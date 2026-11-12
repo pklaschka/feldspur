@@ -72,7 +72,7 @@ function Timeline({
   const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
   const playheadMs = position && playRow?.startMs != null ? playRow.startMs + position.atMs : null;
 
-  const starts = placed.map((r) => r.diaryWindow?.fromMs ?? r.startMs!);
+  const starts = placed.map((r) => r.startMs ?? r.diaryWindow!.fromMs);
   const ends = placed.map((r) => Math.max(r.endMs ?? r.startMs ?? 0, r.diaryWindow?.toMs ?? 0));
   const t0 = Math.floor((Math.min(...starts) - 2 * MIN) / (5 * MIN)) * 5 * MIN;
   const t1 = Math.ceil((Math.max(...ends) + 2 * MIN) / (5 * MIN)) * 5 * MIN;
@@ -90,7 +90,10 @@ function Timeline({
     if (loose.length) list.push({ device: null, rows: loose });
     return list;
   }, [view, placed]);
-  const items = useMemo(() => buildItems(tracks, view.episodes, view.gaps), [tracks, view.episodes, view.gaps]);
+  const items = useMemo(
+    () => buildItems(tracks, view.episodes, view.gaps, view.diary),
+    [tracks, view.episodes, view.gaps, view.diary],
+  );
   const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
   const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
 
@@ -263,9 +266,12 @@ function Timeline({
             (it) =>
               it.type !== "episode" &&
               it.type !== "gap" && (
-                <li key={it.row.id}>
+                <li key={it.type === "diary" ? it.entry.id : it.row.id}>
                   <button data-testid={`tl-${it.type}`} onClick={() => onSelect(it.row.id)}>
-                    {it.row.label} {it.row.fileName} {lage(it.row.startMs, it.row.endMs)}
+                    {it.row.label} {it.row.fileName}{" "}
+                    {it.type === "diary"
+                      ? `Eintrag ${it.entry.number} ${hm(it.t0)}–${hm(it.t1)} ${it.entry.shortText}`
+                      : lage(it.row.startMs, it.row.endMs)}
                   </button>
                 </li>
               ),
@@ -307,15 +313,15 @@ function HoverCard({ item, x, y, width, offset }: { item: Item; x: number; y: nu
     lines = [`${clock(item.gap.startMs)} – ${clock(item.gap.endMs)}`];
     if (item.gap.itemLabels.length) lines.push(item.gap.itemLabels.join(", "));
     if (item.gap.loudAtMs.length) lines.push(`laut: ${item.gap.loudAtMs.slice(0, 4).map(clock).join(", ")}`);
+  } else if (item.type === "diary") {
+    const e = item.entry;
+    title = `Tagebuch ${item.row.label} · Eintrag ${e.number}`;
+    lines = [`notiert ${e.notedAt ?? "?"}, bezieht sich auf ${hm(item.t0)}–${hm(item.t1)}`];
+    if (e.shortText) lines.push(e.shortText.length > 120 ? `${e.shortText.slice(0, 117)}…` : e.shortText);
   } else {
     const r = item.row;
     title = `${r.label} · ${r.fileName}`;
-    lines = [
-      item.type === "diary" && r.diaryWindow
-        ? `bezieht sich auf ${hm(r.diaryWindow.fromMs)}–${hm(r.diaryWindow.toMs)}`
-        : lage(r.startMs, r.endMs),
-      [STATUS_TEXT[r.status], ...r.notes].join(" · "),
-    ];
+    lines = [lage(r.startMs, r.endMs), [STATUS_TEXT[r.status], ...r.notes].join(" · ")];
   }
   const left = offset + Math.min(Math.max(8, x + 12), width - 240);
   return (

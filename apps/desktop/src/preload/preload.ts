@@ -20,6 +20,11 @@ const api: FeldspurApi = {
   setEvidenceEnabled: (id, enabled) => ipcRenderer.invoke(IPC.setEvidenceEnabled, id, enabled),
   removeEvidence: (id) => ipcRenderer.invoke(IPC.removeEvidence, id),
   addAnchor: (input) => ipcRenderer.invoke(IPC.addAnchor, input),
+  createDiaryEntry: (sourceId, region) => ipcRenderer.invoke(IPC.createDiaryEntry, sourceId, region),
+  addDiaryRegion: (entryId, sourceId, region) => ipcRenderer.invoke(IPC.addDiaryRegion, entryId, sourceId, region),
+  removeDiaryRegion: (entryId, index) => ipcRenderer.invoke(IPC.removeDiaryRegion, entryId, index),
+  deleteDiaryEntry: (entryId) => ipcRenderer.invoke(IPC.deleteDiaryEntry, entryId),
+  patchDiaryEntry: (entryId, patch) => ipcRenderer.invoke(IPC.patchDiaryEntry, entryId, patch),
   onProgress: (cb) => {
     const listener = (_e: unknown, p: { done: number; total: number; fileName: string }) => cb(p);
     ipcRenderer.on(IPC.progress, listener);

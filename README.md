@@ -8,6 +8,11 @@ Projekt außerhalb des Repositorys dokumentiert.
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
+Tagebuch abtippen: Rahmen um einen Eintrag ziehen, Notierzeit, Bezugszeitraum und Kurzform oder Volltext eintragen.
+Ein Eintrag kann auf einer anderen Seite weitergehen.
+
+![Abtipp-Ansicht mit zwei Einträgen auf einer erfundenen Seite](docs/tagebuch.png)
+
 ## Aufbau
 
 | Paket                              | Inhalt                                                                                                              |
@@ -84,5 +89,5 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 - Exportformat (Zeitgerüst + Tagesvideo) wartet auf den MAXQDA-Test.
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
-- Tagebuch: Rahmen auf Scans ziehen, Kurzform/Volltext, Einträge über Seiten verketten.
+- Tagebuch: PDF-Scans in der Abtipp-Ansicht anzeigen (bisher nur JPG/PNG).
 - ExifTool statt exifr für RAW/HEIC, mitgelieferte FFmpeg-Programme, Paketierung mit electron-builder.

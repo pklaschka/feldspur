@@ -14,6 +14,7 @@ export function Collect({
   onSelect,
   onRename,
   onNext,
+  onOpenDiary,
 }: {
   view: SessionView;
   guard: Guard;
@@ -22,6 +23,7 @@ export function Collect({
   onSelect: (id: string) => void;
   onRename: (deviceId: string, label: string) => void;
   onNext: () => void;
+  onOpenDiary: (pageId: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [hover, setHover] = useState(false);
@@ -95,6 +97,7 @@ export function Collect({
                 selected={selected}
                 onSelect={onSelect}
                 onRename={(label) => onRename(d.id, label)}
+                onOpenDiary={onOpenDiary}
               />
             ))}
             {unassigned.length > 0 && (
@@ -119,12 +122,14 @@ function DeviceCard({
   selected,
   onSelect,
   onRename,
+  onOpenDiary,
 }: {
   device: DeviceRow;
   rows: SourceRow[];
   selected: string | null;
   onSelect: (id: string) => void;
   onRename: (label: string) => void;
+  onOpenDiary: (pageId: string) => void;
 }) {
   const kinds = [...new Set(rows.map((r) => r.kind))];
   return (
@@ -137,6 +142,12 @@ function DeviceCard({
         <Glyph kind={device.kind} />
         <EditableName value={device.label} onCommit={onRename} />
         {device.isReference && <Pill tone="accent">Referenzuhr</Pill>}
+        <span className="flex-1" />
+        {device.kind === "diary" && rows[0] && (
+          <Button size="sm" onClick={() => onOpenDiary(rows[0]!.id)}>
+            Abtippen…
+          </Button>
+        )}
       </header>
       <div className="pr-3 pb-2 pl-[3.1rem] text-[0.8rem] text-muted">
         {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}

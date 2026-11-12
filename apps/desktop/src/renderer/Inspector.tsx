@@ -1,6 +1,13 @@
 import { formatDuration } from "@feldspur/core/time";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { mediaUrl, type Precision, type SessionView, type SourceRow, type TimeInput } from "../shared/api.ts";
+import {
+  mediaUrl,
+  type DiaryEntryRow,
+  type Precision,
+  type SessionView,
+  type SourceRow,
+  type TimeInput,
+} from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
 import { Button, Choice, cx, Eyebrow, Glyph, Pill, PRECISION_OPTIONS, STATUS_TEXT_CLASS, Toggle } from "./ui.tsx";
@@ -10,6 +17,7 @@ export interface InspectorActions {
   addTime: (input: TimeInput) => Promise<boolean>;
   toggleEvidence: (evidenceId: string, enabled: boolean) => void;
   removeEvidence: (evidenceId: string) => void;
+  openDiary: (pageId: string) => void;
 }
 
 export function Inspector({
@@ -26,7 +34,11 @@ export function Inspector({
   return (
     <aside className="min-w-0 overflow-x-hidden overflow-y-auto border-l border-line bg-panel" data-testid="inspector">
       <div className="px-4.5 pt-4 pb-6">
-        {row ? <SourceDetails key={row.id} row={row} onClose={onClose} actions={actions} /> : <Summary view={view} />}
+        {row ? (
+          <SourceDetails key={row.id} row={row} view={view} onClose={onClose} actions={actions} />
+        ) : (
+          <Summary view={view} />
+        )}
       </div>
     </aside>
   );
@@ -88,7 +100,17 @@ function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: b
   );
 }
 
-function SourceDetails({ row, onClose, actions }: { row: SourceRow; onClose: () => void; actions: InspectorActions }) {
+function SourceDetails({
+  row,
+  view,
+  onClose,
+  actions,
+}: {
+  row: SourceRow;
+  view: SessionView;
+  onClose: () => void;
+  actions: InspectorActions;
+}) {
   const items: [string, ReactNode, string?][] = [
     [
       "Lage",
@@ -137,7 +159,14 @@ function SourceDetails({ row, onClose, actions }: { row: SourceRow; onClose: () 
       )}
       <KV items={items} />
 
-      {row.kind === "diary" && <DiaryNote row={row} onCommit={(c) => actions.diaryNote(row.id, c)} />}
+      {row.kind === "diary" && (
+        <DiaryPage
+          row={row}
+          entries={view.diary.filter((e) => e.regions.some((r) => r.sourceId === row.id))}
+          onNote={(c) => actions.diaryNote(row.id, c)}
+          onOpen={() => actions.openDiary(row.id)}
+        />
+      )}
 
       {row.idle.length > 0 && (
         <>
@@ -449,5 +478,43 @@ function Player({ row }: { row: SourceRow }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Tagebuchseite in der Detailleiste: Einträge im Überblick, schnelle Randnotiz bei höchstens einem Eintrag. */
+function DiaryPage({
+  row,
+  entries,
+  onNote,
+  onOpen,
+}: {
+  row: SourceRow;
+  entries: DiaryEntryRow[];
+  onNote: (clock: string) => void;
+  onOpen: () => void;
+}) {
+  return (
+    <>
+      {entries.length <= 1 && <DiaryNote row={row} onCommit={onNote} />}
+      <Eyebrow>Einträge auf dieser Seite</Eyebrow>
+      {entries.length > 0 ? (
+        <ul className="grid gap-1 text-[0.85rem]">
+          {entries.map((e) => (
+            <li key={e.id} className="flex gap-2">
+              <b className="font-mono text-k-diary">{e.number}</b>
+              <span className="font-mono text-muted">{e.notedAt ?? "–:–"}</span>
+              <span className="truncate">
+                {e.shortText || (e.mode === "scan" ? "nur Scan" : "noch nicht abgetippt")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[0.8rem] text-muted">Noch nicht abgetippt.</p>
+      )}
+      <Button variant="primary" size="sm" className="mt-2" onClick={onOpen}>
+        Abtippen…
+      </Button>
+    </>
   );
 }

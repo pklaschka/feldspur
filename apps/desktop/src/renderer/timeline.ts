@@ -2,7 +2,7 @@
  * Zeichnen der Zeitachse auf Canvas. Reine Funktionen ohne React:
  * Layout (Zeilen, Elemente mit Pixelrechtecken), Treffersuche und Zeichnen.
  */
-import type { DeviceRow, EpisodeRow, GapRow, SourceRow } from "../shared/api.ts";
+import type { DeviceRow, DiaryEntryRow, EpisodeRow, GapRow, SourceRow } from "../shared/api.ts";
 import { hm } from "./format.ts";
 
 export const MIN = 60_000;
@@ -16,7 +16,8 @@ export interface Track {
 }
 
 export type Item =
-  | { type: "clip" | "point" | "diary"; row: SourceRow; track: number; t0: number; t1: number }
+  | { type: "clip" | "point"; row: SourceRow; track: number; t0: number; t1: number }
+  | { type: "diary"; row: SourceRow; track: number; t0: number; t1: number; entry: DiaryEntryRow }
   | { type: "episode"; ep: EpisodeRow; t0: number; t1: number }
   | { type: "gap"; gap: GapRow; t0: number; t1: number };
 
@@ -33,20 +34,33 @@ export function trackTop(i: number): number {
   return RULER_H + EPISODE_H + i * TRACK_H;
 }
 
-export function buildItems(tracks: Track[], episodes: EpisodeRow[] | null, gaps: GapRow[]): Item[] {
+export function buildItems(
+  tracks: Track[],
+  episodes: EpisodeRow[] | null,
+  gaps: GapRow[],
+  diary: DiaryEntryRow[],
+): Item[] {
   const items: Item[] = [];
   for (const g of gaps) items.push({ type: "gap", gap: g, t0: g.startMs, t1: g.endMs });
   for (const e of episodes ?? []) items.push({ type: "episode", ep: e, t0: e.startMs, t1: e.endMs });
   tracks.forEach((tr, track) => {
     for (const r of tr.rows) {
-      if (r.kind === "diary" && r.diaryWindow) {
-        items.push({ type: "diary", row: r, track, t0: r.diaryWindow.fromMs, t1: r.diaryWindow.toMs });
-      } else if (r.startMs !== null) {
+      if (r.kind === "diary") continue;
+      if (r.startMs !== null) {
         const clip = r.endMs !== null && r.endMs > r.startMs;
         items.push({ type: clip ? "clip" : "point", row: r, track, t0: r.startMs, t1: clip ? r.endMs! : r.startMs });
       }
     }
   });
+  // Tagebuch: ein Balken pro Eintrag, auf der Spur der Seite, auf der er beginnt.
+  for (const e of diary) {
+    if (!e.window) continue;
+    const first = e.regions[0];
+    const track = tracks.findIndex((t) => t.rows.some((r) => r.id === first?.sourceId));
+    const row = tracks[track]?.rows.find((r) => r.id === first?.sourceId);
+    if (track < 0 || !row) continue;
+    items.push({ type: "diary", row, track, t0: e.window.fromMs, t1: e.window.toMs, entry: e });
+  }
   return items;
 }
 
@@ -284,7 +298,7 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
           ctx.font = `600 11px ${p.sans}`;
           ctx.textAlign = "right";
           ctx.textBaseline = "middle";
-          ctx.fillText(r.label, x0 + w - 9, y + 14);
+          ctx.fillText(`${r.label} · ${it.entry.number}`, x0 + w - 9, y + 14);
         }
         outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, 28, [4, 0, 0, 4]));
       } else {

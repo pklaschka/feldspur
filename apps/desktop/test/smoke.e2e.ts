@@ -9,7 +9,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
-import { makePhoto, makeSyncDay } from "../../../packages/media/test/fixtures.ts";
+import { makeDiaryPage, makePhoto, makeSyncDay } from "../../../packages/media/test/fixtures.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "feldspur-e2e-"));
 const fixtures = join(dir, "Rohquellen");
@@ -20,7 +20,8 @@ makePhoto(join(fixtures, "IMG_0231.jpg"), "0x8a4fbf", {
   dateTimeOriginal: "2026:09:14 10:12:34",
 });
 makePhoto(join(fixtures, "IMG_20260914_104050.jpg"), "0x1f8a70");
-makePhoto(join(fixtures, "Tagebuch_S01.jpg"), "0xc2703d");
+makeDiaryPage(join(fixtures, "Tagebuch_S01.jpg"), 1);
+makeDiaryPage(join(fixtures, "Tagebuch_S02.jpg"), 2);
 makePhoto(join(fixtures, "Marktstand.jpg"), "0x2a52be"); // ohne jede Zeitangabe
 const sources = process.env.FELDSPUR_E2E_SOURCES ?? fixtures;
 
@@ -140,6 +141,44 @@ try {
   console.log(`Spuren: ${tracks.join(" | ")}`);
   if (tracks.length < 4) throw new Error(`Erwartet mindestens 4 Spuren, gefunden ${tracks.length}`);
   await shot("");
+  // Tagebuch abtippen: Seite 1 trägt schon die Randnotiz, auf Seite 2 zwei Einträge als Rahmen ziehen.
+  await page.getByTestId("inspector").getByRole("button", { name: "Abtippen…" }).click();
+  const editor = page.getByTestId("diary-editor");
+  await editor.waitFor();
+  // Die Randnotiz hat nur einen Scan-Eintrag angelegt; auf Kurzform umstellen.
+  await editor.getByRole("radio", { name: "Kurzform" }).click();
+  await editor.getByLabel("Kurzform Eintrag 1").fill("Ankunft, Aufbau der Stände, Regen");
+  await editor.getByLabel("Kurzform Eintrag 1").blur();
+  await editor.getByRole("navigation", { name: "Seiten" }).getByRole("button").nth(1).click();
+  const sheet = editor.getByTestId("diary-page");
+  await sheet.locator("img").waitFor();
+  const drag = async (x0: number, y0: number, x1: number, y1: number) => {
+    const b = (await sheet.boundingBox())!;
+    await page.mouse.move(b.x + b.width * x0, b.y + b.height * y0);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * x1, b.y + b.height * y1, { steps: 6 });
+    await page.mouse.up();
+  };
+  await drag(0.06, 0.08, 0.94, 0.42);
+  await editor.getByLabel("Notierzeit Eintrag 2").waitFor();
+  await drag(0.06, 0.46, 0.94, 0.8);
+  await editor.getByLabel("Notierzeit Eintrag 3").waitFor();
+  for (const [n, at, text] of [
+    [2, "10:35", "Streit am Käsestand, Händlerin holt Marktaufsicht"],
+    [3, "10:41", "Gespräch mit Testperson B über Standgebühren"],
+  ] as const) {
+    await editor.getByLabel(`Notierzeit Eintrag ${n}`).fill(at);
+    await editor.getByLabel(`Notierzeit Eintrag ${n}`).press("Enter");
+    await editor.getByLabel(`Kurzform Eintrag ${n}`).fill(text);
+    await editor.getByLabel(`Kurzform Eintrag ${n}`).blur();
+  }
+  await editor.getByText("10:26–10:41").waitFor();
+  await shot("-tagebuch");
+  await editor.getByRole("button", { name: "Fertig" }).click();
+  await editor.waitFor({ state: "detached" });
+  const diaryItems = await page.getByTestId("tl-diary").count();
+  console.log(`Tagebucheinträge auf der Zeitachse: ${diaryItems}`);
+  if (diaryItems < 3) throw new Error(`Erwartet 3 Tagebucheinträge, gefunden ${diaryItems}`);
   // Foto ohne Zeit: Uhrzeit von Hand eintragen, Beleg ab- und wieder einschalten.
   await page.getByTestId("tray-item").filter({ hasText: "Marktstand.jpg" }).click();
   const form = page.getByTestId("time-form");

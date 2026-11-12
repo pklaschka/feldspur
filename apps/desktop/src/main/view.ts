@@ -7,7 +7,16 @@ import {
   type Interval,
   type ProjectStore,
 } from "@feldspur/core";
-import type { AnchorRow, DeviceRow, EpisodeRow, GapRow, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
+import type {
+  AnchorRow,
+  DeviceRow,
+  DiaryEntryRow,
+  EpisodeRow,
+  GapRow,
+  ProposalRow,
+  SessionView,
+  SourceRow,
+} from "../shared/api.ts";
 
 const mmss = (ms: number) => formatDuration(ms);
 
@@ -169,10 +178,36 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       };
     });
 
+  const diary: DiaryEntryRow[] = input.diaryEntries
+    .map((e) => {
+      const first = e.regions[0];
+      return {
+        e,
+        key: `${sourceById.get(first?.sourceId ?? "")?.label ?? "~"}:${(first?.y ?? 0).toFixed(4)}:${(first?.x ?? 0).toFixed(4)}`,
+      };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map(({ e }, i) => {
+      const dp = res.diary.get(e.id);
+      return {
+        id: e.id,
+        number: i + 1,
+        notedAt: e.notedAtMs === null ? null : formatClock(e.notedAtMs).slice(0, 5),
+        window: dp ? { fromMs: dp.fromMs, toMs: dp.toMs } : null,
+        lookbackMin: e.lookbackMs === null ? null : e.lookbackMs / 60_000,
+        mode: e.mode,
+        shortText: e.shortText,
+        fullText: e.fullText,
+        regions: e.regions.map((r) => ({ ...r, pageLabel: sourceById.get(r.sourceId)?.label ?? "?" })),
+      };
+    });
+
   return {
     session: input.session,
     rows,
     anchors,
+    diary,
+    diaryLookbackMin: input.session.diaryLookbackMs / 60_000,
     allDevices,
     devices: deviceRows,
     proposals,

@@ -124,6 +124,32 @@ export function makePhoto(
   }
 }
 
+/**
+ * Erfundene Tagebuchseite: liniertes Papier mit „Schrift“ als graue Striche,
+ * in Absätzen, damit sich Einträge als Rahmen darauf ziehen lassen.
+ */
+export function makeDiaryPage(path: string, seed: number) {
+  const w = 620;
+  const h = 877;
+  const boxes: string[] = [];
+  for (let y = 70; y < h - 40; y += 26) boxes.push(`drawbox=x=40:y=${y}:w=${w - 80}:h=1:color=0xc9d6e8:t=fill`);
+  boxes.push(`drawbox=x=78:y=40:w=1:h=${h - 70}:color=0xe8b4b4:t=fill`);
+  let r = seed * 9301 + 49297;
+  const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  let line = 0;
+  for (let y = 70 + 26 * 1; y < h - 60; y += 26, line++) {
+    if (line % 7 === 6) continue; // Absatz
+    const words = 3 + Math.floor(rnd() * 6);
+    let x = line % 7 === 0 ? 92 : 88;
+    for (let k = 0; k < words && x < w - 70; k++) {
+      const len = 18 + Math.floor(rnd() * 46);
+      boxes.push(`drawbox=x=${x}:y=${y - 12}:w=${Math.min(len, w - 50 - x)}:h=3:color=0x3a3f58:t=fill`);
+      x += len + 9;
+    }
+  }
+  ff("-f", "lavfi", "-i", `color=c=0xf6f0e1:size=${w}x${h}:duration=1`, "-vf", boxes.join(","), "-frames:v", "1", path);
+}
+
 /** Ein kleiner erfundener Feldtag wie im Testpaket, nur kürzer. */
 export function makeFieldDay(dir: string) {
   mkdirSync(join(dir, "Kamera"), { recursive: true });

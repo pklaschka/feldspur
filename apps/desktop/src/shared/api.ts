@@ -92,6 +92,40 @@ export interface AnchorInput {
   note: string;
 }
 
+/** Rahmen auf einer Scan-Seite, relativ 0 … 1. */
+export interface Region {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export type DiaryMode = "scan" | "short" | "full";
+
+export interface DiaryEntryRow {
+  id: string;
+  /** Laufende Nummer im Einsatz, nach Seite und Lage auf der Seite. */
+  number: number;
+  /** "10:12" oder null */
+  notedAt: string | null;
+  /** Bezugszeitraum, falls eine Notierzeit gesetzt ist. */
+  window: { fromMs: number; toMs: number } | null;
+  /** Eigener Bezugszeitraum in Minuten; null = Standard des Einsatzes. */
+  lookbackMin: number | null;
+  mode: DiaryMode;
+  shortText: string;
+  fullText: string;
+  regions: (Region & { sourceId: string; pageLabel: string })[];
+}
+
+export interface DiaryPatch {
+  notedAt?: string;
+  lookbackMin?: number | null;
+  mode?: DiaryMode;
+  shortText?: string;
+  fullText?: string;
+}
+
 export interface DeviceRow {
   id: string;
   label: string;
@@ -146,6 +180,9 @@ export interface SessionView {
   devices: DeviceRow[];
   proposals: ProposalRow[];
   anchors: AnchorRow[];
+  diary: DiaryEntryRow[];
+  /** Standard-Bezugszeitraum des Einsatzes in Minuten. */
+  diaryLookbackMin: number;
   /** null = Tonspuren noch nicht analysiert */
   episodes: EpisodeRow[] | null;
   gaps: GapRow[];
@@ -189,6 +226,12 @@ export interface FeldspurApi {
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
+  /** Neuer Tagebucheintrag mit Rahmen; gibt die Id des Eintrags mit zurück. */
+  createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
+  addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
+  removeDiaryRegion(entryId: string, index: number): Promise<SessionView>;
+  deleteDiaryEntry(entryId: string): Promise<SessionView>;
+  patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
@@ -217,5 +260,10 @@ export const IPC = {
   setEvidenceEnabled: "evidence:enable",
   removeEvidence: "evidence:remove",
   addAnchor: "anchor:add",
+  createDiaryEntry: "diary:create",
+  addDiaryRegion: "diary:add-region",
+  removeDiaryRegion: "diary:remove-region",
+  deleteDiaryEntry: "diary:delete",
+  patchDiaryEntry: "diary:patch",
   progress: "progress",
 } as const;
