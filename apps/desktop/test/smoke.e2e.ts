@@ -171,6 +171,21 @@ try {
   await page.mouse.click(xAt(10 * 60 + 5), box.y + 30 + 40 + (tracks.length - 1) * 46 + 23);
   await page.getByTestId("inspector").getByText("Tagebuch_S01.jpg").first().waitFor();
   await page.getByRole("button", { name: "Schließen" }).click();
+  // Klick in die Tonspur spult den Player dorthin: 10:16:20 ist im Rekorder 1:20.
+  await page.mouse.click(xAt(10 * 60 + 16 + 1 / 3), box.y + 30 + 40 + 23);
+  const pos = page.getByTestId("player-position");
+  await pos.waitFor();
+  const posText = await pos.innerText();
+  console.log(`Wiedergabe: ${posText.replace(/\s+/g, " ")}`);
+  if (!/^1:(1[5-9]|2[0-5])/.test(posText)) throw new Error(`Player steht nicht bei etwa 1:20: ${posText}`);
+  // Daraus eine angesagte Uhrzeit vorbereiten (nur Formular, nicht speichern).
+  await page.getByRole("button", { name: /Uhrzeit eintragen/ }).click();
+  await page.getByRole("button", { name: /Wiedergabestelle .* übernehmen/ }).click();
+  const atValue = await page.getByLabel("Stelle in der Aufnahme").inputValue();
+  if (!atValue.startsWith("1:")) throw new Error(`Stelle nicht übernommen: ${atValue}`);
+  await shot("-wiedergabe");
+  await page.getByRole("button", { name: "Abbrechen" }).click();
+  await page.getByRole("button", { name: "Schließen" }).click();
   await page.mouse.move(xAt(10 * 60 + 16), box.y + 30 + 40 + 23);
   await shot("-durchsehen");
   if (process.env.FELDSPUR_SCREENSHOT) {

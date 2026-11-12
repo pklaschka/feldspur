@@ -5,6 +5,7 @@ import { Collect } from "./Collect.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { Review } from "./Review.tsx";
+import { PlaybackProvider } from "./playback.tsx";
 import { Sync } from "./Sync.tsx";
 import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
 
@@ -214,7 +215,7 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
   const tabContent = "flex-1 overflow-auto px-5 pt-4.5 pb-6 data-[state=inactive]:hidden";
 
   return (
-    <>
+    <PlaybackProvider>
       <Tabs.Root
         value={step}
         onValueChange={(v) => setStep(v as Step)}
@@ -273,6 +274,7 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
               onReference={(id) => update(guard(() => api.setReference(id)))}
               onOffset={(id, ms) => update(guard(() => api.setDeviceOffset(id, ms)))}
               onNext={() => setStep("review")}
+              onSelect={setSelected}
             />
           </Tabs.Content>
           <Tabs.Content value="review" className={tabContent}>
@@ -298,7 +300,7 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
           removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
         }}
       />
-    </>
+    </PlaybackProvider>
   );
 }
 

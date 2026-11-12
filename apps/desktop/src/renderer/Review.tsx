@@ -15,6 +15,7 @@ import {
   type Item,
   type Track,
 } from "./timeline.ts";
+import { usePlayback } from "./playback.tsx";
 import { Button, cx, Glyph, Panel } from "./ui.tsx";
 
 const LABEL_W = 180;
@@ -67,6 +68,9 @@ function Timeline({
   const [zoom, setZoom] = useState<number | null>(null); // px pro Minute; null = einpassen
   const [hover, setHover] = useState<{ item: Item; x: number; y: number } | null>(null);
   const [themeTick, setThemeTick] = useState(0);
+  const { position, seek } = usePlayback();
+  const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
+  const playheadMs = position && playRow?.startMs != null ? playRow.startMs + position.atMs : null;
 
   const starts = placed.map((r) => r.diaryWindow?.fromMs ?? r.startMs!);
   const ends = placed.map((r) => Math.max(r.endMs ?? r.startMs ?? 0, r.diaryWindow?.toMs ?? 0));
@@ -122,8 +126,9 @@ function Timeline({
       items,
       selected,
       hover: hover?.item ?? null,
+      playheadMs,
     });
-  }, [width, height, scale, tracks, items, selected, hover, themeTick]);
+  }, [width, height, scale, tracks, items, selected, hover, themeTick, playheadMs]);
 
   /** Zoomen und dabei die Zeit unter dem Zeiger festhalten. */
   const zoomTo = (next: number, anchorX = width / 2) => {
@@ -146,7 +151,13 @@ function Timeline({
   const onClick = (e: MouseEvent) => {
     const { x, y } = local(e);
     const it = hitTest(items, scale, x, y);
-    if (it && it.type !== "episode" && it.type !== "gap") onSelect(it.row.id);
+    if (!it || it.type === "episode" || it.type === "gap") return;
+    onSelect(it.row.id);
+    // In Audio/Video an die geklickte Stelle spulen.
+    if (it.type === "clip" && it.row.startMs !== null) {
+      const at = Math.min(Math.max(0, tOf(scale, x) - it.row.startMs), it.row.durationMs ?? 0);
+      seek(it.row.id, Math.round(at));
+    }
   };
   const onWheel = (e: WheelEvent) => {
     if (!e.ctrlKey && !e.metaKey) return;
@@ -269,7 +280,7 @@ function Timeline({
           Tagebuch: Bezugszeitraum bis Notierzeit
         </Legend>
         <Legend swatch="h-2.5 w-4.5 rounded-xs border-[1.5px] border-dashed border-warn">Lage prüfen</Legend>
-        <span>Strg + Mausrad zoomt</span>
+        <span>Klick in Audio/Video spult dorthin · Strg + Mausrad zoomt</span>
       </div>
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>

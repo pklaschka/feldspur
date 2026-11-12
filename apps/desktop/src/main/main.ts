@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { app, BrowserWindow, dialog, ipcMain, net, protocol } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, protocol } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
 import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
 import {
@@ -14,6 +13,7 @@ import {
   type ProjectInfo,
 } from "../shared/api.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
+import { fileResponse } from "./media-response.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -234,10 +234,10 @@ if (process.env.FELDSPUR_FFPROBE || process.env.FELDSPUR_FFMPEG) {
 }
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
 
-/** Originalbilder für die Vorschau ausliefern: nur Quellen des offenen Projekts, nur Bilder. */
+/** Originale für Vorschau und Wiedergabe ausliefern: nur Quellen des offenen Projekts, nur Bild-, Audio- und Videodateien. */
 function registerMediaProtocol(): void {
   protocol.handle(MEDIA_SCHEME, async (req) => {
     try {
@@ -245,8 +245,7 @@ function registerMediaProtocol(): void {
       const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
       if (url.host !== "source" || !store) return new Response("Nicht gefunden", { status: 404 });
       const src = store.getSource(id);
-      if (!/\.(jpe?g|png|webp|gif)$/i.test(src.fileName)) return new Response("Kein Bild", { status: 415 });
-      return await net.fetch(pathToFileURL(src.originalPath).toString());
+      return fileResponse(src.originalPath, src.fileName, req.headers.get("range"));
     } catch {
       return new Response("Nicht gefunden", { status: 404 });
     }

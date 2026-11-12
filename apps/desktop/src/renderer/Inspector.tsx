@@ -1,7 +1,8 @@
 import { formatDuration } from "@feldspur/core/time";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { mediaUrl, type Precision, type SessionView, type SourceRow, type TimeInput } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
+import { positionText, usePlayback } from "./playback.tsx";
 import { Button, Choice, cx, Eyebrow, Glyph, Pill, PRECISION_OPTIONS, STATUS_TEXT_CLASS, Toggle } from "./ui.tsx";
 
 export interface InspectorActions {
@@ -23,7 +24,7 @@ export function Inspector({
   actions: InspectorActions;
 }) {
   return (
-    <aside className="overflow-auto border-l border-line bg-panel" data-testid="inspector">
+    <aside className="min-w-0 overflow-x-hidden overflow-y-auto border-l border-line bg-panel" data-testid="inspector">
       <div className="px-4.5 pt-4 pb-6">
         {row ? <SourceDetails key={row.id} row={row} onClose={onClose} actions={actions} /> : <Summary view={view} />}
       </div>
@@ -126,6 +127,7 @@ function SourceDetails({ row, onClose, actions }: { row: SourceRow; onClose: () 
           ✕
         </Button>
       </div>
+      {(row.kind === "audio" || row.kind === "video") && <Player row={row} />}
       {row.previewable && (
         <img
           className="mt-3.5 mb-1 block max-h-60 w-full rounded-lg border border-line bg-sunken object-contain"
@@ -269,6 +271,8 @@ function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActi
 /** Uhrzeit von Hand eintragen oder angesagte Uhrzeit markieren. */
 function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) => Promise<boolean> }) {
   const av = row.kind === "audio" || row.kind === "video";
+  const { position } = usePlayback();
+  const here = position?.sourceId === row.id ? position.atMs : null;
   const [open, setOpen] = useState(row.status === "unplaced");
   const [kind, setKind] = useState<"manual" | "spoken">("manual");
   const [time, setTime] = useState("");
@@ -307,45 +311,52 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
           onChange={setKind}
           options={[
             { value: "manual", label: "Von Hand" },
-            { value: "spoken", label: "Angesagt in der Aufnahme" },
+            { value: "spoken", label: "Angesagt" },
           ]}
         />
       )}
-      <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-[0.85rem]">
-        <label htmlFor={`t-${row.id}`} className="text-muted">
-          Uhrzeit
-        </label>
-        <input
-          id={`t-${row.id}`}
-          className="w-28 font-mono"
-          placeholder="hh:mm:ss"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          aria-label="Uhrzeit"
-        />
-        {av && (
-          <>
-            <label htmlFor={`a-${row.id}`} className="text-muted">
-              an Stelle
-            </label>
+      <div className="grid gap-2 text-[0.85rem]">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid gap-0.5">
+            <span className="text-muted">Uhrzeit</span>
             <input
-              id={`a-${row.id}`}
-              className="w-28 font-mono"
-              placeholder="m:ss (leer = Anfang)"
-              value={at}
-              onChange={(e) => setAt(e.target.value)}
-              aria-label="Stelle in der Aufnahme"
+              className="w-24 font-mono"
+              placeholder="hh:mm:ss"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              aria-label="Uhrzeit"
             />
-          </>
+          </label>
+          {av && (
+            <label className="grid gap-0.5">
+              <span className="text-muted">an Stelle</span>
+              <input
+                className="w-24 font-mono"
+                placeholder="m:ss"
+                value={at}
+                onChange={(e) => setAt(e.target.value)}
+                aria-label="Stelle in der Aufnahme"
+              />
+            </label>
+          )}
+        </div>
+        {av && here !== null && (
+          <Button
+            variant="link"
+            type="button"
+            className="justify-self-start text-[0.75rem]"
+            onClick={() => setAt(positionText(here))}
+          >
+            ↳ Wiedergabestelle {positionText(here)} übernehmen
+          </Button>
         )}
-        <span className="text-muted">Genauigkeit</span>
-        <Choice label="Genauigkeit" value={precision} onChange={setPrecision} options={PRECISION_OPTIONS} />
-        <label htmlFor={`n-${row.id}`} className="text-muted">
-          Notiz
-        </label>
+        <div className="grid gap-0.5">
+          <span className="text-muted">Genauigkeit</span>
+          <Choice label="Genauigkeit" value={precision} onChange={setPrecision} options={PRECISION_OPTIONS} />
+        </div>
         <input
-          id={`n-${row.id}`}
-          placeholder="optional, z. B. „Kirchturmuhr“"
+          className="w-full min-w-0"
+          placeholder="Notiz (optional), z. B. „Kirchturmuhr“"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           aria-label="Notiz"
@@ -365,5 +376,78 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Audio/Video abspielen; meldet die Stelle an die Zeitachse und nimmt Spul-Wünsche an. */
+function Player({ row }: { row: SourceRow }) {
+  const { report, seekRequest, position } = usePlayback();
+  const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  const [failed, setFailed] = useState(false);
+  const raf = useRef(0);
+
+  const send = () => {
+    const el = ref.current;
+    if (el) report({ sourceId: row.id, atMs: Math.round(el.currentTime * 1000), playing: !el.paused });
+  };
+  // Während der Wiedergabe flüssig nachführen, nicht nur bei timeupdate (≈ 4 Hz).
+  const loop = () => {
+    send();
+    if (ref.current && !ref.current.paused) raf.current = requestAnimationFrame(loop);
+  };
+  useEffect(() => {
+    const el = ref.current;
+    if (el && seekRequest?.sourceId === row.id) {
+      el.currentTime = seekRequest.atMs / 1000;
+      send();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seekRequest, row.id]);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(raf.current);
+      report(null);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [row.id],
+  );
+
+  const here = position?.sourceId === row.id ? position.atMs : null;
+  const props = {
+    ref,
+    src: mediaUrl(row.id),
+    controls: true,
+    preload: "metadata",
+    onLoadedMetadata: () => {
+      if (seekRequest?.sourceId === row.id && ref.current) ref.current.currentTime = seekRequest.atMs / 1000;
+      send();
+    },
+    onSeeked: send,
+    onPlay: () => {
+      raf.current = requestAnimationFrame(loop);
+    },
+    onPause: send,
+    onError: () => setFailed(true),
+    "data-testid": "player",
+  } as const;
+  return (
+    <div className="mt-3.5">
+      {failed ? (
+        <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.8rem] text-warn">
+          Diese Datei lässt sich hier nicht abspielen (Format oder Codec). Für die Wiedergabe kommen später
+          Vorschau-Kopien.
+        </p>
+      ) : row.kind === "video" ? (
+        <video {...props} className="block max-h-56 w-full rounded-lg bg-black" />
+      ) : (
+        <audio {...props} className="block w-full" />
+      )}
+      {here !== null && (
+        <div className="mt-1 flex justify-between font-mono text-[0.78rem] text-ink-2" data-testid="player-position">
+          <span>{positionText(here)}</span>
+          {row.startMs !== null && <span>{clock(row.startMs + here)}</span>}
+        </div>
+      )}
+    </div>
   );
 }

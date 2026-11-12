@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { offsetText, parseOffset } from "./format.ts";
+import { positionText, usePlayback } from "./playback.tsx";
 import { Button, Choice, cx, Glyph, Notice, Panel, Picker, Pill, PRECISION_OPTIONS, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -27,6 +28,7 @@ export function Sync({
   onReference,
   onOffset,
   onNext,
+  onSelect,
 }: {
   view: SessionView;
   guard: Guard;
@@ -34,6 +36,7 @@ export function Sync({
   onReference: (id: string) => void;
   onOffset: (id: string, ms: number | null) => void;
   onNext: () => void;
+  onSelect: (id: string) => void;
 }) {
   const [progress, setProgress] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -117,7 +120,7 @@ export function Sync({
           ))}
         </div>
       </Panel>
-      <ManualAnchors view={view} guard={guard} onView={onView} />
+      <ManualAnchors view={view} guard={guard} onView={onView} onSelect={onSelect} />
     </div>
   );
 }
@@ -262,7 +265,18 @@ function Proposal({ p, onConfirm, onReject }: { p: ProposalRow; onConfirm: () =>
 const ANCHOR_KIND = { clap: "Klatschen", "audio-correlation": "Tonspur", manual: "von Hand" } as const;
 
 /** Gleiche Stelle in zwei Aufnahmen von Hand verbinden, und gesetzte Anker verwalten. */
-function ManualAnchors({ view, guard, onView }: { view: SessionView; guard: Guard; onView: (v: SessionView) => void }) {
+function ManualAnchors({
+  view,
+  guard,
+  onView,
+  onSelect,
+}: {
+  view: SessionView;
+  guard: Guard;
+  onView: (v: SessionView) => void;
+  onSelect: (id: string) => void;
+}) {
+  const { position } = usePlayback();
   const sources = view.rows
     .filter((r) => r.kind !== "diary")
     .map((r) => ({ value: r.id, label: `${r.label} · ${r.fileName}` }));
@@ -287,7 +301,10 @@ function ManualAnchors({ view, guard, onView }: { view: SessionView; guard: Guar
         label={label}
         placeholder="Aufnahme wählen…"
         value={value}
-        onChange={set}
+        onChange={(id) => {
+          set(id);
+          onSelect(id);
+        }}
         options={sources}
         className="w-64"
       />
@@ -299,6 +316,16 @@ function ManualAnchors({ view, guard, onView }: { view: SessionView; guard: Guar
         onChange={(e) => setAt(e.target.value)}
         aria-label={`${label}, Stelle`}
       />
+      {value && position?.sourceId === value && (
+        <Button
+          variant="link"
+          type="button"
+          className="text-[0.8rem]"
+          onClick={() => setAt(positionText(position.atMs))}
+        >
+          ↳ aus Wiedergabe ({positionText(position.atMs)})
+        </Button>
+      )}
     </div>
   );
 
@@ -308,7 +335,8 @@ function ManualAnchors({ view, guard, onView }: { view: SessionView; guard: Guar
       <p className="mt-1 mb-3 max-w-[70ch] text-[0.8rem] text-muted">
         Ein Anker sagt: Diese Stelle in der einen Aufnahme ist derselbe Moment wie diese Stelle in der anderen, etwa
         eine knallende Tür, die beide Geräte hören. Liegt eine der beiden Aufnahmen schon sicher, gleicht das die Uhr
-        des anderen Geräts ab.
+        des anderen Geräts ab. Wählst du eine Aufnahme, erscheint sie rechts zum Abspielen; die gehörte Stelle
+        übernimmst du mit „aus Wiedergabe“.
       </p>
       {view.anchors.length > 0 && (
         <ul className="mb-4 grid gap-1.5" data-testid="anchor-list">
