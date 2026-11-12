@@ -1,16 +1,25 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
-import { clock, hm, KIND_GLYPH, lage, STATUS_TEXT } from "./format.ts";
+import { Slider, VisuallyHidden } from "radix-ui";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type WheelEvent } from "react";
+import type { SessionView, SourceRow } from "../shared/api.ts";
+import { clock, hm, lage, STATUS_TEXT } from "./format.ts";
+import {
+  buildItems,
+  draw,
+  EPISODE_H,
+  hitTest,
+  MIN,
+  readPalette,
+  RULER_H,
+  tOf,
+  TRACK_H,
+  type Item,
+  type Track,
+} from "./timeline.ts";
+import { Button, cx, Glyph, Panel } from "./ui.tsx";
 
-const MIN = 60_000;
 const LABEL_W = 180;
 const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
-
-/** Sinnvoller Abstand der Zeitmarken bei gegebener Auflösung. */
-function tickStep(pxPerMin: number): number {
-  for (const m of [1, 2, 5, 10, 15, 30, 60, 120]) if (m * pxPerMin >= 64) return m * MIN;
-  return 240 * MIN;
-}
+const MAX_PPM = 240;
 
 export function Review({
   view,
@@ -21,12 +30,68 @@ export function Review({
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(900);
+  const placed = view.rows.filter((r) => r.startMs !== null || r.diaryWindow);
+  const unplaced = view.rows.filter((r) => r.startMs === null && !r.diaryWindow);
+
+  if (!placed.length) {
+    return (
+      <Panel className="max-w-[640px]">
+        <h2 className="text-base font-semibold">Durchsehen</h2>
+        <p className="mt-2 text-muted">
+          Noch keine Quelle hat eine Uhrzeit. Sammle Aufnahmen ein oder trage bei Tagebuchseiten die Randnotiz ein.
+        </p>
+        {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
+      </Panel>
+    );
+  }
+  return <Timeline view={view} placed={placed} unplaced={unplaced} selected={selected} onSelect={onSelect} />;
+}
+
+function Timeline({
+  view,
+  placed,
+  unplaced,
+  selected,
+  onSelect,
+}: {
+  view: SessionView;
+  placed: SourceRow[];
+  unplaced: SourceRow[];
+  selected: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [width, setWidth] = useState(700);
+  const [scrollX, setScrollX] = useState(0);
   const [zoom, setZoom] = useState<number | null>(null); // px pro Minute; null = einpassen
+  const [hover, setHover] = useState<{ item: Item; x: number; y: number } | null>(null);
+  const [themeTick, setThemeTick] = useState(0);
+
+  const starts = placed.map((r) => r.diaryWindow?.fromMs ?? r.startMs!);
+  const ends = placed.map((r) => Math.max(r.endMs ?? r.startMs ?? 0, r.diaryWindow?.toMs ?? 0));
+  const t0 = Math.floor((Math.min(...starts) - 2 * MIN) / (5 * MIN)) * 5 * MIN;
+  const t1 = Math.ceil((Math.max(...ends) + 2 * MIN) / (5 * MIN)) * 5 * MIN;
+  const fit = Math.max(0.2, (width - 2) / ((t1 - t0) / MIN));
+  const ppm = zoom ?? fit;
+  const innerW = Math.max(width, ((t1 - t0) / MIN) * ppm);
+
+  const tracks: Track[] = useMemo(() => {
+    const devices = [...view.allDevices].sort(
+      (a, b) =>
+        Number(b.isReference) - Number(a.isReference) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
+    );
+    const list: Track[] = devices.map((d) => ({ device: d, rows: placed.filter((r) => r.deviceId === d.id) }));
+    const loose = placed.filter((r) => !r.deviceId);
+    if (loose.length) list.push({ device: null, rows: loose });
+    return list;
+  }, [view, placed]);
+  const items = useMemo(() => buildItems(tracks, view.episodes, view.gaps), [tracks, view.episodes, view.gaps]);
+  const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
+  const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
 
   useLayoutEffect(() => {
-    const el = wrap.current;
+    const el = scroller.current;
     if (!el) return;
     const ro = new ResizeObserver(() => setWidth(el.clientWidth));
     ro.observe(el);
@@ -34,232 +99,225 @@ export function Review({
     return () => ro.disconnect();
   }, []);
 
-  const placed = view.rows.filter((r) => r.startMs !== null || r.diaryWindow);
-  const unplaced = view.rows.filter((r) => r.startMs === null && !r.diaryWindow);
+  useEffect(() => {
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const on = () => setThemeTick((n) => n + 1);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
 
-  if (!placed.length) {
-    return (
-      <section className="panel narrow">
-        <h2>Durchsehen</h2>
-        <p className="muted">
-          Noch keine Quelle hat eine Uhrzeit. Sammle Aufnahmen ein oder trage bei Tagebuchseiten die Randnotiz ein.
-        </p>
-        {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
-      </section>
-    );
-  }
+  useEffect(() => {
+    const c = canvas.current;
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(width * dpr);
+    c.height = Math.round(height * dpr);
+    const ctx = c.getContext("2d")!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(ctx, readPalette(document.documentElement), {
+      scale,
+      width,
+      height,
+      tracks,
+      items,
+      selected,
+      hover: hover?.item ?? null,
+    });
+  }, [width, height, scale, tracks, items, selected, hover, themeTick]);
 
-  const starts = placed.map((r) => r.diaryWindow?.fromMs ?? r.startMs!);
-  const ends = placed.map((r) => Math.max(r.endMs ?? r.startMs ?? 0, r.diaryWindow?.toMs ?? 0));
-  const t0 = Math.floor((Math.min(...starts) - 2 * MIN) / (5 * MIN)) * 5 * MIN;
-  const t1 = Math.ceil((Math.max(...ends) + 2 * MIN) / (5 * MIN)) * 5 * MIN;
-  const fit = Math.max(0.5, (width - LABEL_W - 24) / ((t1 - t0) / MIN));
-  const ppm = zoom ?? fit;
-  const x = (t: number) => ((t - t0) / MIN) * ppm;
-  const w = (a: number, b: number) => Math.max(2, x(b) - x(a));
-  const innerW = x(t1);
-  const step = tickStep(ppm);
-  const ticks: number[] = [];
-  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) ticks.push(t);
+  /** Zoomen und dabei die Zeit unter dem Zeiger festhalten. */
+  const zoomTo = (next: number, anchorX = width / 2) => {
+    const clamped = Math.min(MAX_PPM, Math.max(fit, next));
+    const tAnchor = tOf(scale, anchorX);
+    const newScroll = ((tAnchor - t0) / MIN) * clamped - anchorX;
+    setZoom(clamped <= fit * 1.001 ? null : clamped);
+    requestAnimationFrame(() => scroller.current?.scrollTo({ left: Math.max(0, newScroll) }));
+  };
 
-  const devices = [...view.allDevices].sort(
-    (a, b) => Number(b.isReference) - Number(a.isReference) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
-  );
-  const loose = placed.filter((r) => !r.deviceId);
+  const local = (e: MouseEvent) => {
+    const r = canvas.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const onMove = (e: MouseEvent) => {
+    const { x, y } = local(e);
+    const it = hitTest(items, scale, x, y);
+    setHover(it ? { item: it, x, y } : null);
+  };
+  const onClick = (e: MouseEvent) => {
+    const { x, y } = local(e);
+    const it = hitTest(items, scale, x, y);
+    if (it && it.type !== "episode" && it.type !== "gap") onSelect(it.row.id);
+  };
+  const onWheel = (e: WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    zoomTo(ppm * (e.deltaY < 0 ? 1.25 : 0.8), local(e).x);
+  };
+
   const totalEp = view.episodes?.reduce((s, e) => s + e.endMs - e.startMs, 0) ?? 0;
+  // Schieberegler logarithmisch zwischen „Einpassen“ und 240 px/min.
+  const sliderMax = Math.log(MAX_PPM / fit);
+  const sliderVal = Math.log(ppm / fit);
 
   return (
-    <div className="review">
-      <div className="section-head">
-        <h2>Zeitachse</h2>
-        <span className="muted small">
-          {clock(t0).slice(0, 5)} – {clock(t1).slice(0, 5)}
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <h2 className="text-base font-semibold">Zeitachse</h2>
+        <span className="text-[0.8rem] text-muted">
+          {hm(t0)} – {hm(t1)}
           {view.episodes &&
             ` · ${view.episodes.length} ${view.episodes.length === 1 ? "Episode" : "Episoden"}, ${Math.round(totalEp / MIN)} Min. mit Inhalt`}
         </span>
-        <span className="sp" />
-        <div className="zoom" role="group" aria-label="Zoom">
-          <button className="btn sm" onClick={() => setZoom(Math.max(0.5, ppm / 1.6))} aria-label="Verkleinern">
-            −
-          </button>
-          <button className={`btn sm ${zoom === null ? "on" : ""}`} onClick={() => setZoom(null)}>
-            Einpassen
-          </button>
-          <button className="btn sm" onClick={() => setZoom(Math.min(240, ppm * 1.6))} aria-label="Vergrößern">
-            +
-          </button>
-        </div>
+        <span className="flex-1" />
+        <Button size="sm" data-state={zoom === null ? "on" : "off"} onClick={() => setZoom(null)}>
+          Einpassen
+        </Button>
+        <Slider.Root
+          className="relative flex h-5 w-40 touch-none items-center select-none"
+          min={0}
+          max={Math.max(0.01, sliderMax)}
+          step={0.01}
+          value={[sliderVal]}
+          onValueChange={([v]) => zoomTo(fit * Math.exp(v ?? 0))}
+          aria-label="Zoom"
+        >
+          <Slider.Track className="relative h-1 grow rounded-full bg-sunken">
+            <Slider.Range className="absolute h-full rounded-full bg-accent/50" />
+          </Slider.Track>
+          <Slider.Thumb className="block size-4 rounded-full border-2 border-accent bg-panel shadow" />
+        </Slider.Root>
       </div>
-      <div className="tl-wrap" ref={wrap}>
-        <div className="tl" style={{ width: innerW + LABEL_W }}>
-          <div className="tl-row ruler">
-            <div className="tl-label" />
-            <div className="tl-lane" style={{ width: innerW }}>
-              {ticks.map((t) => (
-                <span key={t} className="tick" style={{ left: x(t) }}>
-                  <span className="mono">{hm(t)}</span>
-                </span>
-              ))}
-            </div>
+
+      <div className="flex overflow-hidden rounded-[10px] border border-line bg-panel shadow-xs">
+        <div className="flex-none border-r border-line" style={{ width: LABEL_W }}>
+          <div className="border-b border-line bg-panel-2" style={{ height: RULER_H }} />
+          <div className="grid content-center border-b border-line px-3 leading-tight" style={{ height: EPISODE_H }}>
+            <b className="font-semibold">Episoden</b>
+            <span className="text-[0.8rem] text-muted">{view.episodes ? "aus Tonspuren" : "nach Abgleich"}</span>
           </div>
-          <div className="tl-grid" style={{ left: LABEL_W, width: innerW }} aria-hidden>
-            {ticks.map((t) => (
-              <span key={t} style={{ left: x(t) }} />
-            ))}
-          </div>
-          <div className="tl-row episodes">
-            <div className="tl-label">
-              <b>Episoden</b>
-              <span className="muted small">{view.episodes ? "aus Tonspuren" : "nach Abgleich"}</span>
-            </div>
-            <div className="tl-lane" style={{ width: innerW }}>
-              {view.episodes?.map((e) => (
-                <span
-                  key={e.index}
-                  className="ep"
-                  style={{ left: x(e.startMs), width: w(e.startMs, e.endMs) }}
-                  title={`E${e.index} · ${clock(e.startMs)}–${clock(e.endMs)} · ${e.sourceLabels.join(", ")}`}
-                >
-                  E{e.index}
+          {tracks.map((t) => (
+            <div
+              key={t.device?.id ?? "loose"}
+              data-testid="track"
+              data-device={t.device?.label ?? "Ohne Gerät"}
+              className="flex items-center gap-2 border-b border-line px-3 last:border-b-0"
+              style={{ height: TRACK_H }}
+            >
+              <Glyph kind={t.device?.kind ?? "other"} />
+              <span className="grid min-w-0 leading-tight">
+                <b className="truncate font-medium" title={t.device?.label}>
+                  {t.device?.label ?? "Ohne Gerät"}
+                </b>
+                <span className="text-[0.8rem] text-muted">
+                  {t.device?.isReference
+                    ? "Referenzuhr"
+                    : t.device?.personName || `${t.rows.length} ${t.rows.length === 1 ? "Datei" : "Dateien"}`}
                 </span>
-              ))}
-              {view.gaps.map((g) => (
-                <span
-                  key={g.startMs}
-                  className="gap"
-                  style={{ left: x(g.startMs), width: w(g.startMs, g.endMs) }}
-                  title={`Zwischenzeit ${clock(g.startMs)}–${clock(g.endMs)}${g.itemLabels.length ? ` · ${g.itemLabels.join(", ")}` : ""}${g.loudAtMs.length ? ` · ${g.loudAtMs.length} laute Stellen` : ""}`}
-                >
-                  {g.loudAtMs.length > 0 && <span className="gap-loud">{g.loudAtMs.length}× laut</span>}
-                </span>
-              ))}
+              </span>
             </div>
-          </div>
-          {devices.map((d) => (
-            <Track
-              key={d.id}
-              device={d}
-              rows={placed.filter((r) => r.deviceId === d.id)}
-              x={x}
-              w={w}
-              innerW={innerW}
-              selected={selected}
-              onSelect={onSelect}
-            />
           ))}
-          {loose.length > 0 && (
-            <Track device={null} rows={loose} x={x} w={w} innerW={innerW} selected={selected} onSelect={onSelect} />
-          )}
+        </div>
+        <div
+          ref={scroller}
+          className="relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+          onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)}
+        >
+          <div style={{ width: innerW, height }}>
+            <canvas
+              ref={canvas}
+              className={cx(
+                "sticky left-0 block",
+                hover?.item && hover.item.type !== "episode" && hover.item.type !== "gap" && "cursor-pointer",
+              )}
+              style={{ width, height }}
+              onMouseMove={onMove}
+              onMouseLeave={() => setHover(null)}
+              onClick={onClick}
+              onWheel={onWheel}
+              aria-hidden
+            />
+          </div>
+          {hover && <HoverCard item={hover.item} x={hover.x} y={hover.y} width={width} offset={scrollX} />}
         </div>
       </div>
-      <div className="legend small muted">
-        <span>
-          <i className="lg-idle" /> Stille (≥ 5 Min.)
-        </span>
-        <span>
-          <i className="lg-loud" /> laute Stelle in der Stille
-        </span>
-        <span>
-          <i className="lg-diary" /> Tagebuch: Bezugszeitraum bis Notierzeit
-        </span>
-        <span>
-          <i className="lg-check" /> Lage prüfen
-        </span>
+
+      {/* Für Bildschirmleser und Tastatur: dieselben Elemente als Liste. */}
+      <VisuallyHidden.Root asChild>
+        <ul aria-label="Elemente der Zeitachse">
+          {view.episodes?.map((e) => (
+            <li key={`e${e.index}`} data-testid="episode">
+              E{e.index} {clock(e.startMs)}–{clock(e.endMs)}
+            </li>
+          ))}
+          {items.map(
+            (it) =>
+              it.type !== "episode" &&
+              it.type !== "gap" && (
+                <li key={it.row.id}>
+                  <button data-testid={`tl-${it.type}`} onClick={() => onSelect(it.row.id)}>
+                    {it.row.label} {it.row.fileName} {lage(it.row.startMs, it.row.endMs)}
+                  </button>
+                </li>
+              ),
+          )}
+        </ul>
+      </VisuallyHidden.Root>
+
+      <div className="mx-0.5 mt-2.5 flex flex-wrap gap-5 text-[0.8rem] text-muted">
+        <Legend swatch="hatch h-2.5 w-4.5 rounded-xs border border-line-2">Stille (≥ 5 Min.)</Legend>
+        <Legend swatch="h-2.5 w-[3px] bg-warn">laute Stelle in der Stille</Legend>
+        <Legend swatch="h-2.5 w-4.5 border-r-[3px] border-k-diary bg-linear-to-r from-transparent to-k-diary/40">
+          Tagebuch: Bezugszeitraum bis Notierzeit
+        </Legend>
+        <Legend swatch="h-2.5 w-4.5 rounded-xs border-[1.5px] border-dashed border-warn">Lage prüfen</Legend>
+        <span>Strg + Mausrad zoomt</span>
       </div>
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
   );
 }
 
-function Track({
-  device,
-  rows,
-  x,
-  w,
-  innerW,
-  selected,
-  onSelect,
-}: {
-  device: DeviceRow | null;
-  rows: SourceRow[];
-  x: (t: number) => number;
-  w: (a: number, b: number) => number;
-  innerW: number;
-  selected: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const kind = device?.kind ?? "other";
+function Legend({ swatch, children }: { swatch: string; children: string }) {
   return (
-    <div className={`tl-row track k-${kind}`} data-device={device?.label ?? "Ohne Gerät"}>
-      <div className="tl-label">
-        <span className="glyph">{KIND_GLYPH[kind]}</span>
-        <span className="tl-name">
-          <b title={device?.label}>{device?.label ?? "Ohne Gerät"}</b>
-          <span className="muted small">
-            {device?.isReference
-              ? "Referenzuhr"
-              : device?.personName || `${rows.length} ${rows.length === 1 ? "Datei" : "Dateien"}`}
-          </span>
-        </span>
-      </div>
-      <div className="tl-lane" style={{ width: innerW }}>
-        {rows.map((r) => {
-          const on = selected === r.id ? "on" : "";
-          const st = `st-${r.status}`;
-          const title = `${r.label} · ${r.fileName}\n${lage(r.startMs, r.endMs)} · ${STATUS_TEXT[r.status]}`;
-          if (r.kind === "diary" && r.diaryWindow) {
-            const { fromMs, toMs } = r.diaryWindow;
-            return (
-              <button
-                key={r.id}
-                className={`item diary ${on} ${st}`}
-                style={{ left: x(fromMs), width: w(fromMs, toMs) }}
-                onClick={() => onSelect(r.id)}
-                title={`${title}\nbezieht sich auf ${hm(fromMs)}–${hm(toMs)}`}
-              >
-                <span className="diary-pin" />
-                <span className="item-text">{r.label}</span>
-              </button>
-            );
-          }
-          if (r.startMs === null) return null;
-          if (r.endMs !== null && r.endMs > r.startMs) {
-            return (
-              <button
-                key={r.id}
-                className={`item clip ${on} ${st}`}
-                style={{ left: x(r.startMs), width: w(r.startMs, r.endMs) }}
-                onClick={() => onSelect(r.id)}
-                title={title}
-              >
-                {r.idle.map((i) => (
-                  <span
-                    key={i.startMs}
-                    className="idle"
-                    style={{ left: x(i.startMs) - x(r.startMs!), width: w(i.startMs, i.endMs) }}
-                  />
-                ))}
-                {r.loudAtMs.map((t) => (
-                  <span key={t} className="loud" style={{ left: x(t) - x(r.startMs!) }} />
-                ))}
-                <span className="item-text">
-                  <b>{r.label}</b> {r.fileName}
-                </span>
-              </button>
-            );
-          }
-          return (
-            <button
-              key={r.id}
-              className={`item point ${on} ${st}`}
-              style={{ left: x(r.startMs) }}
-              onClick={() => onSelect(r.id)}
-              title={title}
-              aria-label={r.label}
-            />
-          );
-        })}
-      </div>
+    <span className="inline-flex items-center gap-1.5">
+      <i className={cx("inline-block", swatch)} />
+      {children}
+    </span>
+  );
+}
+
+function HoverCard({ item, x, y, width, offset }: { item: Item; x: number; y: number; width: number; offset: number }) {
+  let title: string;
+  let lines: string[];
+  if (item.type === "episode") {
+    title = `Episode E${item.ep.index}`;
+    lines = [`${clock(item.ep.startMs)} – ${clock(item.ep.endMs)}`, item.ep.sourceLabels.join(", ")];
+  } else if (item.type === "gap") {
+    title = "Zwischenzeit";
+    lines = [`${clock(item.gap.startMs)} – ${clock(item.gap.endMs)}`];
+    if (item.gap.itemLabels.length) lines.push(item.gap.itemLabels.join(", "));
+    if (item.gap.loudAtMs.length) lines.push(`laut: ${item.gap.loudAtMs.slice(0, 4).map(clock).join(", ")}`);
+  } else {
+    const r = item.row;
+    title = `${r.label} · ${r.fileName}`;
+    lines = [
+      item.type === "diary" && r.diaryWindow
+        ? `bezieht sich auf ${hm(r.diaryWindow.fromMs)}–${hm(r.diaryWindow.toMs)}`
+        : lage(r.startMs, r.endMs),
+      [STATUS_TEXT[r.status], ...r.notes].join(" · "),
+    ];
+  }
+  const left = offset + Math.min(Math.max(8, x + 12), width - 240);
+  return (
+    <div
+      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] text-panel shadow-lg"
+      style={{ left, top: y + 14 }}
+    >
+      <b className="block font-semibold">{title}</b>
+      {lines.map((l) => (
+        <div key={l} className="opacity-85">
+          {l}
+        </div>
+      ))}
     </div>
   );
 }
@@ -274,22 +332,26 @@ function Tray({
   onSelect: (id: string) => void;
 }) {
   return (
-    <section className="tray">
-      <div className="section-head">
-        <h3>Ohne Uhrzeit</h3>
-        <span className="muted small">
+    <section className="mt-5">
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <h3 className="text-[0.9rem] font-semibold">Ohne Uhrzeit</h3>
+        <span className="text-[0.8rem] text-muted">
           Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein.
         </span>
       </div>
-      <div className="tray-items">
+      <div className="flex flex-wrap gap-2">
         {rows.map((r) => (
           <button
             key={r.id}
-            className={`chip k-${r.kind} ${selected === r.id ? "on" : ""}`}
+            data-testid="tray-item"
+            className={cx(
+              "inline-flex cursor-pointer items-center gap-2 rounded-lg border py-1 pr-2.5 pl-1",
+              selected === r.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:border-line-2",
+            )}
             onClick={() => onSelect(r.id)}
           >
-            <span className="glyph">{KIND_GLYPH[r.kind]}</span>
-            <b className="mono">{r.label}</b> {r.fileName}
+            <Glyph kind={r.kind} size="sm" />
+            <b className="font-mono">{r.label}</b> {r.fileName}
           </button>
         ))}
       </div>

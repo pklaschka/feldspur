@@ -1,7 +1,8 @@
 import { useEffect, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { KIND_GLYPH, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { Button, cx, Glyph, Notice, Pill, StatusDot, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -48,7 +49,6 @@ export function Collect({
 
   return (
     <div
-      className={`collect ${hover ? "hover" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         setHover(true);
@@ -56,29 +56,37 @@ export function Collect({
       onDragLeave={() => setHover(false)}
       onDrop={onDrop}
     >
-      <div className={`drop ${empty ? "big" : ""}`}>
-        <div>
+      <div
+        className={cx(
+          "mb-4.5 flex items-center gap-4 rounded-[10px] border-[1.5px] border-dashed px-4 py-3",
+          hover ? "border-accent bg-accent-soft" : "border-line-2 bg-panel-2",
+          empty && "flex-col px-8 py-16 text-center",
+        )}
+      >
+        <div className="flex-1">
           <b>{busy ? "Lese Dateien, Metadaten und Prüfsummen…" : "Dateien oder ganze Ordner hier ablegen"}</b>
-          <div className="muted small">
+          <div className="text-[0.8rem] text-muted">
             Video, Audio, Fotos, Tagebuchscans (JPG/PDF), Notizen (TXT/MD). Originale bleiben, wo sie sind.
           </div>
         </div>
-        <button className="btn" disabled={busy} onClick={() => void api.pickFiles().then(importPaths)}>
+        <Button disabled={busy} onClick={() => void api.pickFiles().then(importPaths)}>
           Dateien wählen…
-        </button>
+        </Button>
       </div>
-      {notice && <p className="notice">{notice}</p>}
+      {notice && <Notice>{notice}</Notice>}
       {!empty && (
         <>
-          <div className="section-head">
-            <h2>Geräte</h2>
-            <span className="muted small">erkannt aus Kameramodell oder Dateinamen · Namen anklicken zum Ändern</span>
-            <span className="sp" />
-            <button className="btn pri" onClick={onNext}>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <h2 className="text-base font-semibold">Geräte</h2>
+            <span className="text-[0.8rem] text-muted">
+              erkannt aus Kameramodell oder Dateinamen · Namen anklicken zum Ändern
+            </span>
+            <span className="flex-1" />
+            <Button variant="primary" onClick={onNext}>
               Weiter: Uhren abgleichen →
-            </button>
+            </Button>
           </div>
-          <div className="cards">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] items-start gap-3.5">
             {view.allDevices.map((d) => (
               <DeviceCard
                 key={d.id}
@@ -90,10 +98,10 @@ export function Collect({
               />
             ))}
             {unassigned.length > 0 && (
-              <section className="card dev-card k-other">
-                <header>
-                  <span className="glyph">?</span>
-                  <span className="dev-name">Ohne Gerät</span>
+              <section className="k-other overflow-hidden rounded-[10px] border border-t-[3px] border-line border-t-k bg-panel shadow-xs">
+                <header className="flex items-center gap-2 px-3 pt-3 pb-2">
+                  <Glyph kind="other" />
+                  <span className="font-semibold">Ohne Gerät</span>
                 </header>
                 <SourceList rows={unassigned} selected={selected} onSelect={onSelect} />
               </section>
@@ -120,13 +128,17 @@ function DeviceCard({
 }) {
   const kinds = [...new Set(rows.map((r) => r.kind))];
   return (
-    <section className={`card dev-card k-${device.kind}`} data-device={device.label}>
-      <header>
-        <span className="glyph">{KIND_GLYPH[device.kind]}</span>
+    <section
+      className={`k-${device.kind} overflow-hidden rounded-[10px] border border-t-[3px] border-line border-t-k bg-panel shadow-xs`}
+      data-testid="device-card"
+      data-device={device.label}
+    >
+      <header className="flex items-center gap-2 px-3 pt-3">
+        <Glyph kind={device.kind} />
         <EditableName value={device.label} onCommit={onRename} />
-        {device.isReference && <span className="pill ref">Referenzuhr</span>}
+        {device.isReference && <Pill tone="accent">Referenzuhr</Pill>}
       </header>
-      <div className="dev-meta muted small">
+      <div className="pr-3 pb-2 pl-[3.1rem] text-[0.8rem] text-muted">
         {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
         {device.personName && ` · ${device.personName}`}
       </div>
@@ -145,16 +157,29 @@ function SourceList({
   onSelect: (id: string) => void;
 }) {
   return (
-    <ul className="srclist">
+    <ul className="border-t border-line pb-1">
       {rows.map((r) => (
         <li key={r.id}>
-          <button className={`src ${selected === r.id ? "on" : ""}`} onClick={() => onSelect(r.id)}>
-            <span className="src-label mono">{r.label}</span>
-            <span className="src-file" title={r.fileName}>
+          <button
+            data-testid="source"
+            className={cx(
+              "grid w-full cursor-pointer grid-cols-[3.4rem_minmax(0,1fr)_auto_8px] items-center gap-2.5 px-3 py-1.5 text-left",
+              selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2",
+            )}
+            onClick={() => onSelect(r.id)}
+          >
+            <span className={`k-${r.kind} font-mono text-[0.78rem] font-medium text-k`}>{r.label}</span>
+            <span className="truncate" title={r.fileName}>
               {r.fileName}
             </span>
-            <span className="src-time mono">{r.startMs === null ? "–" : lage(r.startMs, r.endMs)}</span>
-            <span className={`dot st-${r.status}`} title={STATUS_TEXT[r.status]} />
+            <span className="font-mono text-[0.78rem] text-ink-2">
+              {r.startMs === null ? "–" : lage(r.startMs, r.endMs)}
+            </span>
+            <Tip content={STATUS_TEXT[r.status]}>
+              <span>
+                <StatusDot status={r.status} />
+              </span>
+            </Tip>
           </button>
         </li>
       ))}
@@ -168,7 +193,12 @@ function EditableName({ value, onCommit }: { value: string; onCommit: (v: string
   useEffect(() => setText(value), [value]);
   if (!editing) {
     return (
-      <button className="dev-name editable" title="Umbenennen" onClick={() => setEditing(true)}>
+      <button
+        data-testid="device-name"
+        className="-ml-1 min-w-0 cursor-text truncate rounded-[5px] px-1 py-0.5 text-left font-semibold hover:bg-sunken"
+        title="Umbenennen"
+        onClick={() => setEditing(true)}
+      >
         {value}
       </button>
     );
@@ -180,7 +210,7 @@ function EditableName({ value, onCommit }: { value: string; onCommit: (v: string
   };
   return (
     <input
-      className="dev-name-input"
+      className="min-w-0 flex-1 font-semibold"
       autoFocus
       value={text}
       aria-label={`Name für ${value}`}
