@@ -10,7 +10,19 @@ import {
 } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
-import { Button, Choice, cx, Eyebrow, Glyph, Pill, PRECISION_OPTIONS, STATUS_TEXT_CLASS, Toggle } from "./ui.tsx";
+import {
+  Button,
+  Choice,
+  CloseButton,
+  cx,
+  Eyebrow,
+  Glyph,
+  Pill,
+  PRECISION_OPTIONS,
+  StatusDot,
+  STATUS_TEXT_CLASS,
+  Toggle,
+} from "./ui.tsx";
 
 export interface InspectorActions {
   diaryNote: (sourceId: string, clock: string) => void;
@@ -115,14 +127,23 @@ function SourceDetails({
     [
       "Lage",
       <>
-        {lage(row.startMs, row.endMs)}
+        <span className="whitespace-nowrap">{lage(row.startMs, row.endMs)}</span>
         {row.uncertaintyMs !== null && row.uncertaintyMs > 0 && (
-          <span className="text-muted"> ± {formatDuration(row.uncertaintyMs)}</span>
+          <span className="block text-[0.8rem] text-muted">± {formatDuration(row.uncertaintyMs)}</span>
         )}
       </>,
       "font-mono",
     ],
-    ["Status", `● ${[STATUS_TEXT[row.status], ...row.notes].join(" · ")}`, STATUS_TEXT_CLASS[row.status]],
+    [
+      "Status",
+      <>
+        <span className={cx("inline-flex items-center gap-1.5", STATUS_TEXT_CLASS[row.status])}>
+          <StatusDot status={row.status} />
+          {STATUS_TEXT[row.status]}
+        </span>
+        {row.notes.length > 0 && <span className="block text-[0.8rem] text-muted">{row.notes.join(" · ")}</span>}
+      </>,
+    ],
   ];
   if (row.durationMs !== null) items.push(["Dauer", formatDuration(row.durationMs), "font-mono"]);
   items.push([
@@ -145,9 +166,9 @@ function SourceDetails({
           </div>
         </div>
         <span className="flex-1" />
-        <Button variant="link" onClick={onClose} aria-label="Schließen">
-          ✕
-        </Button>
+        <span className="-mt-1 -mr-1.5">
+          <CloseButton onClick={onClose} />
+        </span>
       </div>
       {(row.kind === "audio" || row.kind === "video") && <Player row={row} />}
       {row.previewable && (
@@ -205,10 +226,11 @@ function SourceDetails({
           ],
           [
             "Original",
-            <span key="p" title={row.originalPath}>
+            <span key="p" title={row.originalPath} className="block truncate text-left [direction:rtl]">
+              {"\u200e"}
               {row.originalPath}
             </span>,
-            "text-[0.75rem] text-ink-2 [overflow-wrap:anywhere]",
+            "text-[0.78rem] text-ink-2",
           ],
         ]}
       />
@@ -259,15 +281,15 @@ function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActi
         <li
           key={e.id}
           className={cx(
-            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-[7px] border px-2 py-1.5",
-            e.chosen ? "border-accent bg-accent-soft" : "border-line",
+            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-[7px] border border-l-[3px] px-2.5 py-1.5",
+            e.chosen ? "border-line border-l-accent bg-panel-2" : "border-line",
           )}
         >
           <span className="text-[0.72rem] font-semibold tracking-[0.04em] text-muted uppercase">
             {EVIDENCE_LABEL[e.kind] ?? e.kind}
             {e.chosen && (
               <span className="ml-1.5 normal-case">
-                <Pill>verwendet</Pill>
+                <Pill tone="accent">verwendet</Pill>
               </span>
             )}
           </span>

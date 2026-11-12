@@ -16,7 +16,7 @@ import {
   type Track,
 } from "./timeline.ts";
 import { usePlayback } from "./playback.tsx";
-import { Button, cx, Glyph, Panel } from "./ui.tsx";
+import { Button, cx, Glyph, StepHeader } from "./ui.tsx";
 
 const LABEL_W = 180;
 const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
@@ -26,26 +26,30 @@ export function Review({
   view,
   selected,
   onSelect,
+  onNext,
 }: {
   view: SessionView;
   selected: string | null;
   onSelect: (id: string) => void;
+  onNext: () => void;
 }) {
   const placed = view.rows.filter((r) => r.startMs !== null || r.diaryWindow);
   const unplaced = view.rows.filter((r) => r.startMs === null && !r.diaryWindow);
 
   if (!placed.length) {
     return (
-      <Panel className="max-w-[640px]">
-        <h2 className="text-base font-semibold">Durchsehen</h2>
-        <p className="mt-2 text-muted">
-          Noch keine Quelle hat eine Uhrzeit. Sammle Aufnahmen ein oder trage bei Tagebuchseiten die Randnotiz ein.
-        </p>
+      <div>
+        <StepHeader
+          title="Durchsehen"
+          summary="Noch keine Quelle hat eine Uhrzeit. Sammle Aufnahmen ein oder trage bei Tagebuchseiten die Randnotiz ein."
+        />
         {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
-      </Panel>
+      </div>
     );
   }
-  return <Timeline view={view} placed={placed} unplaced={unplaced} selected={selected} onSelect={onSelect} />;
+  return (
+    <Timeline view={view} placed={placed} unplaced={unplaced} selected={selected} onSelect={onSelect} onNext={onNext} />
+  );
 }
 
 function Timeline({
@@ -54,12 +58,14 @@ function Timeline({
   unplaced,
   selected,
   onSelect,
+  onNext,
 }: {
   view: SessionView;
   placed: SourceRow[];
   unplaced: SourceRow[];
   selected: string | null;
   onSelect: (id: string) => void;
+  onNext: () => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -174,17 +180,31 @@ function Timeline({
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold">Zeitachse</h2>
-        <span className="text-[0.8rem] text-muted">
-          {hm(t0)} – {hm(t1)}
-          {view.episodes &&
-            ` · ${view.episodes.length} ${view.episodes.length === 1 ? "Episode" : "Episoden"}, ${Math.round(totalEp / MIN)} Min. mit Inhalt`}
-        </span>
+      <StepHeader
+        title="Durchsehen"
+        summary={
+          <span>
+            <span className="font-mono">
+              {hm(t0)} – {hm(t1)}
+            </span>
+            {view.episodes &&
+              ` · ${view.episodes.length} ${view.episodes.length === 1 ? "Episode" : "Episoden"}, ${Math.round(totalEp / MIN)} Min. mit Inhalt`}
+          </span>
+        }
+      >
+        <Button variant="primary" onClick={onNext}>
+          Weiter: Ausgeben →
+        </Button>
+      </StepHeader>
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <h3 className="font-semibold">Zeitachse</h3>
         <span className="flex-1" />
-        <Button size="sm" data-state={zoom === null ? "on" : "off"} onClick={() => setZoom(null)}>
+        <Button size="sm" disabled={zoom === null} onClick={() => setZoom(null)}>
           Einpassen
         </Button>
+        <span className="flex items-center gap-2 text-muted" aria-hidden>
+          <ZoomGlyph minus />
+        </span>
         <Slider.Root
           className="relative flex h-5 w-40 touch-none items-center select-none"
           min={0}
@@ -199,6 +219,9 @@ function Timeline({
           </Slider.Track>
           <Slider.Thumb className="block size-4 rounded-full border-2 border-accent bg-panel shadow" />
         </Slider.Root>
+        <span className="text-muted" aria-hidden>
+          <ZoomGlyph />
+        </span>
       </div>
 
       <div className="flex overflow-hidden rounded-[10px] border border-line bg-panel shadow-xs">
@@ -221,11 +244,7 @@ function Timeline({
                 <b className="truncate font-medium" title={t.device?.label}>
                   {t.device?.label ?? "Ohne Gerät"}
                 </b>
-                <span className="text-[0.8rem] text-muted">
-                  {t.device?.isReference
-                    ? "Referenzuhr"
-                    : t.device?.personName || `${t.rows.length} ${t.rows.length === 1 ? "Datei" : "Dateien"}`}
-                </span>
+                <span className="text-[0.8rem] text-muted">{trackSub(t, view.rows)}</span>
               </span>
             </div>
           ))}
@@ -286,10 +305,31 @@ function Timeline({
           Tagebuch: Bezugszeitraum bis Notierzeit
         </Legend>
         <Legend swatch="h-2.5 w-4.5 rounded-xs border-[1.5px] border-dashed border-warn">Lage prüfen</Legend>
-        <span>Klick in Audio/Video spult dorthin · Strg + Mausrad zoomt</span>
+        <span className="ml-auto">Klick in Audio/Video spult dorthin · Strg + Mausrad zoomt</span>
       </div>
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
+  );
+}
+
+/** Untertitel einer Spur: Referenz, Person oder Anzahl, dazu was noch ohne Zeit ist. */
+function trackSub(t: Track, rows: SourceRow[]): string {
+  if (!t.device) return `${t.rows.length} ${t.rows.length === 1 ? "Datei" : "Dateien"}`;
+  const all = rows.filter((r) => r.deviceId === t.device!.id);
+  const open = all.filter((r) => r.startMs === null && !r.diaryWindow).length;
+  const base = t.device.isReference
+    ? "Referenzuhr"
+    : t.device.personName || `${all.length} ${all.length === 1 ? "Datei" : "Dateien"}`;
+  return open ? `${base} · ${open} ohne Zeit` : base;
+}
+
+function ZoomGlyph({ minus = false }: { minus?: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="M10.5 10.5 14 14M5 7h4" />
+      {!minus && <path d="M7 5v4" />}
+    </svg>
   );
 }
 
@@ -326,7 +366,7 @@ function HoverCard({ item, x, y, width, offset }: { item: Item; x: number; y: nu
   const left = offset + Math.min(Math.max(8, x + 12), width - 240);
   return (
     <div
-      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] text-panel shadow-lg"
+      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
       style={{ left, top: y + 14 }}
     >
       <b className="block font-semibold">{title}</b>
