@@ -1,0 +1,26 @@
+{
+  "name": "@feldspur/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "out/main/main.cjs",
+  "scripts": {
+    "build": "vp build && vp pack",
+    "start": "electron .",
+    "native": "node ../../scripts/fetch-electron-sqlite.mjs",
+    "e2e": "vp run build && vpx test/smoke.e2e.ts"
+  },
+  "dependencies": {
+    "@feldspur/core": "workspace:*",
+    "@feldspur/media": "workspace:*",
+    "better-sqlite3": "^12.11.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "electron": "^39.8.10",
+    "playwright-core": "^1.65.0"
+  }
+}
