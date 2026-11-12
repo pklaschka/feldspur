@@ -4,7 +4,16 @@ import { pathToFileURL } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, net, protocol } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
 import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
-import { IPC, MEDIA_SCHEME, type ImportOutcome, type NewSessionInput, type ProjectInfo } from "../shared/api.ts";
+import {
+  IPC,
+  MEDIA_SCHEME,
+  type AnchorInput,
+  type ImportOutcome,
+  type TimeInput,
+  type NewSessionInput,
+  type ProjectInfo,
+} from "../shared/api.ts";
+import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -137,6 +146,26 @@ function registerIpc(): void {
     const a = s.getAnchor(anchorId);
     s.deleteAnchor(anchorId);
     return buildSessionView(s, a.sessionId);
+  });
+
+  ipcMain.handle(IPC.addTime, (_e, input: TimeInput) => {
+    const s = requireStore();
+    return buildSessionView(s, addTimeEvidence(s, input));
+  });
+
+  ipcMain.handle(IPC.setEvidenceEnabled, (_e, evidenceId: string, enabled: boolean) => {
+    const s = requireStore();
+    return buildSessionView(s, toggleEvidence(s, evidenceId, enabled));
+  });
+
+  ipcMain.handle(IPC.removeEvidence, (_e, evidenceId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, removeEvidence(s, evidenceId));
+  });
+
+  ipcMain.handle(IPC.addAnchor, (_e, input: AnchorInput) => {
+    const s = requireStore();
+    return buildSessionView(s, addManualAnchor(s, input));
   });
 
   ipcMain.handle(IPC.setDeviceOffset, (_e, deviceId: string, offsetMs: number | null) => {

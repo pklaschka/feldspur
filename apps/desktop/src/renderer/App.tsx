@@ -287,7 +287,16 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
         view={view}
         row={selectedRow}
         onClose={() => setSelected(null)}
-        onDiaryNote={(id, clock) => update(guard(() => api.setDiaryNote(id, clock)))}
+        actions={{
+          diaryNote: (id, clock) => update(guard(() => api.setDiaryNote(id, clock))),
+          addTime: async (input) => {
+            const v = await guard(() => api.addTime(input));
+            if (v) setView(v);
+            return !!v;
+          },
+          toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
+          removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
+        }}
       />
     </>
   );

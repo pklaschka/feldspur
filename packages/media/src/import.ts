@@ -62,7 +62,10 @@ const KIND_DEVICE: Partial<Record<SourceKind, string>> = {
 
 /** Buchstaben am Anfang der Dateinamen-Familie: "C####.mp4" → "C", "IMG_########_######.jpg" → "IMG". */
 function familyPrefix(family: string): string {
-  return family.replace(/[#].*$/, "").replace(/[_\-\s.]+$/, "");
+  return family
+    .replace(/[#].*$/, "")
+    .replace(/\.[a-z0-9]{2,4}$/i, "")
+    .replace(/[_\-\s.]+$/, "");
 }
 
 function deviceGuess(

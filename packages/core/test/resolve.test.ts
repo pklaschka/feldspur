@@ -104,6 +104,32 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(pl.conflicts[0]!.differenceMs).toBe(T(10, 12, 30) - T(10, 20));
   });
 
+  it("angesagte Uhrzeit in einem Clip gleicht die ganze Kamera ab", () => {
+    const input = testmarkt();
+    input.anchors = [];
+    // Im zweiten Clip sagt jemand bei 0:30 „zehn Uhr vierzig und vierzig Sekunden“.
+    input.evidence.push({
+      id: "ansage",
+      sourceId: "C0013.MP4",
+      kind: "spoken",
+      clock: "true",
+      atMediaMs: 30_000,
+      localMs: T(10, 40, 40),
+      utcMs: null,
+      uncertaintyMs: 2_000,
+      detail: "angesagt",
+      raw: "",
+      enabled: true,
+    });
+    const res = resolveTimeline(input);
+    const cam = res.deviceClocks.get("camA")!;
+    expect(cam.basis).toBe("spoken");
+    expect(cam.offsetMs).toBe(167_000);
+    // Der erste Clip hat keine Ansage, liegt aber über die abgeglichene Uhr richtig.
+    expect(formatClock(res.placements.get("C0012.MP4")!.startMs)).toBe("10:16:00");
+    expect(res.placements.get("C0012.MP4")!.status).toBe("check"); // ± 2,2 s
+  });
+
   it("abgeschalteter Beleg zählt nicht", () => {
     const input = testmarkt();
     input.evidence.find((e) => e.sourceId === "IMG_0231.jpg")!.enabled = false;

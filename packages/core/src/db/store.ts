@@ -292,6 +292,12 @@ export class ProjectStore {
       .map((r) => TimeEvidence.parse(r.e));
   }
 
+  getEvidence(id: Id): TimeEvidence {
+    const row = this.db.select().from(schema.evidence).where(eq(schema.evidence.id, id)).get();
+    if (!row) throw new Error(`Zeitbeleg ${id} nicht gefunden`);
+    return TimeEvidence.parse(row);
+  }
+
   setEvidenceEnabled(id: Id, enabled: boolean): void {
     this.db.update(schema.evidence).set({ enabled }).where(eq(schema.evidence.id, id)).run();
   }
