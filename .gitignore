@@ -1,0 +1,11 @@
+node_modules/
+dist/
+out/
+*.feldspur
+*.feldspur-journal
+*.feldspur-wal
+*.feldspur-shm
+.vite/
+coverage/
+test-fixtures/
+apps/desktop/native/
