@@ -154,6 +154,8 @@ export interface DrawState {
   items: Item[];
   selected: string | null;
   hover: Item | null;
+  /** Abspielposition (Ortszeit) oder null. */
+  playheadMs: number | null;
 }
 
 export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): void {
@@ -301,6 +303,27 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
       }
     }
     ctx.restore();
+  }
+
+  if (st.playheadMs !== null) {
+    const px = Math.round(x(st.playheadMs)) + 0.5;
+    if (px >= 0 && px <= W) {
+      ctx.save();
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px, RULER_H - 6);
+      ctx.lineTo(px, H);
+      ctx.stroke();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(px - 5, RULER_H - 8);
+      ctx.lineTo(px + 5, RULER_H - 8);
+      ctx.lineTo(px, RULER_H - 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
   }
 }
 

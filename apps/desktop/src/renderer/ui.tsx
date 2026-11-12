@@ -125,7 +125,7 @@ export function Choice<T extends string>({
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
       aria-label={label}
-      className="inline-flex overflow-hidden rounded-[7px] border border-line-2"
+      className="inline-flex w-fit overflow-hidden rounded-[7px] border border-line-2"
     >
       {options.map((o) => (
         <ToggleGroup.Item
