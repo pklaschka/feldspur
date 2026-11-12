@@ -1,3 +1,4 @@
+import { Tabs } from "radix-ui";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { ProjectInfo, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
@@ -5,10 +6,29 @@ import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { Review } from "./Review.tsx";
 import { Sync } from "./Sync.tsx";
+import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
 
 const api = window.feldspur;
 
 export type Guard = <T>(fn: () => Promise<T>) => Promise<T | undefined>;
+
+function Logo({ small }: { small?: boolean }) {
+  const bar = (c: string, x: string, w: string, y: number) => (
+    <span className={cx("absolute h-[3px] rounded-full", c)} style={{ left: x, width: w, top: y }} />
+  );
+  return (
+    <div
+      className={cx("flex items-center gap-2.5 font-semibold tracking-tight", small ? "text-[1.05rem]" : "text-2xl")}
+    >
+      <span className="relative size-[18px] rounded-[5px] bg-sunken">
+        {bar("bg-k-video", "0", "70%", 3)}
+        {bar("bg-k-audio", "30%", "70%", 8)}
+        {bar("bg-k-diary", "10%", "55%", 13)}
+      </span>
+      Feldspur
+    </div>
+  );
+}
 
 export function App() {
   const [project, setProject] = useState<ProjectInfo | null>(null);
@@ -40,60 +60,63 @@ export function App() {
 
   if (!project) {
     return (
-      <main className="welcome">
-        <div className="welcome-card">
-          <div className="logo">
-            <span className="logo-mark" />
-            Feldspur
-          </div>
-          <p>Alle Aufzeichnungen eines Feldeinsatzes auf einer gemeinsamen Uhrzeit-Achse.</p>
-          <div className="row">
-            <button className="btn pri" onClick={() => void guard(api.newProject).then(adopt)}>
+      <main className="grid h-full place-items-center">
+        <Panel className="max-w-[440px] px-9 py-8">
+          <Logo />
+          <p className="my-3">Alle Aufzeichnungen eines Feldeinsatzes auf einer gemeinsamen Uhrzeit-Achse.</p>
+          <div className="flex gap-2">
+            <Button variant="primary" onClick={() => void guard(api.newProject).then(adopt)}>
               Neues Projekt
-            </button>
-            <button className="btn" onClick={() => void guard(api.openProject).then(adopt)}>
-              Projekt öffnen…
-            </button>
+            </Button>
+            <Button onClick={() => void guard(api.openProject).then(adopt)}>Projekt öffnen…</Button>
           </div>
-          {error && <p className="err">{error}</p>}
-        </div>
+          {error && <p className="mt-3 text-bad">{error}</p>}
+        </Panel>
       </main>
     );
   }
 
   return (
-    <div className="shell">
-      <nav className="side">
-        <div className="logo small-logo">
-          <span className="logo-mark" />
-          Feldspur
-        </div>
-        <div className="proj" title={project.path}>
-          {project.name}
-        </div>
-        <div className="eyebrow">Einsätze</div>
-        {project.sessions.map((s) => (
-          <button
-            key={s.id}
-            className={`sess ${s.id === sessionId ? "on" : ""}`}
-            onClick={() => setSessionId(s.id)}
-            title={s.place || undefined}
-          >
-            <span className="sess-date mono">{formatDay(s.date)}</span>
-            <span className="sess-title">{s.title}</span>
-          </button>
-        ))}
-        <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adopt)} />
-      </nav>
-      {sessionId ? (
-        <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} />
-      ) : (
-        <main className="empty-main">
-          {error && <p className="err">{error}</p>}
-          <p className="muted">Lege links einen Einsatz an, zum Beispiel „Wochenmarkt Südstadt“.</p>
-        </main>
-      )}
-    </div>
+    <TooltipProvider delayDuration={250}>
+      <div className="grid h-full grid-cols-[210px_minmax(0,1fr)_310px]">
+        <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4">
+          <div className="px-2">
+            <Logo small />
+            <div className="mt-1 truncate text-[0.8rem] text-muted" title={project.path}>
+              {project.name}
+            </div>
+          </div>
+          <div className="mx-2 mt-6 mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">
+            Einsätze
+          </div>
+          {project.sessions.map((s) => (
+            <button
+              key={s.id}
+              className={cx(
+                "flex w-full cursor-pointer gap-2 rounded-[7px] px-2 py-1.5 text-left",
+                s.id === sessionId ? "bg-accent-soft font-medium text-accent" : "hover:bg-sunken",
+              )}
+              onClick={() => setSessionId(s.id)}
+              title={s.place || undefined}
+            >
+              <span className={cx("pt-px font-mono text-[0.78rem]", s.id !== sessionId && "text-muted")}>
+                {formatDay(s.date)}
+              </span>
+              <span>{s.title}</span>
+            </button>
+          ))}
+          <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adopt)} />
+        </nav>
+        {sessionId ? (
+          <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} />
+        ) : (
+          <main className="col-span-2 p-8">
+            {error && <p className="text-bad">{error}</p>}
+            <p className="text-muted">Lege links einen Einsatz an, zum Beispiel „Wochenmarkt Südstadt“.</p>
+          </main>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -103,7 +126,10 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   if (!open) {
     return (
-      <button className="sess add" onClick={() => setOpen(true)}>
+      <button
+        className="w-full cursor-pointer rounded-[7px] px-2 py-1.5 text-left text-muted hover:bg-sunken"
+        onClick={() => setOpen(true)}
+      >
         + neuer Einsatz
       </button>
     );
@@ -116,7 +142,7 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
     setTitle("");
   };
   return (
-    <form className="newsession" onSubmit={submit}>
+    <form className="grid gap-1.5 p-1.5" onSubmit={submit}>
       <input
         autoFocus
         placeholder="Titel"
@@ -125,13 +151,13 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
         aria-label="Titel"
       />
       <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Datum" />
-      <div className="row">
-        <button className="btn pri sm" type="submit">
+      <div className="flex gap-1.5">
+        <Button variant="primary" size="sm" type="submit">
           Anlegen
-        </button>
-        <button className="btn sm" type="button" onClick={() => setOpen(false)}>
+        </Button>
+        <Button size="sm" type="button" onClick={() => setOpen(false)}>
           Abbrechen
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -152,7 +178,7 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
     });
   }, [sessionId, guard]);
 
-  if (!view || !step) return <main className="empty-main muted">Lade…</main>;
+  if (!view || !step) return <main className="col-span-2 p-8 text-muted">Lade…</main>;
 
   const update = (p: Promise<SessionView | undefined>) => void p.then((v) => v && setView(v));
   const unsynced = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
@@ -185,35 +211,50 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
     { id: "export", n: 4, title: "Ausgeben", badge: null },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;
+  const tabContent = "flex-1 overflow-auto px-5 pt-4.5 pb-6 data-[state=inactive]:hidden";
 
   return (
     <>
-      <main className="main">
-        <header className="head">
-          <div className="head-title">
-            <span className="mono muted">{formatDay(view.session.date)}</span>
-            <h1>{view.session.title}</h1>
-            {view.session.place && <span className="muted">{view.session.place}</span>}
-          </div>
-          <div className="steps" role="tablist">
-            {steps.map((s) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={step === s.id}
-                className={`step ${step === s.id ? "on" : ""}`}
-                onClick={() => setStep(s.id)}
-              >
-                <span className="step-n">{s.n}</span>
-                {s.title}
-                {s.badge && <span className={`badge ${s.warn ? "warn" : ""}`}>{s.badge}</span>}
-              </button>
-            ))}
-          </div>
-        </header>
-        {error && <p className="err">{error}</p>}
-        <div className="body">
-          {step === "collect" && (
+      <Tabs.Root
+        value={step}
+        onValueChange={(v) => setStep(v as Step)}
+        className="flex min-w-0 flex-col overflow-hidden"
+        asChild
+      >
+        <main>
+          <header className="border-b border-line bg-panel px-5 pt-3.5">
+            <div className="flex items-baseline gap-2.5">
+              <span className="font-mono text-muted">{formatDay(view.session.date)}</span>
+              <h1 className="text-xl font-semibold">{view.session.title}</h1>
+              {view.session.place && <span className="text-muted">{view.session.place}</span>}
+            </div>
+            <Tabs.List className="mt-3 flex gap-1" aria-label="Arbeitsschritte">
+              {steps.map((s) => (
+                <Tabs.Trigger
+                  key={s.id}
+                  value={s.id}
+                  className="group flex cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 pt-2 pb-2.5 text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-medium data-[state=active]:text-ink"
+                >
+                  <span className="grid size-[19px] place-items-center rounded-full bg-sunken text-[0.72rem] text-muted group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
+                    {s.n}
+                  </span>
+                  {s.title}
+                  {s.badge && (
+                    <span
+                      className={cx(
+                        "rounded-full px-1.5 text-[0.7rem]",
+                        s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
+                      )}
+                    >
+                      {s.badge}
+                    </span>
+                  )}
+                </Tabs.Trigger>
+              ))}
+            </Tabs.List>
+          </header>
+          {error && <p className="mx-5 mt-2 text-bad">{error}</p>}
+          <Tabs.Content value="collect" className={tabContent}>
             <Collect
               view={view}
               guard={guard}
@@ -223,8 +264,8 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
               onRename={(id, label) => update(guard(() => api.renameDevice(id, label)))}
               onNext={() => setStep("sync")}
             />
-          )}
-          {step === "sync" && (
+          </Tabs.Content>
+          <Tabs.Content value="sync" className={tabContent}>
             <Sync
               view={view}
               guard={guard}
@@ -233,11 +274,15 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
               onOffset={(id, ms) => update(guard(() => api.setDeviceOffset(id, ms)))}
               onNext={() => setStep("review")}
             />
-          )}
-          {step === "review" && <Review view={view} selected={selected} onSelect={setSelected} />}
-          {step === "export" && <ExportPlaceholder view={view} />}
-        </div>
-      </main>
+          </Tabs.Content>
+          <Tabs.Content value="review" className={tabContent}>
+            {step === "review" && <Review view={view} selected={selected} onSelect={setSelected} />}
+          </Tabs.Content>
+          <Tabs.Content value="export" className={tabContent}>
+            <ExportPlaceholder view={view} />
+          </Tabs.Content>
+        </main>
+      </Tabs.Root>
       <Inspector
         view={view}
         row={selectedRow}
@@ -249,31 +294,28 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
 }
 
 function ExportPlaceholder({ view }: { view: SessionView }) {
+  const fact = (n: number | string, label: string) => (
+    <div className="grid">
+      <b className="text-2xl font-semibold">{n}</b>
+      <span className="text-[0.8rem] text-muted">{label}</span>
+    </div>
+  );
   return (
-    <section className="panel narrow">
-      <h2>Ausgeben</h2>
-      <p>
+    <Panel className="max-w-[640px]">
+      <h2 className="text-base font-semibold">Ausgeben</h2>
+      <p className="my-2">
         Hier entsteht das Dokument für MAXQDA: ein Dokument pro Einsatz, mit Zeitmarken, Episoden und den eingebetteten
         Tagebuchseiten und Fotos.
       </p>
-      <p className="muted">
+      <p className="text-muted">
         Das genaue Format steht noch aus. Sobald dein Test in MAXQDA zeigt, welche Variante sich am besten importieren
         lässt, baue ich diesen Schritt.
       </p>
-      <div className="facts">
-        <div>
-          <b>{view.rows.length}</b>
-          <span>Quellen</span>
-        </div>
-        <div>
-          <b>{view.episodes?.length ?? "–"}</b>
-          <span>Episoden</span>
-        </div>
-        <div>
-          <b>{view.rows.filter((r) => r.status === "ok").length}</b>
-          <span>sicher verortet</span>
-        </div>
+      <div className="mt-4 flex gap-8">
+        {fact(view.rows.length, "Quellen")}
+        {fact(view.episodes?.length ?? "–", "Episoden")}
+        {fact(view.rows.filter((r) => r.status === "ok").length, "sicher verortet")}
       </div>
-    </section>
+    </Panel>
   );
 }

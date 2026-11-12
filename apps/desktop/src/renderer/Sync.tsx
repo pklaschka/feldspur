@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { DeviceRow, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { KIND_GLYPH, offsetText, parseOffset } from "./format.ts";
+import { offsetText, parseOffset } from "./format.ts";
+import { Button, cx, Glyph, Notice, Panel, Pill, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -11,6 +12,7 @@ const mmss = (ms: number) =>
     .replace(/\.\d+/, "");
 
 const BASIS_TEXT = { reference: "Referenz", manual: "von Hand", anchor: "über Tonspur", unknown: "" } as const;
+const CELL = "border-t border-line py-3";
 
 export function Sync({
   view,
@@ -33,10 +35,10 @@ export function Sync({
 
   if (!view.devices.length) {
     return (
-      <section className="panel narrow">
-        <h2>Uhren abgleichen</h2>
-        <p className="muted">Noch keine Geräte mit eigener Uhr. Sammle zuerst Aufnahmen ein.</p>
-      </section>
+      <Panel className="max-w-[640px]">
+        <h2 className="text-base font-semibold">Uhren abgleichen</h2>
+        <p className="mt-2 text-muted">Noch keine Geräte mit eigener Uhr. Sammle zuerst Aufnahmen ein.</p>
+      </Panel>
     );
   }
 
@@ -68,50 +70,46 @@ export function Sync({
   const ordered = [...view.devices].sort((a, b) => Number(b.isReference) - Number(a.isReference));
 
   return (
-    <div className="sync">
-      <section className="panel">
-        <div className="section-head">
-          <h2>Uhren abgleichen</h2>
-          <span className="sp" />
-          <button className="btn" disabled={!!progress || !hasReference || !view.avCount} onClick={() => void run()}>
-            {view.analyzedCount ? "Tonspuren erneut abgleichen" : "Tonspuren abgleichen"}
-          </button>
-          <button className="btn pri" onClick={onNext}>
-            Weiter: Durchsehen →
-          </button>
-        </div>
-        <p className="muted small lead">
-          {hasReference
-            ? "Jedes Gerät hat seine eigene Uhr. Die Referenzuhr gilt als richtig; für die anderen trägst du ein, wie weit sie abweichen („Kamera geht 2:47 vor“ = +2:47), oder lässt Feldspur über Klatschen und gleiche Geräusche in den Tonspuren suchen. Vorschläge werden erst übernommen, wenn du sie bestätigst."
-            : "Wähle zuerst die Referenzuhr: das Gerät, dessen Uhr am verlässlichsten lief (oft der Audiorekorder oder das Handy mit Netzzeit)."}
-        </p>
-        {progress && <p className="notice">{progress}</p>}
-        {notice && !progress && <p className="notice">{notice}</p>}
-        <div className="clocks">
-          <div className="clock-scale-head">
-            <span />
-            <span className="scale-labels small muted">
-              <span className="mono">−{mmss(span)}</span>
-              <span>Referenz</span>
-              <span className="mono">+{mmss(span)}</span>
-            </span>
-            <span />
-          </div>
-          {ordered.map((d) => (
-            <ClockRow
-              key={d.id}
-              device={d}
-              span={span}
-              proposals={view.proposals.filter((p) => p.deviceId === d.id)}
-              onReference={() => onReference(d.id)}
-              onOffset={(ms) => onOffset(d.id, ms)}
-              onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
-              onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
+    <Panel>
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <h2 className="text-base font-semibold">Uhren abgleichen</h2>
+        <span className="flex-1" />
+        <Button disabled={!!progress || !hasReference || !view.avCount} onClick={() => void run()}>
+          {view.analyzedCount ? "Tonspuren erneut abgleichen" : "Tonspuren abgleichen"}
+        </Button>
+        <Button variant="primary" onClick={onNext}>
+          Weiter: Durchsehen →
+        </Button>
+      </div>
+      <p className="mb-4 max-w-[70ch] text-[0.8rem] text-muted">
+        {hasReference
+          ? "Jedes Gerät hat seine eigene Uhr. Die Referenzuhr gilt als richtig; für die anderen trägst du ein, wie weit sie abweichen („Kamera geht 2:47 vor“ = +2:47), oder lässt Feldspur über Klatschen und gleiche Geräusche in den Tonspuren suchen. Vorschläge werden erst übernommen, wenn du sie bestätigst."
+          : "Wähle zuerst die Referenzuhr: das Gerät, dessen Uhr am verlässlichsten lief (oft der Audiorekorder oder das Handy mit Netzzeit)."}
+      </p>
+      {progress && <Notice>{progress}</Notice>}
+      {notice && !progress && <Notice>{notice}</Notice>}
+      <div className="grid grid-cols-[minmax(140px,190px)_minmax(160px,1fr)_180px] gap-x-5">
+        <span />
+        <span className="flex justify-between pb-1 text-[0.8rem] whitespace-nowrap text-muted">
+          <span className="font-mono">−{mmss(span)}</span>
+          <span>Referenz</span>
+          <span className="font-mono">+{mmss(span)}</span>
+        </span>
+        <span />
+        {ordered.map((d) => (
+          <ClockRow
+            key={d.id}
+            device={d}
+            span={span}
+            proposals={view.proposals.filter((p) => p.deviceId === d.id)}
+            onReference={() => onReference(d.id)}
+            onOffset={(ms) => onOffset(d.id, ms)}
+            onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
+            onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
+          />
+        ))}
+      </div>
+    </Panel>
   );
 }
 
@@ -133,44 +131,55 @@ function ClockRow({
   onReject: (anchorId: string) => void;
 }) {
   const pos = (ms: number) => `${50 + (ms / span) * 50}%`;
+  const dot = "absolute top-1/2 -mt-[7px] -ml-[7px] size-3.5 rounded-full";
   return (
-    <div className={`clock ${device.isReference ? "is-ref" : ""}`} data-device={device.label}>
-      <div className="clock-name">
-        <span className={`glyph k-${device.kind}`}>{KIND_GLYPH[device.kind]}</span>
+    <div className="contents" data-testid="clock" data-device={device.label}>
+      <div className={cx(CELL, "flex items-center gap-2.5")}>
+        <Glyph kind={device.kind} />
         <div>
-          <b>{device.label}</b>
-          <div className="muted small">
+          <b className="font-semibold">{device.label}</b>
+          <div className="text-[0.8rem] text-muted">
             {device.sourceCount} {device.sourceCount === 1 ? "Datei" : "Dateien"}
             {device.personName && ` · ${device.personName}`}
           </div>
         </div>
       </div>
-      <div className="scale" aria-hidden>
-        <span className="scale-zero" />
+      <div className={cx(CELL, "relative")} aria-hidden>
+        <span className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-line" />
+        <span className="absolute inset-y-0 left-1/2 w-px bg-line-2" />
         {proposals.map(
           (p) =>
             p.impliedOffsetMs !== null && (
-              <span key={p.anchorId} className="scale-mark ghost" style={{ left: pos(p.impliedOffsetMs) }} />
+              <span
+                key={p.anchorId}
+                className={cx(dot, "border-2 border-dashed border-warn")}
+                style={{ left: pos(p.impliedOffsetMs) }}
+              />
             ),
         )}
         {device.offsetMs !== null && (
-          <span
-            className={`scale-mark ${device.isReference ? "ref" : ""}`}
-            style={{ left: pos(device.offsetMs) }}
-            title={offsetText(device.offsetMs)}
-          />
+          <Tip content={offsetText(device.offsetMs)}>
+            <span
+              className={cx(dot, "shadow-[0_0_0_3px_var(--panel)]", device.isReference ? "bg-ink-2" : "bg-accent")}
+              style={{ left: pos(device.offsetMs) }}
+            />
+          </Tip>
         )}
-        {device.offsetMs === null && <span className="scale-unknown">Abweichung unbekannt</span>}
+        {device.offsetMs === null && (
+          <span className="absolute inset-x-0 bottom-0.5 text-center text-[0.75rem] text-warn">
+            Abweichung unbekannt
+          </span>
+        )}
       </div>
-      <div className="clock-value">
+      <div className={cx(CELL, "flex flex-wrap items-center gap-x-2.5 gap-y-1")} data-testid="clock-value">
         {device.isReference ? (
-          <span className="pill ref">Referenzuhr</span>
+          <Pill tone="accent">Referenzuhr</Pill>
         ) : (
           <>
             <OffsetInput device={device} onOffset={onOffset} />
-            <button className="link small" onClick={onReference}>
+            <Button variant="link" className="basis-full text-left text-[0.8rem]" onClick={onReference}>
               als Referenz
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -195,9 +204,9 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
     if (ms !== device.offsetMs) onOffset(ms);
   };
   return (
-    <span className="offset">
+    <span className="inline-flex items-center gap-2">
       <input
-        className="mono"
+        className="w-[5.5rem] text-right font-mono disabled:bg-sunken"
         value={text}
         placeholder="±m:ss"
         aria-label={`Abweichung ${device.label}`}
@@ -206,7 +215,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
         onBlur={commit}
         onKeyDown={(e) => e.key === "Enter" && commit()}
       />
-      <span className={`small ${device.offsetMs === null ? "wa" : "muted"}`}>
+      <span className={cx("text-[0.8rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
         {device.offsetMs === null ? "offen" : BASIS_TEXT[device.offsetBasis]}
       </span>
     </span>
@@ -216,24 +225,27 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
 function Proposal({ p, onConfirm, onReject }: { p: ProposalRow; onConfirm: () => void; onReject: () => void }) {
   const sure = (p.confidence ?? 0) >= 0.5;
   return (
-    <div className="proposal">
-      <span className="proposal-tag">Vorschlag</span>
-      <div className="proposal-text">
+    <div
+      data-testid="proposal"
+      className="col-span-full mb-3 flex items-center gap-3 rounded-lg bg-warn-soft px-3 py-2"
+    >
+      <span className="text-[0.7rem] font-semibold tracking-[0.05em] text-warn uppercase">Vorschlag</span>
+      <div className="flex-1">
         <div>
-          Uhr geht <b className="mono">{p.impliedOffset ?? "?"}</b>, gefunden in <b>{p.sourceLabel}</b>{" "}
-          <span className="mono small muted">{p.fileName}</span>
+          Uhr geht <b className="font-mono">{p.impliedOffset ?? "?"}</b>, gefunden in <b>{p.sourceLabel}</b>{" "}
+          <span className="font-mono text-[0.8rem] text-muted">{p.fileName}</span>
         </div>
-        <div className="muted small">
+        <div className="text-[0.8rem] text-muted">
           {p.description} · {p.note} ·{" "}
-          <span className={sure ? "st-ok" : "wa"}>{sure ? "eindeutig" : "unsicher, bitte anhören"}</span>
+          <span className={sure ? "text-good" : "text-warn"}>{sure ? "eindeutig" : "unsicher, bitte anhören"}</span>
         </div>
       </div>
-      <button className="btn pri sm" onClick={onConfirm}>
+      <Button variant="primary" size="sm" onClick={onConfirm}>
         Übernehmen
-      </button>
-      <button className="btn sm" onClick={onReject}>
+      </Button>
+      <Button size="sm" onClick={onReject}>
         Verwerfen
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type UserConfig } from "vite-plus";
 
 type PackConfig = Extract<NonNullable<UserConfig["pack"]>, unknown[]>[number];
@@ -19,6 +20,8 @@ const shared: PackConfig = {
 export default defineConfig({
   root: "src/renderer",
   base: "./",
+  // Tailwind bringt die Plugin-Typen des normalen Vite mit; zur Laufzeit passen sie zu Vite+.
+  plugins: [tailwindcss() as unknown as NonNullable<UserConfig["plugins"]>[number]],
   build: {
     outDir: "../../out/renderer",
     emptyOutDir: true,

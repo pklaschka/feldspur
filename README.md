@@ -10,14 +10,25 @@ Projekt außerhalb des Repositorys dokumentiert.
 
 ## Aufbau
 
-| Paket                              | Inhalt                                                                                                                |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [`packages/core`](packages/core)   | Datenmodell (Zod), Zeitbestimmung, Uhrzeiten aus Dateinamen, Projektdatei (SQLite via better-sqlite3 + Drizzle)       |
-| [`packages/media`](packages/media) | Einsammeln: Dateiart erkennen, ffprobe/EXIF lesen, SHA-256, Gerätevermutung, Zeitbelege, Import ins Projekt           |
-| [`apps/desktop`](apps/desktop)     | Electron-App (React). Bisher: Projekt anlegen/öffnen, Einsätze, Import-Ansicht wie Skizze A, Geräteuhren, Randnotizen |
-| [`scripts`](scripts)               | Entwicklerwerkzeuge                                                                                                   |
+| Paket                              | Inhalt                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [`packages/core`](packages/core)   | Datenmodell (Zod), Zeitbestimmung, Uhrzeiten aus Dateinamen, Projektdatei (SQLite via better-sqlite3 + Drizzle)     |
+| [`packages/media`](packages/media) | Einsammeln: Dateiart erkennen, ffprobe/EXIF lesen, SHA-256, Gerätevermutung, Zeitbelege, Import ins Projekt         |
+| [`apps/desktop`](apps/desktop)     | Electron-App (React, Tailwind, Radix). Schritte Einsammeln, Abgleichen, Durchsehen (Canvas-Zeitachse), Detailleiste |
+| [`scripts`](scripts)               | Entwicklerwerkzeuge                                                                                                 |
 
 Werkzeugkette ist [Vite+](https://viteplus.dev) (`vp`): Vitest, Oxlint, Oxfmt, tsdown, Vite.
+
+Oberfläche: Tailwind CSS v4 (Farben als CSS-Variablen in `styles.css`, hell/dunkel), Radix-Primitive (Reiter, Tooltips,
+Regler), Zeitachse auf Canvas (`apps/desktop/src/renderer/timeline.ts`) mit einer verborgenen Liste für Tastatur und
+Bildschirmleser.
+
+Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
+
+- **exifr** statt ExifTool: liest Aufnahmezeiten aus JPEG/HEIC ohne Zusatzprogramm. ExifTool kommt dazu, falls RAW
+  oder Videos ohne ffprobe-Zeit gebraucht werden.
+- **Eigene Lautstärkekurve** statt FFmpeg-silencedetect: dieselbe Hüllkurve liefert Stille, laute Stellen und
+  Klatscher für den Abgleich, ein Durchlauf statt zwei.
 
 ## Begriffe im Code
 
@@ -72,6 +83,6 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 
 - Exportformat (Zeitgerüst + Tagesvideo) wartet auf den MAXQDA-Test.
 - Anker von Hand setzen (Skizze B), gesprochene Uhrzeiten markieren.
-- Zeitachse mit Spuren (Skizze C), Episodengrenzen verschieben, laute Stellen zur Mini-Episode machen.
+- Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - Tagebuch: Rahmen auf Scans ziehen, Kurzform/Volltext, Einträge über Seiten verketten.
 - ExifTool statt exifr für RAW/HEIC, mitgelieferte FFmpeg-Programme, Paketierung mit electron-builder.
