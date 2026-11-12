@@ -6,7 +6,7 @@ Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchs
 Arbeitstitel, Stand: erste Implementierungsschritte (Einsammeln und Zeitbestimmung). Konzept und Tech-Stack sind im
 Projekt außerhalb des Repositorys dokumentiert.
 
-![Import-Ansicht mit dem erfundenen Testmarkt](docs/import-ansicht.png)
+![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
 ## Aufbau
 

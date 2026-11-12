@@ -37,3 +37,41 @@ export function parseOffset(text: string): number | null {
 export function clock(ms: number): string {
   return formatClock(ms);
 }
+
+export function formatDay(date: string): string {
+  const [, m, d] = date.split("-");
+  return `${d}.${m}.`;
+}
+
+/** "10:15" */
+export function hm(ms: number): string {
+  return formatClock(ms).slice(0, 5);
+}
+
+export function bytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1).replace(".", ",")} MB`;
+  return `${(n / 1024 ** 3).toFixed(2).replace(".", ",")} GB`;
+}
+
+export const STATUS_TEXT = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
+
+export const EVIDENCE_LABEL: Record<string, string> = {
+  metadata: "Metadaten",
+  filename: "Dateiname",
+  spoken: "angesagt",
+  anchor: "Anker",
+  manual: "von Hand",
+};
+
+/** Kurzes Kürzel als Symbol je Quellenart. */
+export const KIND_GLYPH: Record<SourceKind, string> = {
+  video: "▶",
+  audio: "◖",
+  photo: "◼",
+  diary: "✎",
+  note: "≡",
+  gps: "⌖",
+  other: "·",
+};

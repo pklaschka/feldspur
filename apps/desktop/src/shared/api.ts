@@ -25,6 +25,22 @@ export interface SourceRow {
   correctionMs: number;
   /** Nur Tagebuchseiten: Notierzeit "hh:mm" des ersten Eintrags. */
   diaryNote: string | null;
+  /** Nur Tagebuchseiten: Bezugszeitraum (Beginn, Notierzeit). */
+  diaryWindow: { fromMs: number; toMs: number } | null;
+  durationMs: number | null;
+  sizeBytes: number;
+  sha256: string;
+  originalPath: string;
+  /** ± Unsicherheit der Lage in ms. */
+  uncertaintyMs: number | null;
+  /** Alle Zeitbelege, der gewählte zuerst. */
+  evidence: { kind: string; detail: string; raw: string; chosen: boolean; enabled: boolean }[];
+  /** Leerlauf in echter Zeit (nur Audio/Video nach Analyse). */
+  idle: { startMs: number; endMs: number }[];
+  /** Laute Stellen im Leerlauf, echte Zeit. */
+  loudAtMs: number[];
+  /** Bild, das sich als Vorschau zeigen lässt (Foto, Scan). */
+  previewable: boolean;
   status: PlacementStatus;
   notes: string[];
 }
@@ -32,6 +48,9 @@ export interface SourceRow {
 export interface DeviceRow {
   id: string;
   label: string;
+  /** Vorherrschende Quellenart, für Symbol und Farbe. */
+  kind: SourceKind;
+  personName: string;
   isReference: boolean;
   offsetMs: number | null;
   offsetBasis: OffsetBasis;
@@ -49,6 +68,9 @@ export interface ProposalRow {
   confidence: number | null;
   /** Daraus folgende Abweichung des Geräts, z. B. "+2:47". */
   impliedOffset: string | null;
+  /** Dieselbe Abweichung in ms, für die Skala. */
+  impliedOffsetMs: number | null;
+  deviceId: string | null;
   deviceLabel: string;
 }
 
@@ -71,6 +93,9 @@ export interface GapRow {
 export interface SessionView {
   session: FieldSession;
   rows: SourceRow[];
+  /** Alle Geräte, auch ohne eigene Uhr (Tagebuch). */
+  allDevices: DeviceRow[];
+  /** Geräte mit Uhr, die abgeglichen werden müssen. */
   devices: DeviceRow[];
   proposals: ProposalRow[];
   /** null = Tonspuren noch nicht analysiert */
@@ -102,6 +127,7 @@ export interface FeldspurApi {
   pickFiles(): Promise<string[]>;
   importPaths(sessionId: string, paths: string[]): Promise<ImportOutcome>;
   setReference(deviceId: string): Promise<SessionView>;
+  renameDevice(deviceId: string, label: string): Promise<SessionView>;
   /** null = Abweichung unbekannt */
   setDeviceOffset(deviceId: string, offsetMs: number | null): Promise<SessionView>;
   /** Randnotiz einer Tagebuchseite setzen ("10:12"); leer = entfernen. Erzeugt einen Eintrag über die ganze Seite. */
@@ -115,6 +141,10 @@ export interface FeldspurApi {
   pathForFile(file: File): string;
 }
 
+/** Eigenes Protokoll, über das die Oberfläche Originalbilder anzeigen darf (nur lesend, nur Fotos/Scans). */
+export const MEDIA_SCHEME = "feldspur-media";
+export const mediaUrl = (sourceId: string) => `${MEDIA_SCHEME}://source/${encodeURIComponent(sourceId)}`;
+
 export const IPC = {
   newProject: "project:new",
   openProject: "project:open",
@@ -124,6 +154,7 @@ export const IPC = {
   pickFiles: "import:pick",
   importPaths: "import:paths",
   setReference: "device:set-reference",
+  renameDevice: "device:rename",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",

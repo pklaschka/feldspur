@@ -19,11 +19,39 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const sourceById = new Map(input.sources.map((s) => [s.id, s]));
 
+  const analyses = store.listAudioAnalyses(sessionId);
+  const analysisBySource = new Map(analyses.map((a) => [a.sourceId, a]));
+  const evidenceBySource = new Map<Id, typeof input.evidence>();
+  for (const e of [...input.evidence, ...res.derivedEvidence]) {
+    evidenceBySource.set(e.sourceId, [...(evidenceBySource.get(e.sourceId) ?? []), e]);
+  }
+
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
     const entry = input.diaryEntries.find((e) => e.regions.some((r) => r.sourceId === s.id) && e.notedAtMs !== null);
+    const dp = entry ? res.diary.get(entry.id) : undefined;
     const d = s.deviceId ? devices.get(s.deviceId) : undefined;
+    const an = analysisBySource.get(s.id);
+    const evs = (evidenceBySource.get(s.id) ?? [])
+      .map((e) => ({
+        kind: e.kind,
+        detail: e.detail,
+        raw: e.raw,
+        chosen: p?.basis.evidenceId === e.id,
+        enabled: e.enabled,
+      }))
+      .sort((a, b) => Number(b.chosen) - Number(a.chosen));
     return {
+      diaryWindow: dp ? { fromMs: dp.fromMs, toMs: dp.toMs } : null,
+      durationMs: s.durationMs,
+      sizeBytes: s.sizeBytes,
+      sha256: s.sha256,
+      originalPath: s.originalPath,
+      uncertaintyMs: p?.uncertaintyMs ?? null,
+      evidence: evs,
+      idle: p && an ? an.idle.map((i) => ({ startMs: p.startMs + i.startMs, endMs: p.startMs + i.endMs })) : [],
+      loudAtMs: p && an ? an.loudInIdle.map((l) => p.startMs + l.atMs) : [],
+      previewable: (s.kind === "photo" || s.kind === "diary") && /\.(jpe?g|png|webp|gif)$/i.test(s.fileName),
       id: s.id,
       label: s.label,
       kind: s.kind,
@@ -42,21 +70,25 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   });
   rows.sort((a, b) => (a.startMs ?? Infinity) - (b.startMs ?? Infinity) || a.label.localeCompare(b.label));
 
-  // Geräte ohne eigene Uhr (nur Tagebuchscans, Notizen) brauchen keinen Abgleich.
-  const clocked = input.devices.filter((d) =>
-    input.sources.some((s) => s.deviceId === d.id && s.kind !== "diary" && s.kind !== "note"),
-  );
-  const deviceRows: DeviceRow[] = clocked.map((d) => {
+  const toRow = (d: (typeof input.devices)[number]): DeviceRow => {
     const c = res.deviceClocks.get(d.id);
+    const kinds = input.sources.filter((s) => s.deviceId === d.id).map((s) => s.kind);
+    const kind =
+      (["video", "audio", "photo", "diary", "gps", "note", "other"] as const).find((k) => kinds.includes(k)) ?? "other";
     return {
       id: d.id,
       label: d.label,
+      kind,
+      personName: d.personId ? (persons.get(d.personId) ?? "") : "",
       isReference: d.isReference,
       offsetMs: c?.offsetMs ?? null,
       offsetBasis: c?.basis ?? "unknown",
-      sourceCount: input.sources.filter((s) => s.deviceId === d.id).length,
+      sourceCount: kinds.length,
     };
-  });
+  };
+  const allDevices = input.devices.map(toRow);
+  // Geräte ohne eigene Uhr (nur Tagebuchscans, Notizen) brauchen keinen Abgleich.
+  const deviceRows = allDevices.filter((d) => d.kind !== "diary" && d.kind !== "note");
 
   // Vorschläge aus der Tonspur-Analyse.
   const proposals: ProposalRow[] = input.anchors
@@ -82,12 +114,13 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         note: a.note,
         confidence: a.confidence,
         impliedOffset: implied === null ? null : formatDuration(implied, { sign: true }),
+        impliedOffsetMs: implied,
+        deviceId: dev?.id ?? null,
         deviceLabel: dev?.label ?? "",
       };
     });
 
   // Episoden, sobald analysiert.
-  const analyses = store.listAudioAnalyses(sessionId);
   const avCount = input.sources.filter((s) => s.kind === "audio" || s.kind === "video").length;
   let episodes: EpisodeRow[] | null = null;
   let gaps: GapRow[] = [];
@@ -120,6 +153,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   return {
     session: input.session,
     rows,
+    allDevices,
     devices: deviceRows,
     proposals,
     episodes,

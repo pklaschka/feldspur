@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { pathToFileURL } from "node:url";
+import { app, BrowserWindow, dialog, ipcMain, net, protocol } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
 import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
-import { IPC, type ImportOutcome, type NewSessionInput, type ProjectInfo } from "../shared/api.ts";
+import { IPC, MEDIA_SCHEME, type ImportOutcome, type NewSessionInput, type ProjectInfo } from "../shared/api.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -88,6 +89,12 @@ function registerIpc(): void {
       warnings: plan.flatMap((c) => c.warnings.map((message) => ({ fileName: c.fileName, message }))),
       view: buildSessionView(s, sessionId),
     };
+  });
+
+  ipcMain.handle(IPC.renameDevice, (_e, deviceId: string, label: string) => {
+    const s = requireStore();
+    const d = s.updateDevice(deviceId, { label: label.trim() || s.getDevice(deviceId).label });
+    return buildSessionView(s, d.sessionId);
   });
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
@@ -197,7 +204,28 @@ if (process.env.FELDSPUR_FFPROBE || process.env.FELDSPUR_FFMPEG) {
   });
 }
 
+protocol.registerSchemesAsPrivileged([
+  { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+]);
+
+/** Originalbilder für die Vorschau ausliefern: nur Quellen des offenen Projekts, nur Bilder. */
+function registerMediaProtocol(): void {
+  protocol.handle(MEDIA_SCHEME, async (req) => {
+    try {
+      const url = new URL(req.url);
+      const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
+      if (url.host !== "source" || !store) return new Response("Nicht gefunden", { status: 404 });
+      const src = store.getSource(id);
+      if (!/\.(jpe?g|png|webp|gif)$/i.test(src.fileName)) return new Response("Kein Bild", { status: 415 });
+      return await net.fetch(pathToFileURL(src.originalPath).toString());
+    } catch {
+      return new Response("Nicht gefunden", { status: 404 });
+    }
+  });
+}
+
 void app.whenReady().then(() => {
+  registerMediaProtocol();
   registerIpc();
   // Für Tests und „Öffnen mit“: Projektpfad als Argument.
   const arg = process.argv.find((a) => a.endsWith(".feldspur"));

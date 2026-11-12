@@ -52,13 +52,26 @@ export async function listFiles(paths: string[]): Promise<string[]> {
   return [...new Set(out)];
 }
 
+const KIND_DEVICE: Partial<Record<SourceKind, string>> = {
+  video: "Kamera",
+  audio: "Audiorekorder",
+  photo: "Fotos",
+  gps: "GPS",
+  note: "Notizen",
+};
+
+/** Buchstaben am Anfang der Dateinamen-Familie: "C####.mp4" → "C", "IMG_########_######.jpg" → "IMG". */
+function familyPrefix(family: string): string {
+  return family.replace(/[#].*$/, "").replace(/[_\-\s.]+$/, "");
+}
+
 function deviceGuess(
   fileName: string,
   kind: SourceKind,
   exif: ImageExif | null,
   probe: MediaProbe | null,
 ): { key: string; label: string } {
-  if (kind === "diary") return { key: "diary", label: "Tagebuch (Scans)" };
+  if (kind === "diary") return { key: "diary", label: "Tagebuch" };
   const make = exif?.make ?? probe?.tags["com.apple.quicktime.make"] ?? probe?.tags["make"];
   const model = exif?.model ?? probe?.tags["com.apple.quicktime.model"] ?? probe?.tags["model"];
   if (model) {
@@ -66,7 +79,9 @@ function deviceGuess(
     return { key: `model:${label.toLowerCase()}`, label };
   }
   const family = filenameFamily(fileName);
-  return { key: `family:${family.toLowerCase()}`, label: `Gerät „${family}“` };
+  const prefix = familyPrefix(family);
+  const base = KIND_DEVICE[kind] ?? "Gerät";
+  return { key: `family:${family.toLowerCase()}`, label: prefix ? `${base} ${prefix}` : base };
 }
 
 export async function inspectFile(path: string): Promise<ImportCandidate> {

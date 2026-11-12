@@ -10,6 +10,7 @@ const api: FeldspurApi = {
   pickFiles: () => ipcRenderer.invoke(IPC.pickFiles),
   importPaths: (id, paths) => ipcRenderer.invoke(IPC.importPaths, id, paths),
   setReference: (id) => ipcRenderer.invoke(IPC.setReference, id),
+  renameDevice: (id, label) => ipcRenderer.invoke(IPC.renameDevice, id, label),
   setDeviceOffset: (id, ms) => ipcRenderer.invoke(IPC.setDeviceOffset, id, ms),
   setDiaryNote: (id, clock) => ipcRenderer.invoke(IPC.setDiaryNote, id, clock),
   analyze: (id) => ipcRenderer.invoke(IPC.analyze, id),
