@@ -3,7 +3,7 @@
  * Änderungen hier brauchen immer eine neue Migration in migrations.ts.
  */
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 
 const json = <T>(name: string) => text(name, { mode: "json" }).$type<T>();
 const bool = (name: string) => integer(name, { mode: "boolean" });
@@ -120,6 +120,8 @@ export const anchors = sqliteTable(
     uncertaintyMs: integer("uncertainty_ms").notNull(),
     note: text("note").notNull().default(""),
     enabled: bool("enabled").notNull().default(true),
+    proposed: bool("proposed").notNull().default(false),
+    confidence: real("confidence"),
   },
   (t) => [index("anchors_session").on(t.sessionId)],
 );
@@ -152,3 +154,20 @@ export const diaryEntries = sqliteTable(
   },
   (t) => [index("diary_session").on(t.sessionId)],
 );
+
+export const audioAnalysis = sqliteTable("audio_analysis", {
+  sourceId: text("source_id")
+    .primaryKey()
+    .references(() => sources.id, { onDelete: "cascade" }),
+  envelope: blob("envelope", { mode: "buffer" }).notNull(),
+  envelopeRate: integer("envelope_rate").notNull(),
+  noiseFloorDb: real("noise_floor_db").notNull(),
+  idle: json<{ startMs: number; endMs: number }[]>("idle")
+    .notNull()
+    .default(sql`'[]'`),
+  loudInIdle: json<{ atMs: number; aboveFloorDb: number }[]>("loud_in_idle")
+    .notNull()
+    .default(sql`'[]'`),
+  version: integer("version").notNull(),
+  analyzedAt: text("analyzed_at").notNull(),
+});

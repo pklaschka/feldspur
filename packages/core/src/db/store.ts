@@ -11,6 +11,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
+  AudioAnalysis,
   Device,
   DiaryEntry,
   FieldSession,
@@ -316,9 +317,27 @@ export class ProjectStore {
         uncertaintyMs: a.uncertaintyMs,
         note: a.note,
         enabled: a.enabled,
+        proposed: a.proposed,
+        confidence: a.confidence,
       })
       .run();
     return a;
+  }
+
+  /** Alle unbestätigten Vorschläge eines Einsatzes durch neue ersetzen. */
+  replaceProposedAnchors(sessionId: Id, proposals: WithOptionalId<In<typeof SyncAnchor>>[]): SyncAnchor[] {
+    return this.transaction(() => {
+      this.db
+        .delete(schema.anchors)
+        .where(and(eq(schema.anchors.sessionId, sessionId), eq(schema.anchors.proposed, true)))
+        .run();
+      return proposals.map((p) => this.addAnchor({ ...p, sessionId, proposed: true }));
+    });
+  }
+
+  /** Vorschlag übernehmen: zählt ab jetzt für die Zeitbestimmung. */
+  confirmAnchor(id: Id): void {
+    this.db.update(schema.anchors).set({ proposed: false, enabled: true }).where(eq(schema.anchors.id, id)).run();
   }
 
   listAnchors(sessionId: Id): SyncAnchor[] {
@@ -337,12 +356,43 @@ export class ProjectStore {
           uncertaintyMs: r.uncertaintyMs,
           note: r.note,
           enabled: r.enabled,
+          proposed: r.proposed,
+          confidence: r.confidence,
         }),
       );
   }
 
+  getAnchor(id: Id): SyncAnchor {
+    const r = this.db.select().from(schema.anchors).where(eq(schema.anchors.id, id)).get();
+    if (!r) throw new Error(`Anker nicht gefunden: ${id}`);
+    return this.listAnchors(r.sessionId).find((a) => a.id === id)!;
+  }
+
   deleteAnchor(id: Id): void {
     this.db.delete(schema.anchors).where(eq(schema.anchors.id, id)).run();
+  }
+
+  // ── Tonspur-Analyse ──────────────────────────────────────────────────────
+
+  saveAudioAnalysis(input: In<typeof AudioAnalysis>): AudioAnalysis {
+    const a = AudioAnalysis.parse(input);
+    const row = { ...a, envelope: Buffer.from(a.envelope) };
+    this.db
+      .insert(schema.audioAnalysis)
+      .values(row)
+      .onConflictDoUpdate({ target: schema.audioAnalysis.sourceId, set: row })
+      .run();
+    return a;
+  }
+
+  listAudioAnalyses(sessionId: Id): AudioAnalysis[] {
+    return this.db
+      .select({ a: schema.audioAnalysis })
+      .from(schema.audioAnalysis)
+      .innerJoin(schema.sources, eq(schema.sources.id, schema.audioAnalysis.sourceId))
+      .where(eq(schema.sources.sessionId, sessionId))
+      .all()
+      .map(({ a }) => AudioAnalysis.parse({ ...a, envelope: new Uint8Array(a.envelope) }));
   }
 
   // ── Tagebuch ─────────────────────────────────────────────────────────────

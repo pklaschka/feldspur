@@ -287,7 +287,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     let changed = false;
     anchorConflicts.length = 0;
     for (const anchor of input.anchors) {
-      if (!anchor.enabled) continue;
+      if (!anchor.enabled || anchor.proposed) continue;
       for (const [known, other] of [
         [anchor.a, anchor.b],
         [anchor.b, anchor.a],

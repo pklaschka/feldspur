@@ -1,5 +1,15 @@
-import { formatClock, resolveTimeline, type ProjectStore } from "@feldspur/core";
-import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
+import {
+  computeEpisodes,
+  formatDuration,
+  formatClock,
+  resolveTimeline,
+  type Id,
+  type Interval,
+  type ProjectStore,
+} from "@feldspur/core";
+import type { DeviceRow, EpisodeRow, GapRow, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
+
+const mmss = (ms: number) => formatDuration(ms);
 
 /** Einsatz laden, Zeitbestimmung rechnen und als Tabellenzeilen aufbereiten. */
 export function buildSessionView(store: ProjectStore, sessionId: string): SessionView {
@@ -7,6 +17,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   const res = resolveTimeline(input);
   const persons = new Map(store.listPersons().map((p) => [p.id, p.name]));
   const devices = new Map(input.devices.map((d) => [d.id, d]));
+  const sourceById = new Map(input.sources.map((s) => [s.id, s]));
 
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
@@ -47,5 +58,73 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     };
   });
 
-  return { session: input.session, rows, devices: deviceRows };
+  // Vorschläge aus der Tonspur-Analyse.
+  const proposals: ProposalRow[] = input.anchors
+    .filter((a) => a.proposed)
+    .map((a) => {
+      const ref = sourceById.get(a.a.sourceId);
+      const clip = sourceById.get(a.b.sourceId);
+      const dev = clip?.deviceId ? devices.get(clip.deviceId) : undefined;
+      // Abweichung, die aus diesem Anker folgen würde: Geräteuhr am Ankerpunkt minus echte Zeit.
+      const refStart = ref ? res.placements.get(ref.id)?.startMs : undefined;
+      const devEv = input.evidence.find((e) => e.sourceId === clip?.id && e.enabled && e.clock === "device");
+      const implied =
+        refStart !== undefined && devEv
+          ? devEv.localMs - devEv.atMediaMs + a.b.atMediaMs - (refStart + a.a.atMediaMs)
+          : null;
+      const what = a.kind === "clap" ? "Klatschen" : "Gleicher Ton";
+      return {
+        anchorId: a.id,
+        sourceLabel: clip?.label ?? "?",
+        fileName: clip?.fileName ?? "",
+        refLabel: ref?.label ?? "?",
+        description: `${what} bei ${mmss(a.b.atMediaMs)} ↔ ${ref?.label ?? "?"} bei ${mmss(a.a.atMediaMs)}`,
+        note: a.note,
+        confidence: a.confidence,
+        impliedOffset: implied === null ? null : formatDuration(implied, { sign: true }),
+        deviceLabel: dev?.label ?? "",
+      };
+    });
+
+  // Episoden, sobald analysiert.
+  const analyses = store.listAudioAnalyses(sessionId);
+  const avCount = input.sources.filter((s) => s.kind === "audio" || s.kind === "video").length;
+  let episodes: EpisodeRow[] | null = null;
+  let gaps: GapRow[] = [];
+  if (analyses.length) {
+    const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
+    const ep = computeEpisodes(input.sources, res, idle);
+    const label = (id: Id) => sourceById.get(id)?.label ?? "?";
+    episodes = ep.episodes.map((e) => ({
+      index: e.index,
+      startMs: e.startMs,
+      endMs: e.endMs,
+      sourceLabels: e.sourceIds.map(label).sort(),
+    }));
+    const loud = analyses.flatMap((a) => {
+      const start = res.placements.get(a.sourceId)?.startMs;
+      return start === undefined ? [] : a.loudInIdle.map((l) => start + l.atMs);
+    });
+    const diaryLabel = (entryId: Id) => {
+      const e = input.diaryEntries.find((x) => x.id === entryId);
+      return e?.regions[0] ? `${label(e.regions[0].sourceId)} (Tagebuch)` : "Tagebuch";
+    };
+    gaps = ep.gaps.map((g) => ({
+      startMs: g.startMs,
+      endMs: g.endMs,
+      itemLabels: [...g.sourceIds.map(label), ...g.diaryEntryIds.map(diaryLabel)],
+      loudAtMs: loud.filter((t) => t >= g.startMs && t <= g.endMs).sort((a, b) => a - b),
+    }));
+  }
+
+  return {
+    session: input.session,
+    rows,
+    devices: deviceRows,
+    proposals,
+    episodes,
+    gaps,
+    analyzedCount: analyses.length,
+    avCount,
+  };
 }

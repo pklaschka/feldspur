@@ -12,6 +12,14 @@ const api: FeldspurApi = {
   setReference: (id) => ipcRenderer.invoke(IPC.setReference, id),
   setDeviceOffset: (id, ms) => ipcRenderer.invoke(IPC.setDeviceOffset, id, ms),
   setDiaryNote: (id, clock) => ipcRenderer.invoke(IPC.setDiaryNote, id, clock),
+  analyze: (id) => ipcRenderer.invoke(IPC.analyze, id),
+  confirmAnchor: (id) => ipcRenderer.invoke(IPC.confirmAnchor, id),
+  rejectAnchor: (id) => ipcRenderer.invoke(IPC.rejectAnchor, id),
+  onProgress: (cb) => {
+    const listener = (_e: unknown, p: { done: number; total: number; fileName: string }) => cb(p);
+    ipcRenderer.on(IPC.progress, listener);
+    return () => ipcRenderer.removeListener(IPC.progress, listener);
+  },
   pathForFile: (file) => webUtils.getPathForFile(file),
 };
 

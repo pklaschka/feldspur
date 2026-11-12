@@ -32,3 +32,8 @@ export function parseOffset(text: string): number | null {
   const sec = Number(m[3]);
   return sign * Math.round((min * 60 + sec) * 1000);
 }
+
+/** "10:15:00" */
+export function clock(ms: number): string {
+  return formatClock(ms);
+}

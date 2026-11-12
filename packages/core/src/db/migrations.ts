@@ -88,4 +88,19 @@ export const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX diary_session ON diary_entries(session_id);
   `,
+  // 2: Anker-Vorschläge, Tonspur-Analyse
+  `
+  ALTER TABLE sync_anchors ADD COLUMN proposed INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE sync_anchors ADD COLUMN confidence REAL;
+  CREATE TABLE audio_analysis (
+    source_id TEXT PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
+    envelope BLOB NOT NULL,
+    envelope_rate INTEGER NOT NULL,
+    noise_floor_db REAL NOT NULL,
+    idle TEXT NOT NULL DEFAULT '[]',
+    loud_in_idle TEXT NOT NULL DEFAULT '[]',
+    version INTEGER NOT NULL,
+    analyzed_at TEXT NOT NULL
+  );
+  `,
 ];

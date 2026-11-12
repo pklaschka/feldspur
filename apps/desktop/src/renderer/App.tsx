@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type DragEvent, type FormEvent } from "react";
-import type { DeviceRow, ProjectInfo, SessionView, SourceRow } from "../shared/api.ts";
-import { KIND_LABEL, lage, offsetText, parseOffset } from "./format.ts";
+import type { DeviceRow, EpisodeRow, GapRow, ProjectInfo, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
+import { clock, KIND_LABEL, lage, offsetText, parseOffset } from "./format.ts";
 
 const api = window.feldspur;
 
@@ -187,6 +187,8 @@ function SessionPane({ sessionId, guard }: { sessionId: string; guard: Guard }) 
           onOffset={(id, ms) => void guard(() => api.setDeviceOffset(id, ms)).then((v) => v && setView(v))}
         />
       )}
+      {view.avCount > 0 && <SyncPanel view={view} guard={guard} onView={setView} onNotice={setNotice} />}
+      {view.episodes && <EpisodePanel episodes={view.episodes} gaps={view.gaps} />}
     </div>
   );
 }
@@ -232,7 +234,10 @@ function SourceTable({
                 {r.kind === "diary" ? (
                   <DiaryNoteInput row={r} onCommit={(clock) => onDiaryNote(r.id, clock)} />
                 ) : (
-                  r.basis
+                  <>
+                    {r.basis}
+                    {r.correctionMs !== 0 && <span className="muted"> · korrigiert {offsetText(r.correctionMs)}</span>}
+                  </>
                 )}
               </td>
               <td className="mono">{lage(r.startMs, r.endMs)}</td>
@@ -326,5 +331,148 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (id: s
         {device.offsetMs === null ? "Uhr weicht ab?" : BASIS_TEXT[device.offsetBasis]}
       </span>
     </span>
+  );
+}
+
+function SyncPanel({
+  view,
+  guard,
+  onView,
+  onNotice,
+}: {
+  view: SessionView;
+  guard: Guard;
+  onView: (v: SessionView) => void;
+  onNotice: (n: string) => void;
+}) {
+  const [progress, setProgress] = useState<string | null>(null);
+  const hasReference = view.devices.some((d) => d.isReference);
+
+  const run = async () => {
+    setProgress("Starte…");
+    const off = api.onProgress((p) =>
+      setProgress(p.fileName ? `${p.done + 1} / ${p.total} · ${p.fileName}` : "Suche Übereinstimmungen…"),
+    );
+    const r = await guard(() => api.analyze(view.session.id));
+    off();
+    setProgress(null);
+    if (!r) return;
+    onView(r.view);
+    const n = r.view.proposals.length;
+    onNotice(
+      [
+        `${r.analyzed} ${r.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert`,
+        n ? `${n} ${n === 1 ? "Vorschlag" : "Vorschläge"}` : "keine neuen Vorschläge",
+        ...(r.failed.length ? [`${r.failed.length} nicht lesbar`] : []),
+      ].join(" · "),
+    );
+  };
+
+  return (
+    <section className="devices sync">
+      <div className="row between">
+        <h3>Abgleich über die Tonspur</h3>
+        <button className="btn" disabled={!!progress || !hasReference} onClick={() => void run()}>
+          {view.analyzedCount ? "Erneut abgleichen" : "Tonspuren abgleichen"}
+        </button>
+      </div>
+      <p className="muted small">
+        {hasReference
+          ? "Sucht Klatschen und gleiche Geräusche in den Aufnahmen und schlägt vor, wie die Uhren zueinander stehen. Nichts wird ohne deine Bestätigung übernommen."
+          : "Wähle oben zuerst eine Referenzuhr."}
+      </p>
+      {progress && <p className="notice">{progress}</p>}
+      {view.proposals.map((p) => (
+        <ProposalItem
+          key={p.anchorId}
+          p={p}
+          onConfirm={() => void guard(() => api.confirmAnchor(p.anchorId)).then((v) => v && onView(v))}
+          onReject={() => void guard(() => api.rejectAnchor(p.anchorId)).then((v) => v && onView(v))}
+        />
+      ))}
+    </section>
+  );
+}
+
+function ProposalItem({ p, onConfirm, onReject }: { p: ProposalRow; onConfirm: () => void; onReject: () => void }) {
+  const sure = (p.confidence ?? 0) >= 0.5;
+  return (
+    <div className="dev proposal">
+      <div className="stack-sm">
+        <span>
+          <b>{p.sourceLabel}</b> <span className="mono small">{p.fileName}</span>
+          {p.impliedOffset && (
+            <>
+              {" "}
+              · {p.deviceLabel} geht <b className="mono">{p.impliedOffset}</b>
+            </>
+          )}
+        </span>
+        <span className="muted small">
+          {p.description} · {p.note} ·{" "}
+          <span className={sure ? "st-ok" : "wa"}>{sure ? "eindeutig" : "unsicher, bitte anhören"}</span>
+        </span>
+      </div>
+      <span className="row">
+        <button className="btn pri" onClick={onConfirm}>
+          Übernehmen
+        </button>
+        <button className="btn" onClick={onReject}>
+          Verwerfen
+        </button>
+      </span>
+    </div>
+  );
+}
+
+function EpisodePanel({ episodes, gaps }: { episodes: EpisodeRow[]; gaps: GapRow[] }) {
+  type Item = { kind: "ep"; e: EpisodeRow } | { kind: "gap"; g: GapRow };
+  const items: Item[] = [
+    ...episodes.map((e) => ({ kind: "ep" as const, e, t: e.startMs })),
+    ...gaps.map((g) => ({ kind: "gap" as const, g, t: g.startMs })),
+  ].sort((a, b) => a.t - b.t);
+  const total = episodes.reduce((s, e) => s + e.endMs - e.startMs, 0);
+  return (
+    <section className="devices">
+      <h3>Episoden</h3>
+      <p className="muted small">
+        {episodes.length} {episodes.length === 1 ? "Episode" : "Episoden"} · {Math.round(total / 60_000)} Min. mit
+        Inhalt. Stille ab 5 Minuten wird zur Zwischentafel; laute Stellen darin stehen dabei, damit nichts unbemerkt
+        wegfällt.
+      </p>
+      <div className="dense">
+        {items.map((it) =>
+          it.kind === "ep" ? (
+            <div
+              key={`e${it.e.index}`}
+              className="ep"
+              style={{ flexGrow: Math.max(1, (it.e.endMs - it.e.startMs) / 60_000) }}
+            >
+              <b>
+                E{it.e.index} · {clock(it.e.startMs)}–{clock(it.e.endMs)}
+              </b>
+              <br />
+              {it.e.sourceLabels.join(", ")}
+            </div>
+          ) : (
+            <div key={`g${it.g.startMs}`} className="card">
+              <b>
+                {clock(it.g.startMs)}–{clock(it.g.endMs)}
+              </b>
+              <br />
+              {it.g.itemLabels.length ? it.g.itemLabels.join(", ") : "keine Aufnahme"}
+              {it.g.loudAtMs.length > 0 && (
+                <span className="wa">
+                  <br />
+                  {it.g.loudAtMs.length} laute {it.g.loudAtMs.length === 1 ? "Stelle" : "Stellen"}:{" "}
+                  {it.g.loudAtMs.slice(0, 3).map(clock).join(", ")}
+                  {it.g.loudAtMs.length > 3 ? " …" : ""}
+                </span>
+              )}
+            </div>
+          ),
+        )}
+      </div>
+    </section>
   );
 }

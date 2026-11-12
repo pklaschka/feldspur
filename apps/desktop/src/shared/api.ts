@@ -38,10 +38,46 @@ export interface DeviceRow {
   sourceCount: number;
 }
 
+export interface ProposalRow {
+  anchorId: string;
+  sourceLabel: string;
+  fileName: string;
+  refLabel: string;
+  /** "Klatschen bei 0:20 ↔ A-01 bei 1:20" */
+  description: string;
+  note: string;
+  confidence: number | null;
+  /** Daraus folgende Abweichung des Geräts, z. B. "+2:47". */
+  impliedOffset: string | null;
+  deviceLabel: string;
+}
+
+export interface EpisodeRow {
+  index: number;
+  startMs: number;
+  endMs: number;
+  sourceLabels: string[];
+}
+
+export interface GapRow {
+  startMs: number;
+  endMs: number;
+  /** Fotos, Tagebuch in der Zwischenzeit. */
+  itemLabels: string[];
+  /** Laute Stellen im Leerlauf (Wachhund), als Uhrzeiten. */
+  loudAtMs: number[];
+}
+
 export interface SessionView {
   session: FieldSession;
   rows: SourceRow[];
   devices: DeviceRow[];
+  proposals: ProposalRow[];
+  /** null = Tonspuren noch nicht analysiert */
+  episodes: EpisodeRow[] | null;
+  gaps: GapRow[];
+  analyzedCount: number;
+  avCount: number;
 }
 
 export interface ImportOutcome {
@@ -70,6 +106,11 @@ export interface FeldspurApi {
   setDeviceOffset(deviceId: string, offsetMs: number | null): Promise<SessionView>;
   /** Randnotiz einer Tagebuchseite setzen ("10:12"); leer = entfernen. Erzeugt einen Eintrag über die ganze Seite. */
   setDiaryNote(sourceId: string, clock: string): Promise<SessionView>;
+  /** Tonspuren analysieren (Hüllkurve, Leerlauf) und Anker vorschlagen. */
+  analyze(sessionId: string): Promise<{ view: SessionView; analyzed: number; failed: string[] }>;
+  confirmAnchor(anchorId: string): Promise<SessionView>;
+  rejectAnchor(anchorId: string): Promise<SessionView>;
+  onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
 }
@@ -85,4 +126,8 @@ export const IPC = {
   setReference: "device:set-reference",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
+  analyze: "audio:analyze",
+  confirmAnchor: "anchor:confirm",
+  rejectAnchor: "anchor:reject",
+  progress: "progress",
 } as const;

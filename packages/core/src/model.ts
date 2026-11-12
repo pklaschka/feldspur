@@ -149,6 +149,10 @@ export const SyncAnchor = z.object({
   uncertaintyMs: z.number().int().nonnegative().default(50),
   note: z.string().default(""),
   enabled: z.boolean().default(true),
+  /** Automatisch gefunden und noch nicht bestätigt. Zählt erst nach Bestätigung. */
+  proposed: z.boolean().default(false),
+  /** Bei Vorschlägen: Eindeutigkeit 0 … 1. */
+  confidence: z.number().min(0).max(1).nullable().default(null),
 });
 export type SyncAnchor = z.infer<typeof SyncAnchor>;
 
@@ -184,3 +188,24 @@ export const DiaryEntry = z.object({
   fullText: z.string().default(""),
 });
 export type DiaryEntry = z.infer<typeof DiaryEntry>;
+
+export const Interval = z.object({ startMs: z.number().int(), endMs: z.number().int() });
+export type Interval = z.infer<typeof Interval>;
+
+/**
+ * Ergebnis der Tonspur-Analyse einer Quelle (zwischengespeichert, weil das
+ * Dekodieren langer Aufnahmen dauert). Zeiten in ms ab Dateianfang.
+ */
+export const AudioAnalysis = z.object({
+  sourceId: Id,
+  /** Hüllkurve, 1 Byte je Wert (siehe @feldspur/media packEnvelope). */
+  envelope: z.instanceof(Uint8Array),
+  envelopeRate: z.number().int().positive(),
+  noiseFloorDb: z.number(),
+  idle: z.array(Interval),
+  loudInIdle: z.array(z.object({ atMs: z.number().int(), aboveFloorDb: z.number() })),
+  /** Version des Analyseverfahrens; bei Änderung wird neu analysiert. */
+  version: z.number().int(),
+  analyzedAt: z.iso.datetime(),
+});
+export type AudioAnalysis = z.infer<typeof AudioAnalysis>;

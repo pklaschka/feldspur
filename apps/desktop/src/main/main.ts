@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
-import { applyImport, scanPaths, setToolPaths } from "@feldspur/media";
+import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
 import { IPC, type ImportOutcome, type NewSessionInput, type ProjectInfo } from "../shared/api.ts";
 import { buildSessionView } from "./view.ts";
 
@@ -99,6 +99,37 @@ function registerIpc(): void {
   ipcMain.handle(IPC.setDiaryNote, (_e, sourceId: string, clock: string) => {
     const s = requireStore();
     return buildSessionView(s, setDiaryNote(s, sourceId, clock));
+  });
+
+  ipcMain.handle(IPC.analyze, async (e, sessionId: string) => {
+    const s = requireStore();
+    const r = await analyzeSession(s, sessionId, {
+      onProgress: (done, total, fileName) => e.sender.send(IPC.progress, { done, total, fileName }),
+    });
+    return {
+      view: buildSessionView(s, sessionId),
+      analyzed: r.analyzed,
+      failed: r.failed.map((f) => `${f.fileName}: ${f.message}`),
+    };
+  });
+
+  ipcMain.handle(IPC.confirmAnchor, (_e, anchorId: string) => {
+    const s = requireStore();
+    const a = s.getAnchor(anchorId);
+    s.confirmAnchor(anchorId);
+    // Weitere Vorschläge für dasselbe Gerät sind damit erledigt: seine Uhr ist jetzt abgeglichen.
+    const device = s.getSource(a.b.sourceId).deviceId;
+    for (const other of s.listAnchors(a.sessionId)) {
+      if (other.proposed && device && s.getSource(other.b.sourceId).deviceId === device) s.deleteAnchor(other.id);
+    }
+    return buildSessionView(s, a.sessionId);
+  });
+
+  ipcMain.handle(IPC.rejectAnchor, (_e, anchorId: string) => {
+    const s = requireStore();
+    const a = s.getAnchor(anchorId);
+    s.deleteAnchor(anchorId);
+    return buildSessionView(s, a.sessionId);
   });
 
   ipcMain.handle(IPC.setDeviceOffset, (_e, deviceId: string, offsetMs: number | null) => {

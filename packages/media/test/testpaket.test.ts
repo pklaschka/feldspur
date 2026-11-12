@@ -10,6 +10,7 @@
 import { existsSync } from "node:fs";
 import { formatClock, localMs, ProjectStore, resolveTimeline } from "@feldspur/core";
 import { describe, expect, it } from "vite-plus/test";
+import { analyzeSession, sessionEpisodes } from "../src/analyze.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 
 const dir = process.env.FELDSPUR_TESTPAKET;
@@ -73,6 +74,34 @@ describe.skipIf(!dir || !existsSync(dir))("Testpaket Markttag", () => {
       "V-02": "10:40:10",
       "F-003": "10:40:50",
     });
+    store.close();
+  });
+
+  it("findet die Kamera-Abweichung selbst über das Klatschen und teilt den Tag in Episoden", async () => {
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Testmarkt", date: "2026-09-14" });
+    const { sources } = applyImport(store, session.id, await scanPaths([dir!]));
+    const src = (n: string) => sources.find((s) => s.fileName === n)!;
+    store.setReferenceDevice(src("ZOOM0004.m4a").deviceId!);
+
+    const r = await analyzeSession(store, session.id);
+    expect(r.proposals.map((p) => [p.method, p.confidence, p.impliedDeviceOffsetMs])).toEqual([
+      ["clap", "high", 167_000],
+      ["clap", "high", 167_000],
+    ]);
+    for (const a of store.listAnchors(session.id)) store.confirmAnchor(a.id);
+
+    const tl = resolveTimeline(store.loadResolveInput(session.id));
+    expect(formatClock(tl.placements.get(src("C0013.MP4").id)!.startMs)).toBe("10:40:10");
+
+    const { episodes } = sessionEpisodes(store, session.id);
+    expect(episodes.map((e) => `${formatClock(e.startMs)}–${formatClock(e.endMs)}`)).toEqual([
+      "10:15:00–10:17:00",
+      "10:39:50–10:41:30",
+    ]);
+    // Wachhund: das einzelne Geräusch um 10:36 in der Stille wird gemeldet.
+    const zoom = store.listAudioAnalyses(session.id).find((a) => a.sourceId === src("ZOOM0004.m4a").id)!;
+    expect(zoom.loudInIdle.some((l) => l.atMs === 1_260_000)).toBe(true);
     store.close();
   });
 });

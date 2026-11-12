@@ -109,6 +109,8 @@ export function testmarkt() {
       uncertaintyMs: 50,
       note: "",
       enabled: true,
+      proposed: false,
+      confidence: null,
     },
   ];
   const diaryEntries: DiaryEntry[] = [

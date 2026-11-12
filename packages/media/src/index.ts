@@ -4,3 +4,6 @@ export * from "./hash.ts";
 export * from "./import.ts";
 export * from "./probe.ts";
 export * from "./tools.ts";
+export * from "./audio.ts";
+export * from "./sync.ts";
+export * from "./analyze.ts";

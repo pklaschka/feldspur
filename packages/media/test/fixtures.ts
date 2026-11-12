@@ -141,3 +141,74 @@ export function makeFieldDay(dir: string) {
   writeFileSync(join(dir, ".DS_Store"), "x");
   writeFileSync(join(dir, "Kamera", "C0012M01.XML"), "<x/>");
 }
+
+/** Ausdruck für FFmpeg aevalsrc: Raumrauschen, Sprech-Abschnitte (Töne), Klatscher. */
+function audioExpr(opts: { talk?: [number, number][]; claps?: number[] }): string {
+  const noise = "0.003*(random(0)-0.5)";
+  const talk = (opts.talk ?? []).map(([a, b]) => `between(t,${a},${b})*lt(mod(t,4),2)*0.3*sin(2*PI*220*t)`);
+  const claps = (opts.claps ?? []).map((c) => `if(between(t,${c},${c + 0.2}),0.9*(random(1)-0.5)*exp(-(t-${c})*40),0)`);
+  return [noise, ...talk, ...claps].join("+");
+}
+
+export function makeSyncAudio(
+  path: string,
+  opts: { seconds: number; creationTime?: string; talk?: [number, number][]; claps?: number[] },
+) {
+  ff(
+    "-f",
+    "lavfi",
+    "-i",
+    `aevalsrc=exprs='${audioExpr(opts)}':s=8000:d=${opts.seconds}`,
+    "-c:a",
+    "aac",
+    ...(opts.creationTime ? ["-metadata", `creation_time=${opts.creationTime}`] : []),
+    path,
+  );
+}
+
+export function makeSyncVideo(
+  path: string,
+  opts: { seconds: number; creationTime?: string; talk?: [number, number][]; claps?: number[] },
+) {
+  ff(
+    "-f",
+    "lavfi",
+    "-i",
+    `testsrc2=size=160x90:rate=5:duration=${opts.seconds}`,
+    "-f",
+    "lavfi",
+    "-i",
+    `aevalsrc=exprs='${audioExpr(opts)}':s=8000:d=${opts.seconds}`,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "ultrafast",
+    "-c:a",
+    "aac",
+    "-shortest",
+    ...(opts.creationTime ? ["-metadata", `creation_time=${opts.creationTime}`] : []),
+    path,
+  );
+}
+
+/**
+ * Feldtag zum Abgleichen: Diktiergerät 10 Min. ab 10:15:00 (Referenz), mit
+ * Gesprächen am Anfang und Ende und langer Stille dazwischen. Die Kamera geht
+ * 2:47 vor; in beiden Clips wird geklatscht.
+ */
+export function makeSyncDay(dir: string) {
+  mkdirSync(dir, { recursive: true });
+  makeSyncAudio(join(dir, "ZOOM0001.m4a"), {
+    seconds: 600,
+    creationTime: "2026-09-14T10:15:00.000000Z",
+    talk: [
+      [0, 60],
+      [480, 540],
+    ],
+    claps: [80, 300, 502.5],
+  });
+  // Clip 1: echte Zeit 10:16:00 (= Rekorder 60 s), Kamera zeigt 10:18:47. Klatschen bei 20 s.
+  makeSyncVideo(join(dir, "C0001.MP4"), { seconds: 30, creationTime: "2026-09-14T10:18:47.000000Z", claps: [20] });
+  // Clip 2: echte Zeit 10:23:00 (= Rekorder 480 s), Kamera zeigt 10:25:47. Klatschen bei 22,5 s.
+  makeSyncVideo(join(dir, "C0002.MP4"), { seconds: 30, creationTime: "2026-09-14T10:25:47.000000Z", claps: [22.5] });
+}

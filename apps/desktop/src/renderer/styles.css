@@ -328,3 +328,39 @@ table.src td.file {
 td.mono {
   white-space: nowrap;
 }
+.row.between {
+  justify-content: space-between;
+  align-items: center;
+}
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.proposal {
+  border-color: var(--pen);
+}
+.dense {
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+  overflow-x: auto;
+}
+.dense > div {
+  border: 1.4px solid var(--ink);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  background: var(--surface);
+  min-width: 120px;
+}
+.dense .card {
+  flex: 0 0 150px;
+  border-style: dashed;
+  color: var(--muted);
+}
+.dense .ep {
+  background: var(--mark);
+  flex-basis: 0;
+}

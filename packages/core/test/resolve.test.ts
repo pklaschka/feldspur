@@ -65,6 +65,8 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       uncertaintyMs: 50,
       note: "",
       enabled: true,
+      proposed: false,
+      confidence: null,
     });
     const res = resolveTimeline(input);
     const pl = res.placements.get("LEIH.MP4")!;
@@ -139,6 +141,8 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       uncertaintyMs: 50,
       note: "",
       enabled: true,
+      proposed: false,
+      confidence: null,
     });
     const res = resolveTimeline(input);
     expect(res.anchorConflicts).toEqual([{ anchorId: "bad", differenceMs: 10_000 }]);

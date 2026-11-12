@@ -31,6 +31,12 @@ Werkzeugkette ist [Vite+](https://viteplus.dev) (`vp`): Vitest, Oxlint, Oxfmt, t
   (`resolveTimeline`), damit nachvollziehbar bleibt, worauf sie sich stützt.
 - **Sync-Anker** (`SyncAnchor`): „dieser Moment in A = dieser Moment in B“ (Klatschen, Tonspur-Vergleich, von Hand).
   Daraus ergibt sich die Abweichung eines Geräts, oder eine Quelle ohne eigene Zeit erbt ihre Lage.
+- **Tonspur-Analyse**: Hüllkurve (100 Werte/s), Leerlauf (Stille ab 5 Min.) und laute Stellen darin (Wachhund) werden
+  je Quelle in der Projektdatei zwischengespeichert. Daraus schlägt Feldspur Anker vor: per Kreuzkorrelation bei
+  überlappenden Aufnahmen, sonst über Klatscher, bei denen alle Clips eines Geräts gemeinsam über die Uhrabweichung
+  abstimmen. Vorschläge zählen erst nach Bestätigung.
+- **Episode**: Zeitraum, in dem eine Aufnahme läuft und nicht Leerlauf ist (Lücken unter 5 Min. werden verbunden).
+  Dazwischen liegen Zwischenzeiten mit Fotos und Tagebucheinträgen.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz).
 
@@ -65,7 +71,7 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 ## Noch offen
 
 - Exportformat (Zeitgerüst + Tagesvideo) wartet auf den MAXQDA-Test.
-- Zeitabgleich-Oberfläche (Skizze B): Anker setzen, Klatschen/Tonspur automatisch finden.
-- Zeitachse (Skizze C/D), Episoden und Leerlauf-Erkennung.
+- Anker von Hand setzen (Skizze B), gesprochene Uhrzeiten markieren.
+- Zeitachse mit Spuren (Skizze C), Episodengrenzen verschieben, laute Stellen zur Mini-Episode machen.
 - Tagebuch: Rahmen auf Scans ziehen, Kurzform/Volltext, Einträge über Seiten verketten.
 - ExifTool statt exifr für RAW/HEIC, mitgelieferte FFmpeg-Programme, Paketierung mit electron-builder.
