@@ -34,7 +34,8 @@ export interface DeviceClock {
   /** Geräteuhr minus Referenzuhr; null = unbekannt (wird dann als 0 angenommen). */
   offsetMs: number | null;
   uncertaintyMs: number;
-  basis: OffsetBasis;
+  /** "spoken": aus einer angesagten Uhrzeit in einer Aufnahme des Geräts (nur berechnet, nie gespeichert). */
+  basis: OffsetBasis | "spoken";
   /** Bei basis "anchor": aus welchem Anker und welchem Beleg berechnet. */
   viaAnchorId?: Id;
   viaEvidenceId?: Id;
@@ -280,6 +281,37 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     const c = candidates.get(sourceId)?.find((x) => x.ev.id === p.basis.evidenceId);
     return c?.trusted ? p : undefined;
   };
+
+  // Angesagte Uhrzeiten („es ist zehn Uhr fünfzehn“) gleichen die Uhr des Geräts ab,
+  // wenn dieselbe Aufnahme auch eine Zeit der Geräteuhr trägt.
+  for (const src of input.sources) {
+    const clock = src.deviceId ? clocks.get(src.deviceId) : undefined;
+    if (!clock || clock.offsetMs !== null) continue;
+    const evs = (evidenceBySource.get(src.id) ?? []).filter((e) => e.enabled);
+    const spoken = evs
+      .filter((e) => e.kind === "spoken" && e.clock === "true")
+      .sort((a, b) => a.uncertaintyMs - b.uncertaintyMs)[0];
+    const device = deviceById.get(src.deviceId!);
+    const deviceEv = pickBest(
+      candidatesFor(
+        src,
+        evs.filter((e) => e.clock === "device"),
+        device,
+        clock,
+        session.timeZone,
+      ),
+    );
+    if (!spoken || !deviceEv) continue;
+    const deviceShows =
+      effectiveLocal(deviceEv.ev, device, session.timeZone) - deviceEv.ev.atMediaMs + spoken.atMediaMs;
+    clocks.set(clock.deviceId, {
+      deviceId: clock.deviceId,
+      offsetMs: deviceShows - spoken.localMs,
+      uncertaintyMs: combineUncertainty(spoken.uncertaintyMs, deviceEv.ev.uncertaintyMs),
+      basis: "spoken",
+      viaEvidenceId: deviceEv.ev.id,
+    });
+  }
 
   const maxRounds = input.anchors.length + 1;
   for (let round = 0; round <= maxRounds; round++) {

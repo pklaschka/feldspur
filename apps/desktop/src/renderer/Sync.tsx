@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import type { DeviceRow, ProposalRow, SessionView } from "../shared/api.ts";
+import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { offsetText, parseOffset } from "./format.ts";
-import { Button, cx, Glyph, Notice, Panel, Pill, Tip } from "./ui.tsx";
+import { Button, Choice, cx, Glyph, Notice, Panel, Picker, Pill, PRECISION_OPTIONS, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -11,7 +11,13 @@ const mmss = (ms: number) =>
     .replace(/^[+−-]\s*/, "")
     .replace(/\.\d+/, "");
 
-const BASIS_TEXT = { reference: "Referenz", manual: "von Hand", anchor: "über Tonspur", unknown: "" } as const;
+const BASIS_TEXT = {
+  reference: "Referenz",
+  manual: "von Hand",
+  anchor: "über Anker",
+  spoken: "angesagte Zeit",
+  unknown: "",
+} as const;
 const CELL = "border-t border-line py-3";
 
 export function Sync({
@@ -70,46 +76,49 @@ export function Sync({
   const ordered = [...view.devices].sort((a, b) => Number(b.isReference) - Number(a.isReference));
 
   return (
-    <Panel>
-      <div className="mb-2 flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold">Uhren abgleichen</h2>
-        <span className="flex-1" />
-        <Button disabled={!!progress || !hasReference || !view.avCount} onClick={() => void run()}>
-          {view.analyzedCount ? "Tonspuren erneut abgleichen" : "Tonspuren abgleichen"}
-        </Button>
-        <Button variant="primary" onClick={onNext}>
-          Weiter: Durchsehen →
-        </Button>
-      </div>
-      <p className="mb-4 max-w-[70ch] text-[0.8rem] text-muted">
-        {hasReference
-          ? "Jedes Gerät hat seine eigene Uhr. Die Referenzuhr gilt als richtig; für die anderen trägst du ein, wie weit sie abweichen („Kamera geht 2:47 vor“ = +2:47), oder lässt Feldspur über Klatschen und gleiche Geräusche in den Tonspuren suchen. Vorschläge werden erst übernommen, wenn du sie bestätigst."
-          : "Wähle zuerst die Referenzuhr: das Gerät, dessen Uhr am verlässlichsten lief (oft der Audiorekorder oder das Handy mit Netzzeit)."}
-      </p>
-      {progress && <Notice>{progress}</Notice>}
-      {notice && !progress && <Notice>{notice}</Notice>}
-      <div className="grid grid-cols-[minmax(140px,190px)_minmax(160px,1fr)_180px] gap-x-5">
-        <span />
-        <span className="flex justify-between pb-1 text-[0.8rem] whitespace-nowrap text-muted">
-          <span className="font-mono">−{mmss(span)}</span>
-          <span>Referenz</span>
-          <span className="font-mono">+{mmss(span)}</span>
-        </span>
-        <span />
-        {ordered.map((d) => (
-          <ClockRow
-            key={d.id}
-            device={d}
-            span={span}
-            proposals={view.proposals.filter((p) => p.deviceId === d.id)}
-            onReference={() => onReference(d.id)}
-            onOffset={(ms) => onOffset(d.id, ms)}
-            onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
-            onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
-          />
-        ))}
-      </div>
-    </Panel>
+    <div className="grid gap-4">
+      <Panel>
+        <div className="mb-2 flex flex-wrap items-center gap-3">
+          <h2 className="text-base font-semibold">Uhren abgleichen</h2>
+          <span className="flex-1" />
+          <Button disabled={!!progress || !hasReference || !view.avCount} onClick={() => void run()}>
+            {view.analyzedCount ? "Tonspuren erneut abgleichen" : "Tonspuren abgleichen"}
+          </Button>
+          <Button variant="primary" onClick={onNext}>
+            Weiter: Durchsehen →
+          </Button>
+        </div>
+        <p className="mb-4 max-w-[70ch] text-[0.8rem] text-muted">
+          {hasReference
+            ? "Jedes Gerät hat seine eigene Uhr. Die Referenzuhr gilt als richtig; für die anderen trägst du ein, wie weit sie abweichen („Kamera geht 2:47 vor“ = +2:47), oder lässt Feldspur über Klatschen und gleiche Geräusche in den Tonspuren suchen. Vorschläge werden erst übernommen, wenn du sie bestätigst."
+            : "Wähle zuerst die Referenzuhr: das Gerät, dessen Uhr am verlässlichsten lief (oft der Audiorekorder oder das Handy mit Netzzeit)."}
+        </p>
+        {progress && <Notice>{progress}</Notice>}
+        {notice && !progress && <Notice>{notice}</Notice>}
+        <div className="grid grid-cols-[minmax(140px,190px)_minmax(160px,1fr)_180px] gap-x-5">
+          <span />
+          <span className="flex justify-between pb-1 text-[0.8rem] whitespace-nowrap text-muted">
+            <span className="font-mono">−{mmss(span)}</span>
+            <span>Referenz</span>
+            <span className="font-mono">+{mmss(span)}</span>
+          </span>
+          <span />
+          {ordered.map((d) => (
+            <ClockRow
+              key={d.id}
+              device={d}
+              span={span}
+              proposals={view.proposals.filter((p) => p.deviceId === d.id)}
+              onReference={() => onReference(d.id)}
+              onOffset={(ms) => onOffset(d.id, ms)}
+              onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
+              onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
+            />
+          ))}
+        </div>
+      </Panel>
+      <ManualAnchors view={view} guard={guard} onView={onView} />
+    </div>
   );
 }
 
@@ -210,7 +219,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
         value={text}
         placeholder="±m:ss"
         aria-label={`Abweichung ${device.label}`}
-        disabled={device.offsetBasis === "anchor"}
+        disabled={device.offsetBasis === "anchor" || device.offsetBasis === "spoken"}
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => e.key === "Enter" && commit()}
@@ -247,5 +256,110 @@ function Proposal({ p, onConfirm, onReject }: { p: ProposalRow; onConfirm: () =>
         Verwerfen
       </Button>
     </div>
+  );
+}
+
+const ANCHOR_KIND = { clap: "Klatschen", "audio-correlation": "Tonspur", manual: "von Hand" } as const;
+
+/** Gleiche Stelle in zwei Aufnahmen von Hand verbinden, und gesetzte Anker verwalten. */
+function ManualAnchors({ view, guard, onView }: { view: SessionView; guard: Guard; onView: (v: SessionView) => void }) {
+  const sources = view.rows
+    .filter((r) => r.kind !== "diary")
+    .map((r) => ({ value: r.id, label: `${r.label} · ${r.fileName}` }));
+  const [a, setA] = useState("");
+  const [aAt, setAAt] = useState("");
+  const [b, setB] = useState("");
+  const [bAt, setBAt] = useState("");
+  const [precision, setPrecision] = useState<Precision>("exact");
+  const [note, setNote] = useState("");
+
+  const submit = async () => {
+    const v = await guard(() => api.addAnchor({ aSourceId: a, aAt, bSourceId: b, bAt, precision, note }));
+    if (!v) return;
+    onView(v);
+    setAAt("");
+    setBAt("");
+    setNote("");
+  };
+  const side = (label: string, value: string, set: (v: string) => void, at: string, setAt: (v: string) => void) => (
+    <div className="flex flex-wrap items-center gap-2">
+      <Picker
+        label={label}
+        placeholder="Aufnahme wählen…"
+        value={value}
+        onChange={set}
+        options={sources}
+        className="w-64"
+      />
+      <span className="text-[0.8rem] text-muted">bei</span>
+      <input
+        className="w-24 font-mono"
+        placeholder="m:ss"
+        value={at}
+        onChange={(e) => setAt(e.target.value)}
+        aria-label={`${label}, Stelle`}
+      />
+    </div>
+  );
+
+  return (
+    <Panel>
+      <h2 className="text-base font-semibold">Anker</h2>
+      <p className="mt-1 mb-3 max-w-[70ch] text-[0.8rem] text-muted">
+        Ein Anker sagt: Diese Stelle in der einen Aufnahme ist derselbe Moment wie diese Stelle in der anderen, etwa
+        eine knallende Tür, die beide Geräte hören. Liegt eine der beiden Aufnahmen schon sicher, gleicht das die Uhr
+        des anderen Geräts ab.
+      </p>
+      {view.anchors.length > 0 && (
+        <ul className="mb-4 grid gap-1.5" data-testid="anchor-list">
+          {view.anchors.map((x) => (
+            <li key={x.id} className="flex items-center gap-3 rounded-[7px] border border-line px-3 py-1.5">
+              <Pill>{ANCHOR_KIND[x.kind]}</Pill>
+              <span className="font-mono text-[0.85rem]">{x.description}</span>
+              {x.note && <span className="text-[0.8rem] text-muted">{x.note}</span>}
+              {x.conflictMs !== null && <Pill tone="warn">widerspricht um {offsetText(x.conflictMs)}</Pill>}
+              <span className="flex-1" />
+              <Button
+                variant="link"
+                className="text-[0.8rem]"
+                onClick={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
+              >
+                löschen
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="grid gap-2"
+        data-testid="anchor-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        {side("Erste Aufnahme", a, setA, aAt, setAAt)}
+        <span className="pl-1 text-[0.8rem] text-muted">ist derselbe Moment wie</span>
+        {side("Zweite Aufnahme", b, setB, bAt, setBAt)}
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <Choice
+            label="Genauigkeit des Ankers"
+            value={precision}
+            onChange={setPrecision}
+            options={PRECISION_OPTIONS}
+          />
+          <input
+            className="w-64"
+            placeholder="Notiz, z. B. „Tür knallt“"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            aria-label="Notiz zum Anker"
+          />
+          <Button variant="primary" size="sm" type="submit" disabled={!a || !b || a === b}>
+            Anker setzen
+          </Button>
+        </div>
+      </form>
+    </Panel>
   );
 }

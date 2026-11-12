@@ -16,6 +16,10 @@ const api: FeldspurApi = {
   analyze: (id) => ipcRenderer.invoke(IPC.analyze, id),
   confirmAnchor: (id) => ipcRenderer.invoke(IPC.confirmAnchor, id),
   rejectAnchor: (id) => ipcRenderer.invoke(IPC.rejectAnchor, id),
+  addTime: (input) => ipcRenderer.invoke(IPC.addTime, input),
+  setEvidenceEnabled: (id, enabled) => ipcRenderer.invoke(IPC.setEvidenceEnabled, id, enabled),
+  removeEvidence: (id) => ipcRenderer.invoke(IPC.removeEvidence, id),
+  addAnchor: (input) => ipcRenderer.invoke(IPC.addAnchor, input),
   onProgress: (cb) => {
     const listener = (_e: unknown, p: { done: number; total: number; fileName: string }) => cb(p);
     ipcRenderer.on(IPC.progress, listener);

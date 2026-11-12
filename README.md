@@ -82,7 +82,7 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 ## Noch offen
 
 - Exportformat (Zeitgerüst + Tagesvideo) wartet auf den MAXQDA-Test.
-- Anker von Hand setzen (Skizze B), gesprochene Uhrzeiten markieren.
+- Stellen beim Abspielen markieren (Anker und Ansagen zurzeit als m:ss eingeben).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - Tagebuch: Rahmen auf Scans ziehen, Kurzform/Volltext, Einträge über Seiten verketten.
 - ExifTool statt exifr für RAW/HEIC, mitgelieferte FFmpeg-Programme, Paketierung mit electron-builder.

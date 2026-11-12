@@ -7,7 +7,7 @@ import {
   type Interval,
   type ProjectStore,
 } from "@feldspur/core";
-import type { DeviceRow, EpisodeRow, GapRow, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
+import type { AnchorRow, DeviceRow, EpisodeRow, GapRow, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
 
 const mmss = (ms: number) => formatDuration(ms);
 
@@ -34,11 +34,15 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     const an = analysisBySource.get(s.id);
     const evs = (evidenceBySource.get(s.id) ?? [])
       .map((e) => ({
+        id: e.id,
         kind: e.kind,
         detail: e.detail,
         raw: e.raw,
         chosen: p?.basis.evidenceId === e.id,
         enabled: e.enabled,
+        own: e.kind === "manual" || e.kind === "spoken",
+        derived: e.id.startsWith("anchor:"),
+        uncertaintyMs: e.uncertaintyMs,
       }))
       .sort((a, b) => Number(b.chosen) - Number(a.chosen));
     return {
@@ -150,9 +154,25 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     }));
   }
 
+  const conflictBy = new Map(res.anchorConflicts.map((c) => [c.anchorId, c.differenceMs]));
+  const anchors: AnchorRow[] = input.anchors
+    .filter((a) => !a.proposed)
+    .map((a) => {
+      const la = sourceById.get(a.a.sourceId)?.label ?? "?";
+      const lb = sourceById.get(a.b.sourceId)?.label ?? "?";
+      return {
+        id: a.id,
+        kind: a.kind,
+        description: `${la} bei ${mmss(a.a.atMediaMs)} = ${lb} bei ${mmss(a.b.atMediaMs)}`,
+        note: a.note,
+        conflictMs: conflictBy.get(a.id) ?? null,
+      };
+    });
+
   return {
     session: input.session,
     rows,
+    anchors,
     allDevices,
     devices: deviceRows,
     proposals,

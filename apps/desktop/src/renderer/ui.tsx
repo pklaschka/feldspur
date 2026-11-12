@@ -1,5 +1,5 @@
 /** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
-import { Tooltip } from "radix-ui";
+import { Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { SourceKind } from "@feldspur/core/model";
 import { KIND_GLYPH } from "./format.ts";
@@ -106,3 +106,119 @@ export function Tip({ content, children }: { content: ReactNode; children: React
 }
 
 export const TooltipProvider = Tooltip.Provider;
+
+/** Einzelauswahl als Knopfreihe (Radix ToggleGroup). */
+export function Choice<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string; disabled?: boolean; title?: string }[];
+  label: string;
+}) {
+  return (
+    <ToggleGroup.Root
+      type="single"
+      value={value}
+      onValueChange={(v) => v && onChange(v as T)}
+      aria-label={label}
+      className="inline-flex overflow-hidden rounded-[7px] border border-line-2"
+    >
+      {options.map((o) => (
+        <ToggleGroup.Item
+          key={o.value}
+          value={o.value}
+          disabled={o.disabled}
+          title={o.title}
+          className="cursor-pointer border-l border-line-2 bg-panel px-2.5 py-1 text-[0.8rem] first:border-l-0 hover:enabled:bg-sunken disabled:cursor-default disabled:opacity-40 data-[state=on]:bg-accent-soft data-[state=on]:font-medium data-[state=on]:text-accent"
+        >
+          {o.label}
+        </ToggleGroup.Item>
+      ))}
+    </ToggleGroup.Root>
+  );
+}
+
+/** Auswahlliste (Radix Select). */
+export function Picker({
+  value,
+  onChange,
+  options,
+  placeholder,
+  label,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <Select.Root value={value || undefined} onValueChange={onChange}>
+      <Select.Trigger
+        aria-label={label}
+        className={cx(
+          "inline-flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-line-2 bg-panel px-2 py-1 text-left data-[placeholder]:text-muted",
+          className,
+        )}
+      >
+        <span className="truncate">
+          <Select.Value placeholder={placeholder} />
+        </span>
+        <Select.Icon className="text-muted">▾</Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content
+          position="popper"
+          sideOffset={4}
+          className="z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-line bg-panel shadow-lg"
+        >
+          <Select.Viewport className="p-1">
+            {options.map((o) => (
+              <Select.Item
+                key={o.value}
+                value={o.value}
+                className="cursor-pointer rounded px-2 py-1 outline-none data-[highlighted]:bg-accent-soft data-[state=checked]:font-medium"
+              >
+                <Select.ItemText>{o.label}</Select.ItemText>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
+  );
+}
+
+/** Ein-/Ausschalter (Radix Switch). */
+export function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <Switch.Root
+      checked={checked}
+      onCheckedChange={onChange}
+      aria-label={label}
+      className="relative h-4 w-7 flex-none cursor-pointer rounded-full bg-line-2 data-[state=checked]:bg-accent"
+    >
+      <Switch.Thumb className="block size-3 translate-x-0.5 rounded-full bg-panel transition-transform data-[state=checked]:translate-x-[14px]" />
+    </Switch.Root>
+  );
+}
+
+export const PRECISION_OPTIONS = [
+  { value: "exact" as const, label: "genau", title: "± 1 Sekunde" },
+  { value: "approx" as const, label: "ungefähr", title: "± 1 Minute" },
+  { value: "rough" as const, label: "grob", title: "± 15 Minuten" },
+];

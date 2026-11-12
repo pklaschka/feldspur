@@ -1,24 +1,31 @@
 import { formatDuration } from "@feldspur/core/time";
 import { useEffect, useState, type ReactNode } from "react";
-import { mediaUrl, type SessionView, type SourceRow } from "../shared/api.ts";
+import { mediaUrl, type Precision, type SessionView, type SourceRow, type TimeInput } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
-import { Button, cx, Eyebrow, Glyph, Pill, STATUS_TEXT_CLASS } from "./ui.tsx";
+import { Button, Choice, cx, Eyebrow, Glyph, Pill, PRECISION_OPTIONS, STATUS_TEXT_CLASS, Toggle } from "./ui.tsx";
+
+export interface InspectorActions {
+  diaryNote: (sourceId: string, clock: string) => void;
+  addTime: (input: TimeInput) => Promise<boolean>;
+  toggleEvidence: (evidenceId: string, enabled: boolean) => void;
+  removeEvidence: (evidenceId: string) => void;
+}
 
 export function Inspector({
   view,
   row,
   onClose,
-  onDiaryNote,
+  actions,
 }: {
   view: SessionView;
   row: SourceRow | null;
   onClose: () => void;
-  onDiaryNote: (sourceId: string, clock: string) => void;
+  actions: InspectorActions;
 }) {
   return (
     <aside className="overflow-auto border-l border-line bg-panel" data-testid="inspector">
       <div className="px-4.5 pt-4 pb-6">
-        {row ? <SourceDetails row={row} onClose={onClose} onDiaryNote={onDiaryNote} /> : <Summary view={view} />}
+        {row ? <SourceDetails key={row.id} row={row} onClose={onClose} actions={actions} /> : <Summary view={view} />}
       </div>
     </aside>
   );
@@ -80,15 +87,7 @@ function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: b
   );
 }
 
-function SourceDetails({
-  row,
-  onClose,
-  onDiaryNote,
-}: {
-  row: SourceRow;
-  onClose: () => void;
-  onDiaryNote: (sourceId: string, clock: string) => void;
-}) {
+function SourceDetails({ row, onClose, actions }: { row: SourceRow; onClose: () => void; actions: InspectorActions }) {
   const items: [string, ReactNode, string?][] = [
     [
       "Lage",
@@ -136,7 +135,7 @@ function SourceDetails({
       )}
       <KV items={items} />
 
-      {row.kind === "diary" && <DiaryNote row={row} onCommit={(c) => onDiaryNote(row.id, c)} />}
+      {row.kind === "diary" && <DiaryNote row={row} onCommit={(c) => actions.diaryNote(row.id, c)} />}
 
       {row.idle.length > 0 && (
         <>
@@ -158,35 +157,8 @@ function SourceDetails({
       )}
 
       <Eyebrow>Zeitbelege</Eyebrow>
-      {row.evidence.length ? (
-        <ul className="grid gap-1.5">
-          {row.evidence.map((e, i) => (
-            <li
-              key={i}
-              className={cx(
-                "grid grid-cols-[1fr_auto] rounded-[7px] border px-2 py-1.5",
-                e.chosen ? "border-accent bg-accent-soft" : "border-line",
-                !e.enabled && "line-through opacity-55",
-              )}
-            >
-              <span className="text-[0.72rem] font-semibold tracking-[0.04em] text-muted uppercase">
-                {EVIDENCE_LABEL[e.kind] ?? e.kind}
-              </span>
-              <span>{e.chosen && <Pill>verwendet</Pill>}</span>
-              <span className="col-span-2 [overflow-wrap:anywhere]">{e.detail}</span>
-              {e.raw && (
-                <span className="col-span-2 font-mono text-[0.8rem] [overflow-wrap:anywhere] text-muted">{e.raw}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-[0.8rem] text-muted">
-          {row.kind === "diary" && row.diaryNote
-            ? "Zeit aus der Randnotiz."
-            : "Keine Zeit in Metadaten oder Dateiname gefunden."}
-        </p>
-      )}
+      <EvidenceList row={row} actions={actions} />
+      {row.kind !== "diary" && <TimeForm row={row} onAdd={actions.addTime} />}
 
       <Eyebrow>Datei</Eyebrow>
       <KV
@@ -237,5 +209,161 @@ function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string
           : "Uhrzeit, die am Rand der Seite steht. Daraus ergibt sich, auf welchen Zeitraum sich die Seite bezieht."}
       </p>
     </div>
+  );
+}
+
+function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActions }) {
+  if (!row.evidence.length) {
+    return (
+      <p className="text-[0.8rem] text-muted">
+        {row.kind === "diary" && row.diaryNote
+          ? "Zeit aus der Randnotiz."
+          : "Keine Zeit in Metadaten oder Dateiname gefunden."}
+      </p>
+    );
+  }
+  return (
+    <ul className="grid gap-1.5" data-testid="evidence-list">
+      {row.evidence.map((e) => (
+        <li
+          key={e.id}
+          className={cx(
+            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-[7px] border px-2 py-1.5",
+            e.chosen ? "border-accent bg-accent-soft" : "border-line",
+          )}
+        >
+          <span className="text-[0.72rem] font-semibold tracking-[0.04em] text-muted uppercase">
+            {EVIDENCE_LABEL[e.kind] ?? e.kind}
+            {e.chosen && (
+              <span className="ml-1.5 normal-case">
+                <Pill>verwendet</Pill>
+              </span>
+            )}
+          </span>
+          <span className="flex items-center gap-2">
+            {e.own && (
+              <Button variant="link" className="text-[0.75rem]" onClick={() => actions.removeEvidence(e.id)}>
+                löschen
+              </Button>
+            )}
+            {!e.derived && (
+              <Toggle
+                checked={e.enabled}
+                onChange={(v) => actions.toggleEvidence(e.id, v)}
+                label={`${e.detail} ${e.enabled ? "abschalten" : "einschalten"}`}
+              />
+            )}
+          </span>
+          <span className={cx("col-span-2 [overflow-wrap:anywhere]", !e.enabled && "text-muted line-through")}>
+            {e.detail}
+          </span>
+          {e.raw && (
+            <span className="col-span-2 font-mono text-[0.8rem] [overflow-wrap:anywhere] text-muted">{e.raw}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Uhrzeit von Hand eintragen oder angesagte Uhrzeit markieren. */
+function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) => Promise<boolean> }) {
+  const av = row.kind === "audio" || row.kind === "video";
+  const [open, setOpen] = useState(row.status === "unplaced");
+  const [kind, setKind] = useState<"manual" | "spoken">("manual");
+  const [time, setTime] = useState("");
+  const [at, setAt] = useState("");
+  const [precision, setPrecision] = useState<Precision>(row.status === "unplaced" && !av ? "approx" : "exact");
+  const [note, setNote] = useState("");
+  if (!open) {
+    return (
+      <Button variant="link" className="mt-2 text-[0.8rem]" onClick={() => setOpen(true)}>
+        + Uhrzeit eintragen{av ? " oder Ansage markieren" : ""}
+      </Button>
+    );
+  }
+  const submit = async () => {
+    const ok = await onAdd({ sourceId: row.id, kind, clock: time, atMedia: av ? at : "", precision, note });
+    if (ok) {
+      setTime("");
+      setAt("");
+      setNote("");
+      setOpen(false);
+    }
+  };
+  return (
+    <form
+      className="mt-2.5 grid gap-2 rounded-lg border border-line bg-panel-2 p-3"
+      data-testid="time-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+    >
+      {av && (
+        <Choice
+          label="Art der Zeitangabe"
+          value={kind}
+          onChange={setKind}
+          options={[
+            { value: "manual", label: "Von Hand" },
+            { value: "spoken", label: "Angesagt in der Aufnahme" },
+          ]}
+        />
+      )}
+      <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-[0.85rem]">
+        <label htmlFor={`t-${row.id}`} className="text-muted">
+          Uhrzeit
+        </label>
+        <input
+          id={`t-${row.id}`}
+          className="w-28 font-mono"
+          placeholder="hh:mm:ss"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          aria-label="Uhrzeit"
+        />
+        {av && (
+          <>
+            <label htmlFor={`a-${row.id}`} className="text-muted">
+              an Stelle
+            </label>
+            <input
+              id={`a-${row.id}`}
+              className="w-28 font-mono"
+              placeholder="m:ss (leer = Anfang)"
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+              aria-label="Stelle in der Aufnahme"
+            />
+          </>
+        )}
+        <span className="text-muted">Genauigkeit</span>
+        <Choice label="Genauigkeit" value={precision} onChange={setPrecision} options={PRECISION_OPTIONS} />
+        <label htmlFor={`n-${row.id}`} className="text-muted">
+          Notiz
+        </label>
+        <input
+          id={`n-${row.id}`}
+          placeholder="optional, z. B. „Kirchturmuhr“"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-label="Notiz"
+        />
+      </div>
+      <p className="text-[0.75rem] text-muted">
+        {kind === "spoken"
+          ? "Die angesagte Zeit gleicht die Uhr des ganzen Geräts ab, sofern die Aufnahme auch eine Zeit der Geräteuhr hat."
+          : "Gilt nur für diese Quelle und hat Vorrang vor gelesenen Zeiten."}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="primary" size="sm" type="submit" disabled={!time.trim()}>
+          Eintragen
+        </Button>
+        <Button size="sm" type="button" onClick={() => setOpen(false)}>
+          Abbrechen
+        </Button>
+      </div>
+    </form>
   );
 }

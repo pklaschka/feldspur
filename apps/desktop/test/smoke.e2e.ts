@@ -21,6 +21,7 @@ makePhoto(join(fixtures, "IMG_0231.jpg"), "0x8a4fbf", {
 });
 makePhoto(join(fixtures, "IMG_20260914_104050.jpg"), "0x1f8a70");
 makePhoto(join(fixtures, "Tagebuch_S01.jpg"), "0xc2703d");
+makePhoto(join(fixtures, "Marktstand.jpg"), "0x2a52be"); // ohne jede Zeitangabe
 const sources = process.env.FELDSPUR_E2E_SOURCES ?? fixtures;
 
 const app = await electron.launch({
@@ -89,8 +90,29 @@ try {
   await proposal.getByRole("button", { name: "Übernehmen" }).click();
   await page
     .locator('[data-testid=clock][data-device="Kamera Stativ"] [data-testid=clock-value]')
-    .getByText("über Tonspur")
+    .getByText("über Anker")
     .waitFor();
+
+  // Anker von Hand: A-01 bei 9:00 ist derselbe Moment wie das Foto mit Zeit im Dateinamen.
+  const pick = async (label: string, option: RegExp) => {
+    await page.getByRole("combobox", { name: label }).click();
+    await page.getByRole("option", { name: option }).click();
+  };
+  await pick("Erste Aufnahme", /A-01/);
+  await page.getByLabel("Erste Aufnahme, Stelle").fill("9:00");
+  await pick("Zweite Aufnahme", /IMG_20260914_104050/);
+  await page.getByLabel("Notiz zum Anker").fill("Glocke");
+  await page.getByRole("button", { name: "Anker setzen" }).click();
+  await page.getByTestId("anchor-list").getByText("Glocke").waitFor();
+  const fotoClock = page.locator('[data-testid=clock][data-device="Fotos IMG"] [data-testid=clock-value]');
+  await fotoClock.getByText("über Anker").waitFor();
+  await shot("-anker");
+  await page
+    .getByTestId("anchor-list")
+    .locator("li", { hasText: "Glocke" })
+    .getByRole("button", { name: "löschen" })
+    .click();
+  await fotoClock.getByText("offen").waitFor();
 
   // 3 Durchsehen: Zeitachse mit Episoden; Kamera liegt jetzt bei 10:16:00.
   await page.getByRole("tab", { name: /Durchsehen/ }).click();
@@ -118,6 +140,25 @@ try {
   console.log(`Spuren: ${tracks.join(" | ")}`);
   if (tracks.length < 4) throw new Error(`Erwartet mindestens 4 Spuren, gefunden ${tracks.length}`);
   await shot("");
+  // Foto ohne Zeit: Uhrzeit von Hand eintragen, Beleg ab- und wieder einschalten.
+  await page.getByTestId("tray-item").filter({ hasText: "Marktstand.jpg" }).click();
+  const form = page.getByTestId("time-form");
+  await form.getByLabel("Uhrzeit").fill("10:30");
+  await form.getByRole("radio", { name: "ungefähr" }).click();
+  await form.getByLabel("Notiz").fill("geschätzt");
+  await form.getByRole("button", { name: "Eintragen" }).click();
+  await page
+    .getByTestId("inspector")
+    .getByText(/^10:30:00/)
+    .waitFor();
+  await page.getByTestId("inspector").getByText("Von Hand: geschätzt").waitFor();
+  const sw = page.getByRole("switch", { name: /Von Hand: geschätzt/ });
+  await sw.click();
+  await page.getByTestId("tray-item").filter({ hasText: "Marktstand.jpg" }).waitFor();
+  await sw.click();
+  await page.getByTestId("tl-point").filter({ hasText: "Marktstand.jpg" }).waitFor({ state: "attached" });
+  await shot("-von-hand");
+
   // Treffersuche auf der Leinwand: Klick in die Tagebuchspur (letzte Spur) mitten in den Bezugszeitraum.
   await page.getByRole("button", { name: "Schließen" }).click();
   const box = (await page.locator("canvas").boundingBox())!;

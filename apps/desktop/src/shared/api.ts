@@ -34,7 +34,7 @@ export interface SourceRow {
   /** ± Unsicherheit der Lage in ms. */
   uncertaintyMs: number | null;
   /** Alle Zeitbelege, der gewählte zuerst. */
-  evidence: { kind: string; detail: string; raw: string; chosen: boolean; enabled: boolean }[];
+  evidence: EvidenceRow[];
   /** Leerlauf in echter Zeit (nur Audio/Video nach Analyse). */
   idle: { startMs: number; endMs: number }[];
   /** Laute Stellen im Leerlauf, echte Zeit. */
@@ -45,6 +45,53 @@ export interface SourceRow {
   notes: string[];
 }
 
+export interface EvidenceRow {
+  id: string;
+  kind: string;
+  detail: string;
+  raw: string;
+  chosen: boolean;
+  enabled: boolean;
+  /** Von Hand eingetragen (löschbar). */
+  own: boolean;
+  /** Aus einem Anker abgeleitet, nicht gespeichert. */
+  derived: boolean;
+  uncertaintyMs: number;
+}
+
+/** Bestätigter oder von Hand gesetzter Anker. */
+export interface AnchorRow {
+  id: string;
+  kind: "clap" | "audio-correlation" | "manual";
+  /** "A-01 bei 1:20 = V-01 bei 0:20" */
+  description: string;
+  note: string;
+  /** Widerspricht anderen Belegen um so viel; null = passt. */
+  conflictMs: number | null;
+}
+
+export type Precision = "exact" | "approx" | "rough";
+
+export interface TimeInput {
+  sourceId: string;
+  kind: "manual" | "spoken";
+  /** "10:15" oder "10:15:30" */
+  clock: string;
+  /** Stelle in der Aufnahme, "3:20"; leer = Anfang. */
+  atMedia: string;
+  precision: Precision;
+  note: string;
+}
+
+export interface AnchorInput {
+  aSourceId: string;
+  aAt: string;
+  bSourceId: string;
+  bAt: string;
+  precision: Precision;
+  note: string;
+}
+
 export interface DeviceRow {
   id: string;
   label: string;
@@ -53,7 +100,7 @@ export interface DeviceRow {
   personName: string;
   isReference: boolean;
   offsetMs: number | null;
-  offsetBasis: OffsetBasis;
+  offsetBasis: OffsetBasis | "spoken";
   sourceCount: number;
 }
 
@@ -98,6 +145,7 @@ export interface SessionView {
   /** Geräte mit Uhr, die abgeglichen werden müssen. */
   devices: DeviceRow[];
   proposals: ProposalRow[];
+  anchors: AnchorRow[];
   /** null = Tonspuren noch nicht analysiert */
   episodes: EpisodeRow[] | null;
   gaps: GapRow[];
@@ -135,7 +183,12 @@ export interface FeldspurApi {
   /** Tonspuren analysieren (Hüllkurve, Leerlauf) und Anker vorschlagen. */
   analyze(sessionId: string): Promise<{ view: SessionView; analyzed: number; failed: string[] }>;
   confirmAnchor(anchorId: string): Promise<SessionView>;
+  /** Vorschlag verwerfen oder Anker löschen. */
   rejectAnchor(anchorId: string): Promise<SessionView>;
+  addTime(input: TimeInput): Promise<SessionView>;
+  setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
+  removeEvidence(evidenceId: string): Promise<SessionView>;
+  addAnchor(input: AnchorInput): Promise<SessionView>;
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
@@ -160,5 +213,9 @@ export const IPC = {
   analyze: "audio:analyze",
   confirmAnchor: "anchor:confirm",
   rejectAnchor: "anchor:reject",
+  addTime: "evidence:add",
+  setEvidenceEnabled: "evidence:enable",
+  removeEvidence: "evidence:remove",
+  addAnchor: "anchor:add",
   progress: "progress",
 } as const;
