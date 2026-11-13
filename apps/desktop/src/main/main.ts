@@ -165,6 +165,12 @@ function registerIpc(): void {
     return buildSessionView(s, d.sessionId);
   });
 
+  ipcMain.handle(IPC.setDeviceUtc, (_e, deviceId: string, utc: boolean) => {
+    const s = requireStore();
+    const d = s.updateDevice(deviceId, { timestampsAreUtc: utc });
+    return buildSessionView(s, d.sessionId);
+  });
+
   ipcMain.handle(IPC.setDiaryNote, (_e, sourceId: string, clock: string) => {
     const s = requireStore();
     return buildSessionView(s, setDiaryNote(s, sourceId, clock));

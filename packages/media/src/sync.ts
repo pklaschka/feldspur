@@ -11,7 +11,14 @@
  *
  * Ergebnis sind nur Vorschläge. Übernommen wird erst nach Bestätigung.
  */
-import type { Device, Id, ResolveResult, Source, TimeEvidence } from "@feldspur/core";
+import {
+  effectiveLocal,
+  type Device,
+  type Id,
+  type ResolveResult,
+  type Source,
+  type TimeEvidence,
+} from "@feldspur/core";
 import { detectTransients, estimateOffset, type Envelope, type Transient } from "./audio.ts";
 
 export interface AnchorProposal {
@@ -34,6 +41,7 @@ export interface ProposeInput {
   sources: Source[];
   devices: Device[];
   evidence: TimeEvidence[];
+  session: { timeZone: string };
   resolved: ResolveResult;
   envelopes: Map<Id, Envelope>;
 }
@@ -77,7 +85,8 @@ export function proposeAnchors(input: ProposeInput, opts: ProposeOptions = {}): 
   // Gerätezeit, die der Clip-Anfang laut eigener Uhr hatte.
   const deviceStart = (s: Source): number | null => {
     const ev = input.evidence.find((e) => e.sourceId === s.id && e.enabled && e.clock === "device");
-    return ev ? ev.localMs - ev.atMediaMs : null;
+    const device = input.devices.find((d) => d.id === s.deviceId);
+    return ev ? effectiveLocal(ev, device, input.session.timeZone) - ev.atMediaMs : null;
   };
 
   const out: AnchorProposal[] = [];

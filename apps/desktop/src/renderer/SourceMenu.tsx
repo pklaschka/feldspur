@@ -11,6 +11,7 @@ export interface SourceActions {
   remove(sourceId: string): void;
   move(sourceId: string, target: string | { newLabel: string }): void;
   mergeDevices(fromId: string, intoId: string): void;
+  setDeviceUtc(deviceId: string, utc: boolean): void;
   setPartOf(sourceId: string, mainId: string | null): void;
   setFollows(sourceId: string, prevId: string | null): void;
   preview(sourceId: string): void;
@@ -170,12 +171,12 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
   );
 }
 
-/** Menü am Gerät: mit einem anderen Gerät zusammenlegen. */
+/** Menü am Gerät: mit einem anderen Gerät zusammenlegen, UTC-Zeitstempel umstellen. */
 export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionView }) {
   const a = useActions();
   const [into, setInto] = useState<DeviceRow | null>(null);
   const others = view.allDevices.filter((d) => d.id !== device.id);
-  if (!others.length) return null;
+  if (!others.length && !device.hasUtcStamps) return null;
   return (
     <>
       <DropdownMenu.Root>
@@ -195,13 +196,36 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content className={content} align="end" sideOffset={4}>
-            <Sub label="Zusammenlegen mit …">
-              {others.map((d) => (
-                <DropdownMenu.Item key={d.id} className={item} onSelect={() => setInto(d)}>
-                  {d.label}
-                </DropdownMenu.Item>
-              ))}
-            </Sub>
+            {others.length > 0 && (
+              <Sub label="Zusammenlegen mit …">
+                {others.map((d) => (
+                  <DropdownMenu.Item key={d.id} className={item} onSelect={() => setInto(d)}>
+                    {d.label}
+                  </DropdownMenu.Item>
+                ))}
+              </Sub>
+            )}
+            {device.hasUtcStamps && (
+              <>
+                {others.length > 0 && <DropdownMenu.Separator className={sep} />}
+                <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.75rem] text-muted">
+                  Zeitstempel mit „Z“ (UTC) in den Metadaten
+                </DropdownMenu.Label>
+                <DropdownMenu.RadioGroup
+                  value={device.timestampsAreUtc ? "utc" : "local"}
+                  onValueChange={(v) => a.setDeviceUtc(device.id, v === "utc")}
+                >
+                  <DropdownMenu.RadioItem value="utc" className={item}>
+                    <Dot on={device.timestampsAreUtc} />
+                    Sind UTC, in Ortszeit umrechnen
+                  </DropdownMenu.RadioItem>
+                  <DropdownMenu.RadioItem value="local" className={item}>
+                    <Dot on={!device.timestampsAreUtc} />
+                    Sind schon Ortszeit, so lesen
+                  </DropdownMenu.RadioItem>
+                </DropdownMenu.RadioGroup>
+              </>
+            )}
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
@@ -217,6 +241,15 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
         {device.isReference && " Die Referenzuhr geht mit über."}
       </Confirm>
     </>
+  );
+}
+
+function Dot({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cx("size-2 flex-none rounded-full border border-muted", on && "border-accent bg-accent")}
+    />
   );
 }
 

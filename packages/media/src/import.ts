@@ -5,7 +5,7 @@
  */
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import type { Device, Id, ProjectStore, Source, SourceKind } from "@feldspur/core";
+import { utcToLocal, type Device, type Id, type ProjectStore, type Source, type SourceKind } from "@feldspur/core";
 import { classify, filenameFamily, isIgnored } from "./classify.ts";
 import {
   evidenceAppliesTo,
@@ -160,6 +160,30 @@ export interface ApplyImportResult {
   duplicates: { candidate: ImportCandidate; existing: Source }[];
 }
 
+/**
+ * Schreibt ein Gerät Ortszeit in als UTC markierte Felder? Prüfbar, wenn der Dateiname auch eine
+ * Uhrzeit trägt: Liegt der Stempel wie geschrieben nahe am Dateinamen, umgerechnet aber nicht,
+ * ist es Ortszeit. Die Mehrheit der Dateien eines Geräts entscheidet; ohne Hinweis gilt UTC.
+ */
+export function stampsLookLocal(candidates: ImportCandidate[], timeZone: string): boolean {
+  const NEAR = 5 * 60_000;
+  let local = 0;
+  let utc = 0;
+  for (const c of candidates) {
+    const named = c.evidence.find((e) => e.kind === "filename");
+    if (!named) continue;
+    for (const e of c.evidence) {
+      if (e.kind !== "metadata" || e.utcMs === null || e.utcMs === undefined) continue;
+      const asWritten = Math.abs(e.localMs - named.localMs);
+      const converted = Math.abs(utcToLocal(e.utcMs, timeZone) - named.localMs);
+      if (Math.abs(asWritten - converted) < NEAR) continue; // Zeitzone UTC oder kein Unterschied
+      if (asWritten <= NEAR && asWritten < converted) local++;
+      else if (converted <= NEAR) utc++;
+    }
+  }
+  return local > utc;
+}
+
 /** Importplan in den Einsatz übernehmen: Geräte zuordnen oder anlegen, Quellen und Belege speichern. */
 export function applyImport(
   store: ProjectStore,
@@ -210,6 +234,11 @@ export function applyImport(
       seen.set(c.sha256, src);
       result.sources.push(src);
     }
+    const tz = store.getSession(sessionId).timeZone;
+    result.devicesCreated = result.devicesCreated.map((d) => {
+      const own = ordered.filter((c) => c.deviceKey === d.matchKey);
+      return stampsLookLocal(own, tz) ? store.updateDevice(d.id, { timestampsAreUtc: false }) : d;
+    });
     return result;
   });
 }

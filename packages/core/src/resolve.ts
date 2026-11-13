@@ -140,7 +140,8 @@ function initialClocks(devices: Device[]): Map<Id, DeviceClock> {
   return clocks;
 }
 
-function effectiveLocal(ev: TimeEvidence, device: Device | undefined, tz: string): number {
+/** Ortszeit eines Belegs laut Geräteuhr: als UTC markierte Stempel je nach Geräteeinstellung umgerechnet. */
+export function effectiveLocal(ev: TimeEvidence, device: Device | undefined, tz: string): number {
   if (ev.utcMs !== null && device?.timestampsAreUtc) return utcToLocal(ev.utcMs, tz);
   return ev.localMs;
 }

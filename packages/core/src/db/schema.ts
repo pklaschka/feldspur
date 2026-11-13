@@ -47,7 +47,7 @@ export const devices = sqliteTable(
     offsetBasis: text("offset_basis", { enum: ["reference", "manual", "anchor", "unknown"] })
       .notNull()
       .default("unknown"),
-    timestampsAreUtc: bool("timestamps_are_utc").notNull().default(false),
+    timestampsAreUtc: bool("timestamps_are_utc").notNull().default(true),
     filenamePattern: text("filename_pattern"),
   },
   (t) => [index("devices_session").on(t.sessionId)],
