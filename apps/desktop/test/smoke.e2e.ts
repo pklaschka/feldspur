@@ -420,6 +420,7 @@ try {
   console.log(`Zeitgerüst: ${await scaffold.locator("li").count()} Zeilen`);
   await shot("-ausgeben");
   const t0 = Date.now();
+  await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
   await page.getByRole("button", { name: "Ausgeben…" }).click();
   // Während der Ausgabe den Reiter wechseln: Sie läuft weiter, der Reiter zeigt den Fortschritt.
   await page.getByTestId("export-progress").waitFor();
@@ -429,7 +430,11 @@ try {
   await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
   const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
   console.log(`Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`);
-  if (!files.some((f) => f.includes(".mp4")) || !files.some((f) => f.includes(".docx")))
+  if (
+    !files.some((f) => f.includes(".mp4")) ||
+    !files.some((f) => f.includes(".docx")) ||
+    !files.some((f) => f.includes(".fcpxml"))
+  )
     throw new Error("Ausgabe unvollständig");
   await shot("-ausgegeben");
   if (process.env.FELDSPUR_EXPORT_KEEP) cpSync(out, process.env.FELDSPUR_EXPORT_KEEP, { recursive: true });

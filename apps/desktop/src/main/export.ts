@@ -66,7 +66,7 @@ export async function runExport(
   wc: WebContents,
   sessionId: string,
   parent: string,
-  video: boolean,
+  opts: { video: boolean; resolve?: boolean },
 ): Promise<ExportOutcome> {
   // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
@@ -74,7 +74,8 @@ export async function runExport(
   try {
     const dir = join(parent, baseName(buildScaffold(s, sessionId)));
     const r = await exportSession(s, sessionId, dir, {
-      video,
+      video: opts.video,
+      resolve: opts.resolve,
       overlay: overlayVia(wc),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),

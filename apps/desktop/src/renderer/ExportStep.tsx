@@ -14,11 +14,13 @@ const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo: alle Episoden am Stück, Zwischentafeln für Fotos und Tagebuch"],
   [/\.docx$/, "Zeitgerüst für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
   [/\.csv$/, "Begleitprotokoll: Herkunft und Zeitnachweis jeder Datei"],
+  [/\.fcpxml$/, "Schnittliste für DaVinci Resolve (Datei › Importieren › Timeline), Standbilder im Ordner daneben"],
 ];
 
 export function ExportStep({ view }: { view: SessionView }) {
   const [preview, setPreview] = useState<ScaffoldPreview | null>(null);
   const [video, setVideo] = useState(true);
+  const [resolve, setResolve] = useState(false);
   const ex = useExport();
   const sessionId = view.session.id;
   const busy = ex.job?.sessionId === sessionId;
@@ -37,7 +39,7 @@ export function ExportStep({ view }: { view: SessionView }) {
       live = false;
     };
   }, [view, sessionId]);
-  const run = () => ex.start(sessionId, video);
+  const run = () => ex.start(sessionId, { video, resolve });
 
   const fact = (n: number | string, label: string) => (
     <div className="grid">
@@ -80,7 +82,16 @@ export function ExportStep({ view }: { view: SessionView }) {
             Montagevideo mit ausgeben
           </label>
           <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
-            Dauert je nach Länge einige Minuten. Ohne Video entstehen nur Zeitgerüst und Protokoll.
+            Dauert je nach Länge einige Minuten; bei der nächsten Ausgabe wird nur neu gerechnet, was sich geändert hat.
+            Ohne Video entstehen nur Zeitgerüst und Protokoll.
+          </p>
+          <label className="mt-3 flex items-center gap-2.5 text-[0.9rem]">
+            <Toggle checked={resolve} onChange={setResolve} label="Schnittliste für DaVinci Resolve" />
+            Schnittliste für DaVinci Resolve
+          </label>
+          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+            Dieselbe Montage als FCPXML, mit Markern für Mitschrift und Ereignisse. Resolve rechnet dann selbst; die
+            Uhrzeit-Einblendungen fehlen dort.
           </p>
           <div className="mt-5 flex items-center gap-3">
             <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>

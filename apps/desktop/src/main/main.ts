@@ -189,20 +189,23 @@ function registerIpc(): void {
     },
   );
   ipcMain.handle(IPC.previewExport, (_e, sessionId: string) => previewExport(requireStore(), sessionId));
-  ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: { video: boolean; dir?: string }) => {
-    const s = requireStore();
-    let parent = opts.dir;
-    if (!parent) {
-      const r = await dialog.showOpenDialog(win!, {
-        title: "Wohin ausgeben?",
-        buttonLabel: "Hier ausgeben",
-        properties: ["openDirectory", "createDirectory"],
-      });
-      if (r.canceled || !r.filePaths[0]) return null;
-      parent = r.filePaths[0];
-    }
-    return runExport(s, e.sender, sessionId, parent, opts.video);
-  });
+  ipcMain.handle(
+    IPC.exportSession,
+    async (e, sessionId: string, opts: { video: boolean; resolve?: boolean; dir?: string }) => {
+      const s = requireStore();
+      let parent = opts.dir;
+      if (!parent) {
+        const r = await dialog.showOpenDialog(win!, {
+          title: "Wohin ausgeben?",
+          buttonLabel: "Hier ausgeben",
+          properties: ["openDirectory", "createDirectory"],
+        });
+        if (r.canceled || !r.filePaths[0]) return null;
+        parent = r.filePaths[0];
+      }
+      return runExport(s, e.sender, sessionId, parent, opts);
+    },
+  );
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {

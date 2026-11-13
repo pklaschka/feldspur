@@ -69,7 +69,7 @@ export interface OverlayFrame {
 
 export type OverlayRenderer = (timeline: OverlayTimeline, frames: OverlayFrame[]) => Promise<Buffer[]>;
 
-interface Piece {
+export interface Piece {
   /** Grenzen in Bildern ab Montagebeginn. */
   f0: number;
   f1: number;
@@ -136,7 +136,7 @@ export async function videoEncoder(): Promise<string[]> {
 }
 
 /** Stücke der Montage: Grenzen dort, wo Video, Ton oder Standbild wechseln. */
-function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string | null>): Piece[] {
+export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string | null>): Piece[] {
   const { input, resolved, plan } = sc;
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const place = (id: Id) => resolved.placements.get(id);

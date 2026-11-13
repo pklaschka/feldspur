@@ -342,7 +342,10 @@ export interface FeldspurApi {
    * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = abgebrochen.
    */
-  exportSession(sessionId: string, opts: { video: boolean; dir?: string }): Promise<ExportOutcome | null>;
+  exportSession(
+    sessionId: string,
+    opts: { video: boolean; resolve?: boolean; dir?: string },
+  ): Promise<ExportOutcome | null>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
   /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */
   onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
