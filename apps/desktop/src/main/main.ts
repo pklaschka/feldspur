@@ -376,6 +376,7 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   });
+  win.maximize();
   // Keine Navigation weg von der App, keine neuen Fenster.
   win.on("close", (e) => {
     if (!exportRunning()) return;
