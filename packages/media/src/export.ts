@@ -6,7 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, formatDuration, type Id, type ProjectStore } from "@feldspur/core";
 import { scaffoldDocx } from "./docx.ts";
-import { renderMontage, type OverlayRenderer } from "./montage-video.ts";
+import { montageFcpxml } from "./fcpxml.ts";
+import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
 import { buildScaffold, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
 import { renderStill, type Still } from "./stills.ts";
 
@@ -16,6 +17,10 @@ export interface ExportOptions {
   /** Zeichnet Uhrzeit, Leisten und Tafeltexte ins Video (in der App über die Oberfläche). */
   overlay?: OverlayRenderer;
   onProgress?: (step: string, done: number, total: number) => void;
+  /** Zusätzlich eine Schnittliste für DaVinci Resolve (FCPXML) mit Standbildern daneben. */
+  resolve?: boolean;
+  /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
+  cacheDir?: string;
 }
 
 export interface ExportResult {
@@ -126,9 +131,27 @@ export async function exportSession(
       await renderMontage(sc, stills, join(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
+        cacheDir: opts.cacheDir,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
       });
       files.push(media);
+    }
+
+    if (opts.resolve) {
+      const stillDir = `${base}_Standbilder`;
+      await mkdir(join(outDir, stillDir), { recursive: true });
+      const stillFiles = new Map<ScaffoldEntry, string | null>();
+      let k = 0;
+      for (const [e, list] of stills) {
+        const s = list.find(Boolean);
+        if (!s) continue;
+        const f = join(outDir, stillDir, `${String(++k).padStart(3, "0")}_${safeName(e.head)}.jpg`);
+        await writeFile(f, s.data);
+        stillFiles.set(e, f);
+      }
+      const xml = montageFcpxml(sc, planPieces(sc, stillFiles), { projectName: base, stillPath: (f) => f });
+      await writeFile(join(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
+      files.push(`${base}_Resolve.fcpxml`);
     }
 
     opts.onProgress?.("Zeitgerüst", 0, 1);

@@ -4,7 +4,9 @@
  * Das Hauptfeld bleibt durchsichtig, darunter liegt das Video oder Standbild.
  */
 import type { OverlayFrame, OverlayTimeline } from "@feldspur/media";
-import { formatClock, formatDuration } from "@feldspur/core/time";
+import { formatClock } from "@feldspur/core/time";
+
+type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 const W = 1280;
 const H = 720;
@@ -38,7 +40,7 @@ const KIND_COLOR: Record<string, string> = {
 const FONT = '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif';
 const MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
 
-function wrap(ctx: OffscreenCanvasRenderingContext2D, text: string, maxW: number): string[] {
+function wrap(ctx: Ctx2D, text: string, maxW: number): string[] {
   const out: string[] = [];
   for (const para of text.split("\n")) {
     let line = "";
@@ -54,7 +56,7 @@ function wrap(ctx: OffscreenCanvasRenderingContext2D, text: string, maxW: number
   return out;
 }
 
-function truncate(ctx: OffscreenCanvasRenderingContext2D, text: string, maxW: number): string {
+function truncate(ctx: Ctx2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
@@ -63,7 +65,7 @@ function truncate(ctx: OffscreenCanvasRenderingContext2D, text: string, maxW: nu
 
 /** Eine Zeitleiste: Episoden als Band, Aufnahmen als Balken je Spur, Fotos/Tagebuch als Striche. */
 function drawTimeline(
-  ctx: OffscreenCanvasRenderingContext2D,
+  ctx: Ctx2D,
   tl: OverlayTimeline,
   box: { x: number; y: number; w: number; h: number },
   from: number,
@@ -129,7 +131,7 @@ function drawTimeline(
   }
 }
 
-export function drawOverlay(ctx: OffscreenCanvasRenderingContext2D, tl: OverlayTimeline, f: OverlayFrame): void {
+export function drawOverlay(ctx: Ctx2D, tl: OverlayTimeline, f: OverlayFrame): void {
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "middle";
 
@@ -206,7 +208,6 @@ export function drawOverlay(ctx: OffscreenCanvasRenderingContext2D, tl: OverlayT
   ctx.textBaseline = "middle";
   ctx.fillText("Ganzer Einsatz", 12, BOTTOM.y + 12);
   ctx.fillText("±2,5 Min.", 12, BOTTOM.y + 68);
-  ctx.fillText(`Video ${formatDuration(f.montageMs)}`, W - 90, BOTTOM.y + 12);
   const pad = (tl.toMs - tl.fromMs) * 0.01 || 60_000;
   drawTimeline(
     ctx,

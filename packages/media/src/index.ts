@@ -12,3 +12,6 @@ export * from "./stills.ts";
 export * from "./docx.ts";
 export * from "./montage-video.ts";
 export * from "./export.ts";
+export * from "./transcript-import.ts";
+export * from "./fcpxml.ts";
+export * from "./montage-preview.ts";

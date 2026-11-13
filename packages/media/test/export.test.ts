@@ -1,11 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { analyzeSession } from "../src/analyze.ts";
 import { exportSession } from "../src/export.ts";
+import { montagePreview } from "../src/montage-preview.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { buildScaffold, entryText, timestamp } from "../src/scaffold.ts";
 import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay } from "./fixtures.ts";
@@ -107,5 +109,43 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const csv = readFileSync(join(out, r.files[2]!), "utf8");
     expect(csv.split("\r\n")[0]).toContain("Kurzzeichen;Art;Datei");
     expect(csv).toContain("ZOOM0001.m4a");
+  });
+
+  it("plant die Montage zum Ansehen in der App wie das Video", () => {
+    const sc = buildScaffold(store, sessionId);
+    const p = montagePreview(sc);
+    expect(p.durationMs).toBeCloseTo(sc.plan.durationMs, -2);
+    let at = 0;
+    for (const piece of p.pieces) {
+      expect(piece.fromMs).toBeCloseTo(at, 6);
+      at = piece.toMs;
+    }
+    const ep = p.pieces.find((x) => x.kind === "episode" && x.audio)!;
+    expect(sc.input.sources.some((s) => s.id === ep.audio!.sourceId)).toBe(true);
+    expect(p.pieces.some((x) => x.still?.image.sourceId)).toBe(true);
+    expect(p.timeline.episodes.length).toBeGreaterThan(0);
+  });
+
+  it("schreibt eine Schnittliste für DaVinci Resolve", async () => {
+    const out = join(dir, "resolve");
+    const r = await exportSession(store, sessionId, out, { video: false, resolve: true });
+    const name = r.files.find((f) => f.endsWith(".fcpxml"))!;
+    const xml = readFileSync(join(out, name), "utf8");
+    expect(xml).toContain('<fcpxml version="1.9">');
+    // Lückenlos: jedes Element der Hauptspur beginnt, wo das vorige endet.
+    const spine = [...xml.matchAll(/^ {8}<(?:asset-clip|gap) [^>]*offset="([^"]+)"[^>]*duration="([^"]+)"/gm)];
+    const frames = (v: string) => (v === "0s" ? 0 : Number(v.replace("/25s", "")));
+    let at = 0;
+    for (const [, off, len] of spine) {
+      expect(frames(off!)).toBe(at);
+      at += frames(len!);
+    }
+    expect(at).toBe(Math.round(r.durationMs / 40));
+    expect(xml).toContain('srcEnable="video"');
+    expect(xml).toMatch(/<marker [^>]*value="[^"]*B1: Wie lange schon\?"/);
+    expect(xml).toMatch(/<chapter-marker [^>]*Episode 1/);
+    // Standbilder liegen neben der Schnittliste.
+    const still = /src="(file:[^"]+\.jpg)"/.exec(xml)![1]!;
+    expect(existsSync(fileURLToPath(still))).toBe(true);
   });
 });

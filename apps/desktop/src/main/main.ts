@@ -1,8 +1,16 @@
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
-import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
+import {
+  analyzeSession,
+  applyImport,
+  parseTranscript,
+  scanPaths,
+  setToolPaths,
+  TRANSCRIPT_EXTENSIONS,
+} from "@feldspur/media";
 import {
   IPC,
   MEDIA_SCHEME,
@@ -18,12 +26,12 @@ import {
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
-import { previewExport, registerOverlayBridge, runExport } from "./export.ts";
+import { exportRunning, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
 import { resolveToolPaths } from "./tools.ts";
-import { addLine, deleteLine, updateLine } from "./transcript.ts";
+import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -161,21 +169,44 @@ function registerIpc(): void {
   });
 
   registerOverlayBridge();
+  ipcMain.handle(
+    IPC.importTranscript,
+    async (_e, sourceId: string, opts: { mode: "append" | "replace"; path?: string }) => {
+      const s = requireStore();
+      let path = opts.path;
+      if (!path) {
+        const r = await dialog.showOpenDialog(win!, {
+          title: "Transkript importieren",
+          properties: ["openFile"],
+          filters: [{ name: "Transkript (Whisper u. a.)", extensions: TRANSCRIPT_EXTENSIONS }],
+        });
+        if (r.canceled || !r.filePaths[0]) return null;
+        path = r.filePaths[0];
+      }
+      const lines = parseTranscript(await readFile(path, "utf8"), basename(path));
+      const r = importLines(s, sourceId, lines, opts.mode);
+      return { view: buildSessionView(s, r.sessionId), count: r.count, dropped: r.dropped };
+    },
+  );
   ipcMain.handle(IPC.previewExport, (_e, sessionId: string) => previewExport(requireStore(), sessionId));
-  ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: { video: boolean; dir?: string }) => {
-    const s = requireStore();
-    let parent = opts.dir;
-    if (!parent) {
-      const r = await dialog.showOpenDialog(win!, {
-        title: "Wohin ausgeben?",
-        buttonLabel: "Hier ausgeben",
-        properties: ["openDirectory", "createDirectory"],
-      });
-      if (r.canceled || !r.filePaths[0]) return null;
-      parent = r.filePaths[0];
-    }
-    return runExport(s, e.sender, sessionId, parent, opts.video);
-  });
+  ipcMain.handle(IPC.montagePreview, (_e, sessionId: string) => montagePlan(requireStore(), sessionId));
+  ipcMain.handle(
+    IPC.exportSession,
+    async (e, sessionId: string, opts: { video: boolean; resolve?: boolean; dir?: string }) => {
+      const s = requireStore();
+      let parent = opts.dir;
+      if (!parent) {
+        const r = await dialog.showOpenDialog(win!, {
+          title: "Wohin ausgeben?",
+          buttonLabel: "Hier ausgeben",
+          properties: ["openDirectory", "createDirectory"],
+        });
+        if (r.canceled || !r.filePaths[0]) return null;
+        parent = r.filePaths[0];
+      }
+      return runExport(s, e.sender, sessionId, parent, opts);
+    },
+  );
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
@@ -332,6 +363,18 @@ function createWindow(): void {
     },
   });
   // Keine Navigation weg von der App, keine neuen Fenster.
+  win.on("close", (e) => {
+    if (!exportRunning()) return;
+    const choice = dialog.showMessageBoxSync(win!, {
+      type: "warning",
+      buttons: ["Weiter ausgeben", "Abbrechen und schließen"],
+      defaultId: 0,
+      cancelId: 0,
+      message: "Es läuft noch eine Ausgabe.",
+      detail: "Beim Schließen bricht sie ab; die halb geschriebenen Dateien bleiben unvollständig.",
+    });
+    if (choice === 0) e.preventDefault();
+  });
   win.webContents.on("will-navigate", (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   const devUrl = process.env.FELDSPUR_DEV_URL;

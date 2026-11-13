@@ -2,13 +2,15 @@
  * Ausgeben aus der App: Ordner wählen, Export anstoßen, Einblendungen von der Oberfläche zeichnen lassen.
  */
 import { join } from "node:path";
-import { ipcMain, type WebContents } from "electron";
+import { app, ipcMain, type WebContents } from "electron";
 import type { ProjectStore } from "@feldspur/core";
 import {
   baseName,
   buildScaffold,
   entryText,
   exportSession,
+  montagePreview,
+  type MontagePreview,
   type OverlayFrame,
   type OverlayRenderer,
   type OverlayTimeline,
@@ -16,6 +18,12 @@ import {
 import { IPC, type ExportOutcome, type ScaffoldPreview } from "../shared/api.ts";
 
 const CHUNK = 60;
+let running: string | null = null;
+
+/** Läuft gerade eine Ausgabe? Dann nicht schließen, ohne zu fragen. */
+export function exportRunning(): boolean {
+  return running !== null;
+}
 let nextId = 1;
 const pending = new Map<number, { resolve: (b: Buffer[]) => void; reject: (e: Error) => void }>();
 
@@ -44,6 +52,10 @@ function overlayVia(wc: WebContents): OverlayRenderer {
   };
 }
 
+export function montagePlan(s: ProjectStore, sessionId: string): MontagePreview {
+  return montagePreview(buildScaffold(s, sessionId));
+}
+
 export function previewExport(s: ProjectStore, sessionId: string): ScaffoldPreview {
   const sc = buildScaffold(s, sessionId);
   return {
@@ -60,13 +72,22 @@ export async function runExport(
   wc: WebContents,
   sessionId: string,
   parent: string,
-  video: boolean,
+  opts: { video: boolean; resolve?: boolean },
 ): Promise<ExportOutcome> {
-  const dir = join(parent, baseName(buildScaffold(s, sessionId)));
-  const r = await exportSession(s, sessionId, dir, {
-    video,
-    overlay: overlayVia(wc),
-    onProgress: (step, done, total) => wc.send(IPC.exportProgress, { step, done, total }),
-  });
-  return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
+  // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
+  if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
+  running = sessionId;
+  try {
+    const dir = join(parent, baseName(buildScaffold(s, sessionId)));
+    const r = await exportSession(s, sessionId, dir, {
+      video: opts.video,
+      resolve: opts.resolve,
+      overlay: overlayVia(wc),
+      cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
+      onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
+    });
+    return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
+  } finally {
+    running = null;
+  }
 }

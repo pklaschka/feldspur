@@ -3,6 +3,7 @@
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
 import type { FieldSession, OffsetBasis, PlacementStatus, SourceKind } from "@feldspur/core";
+import type { MontagePreview } from "@feldspur/media";
 
 export interface ProjectInfo {
   path: string;
@@ -240,12 +241,15 @@ export interface ExportOutcome {
 }
 
 export interface ExportProgress {
+  sessionId: string;
   step: string;
   done: number;
   total: number;
 }
 
 /** Zeitgerüst ohne Video, zur Vorschau im Schritt „Ausgeben“. */
+export type { MontagePreview, PreviewPiece } from "@feldspur/media";
+
 export interface ScaffoldPreview {
   base: string;
   durationMs: number;
@@ -321,6 +325,14 @@ export interface FeldspurApi {
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
   patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
   /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
+  /**
+   * Automatisches Transkript (.srt, .vtt, .json, .tsv, z. B. Whisper) an eine Aufnahme hängen.
+   * Ohne path fragt die App nach der Datei. null = abgebrochen.
+   */
+  importTranscript(
+    sourceId: string,
+    opts: { mode: "append" | "replace"; path?: string },
+  ): Promise<{ view: SessionView; count: number; dropped: number } | null>;
   addTranscriptLine(
     sourceId: string,
     line: { atMs: number; speaker: string; text: string },
@@ -329,11 +341,16 @@ export interface FeldspurApi {
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
   previewExport(sessionId: string): Promise<ScaffoldPreview>;
+  /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
+  montagePreview(sessionId: string): Promise<MontagePreview>;
   /**
    * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = abgebrochen.
    */
-  exportSession(sessionId: string, opts: { video: boolean; dir?: string }): Promise<ExportOutcome | null>;
+  exportSession(
+    sessionId: string,
+    opts: { video: boolean; resolve?: boolean; dir?: string },
+  ): Promise<ExportOutcome | null>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
   /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */
   onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
@@ -366,6 +383,7 @@ export const IPC = {
   setPartOf: "source:part-of",
   setFollows: "source:follows",
   addTranscriptLine: "transcript:add",
+  importTranscript: "transcript:import",
   updateTranscriptLine: "transcript:update",
   deleteTranscriptLine: "transcript:delete",
   setDeviceOffset: "device:set-offset",
@@ -384,6 +402,7 @@ export const IPC = {
   patchDiaryEntry: "diary:patch",
   progress: "progress",
   previewExport: "export:preview",
+  montagePreview: "export:montage",
   exportSession: "export:run",
   exportProgress: "export:progress",
   overlayRequest: "overlay:request",

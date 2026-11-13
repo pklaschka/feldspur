@@ -333,6 +333,31 @@ try {
   await tr.waitFor({ state: "detached" });
   await page.getByTestId("transcript-summary").getByText("2 Zeilen").waitFor();
 
+  // Automatisches Transkript (erfundenes Whisper-VTT) dazuholen.
+  const vtt = join(dir, "A-01.vtt");
+  writeFileSync(
+    vtt,
+    "WEBVTT\n\n00:00:30.000 --> 00:00:33.000\n<v SPEAKER_00>Ist hier noch frei?\n\n00:01:10.000 --> 00:01:12.000\n<v SPEAKER_01>Ja.\n",
+  );
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [file] })) as typeof dialog.showOpenDialog;
+  }, vtt);
+  await page.getByTestId("inspector").getByRole("button", { name: "Transkript importieren…" }).click();
+  await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }).click();
+  await page.getByTestId("inspector").getByRole("status").getByText("2 Zeilen übernommen").waitFor();
+  await page.getByTestId("transcript-summary").getByText("4 Zeilen").waitFor();
+
+  // Schnellsuche (Strg+K) findet die importierte Zeile und springt hin.
+  await page.keyboard.press("Control+k");
+  const searchBox = page.getByTestId("search").getByRole("textbox", { name: "Suchen" });
+  await searchBox.fill("noch frei");
+  await page.getByTestId("search").getByRole("option").first().getByText("noch frei").waitFor();
+  await shot("-suche");
+  await searchBox.press("Enter");
+  await page.getByTestId("search").waitFor({ state: "detached" });
+  await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
+  await page.getByRole("tab", { name: /Einsammeln/ }).click();
+
   // Große Vorschau und PDF.
   await src("Feldnotizen_Scan.pdf").click();
   await page.getByRole("button", { name: "Feldnotizen_Scan.pdf groß ansehen" }).click();
@@ -405,12 +430,50 @@ try {
     .waitFor();
   console.log(`Zeitgerüst: ${await scaffold.locator("li").count()} Zeilen`);
   await shot("-ausgeben");
+
+  // Montage in der App ansehen: springt ins erste Episodenstück und spielt ab.
+  await page.getByRole("button", { name: "Montage ansehen" }).click();
+  const montage = page.getByTestId("montage");
+  const montageTime = montage.getByTestId("montage-time");
+  await montageTime.waitFor();
+  const montageBar = montage.getByTestId("montage-bar");
+  for (let i = 0; i < 8 && !(await montageBar.innerText()).includes("Episode"); i++)
+    await montage.getByRole("button", { name: "Nächstes Stück" }).click();
+  const before = await montageTime.innerText();
+  await montage.getByRole("button", { name: "Abspielen" }).click();
+  // In der Episode laufen die Originale (Ton oder Video) an der passenden Stelle mit.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll<HTMLMediaElement>("[data-testid=montage] :is(video, audio)")].some(
+      (m) => !m.paused && m.currentTime > 0.5,
+    ),
+  );
+  console.log(`Montage-Vorschau: ${before} → ${await montageTime.innerText()} · ${await montageBar.innerText()}`);
+  // Eine Minute weiter (←/→ springen je 10 s) läuft die Kamera: Ihr Bild steht im Hauptfeld.
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => {
+    const v = document.querySelector<HTMLVideoElement>("[data-testid=montage] video");
+    return !!v && !v.paused && v.currentTime > 0.2 && v.readyState >= 2;
+  });
+  await shot("-montage");
+  await montage.getByRole("button", { name: "Pause" }).click();
+  await montage.getByRole("button", { name: "Schließen" }).click();
+  await montage.waitFor({ state: "detached" });
   const t0 = Date.now();
+  await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
   await page.getByRole("button", { name: "Ausgeben…" }).click();
+  // Während der Ausgabe den Reiter wechseln: Sie läuft weiter, der Reiter zeigt den Fortschritt.
+  await page.getByTestId("export-progress").waitFor();
+  await page.getByRole("tab", { name: /Durchsehen/ }).click();
+  await page.getByRole("tab", { name: /Ausgeben.*läuft/ }).waitFor();
+  await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
   const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
   console.log(`Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`);
-  if (!files.some((f) => f.includes(".mp4")) || !files.some((f) => f.includes(".docx")))
+  if (
+    !files.some((f) => f.includes(".mp4")) ||
+    !files.some((f) => f.includes(".docx")) ||
+    !files.some((f) => f.includes(".fcpxml"))
+  )
     throw new Error("Ausgabe unvollständig");
   await shot("-ausgegeben");
   if (process.env.FELDSPUR_EXPORT_KEEP) cpSync(out, process.env.FELDSPUR_EXPORT_KEEP, { recursive: true });
