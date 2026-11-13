@@ -102,14 +102,14 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Zeit in einem Clip kann die Uhr des ganzen Geräts richten; die übrigen Clips rücken dann mit.
 - **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
-- **Ausgabe**: ein Ordner pro Einsatz. Das **Montagevideo** zeigt alle Episoden in voller Länge; Zeit ohne Episode
-  wird zur Zwischentafel, Fotos und Tagebucheinträge darin stehen je 3 s. Gleichzeitige Videos stehen nebeneinander
-  (bis zu vier), der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Tagebucheinträge
-  zeigen den Scan-Ausschnitt (auch aus PDFs) und die Abschrift. Eingeblendet sind Uhrzeit, laufende Quellen
-  und zwei Zeitleisten (ganzer Einsatz, ± 2,5 Min.); gezeichnet in der Oberfläche, weil die LGPL-Fassung von FFmpeg
-  keine Schrift setzt. „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den Originalen ab. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins Montagevideo und die
-  Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft
-  und Zeitnachweis jeder Datei.
+- **Ausgabe**: ein Ordner pro Einsatz. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins
+  Montagevideo und die Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten (auch aus PDFs). Das
+  **Montagevideo** zeigt nur, was zum Zuordnen nötig ist: Uhrzeit, die laufenden Videos (bis zu vier nebeneinander) mit
+  Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und eine **Montage-ID**, die auch im Kopf des
+  Zeitgerüsts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
+  nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
+  weil die LGPL-Fassung von FFmpeg keine Schrift setzt; „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den
+  Originalen ab. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft und Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Zeitgerüst, Montage, Mitschrift
   und Suche führen den Eintrag an der Notierzeit; der Bezugszeitraum steht als Hinweis dabei.

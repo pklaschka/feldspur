@@ -4,7 +4,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { formatClock, formatDuration, type Id, type ProjectStore, type Source } from "@feldspur/core";
+import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
 import { scaffoldDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
@@ -21,6 +21,8 @@ export interface ExportOptions {
   resolve?: boolean;
   /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
   cacheDir?: string;
+  /** Episoden mit kurzen Tafeln dazwischen (Standard) oder alles in Echtzeit. */
+  mode?: MontageMode;
   /** Ton aller laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
   /**
@@ -50,7 +52,8 @@ export function safeName(s: string): string {
 }
 
 export function baseName(sc: Scaffold): string {
-  return `Feldtag_${sc.header.date}_${safeName(sc.header.title)}`;
+  const base = `Feldtag_${sc.header.date}_${safeName(sc.header.title)}`;
+  return sc.plan.mode === "realtime" ? `${base}_Echtzeit` : base;
 }
 
 const csvCell = (v: string | number | null | undefined) => {
@@ -127,7 +130,7 @@ export async function exportSession(
   outDir: string,
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
-  const sc = buildScaffold(store, sessionId);
+  const sc = buildScaffold(store, sessionId, { mode: opts.mode });
   if (sc.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
   const base = baseName(sc);
   await mkdir(outDir, { recursive: true });
@@ -150,7 +153,7 @@ export async function exportSession(
     const files: string[] = [];
     const media = `${base}.mp4`;
     if (opts.video !== false) {
-      await renderMontage(sc, stills, join(outDir, media), {
+      await renderMontage(sc, join(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
@@ -161,22 +164,7 @@ export async function exportSession(
     }
 
     if (opts.resolve) {
-      const stillDir = `${base}_Standbilder`;
-      await mkdir(join(outDir, stillDir), { recursive: true });
-      const stillFiles = new Map<ScaffoldEntry, string | null>();
-      let k = 0;
-      for (const [e, list] of stills) {
-        const s = list.find(Boolean);
-        if (!s) continue;
-        const f = join(outDir, stillDir, `${String(++k).padStart(3, "0")}_${safeName(e.head)}.jpg`);
-        await writeFile(f, s.data);
-        stillFiles.set(e, f);
-      }
-      const xml = montageFcpxml(sc, planPieces(sc, stillFiles), {
-        projectName: base,
-        stillPath: (f) => f,
-        audioMix: opts.audioMix,
-      });
+      const xml = montageFcpxml(sc, planPieces(sc), { projectName: base, audioMix: opts.audioMix });
       await writeFile(join(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
       files.push(`${base}_Resolve.fcpxml`);
     }

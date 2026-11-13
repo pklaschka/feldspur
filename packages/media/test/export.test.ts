@@ -135,8 +135,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     }
     const ep = p.pieces.find((x) => x.kind === "episode" && x.audios.length)!;
     expect(sc.input.sources.some((s) => s.id === ep.audios[0]!.sourceId)).toBe(true);
-    expect(p.pieces.some((x) => x.still?.image?.sourceId)).toBe(true);
-    expect(p.timeline.episodes.length).toBeGreaterThan(0);
+    expect(p.header.montageId).toMatch(/^FS-[2-9A-Z]{4}-[2-9A-Z]{4}$/);
   });
 
   it("schreibt eine Schnittliste für DaVinci Resolve", async () => {
@@ -158,8 +157,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     expect(xml).toContain('srcEnable="video"');
     expect(xml).toMatch(/<marker [^>]*value="[^"]*B1: Wie lange schon\?"/);
     expect(xml).toMatch(/<chapter-marker [^>]*Episode 1/);
-    // Standbilder liegen neben der Schnittliste.
-    const still = /src="(file:[^"]+\.jpg)"/.exec(xml)![1]!;
-    expect(existsSync(fileURLToPath(still))).toBe(true);
+    // Keine Standbilder mehr: Fotos und Scans stehen im Zeitgerüst.
+    expect(xml).not.toMatch(/\.jpg"/);
   });
 });

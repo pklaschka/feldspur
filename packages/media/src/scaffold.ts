@@ -2,6 +2,7 @@
  * Zeitgerüst: alles eines Einsatzes in einer Reihenfolge, mit der Stelle im Montagevideo.
  * Daraus entstehen das .docx für MAXQDA und die Einblendungen im Video.
  */
+import { createHash } from "node:crypto";
 import {
   computeEpisodes,
   formatClock,
@@ -10,6 +11,7 @@ import {
   resolveTimeline,
   type Id,
   type Interval,
+  type MontageMode,
   type MontagePlan,
   type ProjectStore,
   type ResolveInput,
@@ -46,6 +48,13 @@ export interface ScaffoldHeader {
   reference: string | null;
   sources: string[];
   extra: Record<string, string>;
+  /**
+   * Kennung, die Montagevideo und Zeitgerüst einander zuordnet. Steht im Video eingeblendet
+   * und in den Metadaten, im Dokument im Kopf. Gleicher Stand → gleiche Kennung.
+   */
+  montageId: string;
+  /** „Episoden“ oder „Echtzeit“. */
+  modeLabel: string;
 }
 
 export interface Scaffold {
@@ -79,7 +88,12 @@ export function timestamp(ms: number): string {
   return `#${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}-${tenths}#`;
 }
 
-export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
+export interface ScaffoldOptions {
+  /** Episoden mit kurzen Tafeln dazwischen (Standard) oder alles in Echtzeit. */
+  mode?: MontageMode;
+}
+
+export function buildScaffold(store: ProjectStore, sessionId: Id, opts: ScaffoldOptions = {}): Scaffold {
   const input = store.loadResolveInput(sessionId);
   const res = resolveTimeline(input);
   const analyses = store.listAudioAnalyses(sessionId);
@@ -87,9 +101,12 @@ export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
   const loud = new Map(analyses.map((a) => [a.sourceId, a.loudInIdle]));
   const ep = computeEpisodes(input.sources, res, idle);
   const photos = new Set(input.sources.filter((s) => s.kind === "photo" && !s.partOf).map((s) => s.id));
-  // In Tafeln erscheinen Fotos und Tagebucheinträge; Tagebuchseiten zeigen sich über ihre Einträge.
-  const plan = planMontage(ep, (kind, id) =>
-    kind === "source" ? (photos.has(id) ? res.placements.get(id)?.startMs : undefined) : res.diary.get(id)?.notedAtMs,
+  // In Zwischenzeiten stehen Fotos und Tagebucheinträge; Tagebuchseiten zeigen sich über ihre Einträge.
+  const plan = planMontage(
+    ep,
+    (kind, id) =>
+      kind === "source" ? (photos.has(id) ? res.placements.get(id)?.startMs : undefined) : res.diary.get(id)?.notedAtMs,
+    { mode: opts.mode },
   );
 
   const src = new Map(input.sources.map((s) => [s.id, s]));
@@ -142,7 +159,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
       montageMs: seg.montageStartMs,
       kind: "card",
       clock: span > 0 ? `${formatClock(seg.fromMs)}–${formatClock(seg.toMs)}` : formatClock(seg.fromMs),
-      head: "Zwischentafel",
+      head: plan.mode === "realtime" ? "Zwischenzeit" : "Zwischentafel",
       body: parts.join(". "),
     });
   }
@@ -256,6 +273,8 @@ export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
       reference: ref ? ref.label : null,
       sources: input.sources.filter((s) => res.placements.has(s.id) && !s.partOf).map((s) => s.label),
       extra: input.session.extra,
+      montageId: montageId(sessionId, plan, input.sources, res),
+      modeLabel: plan.mode === "realtime" ? "Echtzeit" : "Episoden",
     },
     plan,
     entries,
@@ -269,4 +288,25 @@ export function entryText(e: ScaffoldEntry): string {
   const clock = e.clock ? `Uhrzeit ${e.clock} · ` : "";
   const head = e.head ? `${e.head}: ` : "";
   return `${timestamp(e.montageMs)} ${clock}${head}${e.body}`;
+}
+
+/** Kurze, gut lesbare Kennung aus Einsatz, Art der Montage und Lage der Quellen. */
+function montageId(sessionId: Id, plan: MontagePlan, sources: Source[], res: ResolveResult): string {
+  const h = createHash("sha1").update(
+    JSON.stringify({
+      sessionId,
+      mode: plan.mode,
+      durationMs: Math.round(plan.durationMs),
+      sources: sources
+        .filter((s) => res.placements.has(s.id))
+        .map((s) => [s.sha256, Math.round(res.placements.get(s.id)!.startMs)])
+        .sort(),
+    }),
+  );
+  // Ohne leicht verwechselbare Zeichen (0/O, 1/I).
+  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const bytes = h.digest();
+  let id = "";
+  for (let i = 0; i < 8; i++) id += alphabet[bytes[i]! % alphabet.length];
+  return `FS-${id.slice(0, 4)}-${id.slice(4)}`;
 }

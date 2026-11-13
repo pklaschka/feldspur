@@ -1,11 +1,11 @@
 /**
  * Schnittliste für DaVinci Resolve (und Final Cut Pro): dieselbe Montage als FCPXML 1.9.
- * Resolve rechnet dann selbst (mit Grafikkarte). Enthalten sind Videos (gleichzeitige nebeneinander), Ton je Gerät auf eigener Spur, Standbilder
- * und Marker für Episoden, Tafeln, Fotos, Tagebuch und Mitschrift. Die Einblendungen (Uhrzeit,
- * Zeitleisten) fehlen; die Uhrzeit steht in den Markern.
+ * Resolve rechnet dann selbst (mit Grafikkarte). Enthalten sind Videos (gleichzeitige nebeneinander),
+ * Ton je Gerät auf eigener Spur und Marker für Episoden, Tafeln, Fotos, Tagebuch und Mitschrift.
+ * Die Einblendungen (Uhrzeit, Herkunft) fehlen; die Uhrzeit steht in den Markern.
  */
 import { pathToFileURL } from "node:url";
-import { FPS, H, stillBox, videoTiles, W, type Box } from "./layout.ts";
+import { FPS, H, videoTiles, W, type Box } from "./layout.ts";
 import type { Piece } from "./montage-video.ts";
 import { entryText, type Scaffold } from "./scaffold.ts";
 
@@ -26,25 +26,21 @@ const transform = (b: Box, scale = Math.min(b.w / W, b.h / H)) => {
 
 export interface FcpxmlOptions {
   projectName: string;
-  /** Bilddateien je Standbild-Datei aus der Montage → Pfad, unter dem Resolve sie findet. */
-  stillPath: (file: string) => string;
   /** Ton wie im Montagevideo: alle laufenden Geräte (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
 }
 
 export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions): string {
   const assets = new Map<string, { id: string; xml: string }>();
-  const asset = (path: string, name: string, kind: "av" | "audio" | "image", durationMs: number | null) => {
+  const asset = (path: string, name: string, kind: "av" | "audio", durationMs: number | null) => {
     const got = assets.get(path);
     if (got) return got.id;
     const id = `a${assets.size + 2}`;
-    const dur = kind === "image" ? "0s" : t(msFrames(durationMs ?? 0));
+    const dur = t(msFrames(durationMs ?? 0));
     const flags =
-      kind === "image"
-        ? `hasVideo="1" format="r1"`
-        : kind === "audio"
-          ? `hasAudio="1" audioSources="1" audioChannels="2"`
-          : `hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2"`;
+      kind === "audio"
+        ? `hasAudio="1" audioSources="1" audioChannels="2"`
+        : `hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2"`;
     assets.set(path, {
       id,
       xml: `    <asset id="${id}" name="${esc(name)}" start="0s" duration="${dur}" ${flags}>\n      <media-rep kind="original-media" src="${esc(pathToFileURL(path).href)}"/>\n    </asset>`,
@@ -85,15 +81,6 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
         `          <asset-clip ref="${id}" lane="${-(k + 1)}" offset="${t(base)}" start="${t(msFrames(a.fromMs))}" duration="${t(len)}" srcEnable="audio" name="${esc(a.label)}"/>`,
       );
     });
-    if (p.still?.file) {
-      const id = asset(opts.stillPath(p.still.file), p.still.caption, "image", null);
-      const box = stillBox(p.kind, !!p.still.text);
-      children.push(
-        `          <video ref="${id}" lane="${more.length + 1}" offset="${t(base)}" start="0s" duration="${t(len)}" name="${esc(p.still.caption)}">${
-          p.kind === "episode" ? `\n            ${transform(box)}\n          ` : ""
-        }</video>`,
-      );
-    }
     children.push(...markersIn(p, base));
     if (main) {
       const id = asset(main.source.originalPath, main.source.fileName, "av", main.source.durationMs);

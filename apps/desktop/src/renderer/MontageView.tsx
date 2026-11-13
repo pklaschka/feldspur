@@ -3,29 +3,29 @@
  * an denen sie im Montagevideo stünden, mit denselben Einblendungen.
  */
 import { formatClock, formatDuration } from "@feldspur/core/time";
-import { H, LAYOUT, MAX_TILES, stillBox, videoTiles, W, type Box } from "@feldspur/media/layout";
+import { H, LAYOUT, MAX_TILES, videoTiles, W } from "@feldspur/media/layout";
 import { Dialog } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import { mediaUrl, type MontagePreview, type PreviewPiece } from "../shared/api.ts";
 
 import { pieceAt, previewFrame } from "./montage.ts";
 import { drawOverlay } from "./overlay.ts";
-import { renderImageRef } from "./stillRender.ts";
 import { Button, CloseButton, cx, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
 /** Höchstens so viele Tonquellen außer den Videos gleichzeitig. */
 const MAX_SOUNDS = 4;
-type StillRef = NonNullable<NonNullable<PreviewPiece["still"]>["image"]>;
 /** Ab so viel Abweichung zwischen Uhr und Wiedergabe wird nachgestellt. */
 const DRIFT_S = 0.3;
 
 export function MontageView({
   sessionId,
+  realtime,
   open,
   onOpenChange,
 }: {
   sessionId: string;
+  realtime: boolean;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
@@ -36,14 +36,14 @@ export function MontageView({
     let live = true;
     setPlan(null);
     setError(null);
-    api.montagePreview(sessionId).then(
+    api.montagePreview(sessionId, realtime).then(
       (p) => live && setPlan(p),
       (e: unknown) => live && setError(e instanceof Error ? e.message : String(e)),
     );
     return () => {
       live = false;
     };
-  }, [open, sessionId]);
+  }, [open, sessionId, realtime]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -73,7 +73,7 @@ export function MontageView({
 }
 
 function Player({ plan }: { plan: MontagePreview }) {
-  const { pieces, durationMs, timeline } = plan;
+  const { pieces, durationMs, header } = plan;
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const tRef = useRef(0);
@@ -158,8 +158,8 @@ function Player({ plan }: { plan: MontagePreview }) {
   const second = Math.floor((t - piece.fromMs) / 1000);
   useEffect(() => {
     const ctx = overlay.current?.getContext("2d");
-    if (ctx) drawOverlay(ctx, timeline, previewFrame(piece, piece.fromMs + second * 1000));
-  }, [piece, second, timeline]);
+    if (ctx) drawOverlay(ctx, header, previewFrame(piece, piece.fromMs + second * 1000));
+  }, [piece, second, header]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -180,7 +180,6 @@ function Player({ plan }: { plan: MontagePreview }) {
   }, []);
 
   const tiles = videoTiles(piece.videos.length);
-  const image = piece.still?.image ?? null;
   const clock = previewFrame(piece, t).clockMs;
 
   return (
@@ -214,14 +213,6 @@ function Player({ plan }: { plan: MontagePreview }) {
               preload="auto"
             />
           ))}
-          {piece.still && image && (
-            <StillImage
-              key={`${image.sourceId}:${JSON.stringify(image.region ?? null)}:${piece.kind}`}
-              image={image}
-              caption={piece.still.caption}
-              box={stillBox(piece.kind, !!piece.still.text)}
-            />
-          )}
           <canvas ref={overlay} width={W} height={H} className="pointer-events-none absolute inset-0" />
         </div>
       </div>
@@ -238,35 +229,6 @@ function Player({ plan }: { plan: MontagePreview }) {
         onMixAll={setMixAll}
       />
     </div>
-  );
-}
-
-/** Foto oder Tagebuchausschnitt (auch aus PDF-Scans), eingepasst wie im Video (oben, mittig). */
-function StillImage({ image, caption, box }: { image: StillRef; caption: string; box: Box }) {
-  const holder = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    let live = true;
-    renderImageRef(image, image.pdf).then(
-      (c) => {
-        if (!live || !holder.current) return;
-        const k = Math.min(box.w / c.width, box.h / c.height);
-        c.style.width = `${Math.round(c.width * k)}px`;
-        c.style.height = `${Math.round(c.height * k)}px`;
-        c.setAttribute("aria-label", caption);
-        holder.current.replaceChildren(c);
-      },
-      () => undefined,
-    );
-    return () => {
-      live = false;
-    };
-  }, [image, caption, box.w, box.h]);
-  return (
-    <div
-      ref={holder}
-      className="absolute flex items-start justify-center"
-      style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
-    />
   );
 }
 

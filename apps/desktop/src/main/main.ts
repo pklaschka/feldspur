@@ -199,11 +199,19 @@ function registerIpc(): void {
       return { view: buildSessionView(s, r.sessionId), count: r.count, dropped: r.dropped };
     },
   );
-  ipcMain.handle(IPC.previewExport, (_e, sessionId: string) => previewExport(requireStore(), sessionId));
-  ipcMain.handle(IPC.montagePreview, (_e, sessionId: string) => montagePlan(requireStore(), sessionId));
+  ipcMain.handle(IPC.previewExport, (_e, sessionId: string, realtime?: boolean) =>
+    previewExport(requireStore(), sessionId, realtime),
+  );
+  ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
+    montagePlan(requireStore(), sessionId, realtime),
+  );
   ipcMain.handle(
     IPC.exportSession,
-    async (e, sessionId: string, opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; dir?: string }) => {
+    async (
+      e,
+      sessionId: string,
+      opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string },
+    ) => {
       const s = requireStore();
       let parent = opts.dir;
       if (!parent) {
