@@ -333,6 +333,20 @@ try {
   await tr.waitFor({ state: "detached" });
   await page.getByTestId("transcript-summary").getByText("2 Zeilen").waitFor();
 
+  // Automatisches Transkript (erfundenes Whisper-VTT) dazuholen.
+  const vtt = join(dir, "A-01.vtt");
+  writeFileSync(
+    vtt,
+    "WEBVTT\n\n00:00:30.000 --> 00:00:33.000\n<v SPEAKER_00>Ist hier noch frei?\n\n00:01:10.000 --> 00:01:12.000\n<v SPEAKER_01>Ja.\n",
+  );
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [file] })) as typeof dialog.showOpenDialog;
+  }, vtt);
+  await page.getByTestId("inspector").getByRole("button", { name: "Transkript importieren…" }).click();
+  await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }).click();
+  await page.getByTestId("inspector").getByRole("status").getByText("2 Zeilen übernommen").waitFor();
+  await page.getByTestId("transcript-summary").getByText("4 Zeilen").waitFor();
+
   // Große Vorschau und PDF.
   await src("Feldnotizen_Scan.pdf").click();
   await page.getByRole("button", { name: "Feldnotizen_Scan.pdf groß ansehen" }).click();

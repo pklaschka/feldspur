@@ -366,6 +366,12 @@ function SessionPane({
             removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
             openDiary: setDiaryPage,
             transcribe: setTranscribeId,
+            importTranscript: async (id, mode) => {
+              const r = await guard(() => api.importTranscript(id, { mode }));
+              if (!r) return null;
+              setView(r.view);
+              return r.count;
+            },
           }}
         />
         <DiaryEditor

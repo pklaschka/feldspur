@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { addLine, deleteLine, updateLine } from "../src/main/transcript.ts";
+import { addLine, deleteLine, importLines, updateLine } from "../src/main/transcript.ts";
 import { buildSessionView } from "../src/main/view.ts";
 import { splitSpeaker } from "../src/renderer/format.ts";
 
@@ -55,6 +55,22 @@ function seed() {
 }
 
 describe("Mitschrift", () => {
+  it("übernimmt ein automatisches Transkript: ergänzen, ersetzen, Überhang verwerfen", () => {
+    const { session, audio, photo } = seed();
+    addLine(store, audio.id, { atMs: 5_000, speaker: "B1", text: "von Hand" });
+    const lines = [
+      { atMs: 1_000, speaker: "S1", text: "Eins" },
+      { atMs: 61_000, speaker: "S2", text: "Zwei" },
+      { atMs: 900_000, speaker: "S1", text: "hinter dem Ende" },
+    ];
+    expect(importLines(store, audio.id, lines, "append")).toMatchObject({ count: 2, dropped: 1 });
+    expect(buildSessionView(store, session.id).transcript.map((l) => l.text)).toEqual(["Eins", "von Hand", "Zwei"]);
+    importLines(store, audio.id, lines.slice(0, 1), "replace");
+    const v = buildSessionView(store, session.id);
+    expect(v.transcript.map((l) => [l.text, l.clockMs])).toEqual([["Eins", Date.UTC(2026, 8, 14, 10, 15, 1)]]);
+    expect(() => importLines(store, photo.id, lines, "append")).toThrow(/keine Ton/);
+  });
+
   it("legt Zeilen an, rechnet die Uhrzeit aus dem Abgleich und begrenzt die Stelle", () => {
     const { session, audio } = seed();
     addLine(store, audio.id, { atMs: 70_000, speaker: " H ", text: " Zwölf Jahre " });

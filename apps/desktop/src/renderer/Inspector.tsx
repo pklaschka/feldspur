@@ -1,4 +1,5 @@
 import { formatDuration } from "@feldspur/core/time";
+import { DropdownMenu } from "radix-ui";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   mediaUrl,
@@ -33,6 +34,8 @@ export interface InspectorActions {
   removeEvidence: (evidenceId: string) => void;
   openDiary: (pageId: string) => void;
   transcribe: (sourceId: string) => void;
+  /** Gibt die Zahl übernommener Zeilen zurück, null bei Abbruch oder Fehler. */
+  importTranscript: (sourceId: string, mode: "append" | "replace") => Promise<number | null>;
 }
 
 export function Inspector({
@@ -203,6 +206,7 @@ function SourceDetails({
             <Button size="sm" onClick={() => sa.preview(row.id)}>
               Groß ansehen
             </Button>
+            <TranscriptImport view={view} row={row} onImport={actions.importTranscript} />
             <Button size="sm" variant="primary" onClick={() => actions.transcribe(row.id)}>
               Mitschreiben…
             </Button>
@@ -623,6 +627,68 @@ function DiaryPage({
       <Button variant="primary" size="sm" className="mt-2" onClick={onOpen}>
         Abtippen…
       </Button>
+    </>
+  );
+}
+
+/** Fertiges Transkript (Whisper u. a.) übernehmen; gibt es schon Zeilen, ergänzen oder ersetzen. */
+function TranscriptImport({
+  view,
+  row,
+  onImport,
+}: {
+  view: SessionView;
+  row: SourceRow;
+  onImport: InspectorActions["importTranscript"];
+}) {
+  const [done, setDone] = useState<string | null>(null);
+  useEffect(() => setDone(null), [row.id]);
+  const has = view.transcript.some((l) => l.sourceId === row.id);
+  const run = async (mode: "append" | "replace") => {
+    const n = await onImport(row.id, mode);
+    if (n !== null) setDone(`${n} ${n === 1 ? "Zeile" : "Zeilen"} übernommen`);
+  };
+  const trigger = "Transkript importieren…";
+  return (
+    <>
+      {done && (
+        <span className="self-center text-[0.75rem] text-good" role="status">
+          {done}
+        </span>
+      )}
+      {has ? (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button size="sm">{trigger}</Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={4}
+              className="z-50 min-w-56 rounded-lg border border-line bg-panel p-1 shadow-lg"
+            >
+              {(
+                [
+                  ["append", "Zur Mitschrift hinzufügen …"],
+                  ["replace", "Mitschrift ersetzen …"],
+                ] as const
+              ).map(([mode, label]) => (
+                <DropdownMenu.Item
+                  key={mode}
+                  className="cursor-pointer rounded px-2.5 py-1.5 text-[0.85rem] outline-none data-[highlighted]:bg-accent-soft"
+                  onSelect={() => void run(mode)}
+                >
+                  {label}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      ) : (
+        <Button size="sm" onClick={() => void run("append")} title="SRT, VTT, JSON oder TSV, z. B. aus Whisper">
+          {trigger}
+        </Button>
+      )}
     </>
   );
 }

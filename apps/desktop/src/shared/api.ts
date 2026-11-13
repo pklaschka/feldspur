@@ -322,6 +322,14 @@ export interface FeldspurApi {
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
   patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
   /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
+  /**
+   * Automatisches Transkript (.srt, .vtt, .json, .tsv, z. B. Whisper) an eine Aufnahme hängen.
+   * Ohne path fragt die App nach der Datei. null = abgebrochen.
+   */
+  importTranscript(
+    sourceId: string,
+    opts: { mode: "append" | "replace"; path?: string },
+  ): Promise<{ view: SessionView; count: number; dropped: number } | null>;
   addTranscriptLine(
     sourceId: string,
     line: { atMs: number; speaker: string; text: string },
@@ -367,6 +375,7 @@ export const IPC = {
   setPartOf: "source:part-of",
   setFollows: "source:follows",
   addTranscriptLine: "transcript:add",
+  importTranscript: "transcript:import",
   updateTranscriptLine: "transcript:update",
   deleteTranscriptLine: "transcript:delete",
   setDeviceOffset: "device:set-offset",

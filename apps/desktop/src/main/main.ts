@@ -1,8 +1,16 @@
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
-import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
+import {
+  analyzeSession,
+  applyImport,
+  parseTranscript,
+  scanPaths,
+  setToolPaths,
+  TRANSCRIPT_EXTENSIONS,
+} from "@feldspur/media";
 import {
   IPC,
   MEDIA_SCHEME,
@@ -23,7 +31,7 @@ import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
 import { resolveToolPaths } from "./tools.ts";
-import { addLine, deleteLine, updateLine } from "./transcript.ts";
+import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -161,6 +169,25 @@ function registerIpc(): void {
   });
 
   registerOverlayBridge();
+  ipcMain.handle(
+    IPC.importTranscript,
+    async (_e, sourceId: string, opts: { mode: "append" | "replace"; path?: string }) => {
+      const s = requireStore();
+      let path = opts.path;
+      if (!path) {
+        const r = await dialog.showOpenDialog(win!, {
+          title: "Transkript importieren",
+          properties: ["openFile"],
+          filters: [{ name: "Transkript (Whisper u. a.)", extensions: TRANSCRIPT_EXTENSIONS }],
+        });
+        if (r.canceled || !r.filePaths[0]) return null;
+        path = r.filePaths[0];
+      }
+      const lines = parseTranscript(await readFile(path, "utf8"), basename(path));
+      const r = importLines(s, sourceId, lines, opts.mode);
+      return { view: buildSessionView(s, r.sessionId), count: r.count, dropped: r.dropped };
+    },
+  );
   ipcMain.handle(IPC.previewExport, (_e, sessionId: string) => previewExport(requireStore(), sessionId));
   ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: { video: boolean; dir?: string }) => {
     const s = requireStore();
