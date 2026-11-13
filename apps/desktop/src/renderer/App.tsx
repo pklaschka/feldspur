@@ -1,5 +1,5 @@
 import { Tabs } from "radix-ui";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
@@ -8,6 +8,7 @@ import { ExportProvider, percent, useExport } from "./exportState.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { renderOverlays } from "./overlay.ts";
+import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
 import { renderImageRefJpeg } from "./stillRender.ts";
 import { Review } from "./Review.tsx";
@@ -48,6 +49,26 @@ export function App() {
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [projectMenu, setProjectMenu] = useState(false);
+
+  // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "o") return;
+      e.preventDefault();
+      if (hasProject.current) setProjectMenu(true);
+      else
+        void api.openProject().then((p) => {
+          if (!p) return;
+          setProject(p);
+          setSessionId(p.sessions.at(-1)?.id ?? null);
+        });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const hasProject = useRef(false);
+  hasProject.current = !!project;
 
   const guard: Guard = useCallback(async (fn) => {
     try {
@@ -99,6 +120,7 @@ export function App() {
             </Button>
             <Button onClick={() => void guard(api.openProject).then(adopt)}>Projekt öffnen…</Button>
           </div>
+          <RecentList onOpen={(path) => void guard(() => api.openRecent(path)).then(adopt)} />
           {error && <p className="mt-3 text-bad">{error}</p>}
         </Panel>
       </main>
@@ -122,9 +144,15 @@ export function App() {
           <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4">
             <div className="px-2">
               <Logo small />
-              <div className="mt-1 truncate text-[0.8rem] text-muted" title={project.path}>
-                {project.name}
-              </div>
+              <ProjectMenu
+                name={project.name}
+                path={project.path}
+                open={projectMenu}
+                onOpenChange={setProjectMenu}
+                onOpenRecent={(path) => void guard(() => api.openRecent(path)).then(adopt)}
+                onOpenOther={() => void guard(api.openProject).then(adopt)}
+                onNew={() => void guard(api.newProject).then(adopt)}
+              />
             </div>
             <div className="mx-2 mt-6 mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">
               Einsätze

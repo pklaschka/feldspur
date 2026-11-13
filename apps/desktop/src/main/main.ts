@@ -33,6 +33,7 @@ import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setP
 import { resolveToolPaths } from "./tools.ts";
 import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
 import { buildSessionView } from "./view.ts";
+import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 
 let store: ProjectStore | null = null;
 let win: BrowserWindow | null = null;
@@ -57,14 +58,17 @@ function requireStore(): ProjectStore {
 }
 
 function openStore(path: string, create: boolean): ProjectInfo | null {
+  if (exportRunning()) throw new Error("Während einer Ausgabe lässt sich kein anderes Projekt öffnen.");
   store?.close();
   const binding = nativeBinding();
   const opts = binding ? { nativeBinding: binding } : {};
   store = create
     ? ProjectStore.create(path, { name: basename(path).replace(/\.feldspur$/, ""), ...opts })
     : ProjectStore.open(path, opts);
-  win?.setTitle(`Feldspur · ${projectInfo()?.name}`);
-  return projectInfo();
+  const info = projectInfo()!;
+  win?.setTitle(`Feldspur · ${info.name}`);
+  rememberProject(info.path, info.name);
+  return info;
 }
 
 function registerIpc(): void {
@@ -90,6 +94,13 @@ function registerIpc(): void {
     const path = r.filePaths[0];
     return r.canceled || !path ? null : openStore(path, false);
   });
+
+  ipcMain.handle(IPC.recentProjects, () => recentProjects());
+  ipcMain.handle(IPC.openRecent, (_e, path: string) => {
+    if (!existsSync(path)) throw new Error(`Projekt nicht gefunden: ${path}`);
+    return openStore(path, false);
+  });
+  ipcMain.handle(IPC.forgetRecent, (_e, path: string) => forgetProject(path));
 
   ipcMain.handle(IPC.createSession, (_e, input: NewSessionInput) => {
     requireStore().addSession(input);
@@ -408,6 +419,9 @@ function registerMediaProtocol(): void {
   });
 }
 
+// Tests: eigener Benutzerordner, damit z. B. „Zuletzt geöffnet“ nichts vom Rechner mitnimmt.
+if (process.env.FELDSPUR_USER_DATA) app.setPath("userData", process.env.FELDSPUR_USER_DATA);
+
 void app.whenReady().then(() => {
   registerMediaProtocol();
   registerIpc();
@@ -415,6 +429,19 @@ void app.whenReady().then(() => {
   const arg = process.argv.find((a) => a.endsWith(".feldspur"));
   if (arg) openStore(arg, !existsSync(arg));
   createWindow();
+});
+
+// macOS: Projekt aus dem Dock („Zuletzt benutzt“) oder per Doppelklick im Finder öffnen.
+app.on("open-file", (e, path) => {
+  e.preventDefault();
+  // Während einer Ausgabe nicht das Projekt unter ihr wechseln.
+  if (!path.endsWith(".feldspur") || !existsSync(path) || exportRunning()) return;
+  if (!app.isReady()) {
+    process.argv.push(path);
+    return;
+  }
+  openStore(path, false);
+  win?.webContents.reload();
 });
 
 app.on("window-all-closed", () => {
