@@ -1,10 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { formatClock, ProjectStore, resolveTimeline } from "@feldspur/core";
+import { effectiveLocal, formatClock, ProjectStore, resolveTimeline } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { applyImport, scanPaths, type ImportCandidate } from "../src/import.ts";
-import { hasFfmpeg, makeAudio, makeFieldDay } from "./fixtures.ts";
+import { hasFfmpeg, makeAudio, makeFieldDay, makeVideo } from "./fixtures.ts";
 
 describe.skipIf(!hasFfmpeg())("Einsammeln eines Feldtags", () => {
   let dir: string;
@@ -40,8 +40,9 @@ describe.skipIf(!hasFfmpeg())("Einsammeln eines Feldtags", () => {
 
   it("liest Zeitbelege aus Metadaten, EXIF und Dateinamen", () => {
     expect(byName("C0012.MP4").evidence.map((e) => [e.kind, formatClock(e.localMs)])).toEqual([
-      ["metadata", "10:18:47"],
+      ["metadata", "08:18:47"], // wie geschrieben; umgerechnet wird beim Einordnen
     ]);
+    expect(new Date(byName("C0012.MP4").evidence[0]!.utcMs!).toISOString()).toBe("2026-09-14T08:18:47.000Z");
     expect(byName("IMG_0231.jpg").evidence.map((e) => [e.detail, formatClock(e.localMs)])).toEqual([
       ["EXIF", "10:12:34"],
     ]);
@@ -89,5 +90,37 @@ describe.skipIf(!hasFfmpeg())("Einsammeln eines Feldtags", () => {
     expect(c!.evidence.map((e) => [e.detail, formatClock(e.localMs)])).toEqual([
       ["Metadaten (BWF Aufnahmebeginn)", "11:02:03"],
     ]);
+  });
+
+  it("liest creation_time mit „Z“ als UTC und rechnet in Ortszeit um", async () => {
+    const sub = join(dir, "utc");
+    mkdirSync(sub);
+    makeVideo(join(sub, "MVI_0001.MP4"), { seconds: 1, creationTime: "2026-09-07T11:29:15.000000Z" });
+    const cands = await scanPaths([sub]);
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Beispiel", date: "2026-09-07" });
+    const res = applyImport(store, session.id, cands);
+    expect(res.devicesCreated[0]!.timestampsAreUtc).toBe(true);
+    const tl = resolveTimeline(store.loadResolveInput(session.id));
+    expect(formatClock(tl.placements.get(res.sources[0]!.id)!.startMs)).toBe("13:29:15");
+    store.close();
+  });
+
+  it("erkennt Geräte, die Ortszeit mit „Z“ schreiben, am Dateinamen", async () => {
+    const sub = join(dir, "ortszeit");
+    mkdirSync(sub);
+    makeVideo(join(sub, "VID_20260907_140003.mp4"), { seconds: 1, creationTime: "2026-09-07T14:00:00.000000Z" });
+    makeVideo(join(sub, "VID_20260907_141502.mp4"), { seconds: 1, creationTime: "2026-09-07T14:15:00.000000Z" });
+    const cands = await scanPaths([sub]);
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Beispiel", date: "2026-09-07" });
+    const res = applyImport(store, session.id, cands);
+    expect(res.devicesCreated).toHaveLength(1);
+    expect(res.devicesCreated[0]!.timestampsAreUtc).toBe(false);
+    const input = store.loadResolveInput(session.id);
+    const first = res.sources.find((s) => s.fileName.endsWith("140003.mp4"))!;
+    const meta = input.evidence.find((e) => e.sourceId === first.id && e.kind === "metadata")!;
+    expect(formatClock(effectiveLocal(meta, input.devices[0], input.session.timeZone))).toBe("14:00:00");
+    store.close();
   });
 });

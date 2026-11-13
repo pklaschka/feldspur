@@ -1,5 +1,6 @@
 import {
   computeEpisodes,
+  effectiveLocal,
   formatDuration,
   formatClock,
   resolveTimeline,
@@ -99,7 +100,9 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
 
   const toRow = (d: (typeof input.devices)[number]): DeviceRow => {
     const c = res.deviceClocks.get(d.id);
-    const kinds = input.sources.filter((s) => s.deviceId === d.id).map((s) => s.kind);
+    const mine = input.sources.filter((s) => s.deviceId === d.id);
+    const own = new Set(mine.map((s) => s.id));
+    const kinds = mine.map((s) => s.kind);
     const kind =
       (["video", "audio", "photo", "diary", "gps", "note", "other"] as const).find((k) => kinds.includes(k)) ?? "other";
     return {
@@ -111,6 +114,8 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       offsetMs: c?.offsetMs ?? null,
       offsetBasis: c?.basis ?? "unknown",
       sourceCount: kinds.length,
+      hasUtcStamps: input.evidence.some((e) => e.utcMs !== null && own.has(e.sourceId)),
+      timestampsAreUtc: d.timestampsAreUtc,
     };
   };
   const allDevices = input.devices.map(toRow);
@@ -129,7 +134,10 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       const devEv = input.evidence.find((e) => e.sourceId === clip?.id && e.enabled && e.clock === "device");
       const implied =
         refStart !== undefined && devEv
-          ? devEv.localMs - devEv.atMediaMs + a.b.atMediaMs - (refStart + a.a.atMediaMs)
+          ? effectiveLocal(devEv, dev, input.session.timeZone) -
+            devEv.atMediaMs +
+            a.b.atMediaMs -
+            (refStart + a.a.atMediaMs)
           : null;
       const what = a.kind === "clap" ? "Klatschen" : "Gleicher Ton";
       return {

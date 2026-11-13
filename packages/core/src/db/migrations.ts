@@ -119,4 +119,9 @@ export const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX transcript_source ON transcript_lines(source_id, at_ms);
   `,
+  // 5: Als UTC markierte Zeitstempel standardmäßig als UTC lesen. Die Einstellung war bisher
+  // nicht in der Oberfläche erreichbar, also hat niemand sie bewusst gesetzt.
+  `
+  UPDATE devices SET timestamps_are_utc = 1;
+  `,
 ];
