@@ -3,7 +3,7 @@
  * als Folgeaufnahme markieren, aus dem Projekt nehmen, Geräte zusammenlegen.
  */
 import { AlertDialog, DropdownMenu } from "radix-ui";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import { Button, cx } from "./ui.tsx";
 
@@ -12,6 +12,7 @@ export interface SourceActions {
   move(sourceId: string, target: string | { newLabel: string }): void;
   mergeDevices(fromId: string, intoId: string): void;
   setDeviceUtc(deviceId: string, utc: boolean): void;
+  setDeviceTimeZone(deviceId: string, timeZone: string | null): void;
   setPartOf(sourceId: string, mainId: string | null): void;
   setFollows(sourceId: string, prevId: string | null): void;
   preview(sourceId: string): void;
@@ -175,8 +176,11 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
 export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionView }) {
   const a = useActions();
   const [into, setInto] = useState<DeviceRow | null>(null);
+  const [zoning, setZoning] = useState(false);
   const others = view.allDevices.filter((d) => d.id !== device.id);
-  if (!others.length && !device.hasUtcStamps) return null;
+  const sessionZone = view.session.timeZone;
+  const noClock = device.kind === "diary" || device.kind === "note";
+  if (!others.length && !device.hasUtcStamps && noClock) return null;
   return (
     <>
       <DropdownMenu.Root>
@@ -205,9 +209,38 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
                 ))}
               </Sub>
             )}
-            {device.hasUtcStamps && (
+            {!noClock && (
               <>
                 {others.length > 0 && <DropdownMenu.Separator className={sep} />}
+                <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.75rem] text-muted">
+                  Zeitzone der Geräteuhr
+                </DropdownMenu.Label>
+                <DropdownMenu.RadioGroup
+                  value={device.timeZone === null ? "session" : device.timeZone === "UTC" ? "UTC" : "other"}
+                  onValueChange={(v) => {
+                    if (v === "session") a.setDeviceTimeZone(device.id, null);
+                    else if (v === "UTC") a.setDeviceTimeZone(device.id, "UTC");
+                    else setZoning(true);
+                  }}
+                >
+                  <DropdownMenu.RadioItem value="session" className={item}>
+                    <Dot on={device.timeZone === null} />
+                    Wie der Einsatz ({sessionZone})
+                  </DropdownMenu.RadioItem>
+                  <DropdownMenu.RadioItem value="UTC" className={item}>
+                    <Dot on={device.timeZone === "UTC"} />
+                    UTC
+                  </DropdownMenu.RadioItem>
+                  <DropdownMenu.RadioItem value="other" className={item}>
+                    <Dot on={device.timeZone !== null && device.timeZone !== "UTC"} />
+                    {device.timeZone !== null && device.timeZone !== "UTC" ? device.timeZone : "Andere …"}
+                  </DropdownMenu.RadioItem>
+                </DropdownMenu.RadioGroup>
+              </>
+            )}
+            {device.hasUtcStamps && (
+              <>
+                <DropdownMenu.Separator className={sep} />
                 <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.75rem] text-muted">
                   Zeitstempel mit „Z“ (UTC) in den Metadaten
                 </DropdownMenu.Label>
@@ -229,6 +262,13 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
+      <ZoneDialog
+        open={zoning}
+        onOpenChange={setZoning}
+        title={`Zeitzone der Uhr von „${device.label}“`}
+        initial={device.timeZone ?? sessionZone}
+        onSubmit={(z) => a.setDeviceTimeZone(device.id, z)}
+      />
       <Confirm
         open={!!into}
         onOpenChange={(o) => !o && setInto(null)}
@@ -285,6 +325,78 @@ function Confirm({
               </Button>
             </AlertDialog.Action>
           </div>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
+}
+
+const ZONES: string[] = (() => {
+  try {
+    return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone");
+  } catch {
+    return [];
+  }
+})();
+
+/** Zeitzone der Geräteuhr eingeben (IANA, z. B. America/New_York). */
+function ZoneDialog({
+  open,
+  onOpenChange,
+  title,
+  initial,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  title: string;
+  initial: string;
+  onSubmit: (zone: string) => void;
+}) {
+  const [zone, setZone] = useState(initial);
+  useEffect(() => {
+    if (open) setZone(initial);
+  }, [open, initial]);
+  return (
+    <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <AlertDialog.Content className="fixed top-1/2 left-1/2 z-50 w-[min(26rem,90vw)] -translate-1/2 rounded-xl border border-line bg-panel p-5 shadow-xl">
+          <AlertDialog.Title className="font-semibold">{title}</AlertDialog.Title>
+          <AlertDialog.Description className="mt-2 text-[0.85rem] text-ink-2">
+            Auf welche Zeitzone war die Uhr des Geräts gestellt? Seine Ortszeit-Stempel werden von dort in die Zeitzone
+            des Einsatzes umgerechnet.
+          </AlertDialog.Description>
+          <form
+            className="mt-3 grid gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!zone.trim()) return;
+              onSubmit(zone.trim());
+              onOpenChange(false);
+            }}
+          >
+            <input
+              autoFocus
+              aria-label="Zeitzone der Geräteuhr"
+              value={zone}
+              list="feldspur-device-zones"
+              onChange={(e) => setZone(e.target.value)}
+            />
+            <datalist id="feldspur-device-zones">
+              {ZONES.map((z) => (
+                <option key={z} value={z} />
+              ))}
+            </datalist>
+            <div className="flex justify-end gap-2">
+              <AlertDialog.Cancel asChild>
+                <Button type="button">Abbrechen</Button>
+              </AlertDialog.Cancel>
+              <Button variant="primary" type="submit" disabled={!zone.trim()}>
+                Übernehmen
+              </Button>
+            </div>
+          </form>
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>

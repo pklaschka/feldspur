@@ -71,3 +71,37 @@ describe.skipIf(!hasFfmpeg())("Abgleich und Episoden an einem erzeugten Feldtag"
     expect(analysis.loudInIdle.some((l) => Math.abs(l.atMs - 300_000) < 200)).toBe(true);
   });
 });
+
+describe.skipIf(!hasFfmpeg())("Abgleich bei sehr falsch gehender Uhr", () => {
+  let dir: string;
+  let store: ProjectStore;
+  let sessionId: string;
+
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), "feldspur-sync-lang-"));
+    makeSyncDay(dir);
+    store = ProjectStore.open(":memory:");
+    sessionId = store.addSession({ title: "Sync", date: "2026-09-14" }).id;
+    const res = applyImport(store, sessionId, await scanPaths([dir]));
+    const byName = (n: string) => res.sources.find((s) => s.fileName === n)!;
+    store.setReferenceDevice(byName("ZOOM0001.m4a").deviceId!);
+    // Die Kamera zeigt einen Tag und fünf Stunden zu viel (Datum und Zeitzone nie gestellt).
+    const cam = store.getDevice(byName("C0001.MP4").deviceId!);
+    store.updateDevice(cam.id, { timestampsAreUtc: false });
+    for (const e of store.listEvidence(sessionId))
+      if (store.getSource(e.sourceId).deviceId === cam.id) store.updateEvidenceTime(e.id, e.localMs + 29 * 3600_000);
+  });
+  afterAll(() => {
+    store?.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("findet Klatscher und Abweichung trotzdem, auch über Tage", async () => {
+    const r = await analyzeSession(store, sessionId);
+    expect(r.proposals.length).toBeGreaterThanOrEqual(2);
+    const p = r.proposals.find((x) => x.method === "clap")!;
+    // Kamera ging vorher 8:18:47 UTC = 10:18:47 Ortszeit; jetzt +29 h, Uhr zeigt Zeitstempel ohne UTC-Umrechnung.
+    expect(p.impliedDeviceOffsetMs).toBeGreaterThan(24 * 3600_000);
+    expect(p.confidence).toBe("high");
+  });
+});

@@ -42,6 +42,8 @@ export interface SourceRow {
   uncertaintyMs: number | null;
   /** Alle Zeitbelege, der gewählte zuerst. */
   evidence: EvidenceRow[];
+  /** Hat die Quelle einen Beleg der Geräteuhr? Nur dann lässt sich die Uhr des Geräts an ihr abgleichen. */
+  hasDeviceClock: boolean;
   /** Leerlauf in echter Zeit (nur Audio/Video nach Analyse). */
   idle: { startMs: number; endMs: number }[];
   /** Laute Stellen im Leerlauf, echte Zeit. */
@@ -90,6 +92,11 @@ export interface TimeInput {
   atMedia: string;
   precision: Precision;
   note: string;
+  /**
+   * Nur bei "manual": Die Uhr des Geräts danach richten, sodass alle anderen Dateien des Geräts
+   * mitwandern (Abweichung = Geräteuhr dieser Datei minus eingetragene Zeit).
+   */
+  syncDevice?: boolean;
 }
 
 export interface AnchorInput {
@@ -168,6 +175,8 @@ export interface DeviceRow {
   hasUtcStamps: boolean;
   /** Als UTC markierte Zeitstempel umrechnen (true) oder als Ortszeit lesen (false). */
   timestampsAreUtc: boolean;
+  /** Zeitzone, auf die die Geräteuhr gestellt ist; null = wie der Einsatz. */
+  timeZone: string | null;
 }
 
 export interface ProposalRow {
@@ -280,6 +289,8 @@ export interface FeldspurApi {
   setReference(deviceId: string): Promise<SessionView>;
   renameDevice(deviceId: string, label: string): Promise<SessionView>;
   setDeviceUtc(deviceId: string, utc: boolean): Promise<SessionView>;
+  /** Zeitzone der Geräteuhr (IANA); null = wie der Einsatz. */
+  setDeviceTimeZone(deviceId: string, timeZone: string | null): Promise<SessionView>;
   updateSession(sessionId: string, patch: SessionPatch): Promise<{ view: SessionView; project: ProjectInfo }>;
   /** Quelle aus dem Projekt nehmen (Originaldatei bleibt). */
   removeSource(sourceId: string): Promise<SessionView>;
@@ -346,6 +357,7 @@ export const IPC = {
   importPaths: "import:paths",
   setReference: "device:set-reference",
   setDeviceUtc: "device:set-utc",
+  setDeviceTimeZone: "device:set-timezone",
   renameDevice: "device:rename",
   updateSession: "session:update",
   removeSource: "source:remove",

@@ -19,6 +19,8 @@ describe("Ortszeit", () => {
     expect(formatDuration(-167_000)).toBe("−2:47");
     expect(formatDuration(4_000, { sign: true })).toBe("+0:04");
     expect(formatDuration(3_723_000)).toBe("1:02:03");
+    expect(formatDuration(86_400_000 + 7_200_000, { sign: true })).toBe("+1 Tag 2:00:00");
+    expect(formatDuration(-3 * 86_400_000 - 5_000)).toBe("−3 Tage 0:00:05");
   });
 
   it("rechnet UTC in Ortszeit um, auch über Sommerzeit", () => {

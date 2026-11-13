@@ -72,6 +72,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       originalPath: s.originalPath,
       uncertaintyMs: p?.uncertaintyMs ?? null,
       evidence: evs,
+      hasDeviceClock: (evidenceBySource.get(s.id) ?? []).some((e) => e.enabled && e.clock === "device"),
       idle: p && an ? an.idle.map((i) => ({ startMs: p.startMs + i.startMs, endMs: p.startMs + i.endMs })) : [],
       loudAtMs: p && an ? an.loudInIdle.map((l) => p.startMs + l.atMs) : [],
       previewable: (s.kind === "photo" || s.kind === "diary") && /\.(jpe?g|png|webp|gif)$/i.test(s.fileName),
@@ -116,6 +117,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       sourceCount: kinds.length,
       hasUtcStamps: input.evidence.some((e) => e.utcMs !== null && own.has(e.sourceId)),
       timestampsAreUtc: d.timestampsAreUtc,
+      timeZone: d.timeZone,
     };
   };
   const allDevices = input.devices.map(toRow);

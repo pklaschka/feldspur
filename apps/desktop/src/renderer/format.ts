@@ -21,16 +21,47 @@ export function offsetText(ms: number | null): string {
   return ms === null ? "unbekannt" : ms === 0 ? "± 0:00" : formatDuration(ms, { sign: true });
 }
 
-/** "−2:47", "+0:04", "2:47", "-167" (Sekunden) → ms. null bei leerer/ungültiger Eingabe. */
+const UNIT_MS: [RegExp, number][] = [
+  [/^(d|t|tag|tage|tagen|days?)$/, 86_400_000],
+  [/^(h|std|stunden?|hours?)$/, 3_600_000],
+  [/^(m|min|minuten?|minutes?)$/, 60_000],
+  [/^(s|sek|sec|sekunden?|seconds?)$/, 1000],
+];
+
+/**
+ * Uhrabweichung als Text → ms. null bei leerer/ungültiger Eingabe. Versteht
+ * "−2:47", "+0:04", "-167" (Sekunden), "+2:00:00", "+1 Tag 2:00:00", "−3 Tage", "+2 h 5 min".
+ */
 export function parseOffset(text: string): number | null {
-  const t = text.trim().replace("−", "-").replace(",", ".");
+  let t = text.trim().replace(/[−–]/g, "-").replace(",", ".").toLowerCase();
   if (!t) return null;
-  const m = /^([+-])?(?:(\d+):)?(\d+(?:\.\d+)?)$/.exec(t);
-  if (!m) return null;
-  const sign = m[1] === "-" ? -1 : 1;
-  const min = m[2] ? Number(m[2]) : 0;
-  const sec = Number(m[3]);
-  return sign * Math.round((min * 60 + sec) * 1000);
+  let sign = 1;
+  if (t[0] === "+" || t[0] === "-") {
+    sign = t[0] === "-" ? -1 : 1;
+    t = t.slice(1).trim();
+  }
+  let ms = 0;
+  // Am Ende darf eine Uhrzeit-Angabe stehen: h:mm:ss, m:ss oder Sekunden.
+  const clock = /(?:^|\s)(?:(\d+):)?(?:(\d+):)?(\d+(?:\.\d+)?)$/.exec(t);
+  let rest = t;
+  if (clock && !/[a-z]$/.test(t)) {
+    const parts = [clock[1], clock[2], clock[3]].filter((x): x is string => x !== undefined).map(Number);
+    const [h, m, s] = parts.length === 3 ? parts : parts.length === 2 ? [0, ...parts] : [0, 0, parts[0]!];
+    ms += (h! * 3600 + m! * 60 + s!) * 1000;
+    rest = t.slice(0, clock.index).trim();
+  }
+  // Davor Mengen mit Einheit: „1 Tag“, „2 h“, „5min“.
+  const unitRe = /(\d+(?:\.\d+)?)\s*([a-zäöü]+)/g;
+  let consumed = "";
+  for (const m of rest.matchAll(unitRe)) {
+    const unit = UNIT_MS.find(([re]) => re.test(m[2]!));
+    if (!unit) return null;
+    ms += Number(m[1]) * unit[1];
+    consumed += m[0];
+  }
+  if (consumed.replace(/\s/g, "") !== rest.replace(/\s/g, "")) return null;
+  if (!clock && !consumed) return null;
+  return sign * Math.round(ms);
 }
 
 /** "10:15:00" */

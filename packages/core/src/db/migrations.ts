@@ -124,4 +124,8 @@ export const MIGRATIONS: readonly string[] = [
   `
   UPDATE devices SET timestamps_are_utc = 1;
   `,
+  // 6: Zeitzone der Geräteuhr
+  `
+  ALTER TABLE devices ADD COLUMN time_zone TEXT;
+  `,
 ];

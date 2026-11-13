@@ -74,6 +74,11 @@ export const Device = z.object({
    * für solche Geräte false (beim Einsammeln am Dateinamen erkannt oder von Hand umgestellt).
    */
   timestampsAreUtc: z.boolean().default(true),
+  /**
+   * Zeitzone, auf die die Geräteuhr gestellt ist (IANA, z. B. "UTC", "America/New_York").
+   * null = wie der Einsatz. Ortszeit-Belege des Geräts werden von hier in die Einsatzzeit umgerechnet.
+   */
+  timeZone: z.string().nullable().default(null),
   /** Eigenes Dateinamen-Muster, z. B. "REC_YYYYMMDD_hhmm". */
   filenamePattern: z.string().nullable().default(null),
 });

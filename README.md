@@ -97,6 +97,9 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   abstimmen. Vorschläge zählen erst nach Bestätigung.
 - **Episode**: Zeitraum, in dem eine Aufnahme läuft und nicht Leerlauf ist (Lücken unter 5 Min. werden verbunden).
   Dazwischen liegen Zwischenzeiten mit Fotos und Tagebucheinträgen.
+- **Geräteuhr**: Abweichung zur Referenzuhr (auch Stunden oder Tage, z. B. „+1 Tag 2:00:00“), dazu optional die
+  Zeitzone, auf die die Uhr gestellt war. Als UTC markierte Stempel („…Z“) gelten als UTC. Eine von Hand gesetzte
+  Zeit in einem Clip kann die Uhr des ganzen Geräts richten; die übrigen Clips rücken dann mit.
 - **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
 - **Ausgabe**: ein Ordner pro Einsatz. Das **Montagevideo** zeigt alle Episoden in voller Länge; Zeit ohne Episode

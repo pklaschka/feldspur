@@ -3,7 +3,7 @@
  * Uhrzeiten markieren, Belege abschalten, Anker setzen. Ohne Electron, damit
  * sich das direkt testen lässt.
  */
-import { localMs, type Id, type ProjectStore } from "@feldspur/core";
+import { combineUncertainty, effectiveLocal, localMs, type Id, type ProjectStore } from "@feldspur/core";
 import type { AnchorInput, TimeInput } from "../shared/api.ts";
 
 /** ± je Genauigkeitsstufe. */
@@ -30,6 +30,29 @@ export function parseMediaPos(text: string): number {
   return Math.round(secs * 1000);
 }
 
+/**
+ * Aus einer von Hand gesetzten Zeit in einer Datei die Uhrabweichung des ganzen Geräts ableiten:
+ * Die Geräteuhr zeigte an dieser Stelle X, echt war es Y. Alle anderen Dateien des Geräts folgen.
+ */
+function syncDeviceClock(s: ProjectStore, sourceId: Id, atMediaMs: number, local: number, uncertaintyMs: number): void {
+  const src = s.getSource(sourceId);
+  const device = src.deviceId ? s.getDevice(src.deviceId) : undefined;
+  if (!device) throw new Error("Die Datei gehört zu keinem Gerät");
+  if (device.isReference) throw new Error("Die Referenzuhr hat keine Abweichung");
+  const tz = s.getSession(src.sessionId).timeZone;
+  const best = s
+    .listEvidence(src.sessionId)
+    .filter((e) => e.sourceId === sourceId && e.enabled && e.clock === "device")
+    .sort((a, b) => a.uncertaintyMs - b.uncertaintyMs)[0];
+  if (!best) throw new Error("Diese Datei hat keine Zeit der Geräteuhr, an der sich die Abweichung ablesen ließe");
+  const deviceShows = effectiveLocal(best, device, tz) - best.atMediaMs + atMediaMs;
+  s.updateDevice(device.id, {
+    offsetBasis: "manual",
+    clockOffsetMs: Math.round(deviceShows - local),
+    clockOffsetUncertaintyMs: combineUncertainty(uncertaintyMs, best.uncertaintyMs),
+  });
+}
+
 /** Uhrzeit von Hand oder angesagte Uhrzeit als Zeitbeleg anlegen. Gibt die Einsatz-Id zurück. */
 export function addTimeEvidence(s: ProjectStore, input: TimeInput): Id {
   const src = s.getSource(input.sourceId);
@@ -42,13 +65,15 @@ export function addTimeEvidence(s: ProjectStore, input: TimeInput): Id {
   }
   const local = parseClockOnDate(session.date, input.clock);
   const where = at ? ` bei ${input.atMedia.trim()}` : "";
+  const uncertaintyMs = PRECISION_MS[input.precision];
+  if (input.syncDevice && input.kind === "manual") syncDeviceClock(s, src.id, at, local, uncertaintyMs);
   s.addEvidence({
     sourceId: src.id,
     kind: input.kind,
     clock: "true",
     atMediaMs: at,
     localMs: local,
-    uncertaintyMs: PRECISION_MS[input.precision],
+    uncertaintyMs,
     detail: (input.kind === "spoken" ? `Angesagt${where}` : `Von Hand${where}`) + (input.note ? `: ${input.note}` : ""),
     raw: input.clock.trim(),
   });

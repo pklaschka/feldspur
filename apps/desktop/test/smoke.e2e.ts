@@ -378,6 +378,19 @@ try {
   await details.getByRole("button", { name: "Speichern" }).click();
   await details.waitFor({ state: "detached" });
   await page.locator("main header").getByText("Südstadt").waitFor();
+  // Zeitzone je Gerät im Gerätemenü.
+  await page.getByRole("tab", { name: /Einsammeln/ }).click();
+  const camMenu = page.getByRole("button", { name: "Aktionen für Gerät Kamera Stativ" });
+  await camMenu.click();
+  await page.getByRole("menuitemradio", { name: "UTC", exact: true }).click();
+  await camMenu.click();
+  await page
+    .getByRole("menuitemradio", { name: "UTC", exact: true })
+    .and(page.locator('[aria-checked="true"]'))
+    .waitFor();
+  await shot("-geraetemenue");
+  await page.getByRole("menuitemradio", { name: /^Wie der Einsatz/ }).click();
+
   // Ausgeben: Ordnerwahl ersetzen, Video mit Einblendungen aus der Oberfläche.
   const out = join(dir, "Ausgabe");
   mkdirSync(out);

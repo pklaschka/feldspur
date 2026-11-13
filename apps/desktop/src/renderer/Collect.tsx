@@ -158,6 +158,7 @@ function DeviceCard({
         <Glyph kind={device.kind} />
         <EditableName value={device.label} onCommit={onRename} />
         {device.isReference && <Pill tone="accent">Referenzuhr</Pill>}
+        {device.timeZone && <Pill>Uhr: {device.timeZone}</Pill>}
         <span className="flex-1" />
         {device.kind === "diary" && rows[0] && (
           <Button size="sm" onClick={() => onOpenDiary(rows[0]!.id)}>

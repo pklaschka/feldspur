@@ -184,6 +184,19 @@ function registerIpc(): void {
     return buildSessionView(s, d.sessionId);
   });
 
+  ipcMain.handle(IPC.setDeviceTimeZone, (_e, deviceId: string, timeZone: string | null) => {
+    const s = requireStore();
+    const zone = timeZone?.trim() || null;
+    if (zone) {
+      try {
+        new Intl.DateTimeFormat("de", { timeZone: zone });
+      } catch {
+        throw new Error(`Unbekannte Zeitzone „${zone}“`);
+      }
+    }
+    const d = s.updateDevice(deviceId, { timeZone: zone });
+    return buildSessionView(s, d.sessionId);
+  });
   ipcMain.handle(IPC.setDeviceUtc, (_e, deviceId: string, utc: boolean) => {
     const s = requireStore();
     const d = s.updateDevice(deviceId, { timestampsAreUtc: utc });
