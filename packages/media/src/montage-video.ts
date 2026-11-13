@@ -20,22 +20,14 @@ import { promisify } from "node:util";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
 import type { Scaffold, ScaffoldEntry } from "./scaffold.ts";
 import type { Still } from "./stills.ts";
+import { FPS, H, MAX_TILES, stillBox, videoTiles, W } from "./layout.ts";
+import { probeMedia } from "./probe.ts";
 import { toolPaths } from "./tools.ts";
 
 const run = promisify(execFile);
 
-export const W = 1280;
-export const H = 720;
-export const FPS = 25;
 const FRAME_MS = 1000 / FPS;
 const RATE = 48_000;
-/** Bereiche im Bild. */
-export const LAYOUT = {
-  top: { x: 0, y: 0, w: W, h: 52 },
-  main: { x: 0, y: 52, w: 944, h: 531 },
-  side: { x: 944, y: 52, w: W - 944, h: 531 },
-  bottom: { x: 0, y: 583, w: W, h: H - 583 },
-} as const;
 
 /** Daten für die Zeitleisten, einmal je Export. */
 export interface OverlayTimeline {
@@ -63,11 +55,23 @@ export interface OverlayFrame {
   body: string;
   /** Hat das Hauptfeld ein Video? Sonst zeichnet der Renderer eine Fläche mit Hinweis. */
   hasVideo: boolean;
+  /** Beschriftung je Videofeld (bei mehreren gleichzeitigen Videos nebeneinander). */
+  tiles: string[];
+  /** Text zum Standbild in der Seitenspalte, z. B. die Abschrift eines Tagebucheintrags. */
+  stillText: string;
   /** Steht in der Seitenspalte (bzw. bei Tafeln groß) ein Standbild? */
   hasStill: boolean;
 }
 
 export type OverlayRenderer = (timeline: OverlayTimeline, frames: OverlayFrame[]) => Promise<Buffer[]>;
+
+export interface MediaRef {
+  source: Source;
+  /** Stelle in der Datei am Beginn des Stücks. */
+  fromMs: number;
+  /** Kurzzeichen und Gerät, z. B. „V-01 Kamera Stativ“. */
+  label: string;
+}
 
 export interface Piece {
   /** Grenzen in Bildern ab Montagebeginn. */
@@ -78,9 +82,12 @@ export interface Piece {
   clock0: number;
   title: string;
   body: string;
-  video: { source: Source; fromMs: number } | null;
-  audio: { source: Source; fromMs: number } | null;
-  still: { file: string; caption: string } | null;
+  /** Gleichzeitig laufende Videos (höchstens MAX_TILES), nebeneinander im Hauptfeld. */
+  videos: MediaRef[];
+  /** Laufende Tonquellen, die Hauptquelle zuerst (Referenzgerät, sonst die längste). */
+  audios: MediaRef[];
+  /** Foto oder Tagebucheintrag: Bilddatei (falls darstellbar), Unterschrift und Text. */
+  still: { file: string | null; caption: string; text: string } | null;
   sources: string[];
 }
 
@@ -152,9 +159,12 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
     return `${s.label} ${d?.label ?? ""}`.trim();
   };
   const stillOf = (e: ScaffoldEntry) => {
-    const f = stillFiles.get(e);
-    return f ? { file: f, caption: `${e.head} · ${e.clock}` } : null;
+    const file = stillFiles.get(e) ?? null;
+    // Tagebuch: Abschrift zeigen, auch wenn sich der Scan nicht als Bild setzen lässt.
+    const text = e.kind === "diary" ? e.body : "";
+    return file || text ? { file, caption: `${e.head} · ${e.clock}`, text } : null;
   };
+  const hasStill = (e: ScaffoldEntry) => !!stillFiles.get(e) || (e.kind === "diary" && !!e.body);
 
   const pieces: Piece[] = [];
   for (const seg of plan.segments) {
@@ -174,8 +184,8 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
           clock0: seg.fromMs,
           title: "Zwischentafel",
           body: card ? `${card.clock}\n${card.body}` : "",
-          video: null,
-          audio: null,
+          videos: [],
+          audios: [],
           still: null,
           sources: [],
         });
@@ -190,8 +200,8 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
           clock0: e.clockMs ?? seg.fromMs,
           title: e.head,
           body: `${e.clock}\n${e.body}`,
-          video: null,
-          audio: null,
+          videos: [],
+          audios: [],
           still: stillOf(e),
           sources: [],
         });
@@ -205,7 +215,7 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
     const toM = (t: number) => seg.montageStartMs + (t - from);
     const stills = sc.entries
       .filter((e) => (e.kind === "photo" || e.kind === "diary") && e.montageMs >= toM(from) && e.montageMs <= toM(to))
-      .filter((e) => stillFiles.get(e));
+      .filter(hasStill);
     const cuts = new Set<number>([from, to]);
     for (const s of av) {
       const p = place(s.id)!;
@@ -224,13 +234,16 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
       const running = av.filter((s) => covering(s, mid));
       const videos = running
         .filter((s) => s.kind === "video")
-        .sort((x, y) => place(x.id)!.startMs - place(y.id)!.startMs);
-      const video = videos[0];
-      const audios = running.filter((s) => s.kind === "audio");
+        .sort((x, y) => place(x.id)!.startMs - place(y.id)!.startMs)
+        .slice(0, MAX_TILES);
+      const audioOnly = running.filter((s) => s.kind === "audio");
       const mainAudio =
-        audios.find((s) => s.deviceId === refDevice) ??
-        audios.sort((x, y) => span(place(y.id)!) - span(place(x.id)!))[0] ??
-        video;
+        audioOnly.find((s) => s.deviceId === refDevice) ??
+        [...audioOnly].sort((x, y) => span(place(y.id)!) - span(place(x.id)!))[0] ??
+        videos[0];
+      const sounding = running.filter((s) => s.kind === "audio" || s.kind === "video");
+      const audios = mainAudio ? [mainAudio, ...sounding.filter((s) => s !== mainAudio)] : sounding;
+      const ref = (s: Source): MediaRef => ({ source: s, fromMs: a - place(s.id)!.startMs, label: describe(s) });
       const lastStill = stills.filter((e) => e.montageMs <= toM(a)).at(-1);
       pieces.push({
         f0,
@@ -239,8 +252,8 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
         clock0: a,
         title: `Episode ${seg.episode.index}`,
         body: "",
-        video: video ? { source: video, fromMs: a - place(video.id)!.startMs } : null,
-        audio: mainAudio ? { source: mainAudio, fromMs: a - place(mainAudio.id)!.startMs } : null,
+        videos: videos.map(ref),
+        audios: audios.map(ref),
         still: lastStill ? stillOf(lastStill) : null,
         sources: running.map(describe),
       });
@@ -301,8 +314,10 @@ function framesFor(p: Piece): OverlayFrame[] {
     sources: p.sources,
     caption: p.still?.caption ?? "",
     body: p.body,
-    hasVideo: !!p.video,
-    hasStill: !!p.still,
+    hasVideo: p.videos.length > 0,
+    hasStill: !!p.still?.file,
+    tiles: p.videos.length > 1 ? p.videos.map((v) => v.label) : [],
+    stillText: p.still?.text ?? "",
   }));
 }
 
@@ -316,6 +331,8 @@ export interface MontageVideoOptions {
    * übernommen statt neu gerechnet. Nicht mehr gebrauchte Abschnitte werden danach gelöscht.
    */
   cacheDir?: string;
+  /** Ton: alle laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
+  audioMix?: "all" | "main";
   /** Wie viele Abschnitte gleichzeitig; Standard: halbe Kernzahl, höchstens 4. */
   parallel?: number;
 }
@@ -323,7 +340,7 @@ export interface MontageVideoOptions {
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
 const CHUNK_FRAMES = 60 * FPS;
 /** Erhöhen, wenn sich das Aussehen ändert, damit alte Abschnitte nicht wiederverwendet werden. */
-const LOOK_VERSION = 2;
+const LOOK_VERSION = 3;
 
 function chunks(pieces: Piece[]): Piece[] {
   return pieces.flatMap((p) => {
@@ -335,8 +352,8 @@ function chunks(pieces: Piece[]): Piece[] {
         f0,
         f1: Math.min(p.f1, f0 + CHUNK_FRAMES),
         clock0: p.kind === "episode" ? p.clock0 + shift : p.clock0,
-        video: p.video ? { ...p.video, fromMs: p.video.fromMs + shift } : null,
-        audio: p.audio ? { ...p.audio, fromMs: p.audio.fromMs + shift } : null,
+        videos: p.videos.map((v) => ({ ...v, fromMs: v.fromMs + shift })),
+        audios: p.audios.map((v) => ({ ...v, fromMs: v.fromMs + shift })),
       });
     }
     return out;
@@ -386,15 +403,37 @@ export async function renderMontage(
     return `${path}|${st.size}|${st.mtimeMs}`;
   };
 
+  // Welche Tonquellen je Stück: alle laufenden übereinander oder nur die Hauptquelle.
+  // Videos ohne Tonspur fallen heraus (einmal je Datei nachgesehen).
+  const soundCache = new Map<string, Promise<boolean>>();
+  const hasSound = (src: Source) => {
+    if (src.kind === "audio") return Promise.resolve(true);
+    let got = soundCache.get(src.originalPath);
+    if (!got) {
+      got = probeMedia(src.originalPath).then(
+        (pr) => pr.hasAudio,
+        () => false,
+      );
+      soundCache.set(src.originalPath, got);
+    }
+    return got;
+  };
+  const soundOf = async (p: Piece) => {
+    const wanted = opts.audioMix === "main" ? p.audios.slice(0, 1) : p.audios;
+    const ok = await Promise.all(wanted.map((a) => hasSound(a.source)));
+    return wanted.filter((_, k) => ok[k]);
+  };
+
   // Ton nebenher: je Stück PCM mit exakter Länge, am Ende einmal AAC. Unverändert: aus dem Zwischenspeicher.
   const audioDone = (async () => {
+    const sounds = await Promise.all(pieces.map(soundOf));
     const audioKey = createHash("sha1")
       .update(
         JSON.stringify(
           await Promise.all(
-            pieces.map(async (p) => [
+            pieces.map(async (p, i) => [
               p.f1 - p.f0,
-              p.audio ? [await fileId(p.audio.source.originalPath), p.audio.fromMs] : null,
+              await Promise.all(sounds[i]!.map(async (a) => [await fileId(a.source.originalPath), a.fromMs])),
             ]),
           ),
         ),
@@ -408,24 +447,35 @@ export async function renderMontage(
       const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
       const aOut = join(dir, `a${i}.wav`);
       const samples = Math.round(durS * RATE);
-      const pad = `aresample=${RATE},aformat=sample_fmts=s16:channel_layouts=stereo,apad,atrim=end_sample=${samples}`;
-      await ff(
-        p.audio
-          ? [
-              "-ss",
-              (p.audio.fromMs / 1000).toFixed(3),
-              "-t",
-              durS.toFixed(3),
-              "-i",
-              p.audio.source.originalPath,
-              "-vn",
-            ].concat(["-af", pad, "-c:a", "pcm_s16le", aOut])
-          : ["-f", "lavfi", "-i", `anullsrc=r=${RATE}:cl=stereo`, "-af", `atrim=end_sample=${samples}`].concat([
-              "-c:a",
-              "pcm_s16le",
-              aOut,
-            ]),
-      );
+      const fit = `apad,atrim=end_sample=${samples}`;
+      const src = sounds[i]!;
+      if (!src.length) {
+        await ff([
+          "-f",
+          "lavfi",
+          "-i",
+          `anullsrc=r=${RATE}:cl=stereo`,
+          "-af",
+          `atrim=end_sample=${samples}`,
+          "-c:a",
+          "pcm_s16le",
+          aOut,
+        ]);
+      } else {
+        // Mehrere Geräte übereinander: gleich laut addiert, ein Begrenzer fängt Spitzen ab.
+        const args: string[] = [];
+        const f: string[] = [];
+        for (const [k, a] of src.entries()) {
+          args.push("-ss", (a.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3), "-i", a.source.originalPath);
+          f.push(`[${k}:a]aresample=${RATE},aformat=sample_fmts=fltp:channel_layouts=stereo[a${k}]`);
+        }
+        const mix =
+          src.length > 1
+            ? `${src.map((_, k) => `[a${k}]`).join("")}amix=inputs=${src.length}:normalize=0:duration=longest,alimiter=limit=0.95,`
+            : "[a0]";
+        f.push(`${mix}aformat=sample_fmts=s16:channel_layouts=stereo,${fit}[out]`);
+        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", aOut]);
+      }
       aList.push(aOut);
     }
     await writeFile(join(dir, "a.txt"), aList.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
@@ -460,8 +510,10 @@ export async function renderMontage(
           enc,
           frameCount,
           kind: p.kind,
-          video: p.video ? { id: await fileId(p.video.source.originalPath), fromMs: p.video.fromMs } : null,
-          still: p.still ? { file: basename(p.still.file), kind: p.kind } : null,
+          videos: await Promise.all(
+            p.videos.map(async (v) => ({ id: await fileId(v.source.originalPath), fromMs: v.fromMs })),
+          ),
+          still: p.still ? { file: p.still.file && basename(p.still.file), text: !!p.still.text } : null,
           // Die Stelle im Video gehört nicht zum Bild: Abschnitte bleiben gültig, wenn sich davor etwas ändert.
           frames: frames?.map(({ montageMs: _m, ...f }) => f),
           timeline: frames ? timeline : null,
@@ -479,32 +531,33 @@ export async function renderMontage(
 
     const pdir = join(dir, `p${i}`);
     await mkdir(pdir, { recursive: true });
-    const m = LAYOUT.main;
-    const sd = LAYOUT.side;
     // Ohne Video ändert sich das Bild höchstens einmal je Sekunde: mit 1 Bild/s zusammensetzen,
     // erst ganz am Ende auf 25 Bilder/s vervielfachen. Spart den größten Teil der Rechenzeit.
-    const rate = p.video ? FPS : 1;
+    const rate = p.videos.length ? FPS : 1;
     const srcDur = (Math.ceil(durS) + 1).toString();
     const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${rate}:d=${srcDur}`];
     const filters: string[] = [];
     let last = "[0:v]";
     let input = 1;
-    if (p.video) {
-      args.push("-hwaccel", "auto", "-ss", (p.video.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3));
-      args.push("-i", p.video.source.originalPath);
+    // Gleichzeitige Videos nebeneinander, jedes in sein Feld eingepasst.
+    const tiles = videoTiles(p.videos.length);
+    for (const [k, v] of p.videos.entries()) {
+      const box = tiles[k]!;
+      args.push("-hwaccel", "auto", "-ss", (v.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3));
+      args.push("-i", v.source.originalPath);
       filters.push(
-        `[${input}:v]fps=${FPS},scale=${m.w}:${m.h}:force_original_aspect_ratio=decrease,setsar=1[v${input}]`,
-        `${last}[v${input}]overlay=x=${m.x}+(${m.w}-overlay_w)/2:y=${m.y}+(${m.h}-overlay_h)/2:eof_action=pass[b${input}]`,
+        `[${input}:v]fps=${FPS},scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1[v${input}]`,
+        `${last}[v${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}+(${box.h}-overlay_h)/2:eof_action=pass[b${input}]`,
       );
       last = `[b${input}]`;
       input++;
     }
-    if (p.still) {
-      const box = p.kind === "item" ? { x: m.x, y: m.y, w: m.w, h: m.h } : sd;
+    if (p.still?.file) {
+      const box = stillBox(p.kind, !!p.still.text);
       args.push("-framerate", String(rate), "-loop", "1", "-t", srcDur, "-i", p.still.file);
       filters.push(
-        `[${input}:v]scale=${box.w - 16}:${box.h - 40}:force_original_aspect_ratio=decrease,setsar=1[s${input}]`,
-        `${last}[s${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}+8:shortest=1[b${input}]`,
+        `[${input}:v]scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease,setsar=1[s${input}]`,
+        `${last}[s${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}:shortest=1[b${input}]`,
       );
       last = `[b${input}]`;
       input++;

@@ -103,9 +103,11 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
 - **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
 - **Ausgabe**: ein Ordner pro Einsatz. Das **Montagevideo** zeigt alle Episoden in voller Länge; Zeit ohne Episode
-  wird zur Zwischentafel, Fotos und Tagebucheinträge darin stehen je 3 s. Eingeblendet sind Uhrzeit, laufende Quellen
+  wird zur Zwischentafel, Fotos und Tagebucheinträge darin stehen je 3 s. Gleichzeitige Videos stehen nebeneinander
+  (bis zu vier), der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Tagebucheinträge
+  zeigen den Scan-Ausschnitt (auch aus PDFs) und die Abschrift. Eingeblendet sind Uhrzeit, laufende Quellen
   und zwei Zeitleisten (ganzer Einsatz, ± 2,5 Min.); gezeichnet in der Oberfläche, weil die LGPL-Fassung von FFmpeg
-  keine Schrift setzt. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins Montagevideo und die
+  keine Schrift setzt. „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den Originalen ab. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins Montagevideo und die
   Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft
   und Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
@@ -158,7 +160,7 @@ von selbst; `FELDSPUR_FFMPEG`/`FELDSPUR_FFPROBE` überschreiben das. Das Paket i
 
 ## Noch offen
 
-- Ausgabe: gleichzeitige Videos nebeneinander zeigen, PDF-Seiten als Bild ins Zeitgerüst, Dokumentvariablen.
+- Ausgabe: Dokumentvariablen im Zeitgerüst; Resolve-Schnittliste in Resolve selbst erproben.
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - ExifTool statt exifr für RAW/HEIC.

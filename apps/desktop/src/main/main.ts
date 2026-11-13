@@ -192,7 +192,7 @@ function registerIpc(): void {
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string) => montagePlan(requireStore(), sessionId));
   ipcMain.handle(
     IPC.exportSession,
-    async (e, sessionId: string, opts: { video: boolean; resolve?: boolean; dir?: string }) => {
+    async (e, sessionId: string, opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; dir?: string }) => {
       const s = requireStore();
       let parent = opts.dir;
       if (!parent) {

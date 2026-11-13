@@ -4,12 +4,12 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { formatClock, formatDuration, type Id, type ProjectStore } from "@feldspur/core";
+import { formatClock, formatDuration, type Id, type ProjectStore, type Source } from "@feldspur/core";
 import { scaffoldDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
-import { buildScaffold, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
-import { renderStill, type Still } from "./stills.ts";
+import { buildScaffold, type ImageRef, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
+import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 
 export interface ExportOptions {
   /** Ohne Video geht es schnell; nützlich zum Prüfen des Gerüsts. */
@@ -21,6 +21,13 @@ export interface ExportOptions {
   resolve?: boolean;
   /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
   cacheDir?: string;
+  /** Ton aller laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
+  audioMix?: "all" | "main";
+  /**
+   * Bilder, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG liefern. In der App zeichnet
+   * die Oberfläche sie mit pdf.js; ohne diese Hilfe fehlen solche Ausschnitte.
+   */
+  renderImage?: (src: Source, ref: ImageRef) => Promise<Buffer | null>;
 }
 
 export interface ExportResult {
@@ -99,6 +106,21 @@ export function protocolCsv(store: ProjectStore, sc: Scaffold): string {
   return `﻿${[head, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n`;
 }
 
+/** Standbild: Rasterbilder über ffmpeg, PDF-Seiten über die Oberfläche (falls verfügbar). */
+async function stillOf(
+  src: Source,
+  ref: ImageRef,
+  work: string,
+  name: string,
+  opts: ExportOptions,
+): Promise<Still | null> {
+  if (canRenderStill(src)) return renderStill(src, ref, work, { name });
+  if (!opts.renderImage) return null;
+  const data = await opts.renderImage(src, ref).catch(() => null);
+  const size = data && jpegSize(data);
+  return data && size ? { data, ...size } : null;
+}
+
 export async function exportSession(
   store: ProjectStore,
   sessionId: Id,
@@ -120,7 +142,7 @@ export async function exportSession(
       const list: (Still | null)[] = [];
       for (const ref of e.images) {
         const src = sources.get(ref.sourceId);
-        list.push(src ? await renderStill(src, ref, work, { name: `still-${++n}` }) : null);
+        list.push(src ? await stillOf(src, ref, work, `still-${++n}`, opts) : null);
       }
       stills.set(e, list);
     }
@@ -132,6 +154,7 @@ export async function exportSession(
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
+        audioMix: opts.audioMix,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
       });
       files.push(media);
@@ -149,7 +172,11 @@ export async function exportSession(
         await writeFile(f, s.data);
         stillFiles.set(e, f);
       }
-      const xml = montageFcpxml(sc, planPieces(sc, stillFiles), { projectName: base, stillPath: (f) => f });
+      const xml = montageFcpxml(sc, planPieces(sc, stillFiles), {
+        projectName: base,
+        stillPath: (f) => f,
+        audioMix: opts.audioMix,
+      });
       await writeFile(join(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
       files.push(`${base}_Resolve.fcpxml`);
     }

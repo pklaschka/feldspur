@@ -15,3 +15,4 @@ export * from "./export.ts";
 export * from "./transcript-import.ts";
 export * from "./fcpxml.ts";
 export * from "./montage-preview.ts";
+export * from "./layout.ts";

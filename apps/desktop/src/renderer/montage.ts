@@ -13,8 +13,10 @@ export function previewFrame(p: PreviewPiece, montageMs: number): OverlayFrame {
     sources: p.sources,
     caption: p.still?.caption ?? "",
     body: p.body,
-    hasVideo: !!p.video,
-    hasStill: !!p.still,
+    hasVideo: p.videos.length > 0,
+    hasStill: !!p.still?.image,
+    tiles: p.videos.length > 1 ? p.videos.map((v) => v.label) : [],
+    stillText: p.still?.text ?? "",
   };
 }
 

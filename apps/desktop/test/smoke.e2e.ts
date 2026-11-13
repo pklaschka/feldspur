@@ -356,6 +356,19 @@ try {
   await searchBox.press("Enter");
   await page.getByTestId("search").waitFor({ state: "detached" });
   await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
+
+  // Seitenleiste breiter ziehen; die Breite bleibt nach dem Neuladen.
+  const inspectorBox = async () => (await page.getByTestId("inspector").boundingBox())!;
+  const before0 = await inspectorBox();
+  const grip = (await page.getByRole("separator", { name: "Breite der Seitenleiste" }).boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + 300);
+  await page.mouse.down();
+  await page.mouse.move(grip.x - 120, grip.y + 300, { steps: 5 });
+  await page.mouse.up();
+  const after0 = await inspectorBox();
+  if (Math.abs(after0.width - before0.width - 120) > 4)
+    throw new Error(`Seitenleiste nicht verbreitert: ${before0.width} → ${after0.width}`);
+
   await page.getByRole("tab", { name: /Einsammeln/ }).click();
 
   // Große Vorschau und PDF.
@@ -456,6 +469,12 @@ try {
   });
   await shot("-montage");
   await montage.getByRole("button", { name: "Pause" }).click();
+  // Tagebucheintrag: Scan-Ausschnitt groß, dazu der abgetippte Text.
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 12 && !(await montageBar.innerText()).includes("Tagebuch"); i++)
+    await montage.getByRole("button", { name: "Nächstes Stück" }).click();
+  await montage.locator("canvas[aria-label^='Tagebuch']").waitFor();
+  await shot("-montage-tagebuch");
   await montage.getByRole("button", { name: "Schließen" }).click();
   await montage.waitFor({ state: "detached" });
   const t0 = Date.now();

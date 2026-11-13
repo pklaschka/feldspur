@@ -9,6 +9,7 @@ import {
   buildScaffold,
   entryText,
   exportSession,
+  type ImageRef,
   montagePreview,
   type MontagePreview,
   type OverlayFrame,
@@ -27,7 +28,24 @@ export function exportRunning(): boolean {
 let nextId = 1;
 const pending = new Map<number, { resolve: (b: Buffer[]) => void; reject: (e: Error) => void }>();
 
+const pendingStills = new Map<number, (b: Buffer | null) => void>();
+
+/** Lässt die Oberfläche einen Bildausschnitt als JPEG zeichnen (PDF-Seiten kann ffmpeg nicht lesen). */
+function stillVia(wc: WebContents) {
+  return (src: { id: string; fileName: string }, ref: ImageRef) =>
+    new Promise<Buffer | null>((resolve) => {
+      const id = nextId++;
+      pendingStills.set(id, resolve);
+      wc.send(IPC.stillRequest, id, ref, /\.pdf$/i.test(src.fileName));
+    });
+}
+
 export function registerOverlayBridge(): void {
+  ipcMain.on(IPC.stillReply, (_e, id: number, jpeg: Uint8Array | null) => {
+    const done = pendingStills.get(id);
+    pendingStills.delete(id);
+    done?.(jpeg ? Buffer.from(jpeg) : null);
+  });
   ipcMain.on(IPC.overlayReply, (_e, id: number, pngs: Uint8Array[], err: string | null) => {
     const p = pending.get(id);
     if (!p) return;
@@ -72,7 +90,7 @@ export async function runExport(
   wc: WebContents,
   sessionId: string,
   parent: string,
-  opts: { video: boolean; resolve?: boolean },
+  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean },
 ): Promise<ExportOutcome> {
   // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
@@ -83,6 +101,8 @@ export async function runExport(
       video: opts.video,
       resolve: opts.resolve,
       overlay: overlayVia(wc),
+      renderImage: stillVia(wc),
+      audioMix: opts.mixAudio === false ? "main" : "all",
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
     });

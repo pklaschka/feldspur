@@ -10,8 +10,8 @@ const piece = (fromMs: number, toMs: number, kind: PreviewPiece["kind"], clock0:
   title: kind,
   body: "",
   sources: [],
-  video: null,
-  audio: null,
+  videos: [],
+  audios: [],
   still: null,
 });
 

@@ -61,6 +61,16 @@ const api: FeldspurApi = {
     ipcRenderer.on(IPC.overlayRequest, listener);
     return () => ipcRenderer.removeListener(IPC.overlayRequest, listener);
   },
+  onStillRequest: (render) => {
+    const listener = (_e: unknown, id: number, ref: unknown, pdf: boolean) => {
+      render(ref, pdf).then(
+        (jpeg) => ipcRenderer.send(IPC.stillReply, id, jpeg),
+        () => ipcRenderer.send(IPC.stillReply, id, null),
+      );
+    };
+    ipcRenderer.on(IPC.stillRequest, listener);
+    return () => ipcRenderer.removeListener(IPC.stillRequest, listener);
+  },
   showInFolder: (path) => ipcRenderer.invoke(IPC.showInFolder, path),
 };
 

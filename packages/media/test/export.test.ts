@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +10,7 @@ import { exportSession } from "../src/export.ts";
 import { montagePreview } from "../src/montage-preview.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { buildScaffold, entryText, timestamp } from "../src/scaffold.ts";
-import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay } from "./fixtures.ts";
+import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay, makeSyncVideo } from "./fixtures.ts";
 
 describe("Zeitmarken", () => {
   it("schreibt #hh:mm:ss-z# mit Zehntelsekunden", () => {
@@ -33,6 +33,8 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     makeSyncDay(raw);
     makeDiaryPage(join(raw, "Tagebuch_S01.jpg"), 1);
     makePhoto(join(raw, "IMG_20260914_101630.jpg"), "0x8a4fbf");
+    // Zweite Kamera (Handy) läuft gleichzeitig mit dem ersten Kameraclip: Uhrzeit aus dem Dateinamen.
+    makeSyncVideo(join(raw, "VID_20260914_101605.mp4"), { seconds: 15 });
     store = ProjectStore.open(":memory:");
     sessionId = store.addSession({ title: "Testmarkt", date: "2026-09-14", extra: { DOI: "10.0000/beispiel" } }).id;
     applyImport(store, sessionId, await scanPaths([raw]));
@@ -111,6 +113,15 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     expect(csv).toContain("ZOOM0001.m4a");
   });
 
+  it("zeigt gleichzeitige Videos nebeneinander und mischt den Ton aller Geräte", () => {
+    const sc = buildScaffold(store, sessionId);
+    const both = montagePreview(sc).pieces.find((p) => p.videos.length === 2)!;
+    expect(both.videos.map((v) => v.label).join(" | ")).toMatch(/V-0\d .* \| V-0\d /);
+    // Hauptton zuerst (Referenzgerät), danach die Kameras.
+    expect(both.audios[0]!.sourceId).toBe(src("ZOOM0001.m4a").id);
+    expect(both.audios.length).toBe(3);
+  });
+
   it("plant die Montage zum Ansehen in der App wie das Video", () => {
     const sc = buildScaffold(store, sessionId);
     const p = montagePreview(sc);
@@ -120,9 +131,9 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
       expect(piece.fromMs).toBeCloseTo(at, 6);
       at = piece.toMs;
     }
-    const ep = p.pieces.find((x) => x.kind === "episode" && x.audio)!;
-    expect(sc.input.sources.some((s) => s.id === ep.audio!.sourceId)).toBe(true);
-    expect(p.pieces.some((x) => x.still?.image.sourceId)).toBe(true);
+    const ep = p.pieces.find((x) => x.kind === "episode" && x.audios.length)!;
+    expect(sc.input.sources.some((s) => s.id === ep.audios[0]!.sourceId)).toBe(true);
+    expect(p.pieces.some((x) => x.still?.image?.sourceId)).toBe(true);
     expect(p.timeline.episodes.length).toBeGreaterThan(0);
   });
 
@@ -131,6 +142,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const r = await exportSession(store, sessionId, out, { video: false, resolve: true });
     const name = r.files.find((f) => f.endsWith(".fcpxml"))!;
     const xml = readFileSync(join(out, name), "utf8");
+    if (process.env.FELDSPUR_FCPXML_KEEP) writeFileSync(process.env.FELDSPUR_FCPXML_KEEP, xml);
     expect(xml).toContain('<fcpxml version="1.9">');
     // Lückenlos: jedes Element der Hauptspur beginnt, wo das vorige endet.
     const spine = [...xml.matchAll(/^ {8}<(?:asset-clip|gap) [^>]*offset="([^"]+)"[^>]*duration="([^"]+)"/gm)];

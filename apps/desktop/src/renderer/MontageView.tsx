@@ -3,19 +3,20 @@
  * an denen sie im Montagevideo stünden, mit denselben Einblendungen.
  */
 import { formatClock, formatDuration } from "@feldspur/core/time";
+import { H, LAYOUT, MAX_TILES, stillBox, videoTiles, W, type Box } from "@feldspur/media/layout";
 import { Dialog } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import { mediaUrl, type MontagePreview, type PreviewPiece } from "../shared/api.ts";
 
 import { pieceAt, previewFrame } from "./montage.ts";
 import { drawOverlay } from "./overlay.ts";
-import { Button, CloseButton, cx } from "./ui.tsx";
+import { renderImageRef } from "./stillRender.ts";
+import { Button, CloseButton, cx, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
-const W = 1280;
-const H = 720;
-const MAIN = { x: 0, y: 52, w: 944, h: 531 };
-const SIDE = { x: 944, y: 52, w: W - 944, h: 531 };
+/** Höchstens so viele Tonquellen außer den Videos gleichzeitig. */
+const MAX_SOUNDS = 4;
+type StillRef = NonNullable<NonNullable<PreviewPiece["still"]>["image"]>;
 /** Ab so viel Abweichung zwischen Uhr und Wiedergabe wird nachgestellt. */
 const DRIFT_S = 0.3;
 
@@ -76,14 +77,19 @@ function Player({ plan }: { plan: MontagePreview }) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const tRef = useRef(0);
-  const videoEl = useRef<HTMLVideoElement>(null);
-  const audioEl = useRef<HTMLAudioElement>(null);
+  const videoEls = useRef<(HTMLVideoElement | null)[]>([]);
+  const audioEls = useRef<(HTMLAudioElement | null)[]>([]);
+  const [mixAll, setMixAll] = useState(true);
   const overlay = useRef<HTMLCanvasElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
   const idx = pieceAt(pieces, t);
   const piece = pieces[idx]!;
-  const shared = !!piece.video && piece.audio?.sourceId === piece.video.sourceId;
+  // Ton: Quellen, die schon als Video laufen, klingen aus dem Videofeld; die übrigen aus eigenen Elementen.
+  const sounds = mixAll ? piece.audios : piece.audios.slice(0, 1);
+  const audible = new Set(sounds.map((a) => a.sourceId));
+  const shownVideos = new Set(piece.videos.map((v) => v.sourceId));
+  const extraSounds = sounds.filter((a) => !shownVideos.has(a.sourceId));
 
   const seekTo = (ms: number) => {
     const v = Math.max(0, Math.min(durationMs - 1, ms));
@@ -140,9 +146,13 @@ function Player({ plan }: { plan: MontagePreview }) {
       if (playing && el.paused) void el.play().catch(() => undefined);
       if (!playing && !el.paused) el.pause();
     };
-    follow(videoEl.current, piece.video, !shared);
-    follow(audioEl.current, shared ? null : piece.audio, false);
-  }, [t, piece, playing, shared]);
+    for (let k = 0; k < MAX_TILES; k++) {
+      const v = piece.videos[k] ?? null;
+      follow(videoEls.current[k] ?? null, v, !v || !audible.has(v.sourceId));
+    }
+    for (let k = 0; k < MAX_SOUNDS; k++) follow(audioEls.current[k] ?? null, extraSounds[k] ?? null, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, piece, playing, mixAll]);
 
   // Einblendungen: einmal je Sekunde neu, wie im Video.
   const second = Math.floor((t - piece.fromMs) / 1000);
@@ -158,6 +168,8 @@ function Player({ plan }: { plan: MontagePreview }) {
         e.preventDefault();
         setPlaying((p) => !p);
       } else if (e.key === "ArrowRight") seekTo(tRef.current + 10_000);
+      else if (e.key === "Home") seekTo(0);
+      else if (e.key === "End") seekTo(durationMs - 1);
       else if (e.key === "ArrowLeft") seekTo(tRef.current - 10_000);
       else return;
       e.preventDefault();
@@ -167,7 +179,8 @@ function Player({ plan }: { plan: MontagePreview }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const stillBox = piece.kind === "item" ? MAIN : SIDE;
+  const tiles = videoTiles(piece.videos.length);
+  const image = piece.still?.image ?? null;
   const clock = previewFrame(piece, t).clockMs;
 
   return (
@@ -177,19 +190,36 @@ function Player({ plan }: { plan: MontagePreview }) {
           className="absolute top-1/2 left-1/2 origin-center bg-[#10171b]"
           style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${scale})` }}
         >
-          <video
-            ref={videoEl}
-            className={cx("absolute bg-black object-contain", !piece.video && "invisible")}
-            style={{ left: MAIN.x, top: MAIN.y, width: MAIN.w, height: MAIN.h }}
-            playsInline
-            preload="auto"
-          />
-          <audio ref={audioEl} preload="auto" />
-          {piece.still && (
+          {Array.from({ length: MAX_TILES }, (_, k) => {
+            const b = tiles[k] ?? LAYOUT.main;
+            return (
+              <video
+                key={k}
+                ref={(el) => {
+                  videoEls.current[k] = el;
+                }}
+                className={cx("absolute bg-black object-contain", !piece.videos[k] && "invisible")}
+                style={{ left: b.x, top: b.y, width: b.w, height: b.h }}
+                playsInline
+                preload="auto"
+              />
+            );
+          })}
+          {Array.from({ length: MAX_SOUNDS }, (_, k) => (
+            <audio
+              key={k}
+              ref={(el) => {
+                audioEls.current[k] = el;
+              }}
+              preload="auto"
+            />
+          ))}
+          {piece.still && image && (
             <StillImage
-              key={`${piece.still.image.sourceId}:${JSON.stringify(piece.still.image.region ?? null)}`}
-              still={piece.still}
-              box={{ x: stillBox.x + 8, y: stillBox.y + 8, w: stillBox.w - 16, h: stillBox.h - 40 }}
+              key={`${image.sourceId}:${JSON.stringify(image.region ?? null)}:${piece.kind}`}
+              image={image}
+              caption={piece.still.caption}
+              box={stillBox(piece.kind, !!piece.still.text)}
             />
           )}
           <canvas ref={overlay} width={W} height={H} className="pointer-events-none absolute inset-0" />
@@ -204,43 +234,39 @@ function Player({ plan }: { plan: MontagePreview }) {
         onPlay={() => setPlaying((p) => !p)}
         onSeek={seekTo}
         current={idx}
+        mixAll={mixAll}
+        onMixAll={setMixAll}
       />
     </div>
   );
 }
 
-/** Foto oder Tagebuchausschnitt, eingepasst wie im Video (oben ausgerichtet, mittig). */
-function StillImage({
-  still,
-  box,
-}: {
-  still: NonNullable<PreviewPiece["still"]>;
-  box: { x: number; y: number; w: number; h: number };
-}) {
-  const ref = useRef<HTMLCanvasElement>(null);
+/** Foto oder Tagebuchausschnitt (auch aus PDF-Scans), eingepasst wie im Video (oben, mittig). */
+function StillImage({ image, caption, box }: { image: StillRef; caption: string; box: Box }) {
+  const holder = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      const c = ref.current;
-      const ctx = c?.getContext("2d");
-      if (!c || !ctx) return;
-      const r = still.image.region ?? { x: 0, y: 0, w: 1, h: 1 };
-      const sw = img.naturalWidth * r.w;
-      const sh = img.naturalHeight * r.h;
-      const k = Math.min(box.w / sw, box.h / sh, 1000 / sw);
-      c.width = Math.round(sw * k);
-      c.height = Math.round(sh * k);
-      ctx.drawImage(img, img.naturalWidth * r.x, img.naturalHeight * r.y, sw, sh, 0, 0, c.width, c.height);
+    let live = true;
+    renderImageRef(image, image.pdf).then(
+      (c) => {
+        if (!live || !holder.current) return;
+        const k = Math.min(box.w / c.width, box.h / c.height);
+        c.style.width = `${Math.round(c.width * k)}px`;
+        c.style.height = `${Math.round(c.height * k)}px`;
+        c.setAttribute("aria-label", caption);
+        holder.current.replaceChildren(c);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
     };
-    img.src = mediaUrl(still.image.sourceId);
-  }, [still, box.w, box.h]);
+  }, [image, caption, box.w, box.h]);
   return (
     <div
+      ref={holder}
       className="absolute flex items-start justify-center"
       style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
-    >
-      <canvas ref={ref} aria-label={still.caption} />
-    </div>
+    />
   );
 }
 
@@ -253,6 +279,8 @@ function Controls({
   onPlay,
   onSeek,
   current,
+  mixAll,
+  onMixAll,
 }: {
   pieces: PreviewPiece[];
   durationMs: number;
@@ -262,6 +290,8 @@ function Controls({
   onPlay: () => void;
   onSeek: (ms: number) => void;
   current: number;
+  mixAll: boolean;
+  onMixAll: (v: boolean) => void;
 }) {
   const pct = (ms: number) => `${(ms / durationMs) * 100}%`;
   const jump = (d: -1 | 1) => {
@@ -310,7 +340,11 @@ function Controls({
         </span>
         <span className="font-mono text-[0.85rem] text-muted tabular-nums">· Uhr {formatClock(clock)}</span>
         <span className="truncate text-[0.85rem] text-muted">· {pieces[current]!.title}</span>
-        <span className="ml-auto text-[0.78rem] text-muted">Leertaste: Abspielen · ←/→: 10 s</span>
+        <label className="ml-auto flex items-center gap-2 text-[0.82rem] text-ink-2">
+          <Toggle checked={mixAll} onChange={onMixAll} label="Ton aller Geräte" />
+          Ton aller Geräte
+        </label>
+        <span className="ml-3 text-[0.78rem] text-muted">Leertaste: Abspielen · ←/→: 10 s</span>
       </div>
     </div>
   );
