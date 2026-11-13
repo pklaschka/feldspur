@@ -347,6 +347,17 @@ try {
   await page.getByTestId("inspector").getByRole("status").getByText("2 Zeilen übernommen").waitFor();
   await page.getByTestId("transcript-summary").getByText("4 Zeilen").waitFor();
 
+  // Schnellsuche (Strg+K) findet die importierte Zeile und springt hin.
+  await page.keyboard.press("Control+k");
+  const searchBox = page.getByTestId("search").getByRole("textbox", { name: "Suchen" });
+  await searchBox.fill("noch frei");
+  await page.getByTestId("search").getByRole("option").first().getByText("noch frei").waitFor();
+  await shot("-suche");
+  await searchBox.press("Enter");
+  await page.getByTestId("search").waitFor({ state: "detached" });
+  await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
+  await page.getByRole("tab", { name: /Einsammeln/ }).click();
+
   // Große Vorschau und PDF.
   await src("Feldnotizen_Scan.pdf").click();
   await page.getByRole("button", { name: "Feldnotizen_Scan.pdf groß ansehen" }).click();

@@ -11,6 +11,7 @@ import { renderOverlays } from "./overlay.ts";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
 import { Preview } from "./Preview.tsx";
+import { QuickSearch } from "./SearchDialog.tsx";
 import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Transcriber } from "./Transcriber.tsx";
@@ -183,6 +184,8 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
   );
 }
 
+const isMac = navigator.platform.toLowerCase().includes("mac");
+
 export type Step = "collect" | "sync" | "review" | "export";
 
 function SessionPane({
@@ -204,6 +207,18 @@ function SessionPane({
   const [selected, setSelected] = useState<string | null>(null);
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
   const exporting = useExport();
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearching(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     void guard(() => api.getSession(sessionId)).then((v) => {
@@ -290,6 +305,15 @@ function SessionPane({
                 {view.session.place && <span className="text-muted">{view.session.place}</span>}
                 <Button variant="link" size="sm" onClick={() => setEditing(true)}>
                   Einsatzdaten bearbeiten
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => setSearching(true)}
+                  title="Mitschrift, Tagebuch, Quellen und Episoden durchsuchen (Strg/⌘+K)"
+                >
+                  Suchen <kbd className="ml-1 font-mono text-[0.72rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
                 </Button>
               </div>
               <Tabs.List className="mt-3 flex gap-1" aria-label="Arbeitsschritte">
@@ -391,6 +415,14 @@ function SessionPane({
           onView={setView}
         />
         <Preview view={view} sourceId={previewId} onClose={() => setPreviewId(null)} />
+        <QuickSearch
+          view={view}
+          open={searching}
+          onOpenChange={setSearching}
+          onSource={setSelected}
+          onDiary={setDiaryPage}
+          onReview={() => setStep("review")}
+        />
         <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
       </SourceActionsProvider>
     </PlaybackProvider>
