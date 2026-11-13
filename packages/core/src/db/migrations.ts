@@ -108,4 +108,15 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE sources ADD COLUMN part_of TEXT REFERENCES sources(id) ON DELETE SET NULL;
   ALTER TABLE sources ADD COLUMN follows TEXT REFERENCES sources(id) ON DELETE SET NULL;
   `,
+  // 4: Mitschrift
+  `
+  CREATE TABLE transcript_lines (
+    id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    at_ms INTEGER NOT NULL,
+    speaker TEXT NOT NULL DEFAULT '',
+    text TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX transcript_source ON transcript_lines(source_id, at_ms);
+  `,
 ];

@@ -123,6 +123,27 @@ describe("Projektdatei", () => {
     store.close();
   });
 
+  it("speichert Mitschrift-Zeilen je Quelle und entfernt sie mit der Quelle", () => {
+    const store = ProjectStore.open(":memory:");
+    const { session, video, audio } = seed(store);
+    const b = store.addTranscriptLine({ sourceId: audio.id, atMs: 70_000, speaker: "H", text: "Zwölf Jahre" });
+    store.addTranscriptLine({ sourceId: audio.id, atMs: 66_000, speaker: "B1", text: "Wie lange schon?" });
+    store.addTranscriptLine({ sourceId: video.id, atMs: 1_000, text: "Ruf im Hintergrund" });
+    expect(
+      store
+        .listTranscript(session.id)
+        .filter((l) => l.sourceId === audio.id)
+        .map((l) => l.speaker),
+    ).toEqual(["B1", "H"]);
+    store.updateTranscriptLine(b.id, { text: "Zwölf Jahre, seit mein Vater…" });
+    expect(store.getTranscriptLine(b.id).text).toBe("Zwölf Jahre, seit mein Vater…");
+    store.deleteSource(video.id);
+    expect(store.listTranscript(session.id)).toHaveLength(2);
+    store.deleteTranscriptLine(b.id);
+    expect(store.listTranscript(session.id).map((l) => l.text)).toEqual(["Wie lange schon?"]);
+    store.close();
+  });
+
   it("vergibt Kurzzeichen fortlaufend pro Art", () => {
     const store = ProjectStore.open(":memory:");
     const { session } = seed(store);

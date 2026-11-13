@@ -75,3 +75,9 @@ export const KIND_GLYPH: Record<SourceKind, string> = {
   gps: "⌖",
   other: "·",
 };
+
+/** „B1: Text“ → Sprecher B1. */
+export function splitSpeaker(input: string): { speaker: string | null; text: string } {
+  const m = /^\s*([\p{L}\d]{1,6}):\s+(.*)$/su.exec(input);
+  return m ? { speaker: m[1]!, text: m[2]! } : { speaker: null, text: input };
+}
