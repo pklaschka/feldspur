@@ -80,7 +80,7 @@ function Timeline({
   const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
   const playheadMs = position && playRow?.startMs != null ? playRow.startMs + position.atMs : null;
 
-  const starts = placed.map((r) => r.startMs ?? r.diaryWindow!.fromMs);
+  const starts = placed.map((r) => r.startMs ?? r.diaryWindow!.toMs);
   const ends = placed.map((r) => Math.max(r.endMs ?? r.startMs ?? 0, r.diaryWindow?.toMs ?? 0));
   const t0 = Math.floor((Math.min(...starts) - 2 * MIN) / (5 * MIN)) * 5 * MIN;
   const t1 = Math.ceil((Math.max(...ends) + 2 * MIN) / (5 * MIN)) * 5 * MIN;

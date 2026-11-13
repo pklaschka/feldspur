@@ -41,7 +41,7 @@ export function searchItems(view: SessionView): Hit[] {
     items.push({
       kind: "diary",
       target: d.regions[0]?.sourceId ?? "",
-      clockMs: d.window?.fromMs ?? null,
+      clockMs: d.window?.toMs ?? null,
       title: `Tagebuch ${d.number}${d.regions[0] ? ` · ${d.regions[0].pageLabel}` : ""}${d.notedAt ? ` · notiert ${d.notedAt}` : ""}`,
       text: text || "(noch nicht abgetippt)",
     });

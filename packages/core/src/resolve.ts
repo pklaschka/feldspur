@@ -202,8 +202,9 @@ function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, pl
     const missing = entries.length - placed.length;
     placements.set(src.id, {
       sourceId: src.id,
-      startMs: Math.min(...placed.map((p) => p.fromMs)),
-      endMs: Math.max(...placed.map((p) => p.toMs)),
+      // Seiten stehen dort, wo notiert wurde; der Bezugszeitraum gehört zum einzelnen Eintrag.
+      startMs: Math.min(...placed.map((p) => p.notedAtMs)),
+      endMs: Math.max(...placed.map((p) => p.notedAtMs)),
       uncertaintyMs: 60_000,
       basis: {
         kind: "diary",

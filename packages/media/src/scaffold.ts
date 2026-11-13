@@ -89,7 +89,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
   const photos = new Set(input.sources.filter((s) => s.kind === "photo" && !s.partOf).map((s) => s.id));
   // In Tafeln erscheinen Fotos und Tagebucheinträge; Tagebuchseiten zeigen sich über ihre Einträge.
   const plan = planMontage(ep, (kind, id) =>
-    kind === "source" ? (photos.has(id) ? res.placements.get(id)?.startMs : undefined) : res.diary.get(id)?.fromMs,
+    kind === "source" ? (photos.has(id) ? res.placements.get(id)?.startMs : undefined) : res.diary.get(id)?.notedAtMs,
   );
 
   const src = new Map(input.sources.map((s) => [s.id, s]));
@@ -180,14 +180,14 @@ export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
 
   // Tagebuch: am Beginn des Bezugszeitraums.
   const numbered = [...input.diaryEntries].sort((a, b) => {
-    const pa = res.diary.get(a.id)?.fromMs ?? Infinity;
-    const pb = res.diary.get(b.id)?.fromMs ?? Infinity;
+    const pa = res.diary.get(a.id)?.notedAtMs ?? Infinity;
+    const pb = res.diary.get(b.id)?.notedAtMs ?? Infinity;
     return pa - pb;
   });
   for (const e of numbered) {
     const dp = res.diary.get(e.id);
     if (!dp) continue;
-    const at = plan.toMontage(dp.fromMs, e.id);
+    const at = plan.toMontage(dp.notedAtMs, e.id);
     if (at === null) continue;
     const first = e.regions[0] ? src.get(e.regions[0].sourceId) : undefined;
     const page = first?.partOf ? src.get(first.partOf) : first;
@@ -196,8 +196,8 @@ export function buildScaffold(store: ProjectStore, sessionId: Id): Scaffold {
     push({
       montageMs: at,
       kind: "diary",
-      clock: `ca. ${hm(dp.fromMs)} (notiert ${hm(dp.notedAtMs)})`,
-      clockMs: dp.fromMs,
+      clock: `${hm(dp.notedAtMs)} (notiert, bezieht sich auf ca. ${hm(dp.fromMs)}–${hm(dp.toMs)})`,
+      clockMs: dp.notedAtMs,
       head: `Tagebuch ${page?.label ?? "?"}${page && who(page) ? ` (${who(page)})` : ""}`,
       body: text ? `${modeLabel}: ${text}` : modeLabel,
       images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),

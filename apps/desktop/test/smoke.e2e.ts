@@ -161,7 +161,10 @@ try {
   await page.getByLabel("Randnotiz T-01").fill("10:12");
   await page.getByLabel("Randnotiz T-01").press("Enter");
   await page.getByTestId("tl-diary").first().waitFor({ state: "attached" });
-  await page.getByTestId("inspector").getByText("09:57:00 – 10:12:00").waitFor();
+  await page
+    .getByTestId("inspector")
+    .getByText(/^Bezieht sich auf 09:57–10:12/)
+    .waitFor();
   const tracks = await page
     .getByTestId("track")
     .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.device));
@@ -225,7 +228,7 @@ try {
   await page.getByTestId("tl-point").filter({ hasText: "Marktstand.jpg" }).waitFor({ state: "attached" });
   await shot("-von-hand");
 
-  // Treffersuche auf der Leinwand: Klick in die Tagebuchspur (letzte Spur) mitten in den Bezugszeitraum.
+  // Treffersuche auf der Leinwand: Klick in die Tagebuchspur (letzte Spur) kurz vor der Notierzeit.
   await page.getByRole("button", { name: "Schließen" }).click();
   const box = (await page.locator("canvas").boundingBox())!;
   const rangeText = await page
@@ -234,7 +237,7 @@ try {
     .innerText();
   const [from, to] = rangeText.match(/\d\d:\d\d/g)!.map((t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3)));
   const xAt = (min: number) => box.x + ((min - from!) / (to! - from!)) * box.width;
-  await page.mouse.click(xAt(10 * 60 + 5), box.y + 30 + 40 + (tracks.length - 1) * 52 + 26);
+  await page.mouse.click(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 1) * 52 + 26);
   await page.getByTestId("inspector").getByText("Tagebuch_S01.jpg").first().waitFor();
   await page.getByRole("button", { name: "Schließen" }).click();
   // Klick in die Tonspur spult den Player dorthin: 10:16:20 ist im Rekorder 1:20.

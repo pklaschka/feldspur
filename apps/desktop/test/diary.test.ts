@@ -53,9 +53,9 @@ describe("Tagebuch abtippen", () => {
     expect(formatClock(first!.window!.fromMs)).toBe("14:00:00");
     expect(formatClock(second!.window!.fromMs)).toBe("14:08:00"); // 15 Min. Standard
     expect(second!.shortText).toBe("Streit am Käsestand");
-    // Die Seite reicht über beide Einträge.
+    // Die Seite steht von der ersten bis zur letzten Notierzeit.
     const page = view.rows.find((r) => r.id === p1.id)!;
-    expect(formatClock(page.startMs!)).toBe("14:00:00");
+    expect(formatClock(page.startMs!)).toBe("14:05:00");
     expect(formatClock(page.endMs!)).toBe("14:23:00");
   });
 
