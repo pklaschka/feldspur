@@ -2,7 +2,7 @@
  * Rauchtest der Desktop-App: startet Electron mit einem frischen Projekt,
  * legt einen Einsatz an, importiert erfundene Fixtures und geht die vier Schritte durch.
  *
- *   pnpm --filter @feldspur/desktop e2e            (Linux ohne Bildschirm: xvfb-run -a …)
+ *   vp run e2e                                     (Linux ohne Bildschirm: xvfb-run -a …)
  *   FELDSPUR_SCREENSHOT=bild.png …                 speichert ein Bildschirmfoto
  *   FELDSPUR_E2E_APP=release/…/feldspur vpx test/smoke.e2e.ts   prüft das fertige Paket
  */

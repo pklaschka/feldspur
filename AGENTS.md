@@ -36,4 +36,4 @@ release. Add a tool name to select part of the graph. For example, run
 - Lage auf der Zeitachse nie speichern, immer aus Belegen berechnen (`packages/core/src/resolve.ts`).
 - Migrationen in `packages/core/src/db/migrations.ts` nur anhängen, nie ändern.
 - Keine echten Forschungsdaten in Tests oder Fixtures.
-- Vor dem Commit: `pnpm check` und `pnpm test`.
+- Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).

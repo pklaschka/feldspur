@@ -2,8 +2,8 @@
  * Baut das Installationspaket der Desktop-App mit electron-builder.
  *
  * Voraussetzungen (für die Zielplattform):
- *   pnpm --filter @feldspur/desktop build     App gebaut nach apps/desktop/out
- *   pnpm --filter @feldspur/desktop native    better-sqlite3 für Electron
+ *   vp run @feldspur/desktop#build            App gebaut nach apps/desktop/out
+ *   vp run @feldspur/desktop#native           better-sqlite3 für Electron
  *   node scripts/fetch-ffmpeg.mjs             ffmpeg/ffprobe (LGPL)
  *
  *   node scripts/package-desktop.mjs [--dir]  --dir: nur entpackt, ohne Installer
@@ -34,8 +34,8 @@ const need = (p, hint) => {
   if (!existsSync(p)) throw new Error(`Fehlt: ${p}\n→ ${hint}`);
   return p;
 };
-need(join(desktop, "out", "main", "main.cjs"), "pnpm --filter @feldspur/desktop build");
-const binding = need(join(desktop, "native", key, "better_sqlite3.node"), "pnpm --filter @feldspur/desktop native");
+need(join(desktop, "out", "main", "main.cjs"), "vp run @feldspur/desktop#build");
+const binding = need(join(desktop, "native", key, "better_sqlite3.node"), "vp run @feldspur/desktop#native");
 const ffmpegDir = join(desktop, "vendor", "ffmpeg", key);
 for (const t of ["ffmpeg", "ffprobe"]) need(join(ffmpegDir, `${t}${exe}`), "node scripts/fetch-ffmpeg.mjs");
 

@@ -37,12 +37,11 @@ jobs:
     name: ${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      # Vite+ bringt Node, pnpm und den Abhängigkeits-Cache mit und führt `vp install` aus.
+      - uses: voidzero-dev/setup-vp@v1.21.2
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: true
 
       # FFmpeg (LGPL): Windows/Linux fertig von BtbN, macOS aus den Quellen gebaut (dauert, daher Cache).
       - name: FFmpeg-Cache (macOS)
@@ -63,8 +62,8 @@ jobs:
             node scripts/fetch-ffmpeg.mjs
           fi
 
-      - run: pnpm --filter @feldspur/desktop build
-      - run: pnpm --filter @feldspur/desktop native
+      - run: vp run @feldspur/desktop#build
+      - run: vp run @feldspur/desktop#native
       - run: node scripts/package-desktop.mjs
 
       - name: Rauchtest mit dem fertigen Paket (Linux)
@@ -72,7 +71,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg xvfb
           cd apps/desktop
-          FELDSPUR_E2E_APP="$PWD/release/dist/linux-unpacked/feldspur" xvfb-run -a pnpm exec vpx test/smoke.e2e.ts
+          FELDSPUR_E2E_APP="$PWD/release/dist/linux-unpacked/feldspur" xvfb-run -a vpx test/smoke.e2e.ts
 
       - uses: actions/upload-artifact@v4
         with:

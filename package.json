@@ -10,8 +10,8 @@
     "check": "vp check && tsc -p tsconfig.json && tsc -p apps/desktop/tsconfig.json",
     "fix": "vp check --fix",
     "probe": "vpx scripts/probe-folder.ts",
-    "desktop": "pnpm --filter @feldspur/desktop build && pnpm --filter @feldspur/desktop start",
-    "e2e": "pnpm --filter @feldspur/desktop e2e"
+    "desktop": "vp run @feldspur/desktop#build && vp run @feldspur/desktop#start",
+    "e2e": "vp run @feldspur/desktop#e2e"
   },
   "devDependencies": {
     "@feldspur/core": "workspace:*",

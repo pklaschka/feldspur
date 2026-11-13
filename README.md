@@ -61,26 +61,26 @@ werden als Wurzel der Quadratsumme kombiniert; „sicher“ heißt ± 2 s oder b
 
 ## Entwickeln
 
-Voraussetzungen: Node 22+, pnpm 10, FFmpeg (`ffmpeg`, `ffprobe`) im PATH.
+Voraussetzungen: [Vite+](https://viteplus.dev) (`vp`, bringt Node und pnpm mit), FFmpeg (`ffmpeg`, `ffprobe`) im PATH.
 
 ```sh
-pnpm install
-pnpm check         # Format, Lint, Typen
-pnpm test          # Vitest; Medien-Fixtures werden zur Laufzeit mit FFmpeg erzeugt
-pnpm --filter @feldspur/desktop native   # better-sqlite3 für Electron holen (einmalig)
-pnpm desktop       # App bauen und starten
-pnpm e2e           # Rauchtest der App (Linux ohne Bildschirm: xvfb-run -a pnpm e2e)
+vp install
+vp run check       # Format, Lint, Typen
+vp run test        # Vitest; Medien-Fixtures werden zur Laufzeit mit FFmpeg erzeugt
+vp run @feldspur/desktop#native   # better-sqlite3 für Electron holen (einmalig)
+vp run desktop     # App bauen und starten
+vp run e2e         # Rauchtest der App (Linux ohne Bildschirm: xvfb-run -a vp run e2e)
 ```
 
 Einen Ordner ohne App durchprobieren, z. B. das erfundene Testpaket:
 
 ```sh
-pnpm probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
+vp run probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
   --anchor ZOOM0004.m4a@80=C0012.MP4@20 --diary Tagebuch_S01.jpg@10:12
 ```
 
 Abgleich mit dem Begleitprotokoll des Testpakets als Test:
-`FELDSPUR_TESTPAKET=/pfad/1_Rohquellen pnpm test`.
+`FELDSPUR_TESTPAKET=/pfad/1_Rohquellen vp run test`.
 
 ## Installationspaket
 
@@ -88,8 +88,8 @@ Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Ins
 von Hand oder bei einem Tag `v*`; die Dateien liegen danach als Artefakte am Lauf. Lokal für die eigene Plattform:
 
 ```sh
-pnpm --filter @feldspur/desktop build
-pnpm --filter @feldspur/desktop native
+vp run @feldspur/desktop#build
+vp run @feldspur/desktop#native
 node scripts/fetch-ffmpeg.mjs          # LGPL-FFmpeg; auf macOS wird aus den Quellen gebaut
 node scripts/package-desktop.mjs       # --dir: nur entpackt, ohne Installer
 ```
