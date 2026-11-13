@@ -330,11 +330,11 @@ function registerIpc(): void {
       offsetMs === null
         ? { offsetBasis: "unknown", clockOffsetMs: 0, isReference: false }
         : {
-            offsetBasis: "manual",
-            clockOffsetMs: Math.round(offsetMs),
-            clockOffsetUncertaintyMs: 1000,
-            isReference: false,
-          },
+          offsetBasis: "manual",
+          clockOffsetMs: Math.round(offsetMs),
+          clockOffsetUncertaintyMs: 1000,
+          isReference: false,
+        },
     );
     return buildSessionView(s, d.sessionId);
   });
@@ -373,6 +373,7 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   });
+  win.maximize();
   // Keine Navigation weg von der App, keine neuen Fenster.
   win.on("close", (e) => {
     if (!exportRunning()) return;
