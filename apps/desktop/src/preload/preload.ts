@@ -4,6 +4,9 @@ import { IPC, type ExportProgress, type FeldspurApi } from "../shared/api.ts";
 const api: FeldspurApi = {
   newProject: () => ipcRenderer.invoke(IPC.newProject),
   openProject: () => ipcRenderer.invoke(IPC.openProject),
+  recentProjects: () => ipcRenderer.invoke(IPC.recentProjects),
+  openRecent: (path) => ipcRenderer.invoke(IPC.openRecent, path),
+  forgetRecent: (path) => ipcRenderer.invoke(IPC.forgetRecent, path),
   currentProject: () => ipcRenderer.invoke(IPC.currentProject),
   createSession: (input) => ipcRenderer.invoke(IPC.createSession, input),
   getSession: (id) => ipcRenderer.invoke(IPC.getSession, id),
