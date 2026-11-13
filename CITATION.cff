@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: >-
+  Wenn du Feldspur in deiner Arbeit verwendest oder darauf verweist, zitiere es bitte
+  mit diesen Angaben und nenne die verwendete Version oder den Commit.
+type: software
+title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen"
+abstract: >-
+  Forschungswerkzeug für die Ethnografie. Feldspur legt alle Aufzeichnungen eines
+  Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf eine gemeinsame
+  Uhrzeit-Achse und erzeugt daraus ein codierbares Quelldokument, zuerst für MAXQDA.
+  Große Teile des Codes wurden mit generativer KI (Claude, Anthropic) unter der Leitung
+  von Zuri Nimca Klaschka entwickelt.
+authors:
+  - given-names: Zuri Nimca
+    family-names: Klaschka
+    orcid: "https://orcid.org/0009-0005-9995-5687"
+repository-code: "https://github.com/pklaschka/feldspur"
+url: "https://github.com/pklaschka/feldspur"
+version: 0.1.0
+keywords:
+  - Ethnografie
+  - Feldforschung
+  - qualitative Forschung
+  - MAXQDA
+  - Multimedia
+  - Zeitachse

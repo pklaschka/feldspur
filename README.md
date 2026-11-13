@@ -3,8 +3,15 @@
 Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
 **eine gemeinsame Uhrzeit-Achse** und macht daraus später ein codierbares Quelldokument, zuerst für MAXQDA.
 
-Arbeitstitel, Stand: erste Implementierungsschritte (Einsammeln und Zeitbestimmung). Konzept und Tech-Stack sind im
-Projekt außerhalb des Repositorys dokumentiert.
+> [!IMPORTANT]
+> **Forschungswerkzeug, (noch) kein Produkt.** Feldspur entsteht als Werkzeug für meine eigene ethnografische
+> Forschung. Es richtet sich nach meinen Arbeitsabläufen, ist nicht für die allgemeine Nutzung gedacht und hat weder
+> stabile Formate noch Support, Installationshilfe oder Garantien. Projektdateien und Exporte können sich zwischen
+> Versionen ohne Übergang ändern. Wer es trotzdem ausprobieren möchte, ist willkommen, sollte aber mit Ecken und Kanten
+> rechnen.
+
+Arbeitstitel, Stand: in Entwicklung (Einsammeln, Zeitbestimmung, Abgleich, Durchsehen und Tagebuch abtippen
+funktionieren; der Export steht noch aus). Konzept und Tech-Stack sind außerhalb des Repositorys dokumentiert.
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
@@ -12,6 +19,36 @@ Tagebuch abtippen: Rahmen um einen Eintrag ziehen, Notierzeit, Bezugszeitraum un
 Ein Eintrag kann auf einer anderen Seite weitergehen.
 
 ![Abtipp-Ansicht mit zwei Einträgen auf einer erfundenen Seite](docs/tagebuch.png)
+
+## Entstehung mit KI
+
+Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests, der Skripte und
+dieser Dokumentation wurde von Claude (Anthropic) über Claude Code geschrieben, im Dialog mit mir. Von mir stammen die
+Fragestellung, das Konzept, die Anforderungen aus der Feldforschung und die Entscheidungen; ich gebe die Richtung vor,
+sehe Ergebnisse durch und probiere sie aus. Ich lese aber nicht jede Zeile Code selbst gegen. Commits, an denen die KI
+beteiligt war, tragen eine `Co-Authored-By`-Zeile.
+
+Was das für die Nutzung heißt:
+
+- Der Code kann Fehler enthalten, die weder Tests noch ich bemerkt haben. Ergebnisse, die in eine Analyse oder
+  Veröffentlichung eingehen, bitte an den Originalaufnahmen prüfen.
+- Feldspur ist deshalb bewusst auf Nachvollziehbarkeit gebaut: Originale werden nie verändert und über Prüfsummen
+  belegt, jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet, und automatische Vorschläge (z. B.
+  Sync-Anker) zählen erst, wenn sie von Hand bestätigt wurden.
+- Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: keine automatische Transkription, keine Cloud-Dienste.
+  Alles läuft lokal.
+
+## Zitieren
+
+Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, findet die Zitierangaben in
+[`CITATION.cff`](CITATION.cff); GitHub bietet daraus oben rechts „Cite this repository“ (APA und BibTeX) an. Kurzform:
+
+> Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
+> (Version 0.1.0) [Software]. https://github.com/pklaschka/feldspur
+
+Autor*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687).
+
+Bitte die tatsächlich verwendete Version oder den Commit angeben, da sich das Werkzeug noch stark verändert.
 
 ## Aufbau
 
