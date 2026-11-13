@@ -59,6 +59,8 @@ export function testmarkt() {
     durationMs,
     metadata: {},
     importedAt: "2026-11-12T00:00:00.000Z",
+    partOf: null,
+    follows: null,
   });
   const sources = [
     src("ZOOM0004.m4a", "A-01", "audio", "zoom", 1_590_000),
@@ -117,7 +119,7 @@ export function testmarkt() {
     {
       id: "d1",
       sessionId: "s1",
-      regions: [{ sourceId: "Tagebuch_S01.jpg", x: 0, y: 0, w: 1, h: 1 }],
+      regions: [{ sourceId: "Tagebuch_S01.jpg", page: 0, x: 0, y: 0, w: 1, h: 1 }],
       notedAtMs: T(10, 12),
       lookbackMs: 7 * 60_000,
       mode: "scan",
@@ -127,7 +129,7 @@ export function testmarkt() {
     {
       id: "d2",
       sessionId: "s1",
-      regions: [{ sourceId: "Tagebuch_S02.jpg", x: 0, y: 0, w: 1, h: 1 }],
+      regions: [{ sourceId: "Tagebuch_S02.jpg", page: 0, x: 0, y: 0, w: 1, h: 1 }],
       notedAtMs: T(10, 25),
       lookbackMs: 8 * 60_000,
       mode: "short",

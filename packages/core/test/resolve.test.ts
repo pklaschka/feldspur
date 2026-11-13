@@ -178,3 +178,84 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(combineUncertainty(3000, 4000)).toBe(5000);
   });
 });
+
+describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
+  it("eine Folgeaufnahme beginnt am Ende der Vorgängerdatei, auch über mehrere Glieder", () => {
+    const input = testmarkt();
+    const base = input.sources.find((s) => s.id === "ZOOM0004.m4a")!;
+    input.sources.push(
+      {
+        ...base,
+        id: "ZOOM0004_002.m4a",
+        label: "A-02",
+        fileName: "ZOOM0004_002.m4a",
+        durationMs: 600_000,
+        follows: "ZOOM0004.m4a",
+      },
+      {
+        ...base,
+        id: "ZOOM0004_003.m4a",
+        label: "A-03",
+        fileName: "ZOOM0004_003.m4a",
+        durationMs: 60_000,
+        follows: "ZOOM0004_002.m4a",
+      },
+    );
+    const res = resolveTimeline(input);
+    const two = res.placements.get("ZOOM0004_002.m4a")!;
+    expect(clock(two.startMs)).toBe("10:41:30");
+    expect(two.basis.kind).toBe("follows");
+    expect(two.basis.detail).toBe("Folgeaufnahme von A-01");
+    expect(two.status).toBe("ok");
+    expect(clock(res.placements.get("ZOOM0004_003.m4a")!.startMs)).toBe("10:51:30");
+  });
+
+  it("eine eigene Handeingabe geht der Verkettung vor", () => {
+    const input = testmarkt();
+    const base = input.sources.find((s) => s.id === "ZOOM0004.m4a")!;
+    input.sources.push({
+      ...base,
+      id: "Z2",
+      label: "A-02",
+      fileName: "Z2",
+      durationMs: 60_000,
+      follows: "ZOOM0004.m4a",
+    });
+    input.evidence.push({
+      id: "ev:Z2",
+      sourceId: "Z2",
+      kind: "manual",
+      clock: "true",
+      atMediaMs: 0,
+      localMs: T(11, 0),
+      utcMs: null,
+      uncertaintyMs: 1000,
+      detail: "Von Hand",
+      raw: "",
+      enabled: true,
+    });
+    expect(clock(resolveTimeline(input).placements.get("Z2")!.startMs)).toBe("11:00:00");
+  });
+
+  it("ein weiteres Bild einer Seite liegt wie die Hauptquelle, Rahmen darauf zählen für sie", () => {
+    const input = testmarkt();
+    const page = input.sources.find((s) => s.id === "Tagebuch_S02.jpg")!;
+    input.sources.push({ ...page, id: "S02b", label: "T-03", fileName: "S02b.jpg", partOf: "Tagebuch_S02.jpg" });
+    input.diaryEntries.push({
+      id: "d9",
+      sessionId: "s1",
+      regions: [{ sourceId: "S02b", page: 0, x: 0, y: 0, w: 1, h: 0.5 }],
+      notedAtMs: T(10, 35),
+      lookbackMs: null,
+      mode: "short",
+      shortText: "",
+      fullText: "",
+    });
+    const res = resolveTimeline(input);
+    const main = res.placements.get("Tagebuch_S02.jpg")!;
+    const part = res.placements.get("S02b")!;
+    expect(clock(main.endMs)).toBe("10:35:00");
+    expect([part.startMs, part.endMs]).toEqual([main.startMs, main.endMs]);
+    expect(part.basis.kind).toBe("part");
+  });
+});

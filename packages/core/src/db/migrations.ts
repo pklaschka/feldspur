@@ -103,4 +103,9 @@ export const MIGRATIONS: readonly string[] = [
     analyzed_at TEXT NOT NULL
   );
   `,
+  // 3: Seiten aus mehreren Bildern, Folgeaufnahmen
+  `
+  ALTER TABLE sources ADD COLUMN part_of TEXT REFERENCES sources(id) ON DELETE SET NULL;
+  ALTER TABLE sources ADD COLUMN follows TEXT REFERENCES sources(id) ON DELETE SET NULL;
+  `,
 ];

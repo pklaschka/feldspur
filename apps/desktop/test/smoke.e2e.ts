@@ -6,11 +6,17 @@
  *   FELDSPUR_SCREENSHOT=bild.png …                 speichert ein Bildschirmfoto
  *   FELDSPUR_E2E_APP=release/…/feldspur vpx test/smoke.e2e.ts   prüft das fertige Paket
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
-import { makeDiaryPage, makePhoto, makeSyncDay } from "../../../packages/media/test/fixtures.ts";
+import {
+  makeDiaryPage,
+  makePdf,
+  makePhoto,
+  makeSyncAudio,
+  makeSyncDay,
+} from "../../../packages/media/test/fixtures.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "feldspur-e2e-"));
 const fixtures = join(dir, "Rohquellen");
@@ -25,6 +31,16 @@ makeDiaryPage(join(fixtures, "Tagebuch_S01.jpg"), 1);
 makeDiaryPage(join(fixtures, "Tagebuch_S02.jpg"), 2);
 makePhoto(join(fixtures, "Marktstand.jpg"), "0x2a52be"); // ohne jede Zeitangabe
 const sources = process.env.FELDSPUR_E2E_SOURCES ?? fixtures;
+// Nachtrag: Folgeaufnahme ohne eigene Zeit, zweites Foto einer Tagebuchseite, PDF-Scan, versehentliche Datei.
+const later = join(dir, "Nachtrag");
+mkdirSync(later, { recursive: true });
+makeSyncAudio(join(later, "ZOOM0002.m4a"), { seconds: 40, talk: [[0, 20]] });
+makeDiaryPage(join(later, "Tagebuch_S02_Rueckseite.jpg"), 3);
+makePdf(join(later, "Feldnotizen_Scan.pdf"), [
+  ["Feldnotizen (erfundenes Beispiel)", "", "10:50  Testperson C kommt dazu", "10:58  Regen hoert auf"],
+  ["Seite 2", "", "11:05  Abbau beginnt"],
+]);
+writeFileSync(join(later, "Einkaufsliste.txt"), "Milch, Brot\n");
 
 // FELDSPUR_E2E_APP=<Programmdatei> prüft statt des Entwicklungsstands das fertige Paket.
 const packaged = process.env.FELDSPUR_E2E_APP;
@@ -35,8 +51,10 @@ const app = await electron.launch(
     : { args: [".", join(dir, "Test.feldspur"), ...sandbox], cwd: join(import.meta.dirname, "..") },
 );
 let failed = false;
+const page = await app.firstWindow();
+const logs: string[] = [];
+page.on("console", (m) => m.type() === "error" && logs.push(m.text()));
 try {
-  const page = await app.firstWindow();
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByText("+ neuer Einsatz").click();
   await page.getByLabel("Titel").fill("Testmarkt");
@@ -235,6 +253,92 @@ try {
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
   await shot("-ausgeben");
+
+  // Quellen pflegen: Nachtrag einsammeln, Versehen entfernen, Seiten zusammenführen, Folgeaufnahme anhängen.
+  await page.evaluate(async ([id, p]) => window.feldspur.importPaths(id!, [p!]), [sessionId, later]);
+  await page.reload();
+  await page.getByRole("tab", { name: /Einsammeln/ }).click();
+  const src = (name: string) => page.getByTestId("source").filter({ hasText: name });
+  await src("Einkaufsliste.txt").waitFor();
+  const menuFor = async (name: string) => {
+    const label = (await src(name).getAttribute("data-label"))!;
+    await page
+      .getByRole("button", { name: `Aktionen für ${label}`, exact: true })
+      .first()
+      .click();
+    return label;
+  };
+  await menuFor("Einkaufsliste.txt");
+  await page.getByRole("menuitem", { name: "Aus Projekt entfernen…" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Entfernen" }).click();
+  await src("Einkaufsliste.txt").waitFor({ state: "detached" });
+
+  await menuFor("Tagebuch_S02_Rueckseite.jpg");
+  await page.getByRole("menuitem", { name: /Als weiteres Bild zu Seite/ }).click();
+  await page.getByRole("menuitem", { name: /Tagebuch_S02\.jpg/ }).click();
+  await page
+    .getByText(/weiteres Bild zu T-\d+/)
+    .first()
+    .waitFor();
+
+  const zoomLabel = await menuFor("ZOOM0002.m4a");
+  await page.getByRole("menuitem", { name: /Setzt Aufnahme fort/ }).click();
+  await page.getByRole("menuitem", { name: /ZOOM0001\.m4a/ }).click();
+  await page.getByText(/setzt A-\d+ fort/).waitFor();
+  await src("ZOOM0002.m4a").click();
+  await page
+    .getByTestId("inspector")
+    .getByText(/^10:25:00/)
+    .first()
+    .waitFor();
+  console.log(`Folgeaufnahme ${zoomLabel} beginnt 10:25:00`);
+  await shot("-quellen");
+
+  // Große Vorschau und PDF.
+  await src("Feldnotizen_Scan.pdf").click();
+  await page.getByRole("button", { name: "Feldnotizen_Scan.pdf groß ansehen" }).click();
+  const preview = page.getByTestId("preview");
+  await preview.getByText("Seite 2").waitFor();
+  await preview.locator("canvas").nth(1).waitFor();
+  await shot("-vorschau-pdf");
+  await preview.getByRole("button", { name: "Schließen" }).click();
+  await preview.waitFor({ state: "detached" });
+  await src("Tagebuch_S02.jpg").click();
+  await page.getByRole("button", { name: "Tagebuch_S02.jpg groß ansehen" }).click();
+  await preview.getByText("Bild 1 von 2").waitFor();
+  await preview.getByRole("button", { name: "Nächstes Bild" }).click();
+  await preview.getByText("Tagebuch_S02_Rueckseite.jpg").waitFor();
+  await shot("-vorschau");
+  await preview.getByRole("button", { name: "Schließen" }).click();
+
+  // Abtippen: PDF-Seiten einzeln, Vorder- und Rückseite gemeinsam.
+  await src("Feldnotizen_Scan.pdf").click();
+  await page.getByTestId("inspector").getByRole("button", { name: "Abtippen…" }).click();
+  await editor.waitFor();
+  const nav = editor.getByRole("navigation", { name: "Seiten" });
+  await nav.getByText(/S\. 2$/).waitFor();
+  await editor.getByTestId("diary-page").locator("canvas").waitFor();
+  await drag(0.06, 0.12, 0.94, 0.3);
+  await editor.getByLabel("Notierzeit Eintrag 4").fill("10:58");
+  await editor.getByLabel("Notierzeit Eintrag 4").press("Enter");
+  await editor.getByText("T-03 S. 1").first().waitFor();
+  await nav.getByRole("button", { name: /2 Bilder/ }).click();
+  await editor.getByTestId("diary-page").nth(1).waitFor();
+  await shot("-tagebuch-seiten");
+  await editor.getByRole("button", { name: "Fertig" }).click();
+  await editor.waitFor({ state: "detached" });
+
+  // Einsatzdaten bearbeiten.
+  await page.getByRole("button", { name: "Einsatzdaten bearbeiten" }).click();
+  const details = page.getByTestId("session-details");
+  await details.getByLabel("Ort", { exact: true }).fill("Südstadt");
+  await details.getByRole("button", { name: "+ Feld" }).click();
+  await details.getByLabel("Feld", { exact: true }).fill("DOI");
+  await details.getByLabel("Wert für DOI").fill("10.0000/beispiel");
+  await shot("-einsatzdaten");
+  await details.getByRole("button", { name: "Speichern" }).click();
+  await details.waitFor({ state: "detached" });
+  await page.locator("main header").getByText("Südstadt").waitFor();
   await page.getByRole("tab", { name: /Durchsehen/ }).click();
   if (process.env.FELDSPUR_SCREENSHOT) {
     await page.emulateMedia({ colorScheme: "dark" });
@@ -248,6 +352,10 @@ try {
 } catch (e) {
   failed = true;
   console.error(e);
+  if (logs.length) console.error(`Konsole:\n${logs.join("\n")}`);
+  if (process.env.FELDSPUR_SCREENSHOT) {
+    await page.screenshot({ path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, "-fehler.png") }).catch(() => {});
+  }
 } finally {
   await app.close();
   rmSync(dir, { recursive: true, force: true });

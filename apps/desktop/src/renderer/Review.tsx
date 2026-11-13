@@ -33,8 +33,10 @@ export function Review({
   onSelect: (id: string) => void;
   onNext: () => void;
 }) {
-  const placed = view.rows.filter((r) => r.startMs !== null || r.diaryWindow);
-  const unplaced = view.rows.filter((r) => r.startMs === null && !r.diaryWindow);
+  // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
+  const rows = view.rows.filter((r) => !r.partOf);
+  const placed = rows.filter((r) => r.startMs !== null || r.diaryWindow);
+  const unplaced = rows.filter((r) => r.startMs === null && !r.diaryWindow);
 
   if (!placed.length) {
     return (
@@ -315,7 +317,7 @@ function Timeline({
 /** Untertitel einer Spur: Referenz, Person oder Anzahl, dazu was noch ohne Zeit ist. */
 function trackSub(t: Track, rows: SourceRow[]): string {
   if (!t.device) return `${t.rows.length} ${t.rows.length === 1 ? "Datei" : "Dateien"}`;
-  const all = rows.filter((r) => r.deviceId === t.device!.id);
+  const all = rows.filter((r) => r.deviceId === t.device!.id && !r.partOf);
   const open = all.filter((r) => r.startMs === null && !r.diaryWindow).length;
   const base = t.device.isReference
     ? "Referenzuhr"

@@ -1,12 +1,15 @@
 import { Tabs } from "radix-ui";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { ProjectInfo, SessionView } from "../shared/api.ts";
+import type { ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
+import { Preview } from "./Preview.tsx";
+import { SessionDetails } from "./SessionDetails.tsx";
+import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Sync } from "./Sync.tsx";
 import { Button, cx, Panel, StepHeader, TooltipProvider } from "./ui.tsx";
 
@@ -110,7 +113,7 @@ export function App() {
           <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adopt)} />
         </nav>
         {sessionId ? (
-          <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} />
+          <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} onProject={setProject} />
         ) : (
           <main className="col-span-2 p-8">
             {error && <p className="text-bad">{error}</p>}
@@ -167,8 +170,20 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
 
 export type Step = "collect" | "sync" | "review" | "export";
 
-function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Guard; error: string | null }) {
+function SessionPane({
+  sessionId,
+  guard,
+  error,
+  onProject,
+}: {
+  sessionId: string;
+  guard: Guard;
+  error: string | null;
+  onProject: (p: ProjectInfo) => void;
+}) {
   const [view, setView] = useState<SessionView | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [step, setStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
@@ -184,6 +199,24 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
   if (!view || !step) return <main className="col-span-2 p-8 text-muted">Lade…</main>;
 
   const update = (p: Promise<SessionView | undefined>) => void p.then((v) => v && setView(v));
+  const sourceActions: SourceActions = {
+    remove: (id) => {
+      if (selected === id) setSelected(null);
+      update(guard(() => api.removeSource(id)));
+    },
+    move: (id, target) => update(guard(() => api.moveSource(id, target))),
+    mergeDevices: (from, into) => update(guard(() => api.mergeDevices(from, into))),
+    setPartOf: (id, mainId) => update(guard(() => api.setPartOf(id, mainId))),
+    setFollows: (id, prevId) => update(guard(() => api.setFollows(id, prevId))),
+    preview: setPreviewId,
+  };
+  const saveDetails = async (patch: SessionPatch) => {
+    const res = await guard(() => api.updateSession(sessionId, patch));
+    if (!res) return false;
+    setView(res.view);
+    onProject(res.project);
+    return true;
+  };
   const unsynced = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
   const hasRef = view.devices.some((d) => d.isReference);
   const unplaced = view.rows.filter((r) => r.status === "unplaced").length;
@@ -218,102 +251,109 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
 
   return (
     <PlaybackProvider>
-      <Tabs.Root
-        value={step}
-        onValueChange={(v) => setStep(v as Step)}
-        className="flex min-w-0 flex-col overflow-hidden"
-        asChild
-      >
-        <main>
-          <header className="border-b border-line bg-panel px-5 pt-3.5">
-            <div className="flex items-baseline gap-2.5">
-              <span className="font-mono text-muted">{formatDay(view.session.date)}</span>
-              <h1 className="text-xl font-semibold">{view.session.title}</h1>
-              {view.session.place && <span className="text-muted">{view.session.place}</span>}
-            </div>
-            <Tabs.List className="mt-3 flex gap-1" aria-label="Arbeitsschritte">
-              {steps.map((s) => (
-                <Tabs.Trigger
-                  key={s.id}
-                  value={s.id}
-                  className="group flex cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 pt-2 pb-2.5 text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-medium data-[state=active]:text-ink"
-                >
-                  <span className="grid size-[19px] place-items-center rounded-full bg-sunken text-[0.72rem] text-muted group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
-                    {s.n}
-                  </span>
-                  {s.title}
-                  {s.badge && (
-                    <span
-                      className={cx(
-                        "rounded-full px-1.5 text-[0.7rem]",
-                        s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
-                      )}
-                    >
-                      {s.badge}
+      <SourceActionsProvider value={sourceActions}>
+        <Tabs.Root
+          value={step}
+          onValueChange={(v) => setStep(v as Step)}
+          className="flex min-w-0 flex-col overflow-hidden"
+          asChild
+        >
+          <main>
+            <header className="border-b border-line bg-panel px-5 pt-3.5">
+              <div className="flex items-baseline gap-2.5">
+                <span className="font-mono text-muted">{formatDay(view.session.date)}</span>
+                <h1 className="text-xl font-semibold">{view.session.title}</h1>
+                {view.session.place && <span className="text-muted">{view.session.place}</span>}
+                <Button variant="link" size="sm" onClick={() => setEditing(true)}>
+                  Einsatzdaten bearbeiten
+                </Button>
+              </div>
+              <Tabs.List className="mt-3 flex gap-1" aria-label="Arbeitsschritte">
+                {steps.map((s) => (
+                  <Tabs.Trigger
+                    key={s.id}
+                    value={s.id}
+                    className="group flex cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 pt-2 pb-2.5 text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-medium data-[state=active]:text-ink"
+                  >
+                    <span className="grid size-[19px] place-items-center rounded-full bg-sunken text-[0.72rem] text-muted group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
+                      {s.n}
                     </span>
-                  )}
-                </Tabs.Trigger>
-              ))}
-            </Tabs.List>
-          </header>
-          {error && <p className="mx-5 mt-2 text-bad">{error}</p>}
-          <Tabs.Content value="collect" className={tabContent}>
-            <Collect
-              view={view}
-              guard={guard}
-              onView={setView}
-              selected={selected}
-              onSelect={setSelected}
-              onRename={(id, label) => update(guard(() => api.renameDevice(id, label)))}
-              onOpenDiary={setDiaryPage}
-              onNext={() => setStep("sync")}
-            />
-          </Tabs.Content>
-          <Tabs.Content value="sync" className={tabContent}>
-            <Sync
-              view={view}
-              guard={guard}
-              onView={setView}
-              onReference={(id) => update(guard(() => api.setReference(id)))}
-              onOffset={(id, ms) => update(guard(() => api.setDeviceOffset(id, ms)))}
-              onNext={() => setStep("review")}
-              onSelect={setSelected}
-            />
-          </Tabs.Content>
-          <Tabs.Content value="review" className={tabContent}>
-            {step === "review" && (
-              <Review view={view} selected={selected} onSelect={setSelected} onNext={() => setStep("export")} />
-            )}
-          </Tabs.Content>
-          <Tabs.Content value="export" className={tabContent}>
-            <ExportPlaceholder view={view} />
-          </Tabs.Content>
-        </main>
-      </Tabs.Root>
-      <Inspector
-        view={view}
-        row={selectedRow}
-        onClose={() => setSelected(null)}
-        actions={{
-          diaryNote: (id, clock) => update(guard(() => api.setDiaryNote(id, clock))),
-          addTime: async (input) => {
-            const v = await guard(() => api.addTime(input));
-            if (v) setView(v);
-            return !!v;
-          },
-          toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
-          removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
-          openDiary: setDiaryPage,
-        }}
-      />
-      <DiaryEditor
-        view={view}
-        pageId={diaryPage}
-        onPage={setDiaryPage}
-        onClose={() => setDiaryPage(null)}
-        guard={guard}
-        onView={setView}
-      />
+                    {s.title}
+                    {s.badge && (
+                      <span
+                        className={cx(
+                          "rounded-full px-1.5 text-[0.7rem]",
+                          s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
+                        )}
+                      >
+                        {s.badge}
+                      </span>
+                    )}
+                  </Tabs.Trigger>
+                ))}
+              </Tabs.List>
+            </header>
+            {error && <p className="mx-5 mt-2 text-bad">{error}</p>}
+            <Tabs.Content value="collect" className={tabContent}>
+              <Collect
+                view={view}
+                guard={guard}
+                onView={setView}
+                selected={selected}
+                onSelect={setSelected}
+                onRename={(id, label) => update(guard(() => api.renameDevice(id, label)))}
+                onOpenDiary={setDiaryPage}
+                onNext={() => setStep("sync")}
+              />
+            </Tabs.Content>
+            <Tabs.Content value="sync" className={tabContent}>
+              <Sync
+                view={view}
+                guard={guard}
+                onView={setView}
+                onReference={(id) => update(guard(() => api.setReference(id)))}
+                onOffset={(id, ms) => update(guard(() => api.setDeviceOffset(id, ms)))}
+                onNext={() => setStep("review")}
+                onSelect={setSelected}
+              />
+            </Tabs.Content>
+            <Tabs.Content value="review" className={tabContent}>
+              {step === "review" && (
+                <Review view={view} selected={selected} onSelect={setSelected} onNext={() => setStep("export")} />
+              )}
+            </Tabs.Content>
+            <Tabs.Content value="export" className={tabContent}>
+              <ExportPlaceholder view={view} />
+            </Tabs.Content>
+          </main>
+        </Tabs.Root>
+        <Inspector
+          view={view}
+          row={selectedRow}
+          onClose={() => setSelected(null)}
+          actions={{
+            diaryNote: (id, clock) => update(guard(() => api.setDiaryNote(id, clock))),
+            addTime: async (input) => {
+              const v = await guard(() => api.addTime(input));
+              if (v) setView(v);
+              return !!v;
+            },
+            toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
+            removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
+            openDiary: setDiaryPage,
+          }}
+        />
+        <DiaryEditor
+          view={view}
+          pageId={diaryPage}
+          onPage={setDiaryPage}
+          onClose={() => setDiaryPage(null)}
+          guard={guard}
+          onView={setView}
+        />
+        <Preview view={view} sourceId={previewId} onClose={() => setPreviewId(null)} />
+        <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
+      </SourceActionsProvider>
     </PlaybackProvider>
   );
 }

@@ -14,6 +14,13 @@ export interface SourceRow {
   id: string;
   label: string;
   kind: SourceKind;
+  /** Weiteres Bild einer Seite: Id der Hauptquelle. */
+  partOf: string | null;
+  /** Ids der weiteren Bilder dieser Seite. */
+  parts: string[];
+  /** Folgeaufnahme von … / fortgesetzt durch … */
+  follows: string | null;
+  followedBy: string | null;
   fileName: string;
   deviceId: string | null;
   deviceLabel: string;
@@ -41,6 +48,8 @@ export interface SourceRow {
   loudAtMs: number[];
   /** Bild, das sich als Vorschau zeigen lässt (Foto, Scan). */
   previewable: boolean;
+  /** PDF-Datei (Scan), wird mit pdf.js angezeigt. */
+  isPdf: boolean;
   status: PlacementStatus;
   notes: string[];
 }
@@ -94,6 +103,8 @@ export interface AnchorInput {
 
 /** Rahmen auf einer Scan-Seite, relativ 0 … 1. */
 export interface Region {
+  /** Seite in einem mehrseitigen PDF (ab 0); bei Bildern 0 oder weggelassen. */
+  page?: number;
   x: number;
   y: number;
   w: number;
@@ -203,6 +214,17 @@ export interface NewSessionInput {
   place: string;
 }
 
+/** Einsatzdaten ändern; nur gesetzte Felder werden übernommen. */
+export interface SessionPatch {
+  title?: string;
+  date?: string;
+  place?: string;
+  timeZone?: string;
+  diaryLookbackMin?: number;
+  /** Zusatzfelder für den Quellennachweis, z. B. { DOI: "10.…" }. Ersetzt alle bisherigen. */
+  extra?: Record<string, string>;
+}
+
 export interface FeldspurApi {
   newProject(): Promise<ProjectInfo | null>;
   openProject(): Promise<ProjectInfo | null>;
@@ -213,6 +235,16 @@ export interface FeldspurApi {
   importPaths(sessionId: string, paths: string[]): Promise<ImportOutcome>;
   setReference(deviceId: string): Promise<SessionView>;
   renameDevice(deviceId: string, label: string): Promise<SessionView>;
+  updateSession(sessionId: string, patch: SessionPatch): Promise<{ view: SessionView; project: ProjectInfo }>;
+  /** Quelle aus dem Projekt nehmen (Originaldatei bleibt). */
+  removeSource(sourceId: string): Promise<SessionView>;
+  /** Quelle in ein anderes Gerät verschieben; { newLabel } legt ein neues Gerät an. */
+  moveSource(sourceId: string, target: string | { newLabel: string }): Promise<SessionView>;
+  mergeDevices(fromDeviceId: string, intoDeviceId: string): Promise<SessionView>;
+  /** Bild als weiteren Teil einer Seite an mainId hängen; null löst es. */
+  setPartOf(sourceId: string, mainId: string | null): Promise<SessionView>;
+  /** Aufnahme als Fortsetzung von prevId markieren; null löst es. */
+  setFollows(sourceId: string, prevId: string | null): Promise<SessionView>;
   /** null = Abweichung unbekannt */
   setDeviceOffset(deviceId: string, offsetMs: number | null): Promise<SessionView>;
   /** Randnotiz einer Tagebuchseite setzen ("10:12"); leer = entfernen. Erzeugt einen Eintrag über die ganze Seite. */
@@ -251,6 +283,12 @@ export const IPC = {
   importPaths: "import:paths",
   setReference: "device:set-reference",
   renameDevice: "device:rename",
+  updateSession: "session:update",
+  removeSource: "source:remove",
+  moveSource: "source:move",
+  mergeDevices: "device:merge",
+  setPartOf: "source:part-of",
+  setFollows: "source:follows",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",

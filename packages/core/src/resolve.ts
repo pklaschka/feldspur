@@ -42,7 +42,8 @@ export interface DeviceClock {
 }
 
 export interface PlacementBasis {
-  kind: EvidenceKind | "diary";
+  /** "follows": Folgeaufnahme, beginnt am Ende der Vorgängerdatei; "part": weiteres Bild einer Seite. */
+  kind: EvidenceKind | "diary" | "follows" | "part";
   evidenceId?: Id;
   detail: string;
 }
@@ -185,9 +186,11 @@ function pickBest(cands: Candidate[]): Candidate | undefined {
 }
 
 function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, placements: Map<Id, Placement>): void {
+  // Rahmen auf weiteren Bildern einer Seite zählen für die Hauptquelle.
+  const pageOf = new Map(input.sources.map((x) => [x.id, x.partOf ?? x.id]));
   for (const src of input.sources) {
-    if (src.kind !== "diary") continue;
-    const entries = input.diaryEntries.filter((e) => e.regions.some((r) => r.sourceId === src.id));
+    if (src.kind !== "diary" || src.partOf) continue;
+    const entries = input.diaryEntries.filter((e) => e.regions.some((r) => pageOf.get(r.sourceId) === src.id));
     const placed = entries.map((e) => diary.get(e.id)).filter((p): p is DiaryPlacement => !!p);
     if (placed.length === 0) continue; // bleibt „zuordnen“
     const missing = entries.length - placed.length;
@@ -273,11 +276,45 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         conflicts,
       });
     }
+    chainFollowUps();
+  };
+
+  // Folgeaufnahmen: Beginn = Ende der Vorgängerdatei. Eigene Handeingaben und angesagte Zeiten gehen vor.
+  const chainTrusted = new Set<Id>();
+  const chainFollowUps = () => {
+    chainTrusted.clear();
+    const pending = input.sources.filter((x) => x.follows && x.kind !== "diary");
+    for (let round = 0; round < pending.length; round++) {
+      let changed = false;
+      for (const src of pending) {
+        const prev = placements.get(src.follows!);
+        const prevSrc = sourceById.get(src.follows!);
+        if (!prev || !prevSrc || prevSrc.durationMs === null) continue;
+        const own = placements.get(src.id);
+        if (own && (own.basis.kind === "manual" || own.basis.kind === "spoken")) continue;
+        if (own?.basis.kind === "follows" && own.startMs === prev.endMs) continue;
+        placements.set(src.id, {
+          sourceId: src.id,
+          startMs: prev.endMs,
+          endMs: prev.endMs + (src.durationMs ?? 0),
+          uncertaintyMs: prev.uncertaintyMs,
+          basis: { kind: "follows", detail: `Folgeaufnahme von ${prevSrc.label}` },
+          deviceCorrectionMs: prev.deviceCorrectionMs,
+          status: prev.status,
+          notes: prev.notes.filter((n) => !n.startsWith("Widerspruch")),
+          conflicts: [],
+        });
+        if (trustedPlacement(prevSrc.id)) chainTrusted.add(src.id);
+        changed = true;
+      }
+      if (!changed) break;
+    }
   };
 
   const trustedPlacement = (sourceId: Id): Placement | undefined => {
     const p = placements.get(sourceId);
     if (!p) return undefined;
+    if (p.basis.kind === "follows") return chainTrusted.has(sourceId) ? p : undefined;
     const c = candidates.get(sourceId)?.find((x) => x.ev.id === p.basis.evidenceId);
     return c?.trusted ? p : undefined;
   };
@@ -387,6 +424,22 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
   }
 
   placeDiaryPages(input, diary, placements);
+  // Weitere Bilder einer Seite liegen genau dort, wo die Hauptquelle liegt.
+  for (const src of input.sources) {
+    if (!src.partOf) continue;
+    const main = placements.get(src.partOf);
+    const mainSrc = sourceById.get(src.partOf);
+    if (!main || !mainSrc) {
+      placements.delete(src.id);
+      continue;
+    }
+    placements.set(src.id, {
+      ...main,
+      sourceId: src.id,
+      basis: { kind: "part", detail: `Teil von ${mainSrc.label}` },
+      conflicts: [],
+    });
+  }
 
   return { placements, deviceClocks: clocks, diary, derivedEvidence: derived, anchorConflicts };
 }

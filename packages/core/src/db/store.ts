@@ -266,12 +266,42 @@ export class ProjectStore {
     return Source.parse(r);
   }
 
-  updateSource(id: Id, patch: Partial<Pick<Source, "deviceId" | "kind" | "title" | "label">>): Source {
+  updateSource(
+    id: Id,
+    patch: Partial<Pick<Source, "deviceId" | "kind" | "title" | "label" | "partOf" | "follows">>,
+  ): Source {
     const r = this.db.select().from(schema.sources).where(eq(schema.sources.id, id)).get();
     if (!r) throw new Error(`Quelle nicht gefunden: ${id}`);
     const next = Source.parse({ ...r, ...patch });
     this.db.update(schema.sources).set(next).where(eq(schema.sources.id, id)).run();
     return next;
+  }
+
+  /**
+   * Quelle aus dem Projekt nehmen (die Originaldatei bleibt unberührt). Zeitbelege, Anker und
+   * Tonspur-Analyse gehen per Fremdschlüssel mit; Tagebuch-Rahmen auf dieser Seite werden entfernt,
+   * Einträge ohne Rahmen gelöscht. Ein Gerät ohne Quellen verschwindet ebenfalls.
+   */
+  deleteSource(id: Id): void {
+    const src = this.getSource(id);
+    this.transaction(() => {
+      for (const e of this.listDiaryEntries(src.sessionId)) {
+        if (!e.regions.some((r) => r.sourceId === id)) continue;
+        const regions = e.regions.filter((r) => r.sourceId !== id);
+        if (regions.length) this.updateDiaryEntry(e.id, { regions });
+        else this.deleteDiaryEntry(e.id);
+      }
+      this.db.delete(schema.sources).where(eq(schema.sources.id, id)).run();
+      if (src.deviceId) this.deleteDeviceIfEmpty(src.deviceId);
+    });
+  }
+
+  /** Gerät löschen, wenn ihm keine Quelle mehr gehört. Gibt zurück, ob es gelöscht wurde. */
+  deleteDeviceIfEmpty(id: Id): boolean {
+    const rest = this.db.select().from(schema.sources).where(eq(schema.sources.deviceId, id)).all();
+    if (rest.length) return false;
+    this.db.delete(schema.devices).where(eq(schema.devices.id, id)).run();
+    return true;
   }
 
   // ── Zeitbelege ───────────────────────────────────────────────────────────
@@ -300,6 +330,11 @@ export class ProjectStore {
 
   setEvidenceEnabled(id: Id, enabled: boolean): void {
     this.db.update(schema.evidence).set({ enabled }).where(eq(schema.evidence.id, id)).run();
+  }
+
+  /** Uhrzeit eines Zeitbelegs verschieben (z. B. wenn das Einsatzdatum korrigiert wird). */
+  updateEvidenceTime(id: Id, localMs: number): void {
+    this.db.update(schema.evidence).set({ localMs }).where(eq(schema.evidence.id, id)).run();
   }
 
   deleteEvidence(id: Id): void {

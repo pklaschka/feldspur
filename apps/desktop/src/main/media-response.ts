@@ -11,6 +11,7 @@ const TYPES: Record<string, string> = {
   png: "image/png",
   webp: "image/webp",
   gif: "image/gif",
+  pdf: "application/pdf",
   mp4: "video/mp4",
   m4v: "video/mp4",
   mov: "video/quicktime",
@@ -62,6 +63,9 @@ export function fileResponse(path: string, fileName: string, rangeHeader: string
     "Content-Type": type,
     "Content-Length": String(end - start + 1),
     "Accept-Ranges": "bytes",
+    // Die Oberfläche läuft unter file:// (Origin "null"); pdf.js lädt per XHR und braucht dafür CORS.
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "Accept-Ranges, Content-Length, Content-Range",
   };
   if (range) headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
   return new Response(body, { status: range ? 206 : 200, headers });

@@ -98,12 +98,29 @@ describe("Projektdatei", () => {
     const input = again.loadResolveInput(session.id);
     expect(input.sources.map((s) => s.label)).toEqual(["A-01", "T-01", "V-01"]);
     expect(input.session.extra).toEqual({ doi: "" });
-    expect(input.diaryEntries[0]!.regions[0]).toEqual({ sourceId: page.id, x: 0, y: 0, w: 1, h: 1 });
+    expect(input.diaryEntries[0]!.regions[0]).toEqual({ sourceId: page.id, page: 0, x: 0, y: 0, w: 1, h: 1 });
     const res = resolveTimeline(input);
     expect(formatClock(res.placements.get(video.id)!.startMs)).toBe("10:16:00");
     expect(formatClock(res.placements.get(audio.id)!.startMs)).toBe("10:15:00");
     expect(formatClock(res.placements.get(page.id)!.startMs)).toBe("10:05:00");
     again.close();
+  });
+
+  it("entfernt eine Quelle samt Belegen, Ankern, Rahmen und leerem Gerät", () => {
+    const store = ProjectStore.create(join(dir, "del.feldspur"), { name: "x" });
+    const { session, cam, video, page, audio } = seed(store);
+    store.deleteSource(video.id);
+    const input = store.loadResolveInput(session.id);
+    expect(input.sources.map((s) => s.label)).toEqual(["A-01", "T-01"]);
+    expect(input.evidence.every((e) => e.sourceId !== video.id)).toBe(true);
+    expect(input.anchors).toEqual([]);
+    expect(store.listDevices(session.id).some((d) => d.id === cam.id)).toBe(false);
+    store.deleteSource(page.id);
+    expect(store.listDiaryEntries(session.id)).toEqual([]);
+    // Das Referenzgerät mit seiner verbliebenen Quelle bleibt.
+    expect(store.listDevices(session.id).map((d) => d.label)).toEqual(["Diktiergerät"]);
+    expect(store.getSource(audio.id).label).toBe("A-01");
+    store.close();
   });
 
   it("vergibt Kurzzeichen fortlaufend pro Art", () => {

@@ -34,6 +34,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   oder Videos ohne ffprobe-Zeit gebraucht werden.
 - **Eigene Lautstärkekurve** statt FFmpeg-silencedetect: dieselbe Hüllkurve liefert Stille, laute Stellen und
   Klatscher für den Abgleich, ein Durchlauf statt zwei.
+- **pdf.js** (`pdfjs-dist`, fest auf 5.4.624) für PDF-Scans in Vorschau und Abtipp-Ansicht. Neuere 5.x-Fassungen nutzen
+  `Map.getOrInsertComputed`, das Electron 39 noch nicht kennt.
 
 ## Begriffe im Code
 
@@ -41,7 +43,10 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
 - **Gerät** (`Device`): hat eine Uhr. Genau eins pro Einsatz ist die **Referenzuhr**; für die anderen gibt es eine
   **Abweichung** (`clockOffsetMs`, Geräteuhr minus Referenz, positiv = geht vor).
 - **Quelle** (`Source`): eine Originaldatei mit Prüfsumme. Kurzzeichen wie im Begleitprotokoll: `V-01`, `A-01`,
-  `F-001`, `T-01`. Originale werden nie verändert.
+  `F-001`, `T-01`. Originale werden nie verändert. Eine Quelle kann **weiteres Bild** einer Seite sein (`partOf`,
+  z. B. Rückseite oder zweiter Scan) und übernimmt dann deren Zeit, oder eine **Folgeaufnahme** (`follows`): ein Gerät,
+  das in mehrere Dateien teilt, setzt die vorige Datei nahtlos fort. Folgeaufnahmen erkennt Feldspur beim Einsammeln
+  (gleiches Gerät, Beginn = Ende der vorigen ± 3 s, oder GoPro-Kapitel); ohne eigene Zeit beginnt sie am Ende der vorigen.
 - **Zeitbeleg** (`TimeEvidence`): eine Angabe, wann eine Stelle der Quelle war: Metadaten, Dateiname, angesagte Uhrzeit,
   Anker oder von Hand. Die Lage auf der Achse wird nie gespeichert, sondern immer aus den Belegen berechnet
   (`resolveTimeline`), damit nachvollziehbar bleibt, worauf sie sich stützt.
@@ -106,6 +111,5 @@ von selbst; `FELDSPUR_FFMPEG`/`FELDSPUR_FFPROBE` überschreiben das. Das Paket i
 - Exportformat (Zeitgerüst + Tagesvideo) wartet auf den MAXQDA-Test.
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
-- Tagebuch: PDF-Scans in der Abtipp-Ansicht anzeigen (bisher nur JPG/PNG).
 - ExifTool statt exifr für RAW/HEIC.
 - Code-Signatur (Windows, macOS-Notarisierung) und ein App-Symbol.
