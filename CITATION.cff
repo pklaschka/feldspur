@@ -13,6 +13,7 @@ abstract: >-
 authors:
   - given-names: Zuri Nimca
     family-names: Klaschka
+    orcid: "https://orcid.org/0009-0005-9995-5687"
 repository-code: "https://github.com/pklaschka/feldspur"
 url: "https://github.com/pklaschka/feldspur"
 version: 0.1.0
