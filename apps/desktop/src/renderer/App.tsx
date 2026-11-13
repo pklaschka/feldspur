@@ -4,6 +4,7 @@ import type { ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
 import { ExportStep } from "./ExportStep.tsx";
+import { ExportProvider, percent, useExport } from "./exportState.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { renderOverlays } from "./overlay.ts";
@@ -94,46 +95,48 @@ export function App() {
   }
 
   return (
-    <TooltipProvider delayDuration={250}>
-      <div className="grid h-full grid-cols-[210px_minmax(0,1fr)_310px]">
-        <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4">
-          <div className="px-2">
-            <Logo small />
-            <div className="mt-1 truncate text-[0.8rem] text-muted" title={project.path}>
-              {project.name}
+    <ExportProvider>
+      <TooltipProvider delayDuration={250}>
+        <div className="grid h-full grid-cols-[210px_minmax(0,1fr)_310px]">
+          <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4">
+            <div className="px-2">
+              <Logo small />
+              <div className="mt-1 truncate text-[0.8rem] text-muted" title={project.path}>
+                {project.name}
+              </div>
             </div>
-          </div>
-          <div className="mx-2 mt-6 mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">
-            Einsätze
-          </div>
-          {project.sessions.map((s) => (
-            <button
-              key={s.id}
-              className={cx(
-                "flex w-full cursor-pointer gap-2 rounded-[7px] px-2 py-1.5 text-left",
-                s.id === sessionId ? "bg-accent-soft font-medium text-accent" : "hover:bg-sunken",
-              )}
-              onClick={() => setSessionId(s.id)}
-              title={s.place || undefined}
-            >
-              <span className={cx("pt-px font-mono text-[0.78rem]", s.id !== sessionId && "text-muted")}>
-                {formatDay(s.date)}
-              </span>
-              <span>{s.title}</span>
-            </button>
-          ))}
-          <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adopt)} />
-        </nav>
-        {sessionId ? (
-          <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} onProject={setProject} />
-        ) : (
-          <main className="col-span-2 p-8">
-            {error && <p className="text-bad">{error}</p>}
-            <p className="text-muted">Lege links einen Einsatz an, zum Beispiel „Wochenmarkt Südstadt“.</p>
-          </main>
-        )}
-      </div>
-    </TooltipProvider>
+            <div className="mx-2 mt-6 mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">
+              Einsätze
+            </div>
+            {project.sessions.map((s) => (
+              <button
+                key={s.id}
+                className={cx(
+                  "flex w-full cursor-pointer gap-2 rounded-[7px] px-2 py-1.5 text-left",
+                  s.id === sessionId ? "bg-accent-soft font-medium text-accent" : "hover:bg-sunken",
+                )}
+                onClick={() => setSessionId(s.id)}
+                title={s.place || undefined}
+              >
+                <span className={cx("pt-px font-mono text-[0.78rem]", s.id !== sessionId && "text-muted")}>
+                  {formatDay(s.date)}
+                </span>
+                <span>{s.title}</span>
+              </button>
+            ))}
+            <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adopt)} />
+          </nav>
+          {sessionId ? (
+            <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} onProject={setProject} />
+          ) : (
+            <main className="col-span-2 p-8">
+              {error && <p className="text-bad">{error}</p>}
+              <p className="text-muted">Lege links einen Einsatz an, zum Beispiel „Wochenmarkt Südstadt“.</p>
+            </main>
+          )}
+        </div>
+      </TooltipProvider>
+    </ExportProvider>
   );
 }
 
@@ -200,6 +203,7 @@ function SessionPane({
   const [step, setStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
+  const exporting = useExport();
 
   useEffect(() => {
     void guard(() => api.getSession(sessionId)).then((v) => {
@@ -259,7 +263,12 @@ function SessionPane({
       badge: unplaced ? `${unplaced} ohne Zeit` : view.episodes ? `${view.episodes.length} Episoden` : null,
       warn: unplaced > 0,
     },
-    { id: "export", n: 4, title: "Ausgeben", badge: null },
+    {
+      id: "export",
+      n: 4,
+      title: "Ausgeben",
+      badge: exporting.job?.sessionId === view.session.id ? `läuft ${percent(exporting.job.progress)} %` : null,
+    },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;
   const tabContent = "flex-1 overflow-auto px-5 pt-4.5 pb-6 data-[state=inactive]:hidden";
@@ -338,7 +347,7 @@ function SessionPane({
               )}
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
-              <ExportStep view={view} guard={guard} />
+              <ExportStep view={view} />
             </Tabs.Content>
           </main>
         </Tabs.Root>

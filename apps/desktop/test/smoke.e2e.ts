@@ -407,6 +407,11 @@ try {
   await shot("-ausgeben");
   const t0 = Date.now();
   await page.getByRole("button", { name: "Ausgeben…" }).click();
+  // Während der Ausgabe den Reiter wechseln: Sie läuft weiter, der Reiter zeigt den Fortschritt.
+  await page.getByTestId("export-progress").waitFor();
+  await page.getByRole("tab", { name: /Durchsehen/ }).click();
+  await page.getByRole("tab", { name: /Ausgeben.*läuft/ }).waitFor();
+  await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
   const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
   console.log(`Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`);

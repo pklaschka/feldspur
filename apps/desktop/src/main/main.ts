@@ -18,7 +18,7 @@ import {
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
-import { previewExport, registerOverlayBridge, runExport } from "./export.ts";
+import { exportRunning, previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
@@ -332,6 +332,18 @@ function createWindow(): void {
     },
   });
   // Keine Navigation weg von der App, keine neuen Fenster.
+  win.on("close", (e) => {
+    if (!exportRunning()) return;
+    const choice = dialog.showMessageBoxSync(win!, {
+      type: "warning",
+      buttons: ["Weiter ausgeben", "Abbrechen und schließen"],
+      defaultId: 0,
+      cancelId: 0,
+      message: "Es läuft noch eine Ausgabe.",
+      detail: "Beim Schließen bricht sie ab; die halb geschriebenen Dateien bleiben unvollständig.",
+    });
+    if (choice === 0) e.preventDefault();
+  });
   win.webContents.on("will-navigate", (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   const devUrl = process.env.FELDSPUR_DEV_URL;

@@ -2,12 +2,12 @@
  * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Zeitgerüst (.docx) und Begleitprotokoll.
  */
 import { useEffect, useState } from "react";
-import type { ExportOutcome, ExportProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
+import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
+import { percent, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
-type Guard = <T>(fn: () => Promise<T>) => Promise<T | undefined>;
 
 const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const FILE_ROLE: [RegExp, string][] = [
@@ -16,13 +16,16 @@ const FILE_ROLE: [RegExp, string][] = [
   [/\.csv$/, "Begleitprotokoll: Herkunft und Zeitnachweis jeder Datei"],
 ];
 
-export function ExportStep({ view, guard }: { view: SessionView; guard: Guard }) {
+export function ExportStep({ view }: { view: SessionView }) {
   const [preview, setPreview] = useState<ScaffoldPreview | null>(null);
   const [video, setVideo] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<ExportProgress | null>(null);
-  const [result, setResult] = useState<ExportOutcome | null>(null);
+  const ex = useExport();
   const sessionId = view.session.id;
+  const busy = ex.job?.sessionId === sessionId;
+  const elsewhere = !!ex.job && !busy;
+  const progress = busy ? ex.job!.progress : null;
+  const result = busy ? null : (ex.results[sessionId] ?? null);
+  const error = busy ? null : (ex.errors[sessionId] ?? null);
 
   useEffect(() => {
     let live = true;
@@ -34,17 +37,7 @@ export function ExportStep({ view, guard }: { view: SessionView; guard: Guard })
       live = false;
     };
   }, [view, sessionId]);
-  useEffect(() => api.onExportProgress(setProgress), []);
-
-  const run = async () => {
-    setBusy(true);
-    setResult(null);
-    setProgress(null);
-    const r = await guard(() => api.exportSession(sessionId, { video }));
-    setBusy(false);
-    setProgress(null);
-    if (r) setResult(r);
-  };
+  const run = () => ex.start(sessionId, video);
 
   const fact = (n: number | string, label: string) => (
     <div className="grid">
@@ -53,7 +46,7 @@ export function ExportStep({ view, guard }: { view: SessionView; guard: Guard })
     </div>
   );
   const empty = !preview || preview.durationMs <= 0;
-  const pct = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  const pct = percent(progress);
 
   return (
     <>
@@ -90,20 +83,30 @@ export function ExportStep({ view, guard }: { view: SessionView; guard: Guard })
             Dauert je nach Länge einige Minuten. Ohne Video entstehen nur Zeitgerüst und Protokoll.
           </p>
           <div className="mt-5 flex items-center gap-3">
-            <Button variant="primary" disabled={busy || empty} onClick={() => void run()}>
+            <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>
               {busy ? "Gibt aus…" : "Ausgeben…"}
             </Button>
             {empty && <span className="text-[0.85rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
+            {elsewhere && (
+              <span className="text-[0.85rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>
+            )}
           </div>
+          {busy && (
+            <p className="mt-2 text-[0.8rem] text-muted">
+              Du kannst währenddessen weiterarbeiten oder den Reiter wechseln; die Ausgabe läuft weiter. Änderungen ab
+              jetzt kommen erst in die nächste Ausgabe.
+            </p>
+          )}
+          {error && (
+            <div className="mt-4">
+              <Notice>Ausgabe fehlgeschlagen: {error}</Notice>
+            </div>
+          )}
           {busy && (
             <div className="mt-4" data-testid="export-progress">
               <div className="mb-1 flex justify-between text-[0.8rem] text-muted">
                 <span>{progress?.step ?? "Vorbereiten"}</span>
-                {progress && progress.total > 1 && (
-                  <span className="tabular-nums">
-                    {progress.done} / {progress.total}
-                  </span>
-                )}
+                <span className="tabular-nums">{pct} %</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
                 <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />

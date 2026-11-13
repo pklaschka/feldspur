@@ -16,6 +16,12 @@ import {
 import { IPC, type ExportOutcome, type ScaffoldPreview } from "../shared/api.ts";
 
 const CHUNK = 60;
+let running: string | null = null;
+
+/** Läuft gerade eine Ausgabe? Dann nicht schließen, ohne zu fragen. */
+export function exportRunning(): boolean {
+  return running !== null;
+}
 let nextId = 1;
 const pending = new Map<number, { resolve: (b: Buffer[]) => void; reject: (e: Error) => void }>();
 
@@ -62,11 +68,18 @@ export async function runExport(
   parent: string,
   video: boolean,
 ): Promise<ExportOutcome> {
-  const dir = join(parent, baseName(buildScaffold(s, sessionId)));
-  const r = await exportSession(s, sessionId, dir, {
-    video,
-    overlay: overlayVia(wc),
-    onProgress: (step, done, total) => wc.send(IPC.exportProgress, { step, done, total }),
-  });
-  return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
+  // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
+  if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
+  running = sessionId;
+  try {
+    const dir = join(parent, baseName(buildScaffold(s, sessionId)));
+    const r = await exportSession(s, sessionId, dir, {
+      video,
+      overlay: overlayVia(wc),
+      onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
+    });
+    return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
+  } finally {
+    running = null;
+  }
 }

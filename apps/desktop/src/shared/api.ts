@@ -240,6 +240,7 @@ export interface ExportOutcome {
 }
 
 export interface ExportProgress {
+  sessionId: string;
   step: string;
   done: number;
   total: number;
