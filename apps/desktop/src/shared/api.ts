@@ -164,6 +164,10 @@ export interface DeviceRow {
   offsetMs: number | null;
   offsetBasis: OffsetBasis | "spoken";
   sourceCount: number;
+  /** Trägt eine Datei des Geräts einen als UTC markierten Zeitstempel? Dann gibt es die Einstellung. */
+  hasUtcStamps: boolean;
+  /** Als UTC markierte Zeitstempel umrechnen (true) oder als Ortszeit lesen (false). */
+  timestampsAreUtc: boolean;
 }
 
 export interface ProposalRow {
@@ -275,6 +279,7 @@ export interface FeldspurApi {
   importPaths(sessionId: string, paths: string[]): Promise<ImportOutcome>;
   setReference(deviceId: string): Promise<SessionView>;
   renameDevice(deviceId: string, label: string): Promise<SessionView>;
+  setDeviceUtc(deviceId: string, utc: boolean): Promise<SessionView>;
   updateSession(sessionId: string, patch: SessionPatch): Promise<{ view: SessionView; project: ProjectInfo }>;
   /** Quelle aus dem Projekt nehmen (Originaldatei bleibt). */
   removeSource(sourceId: string): Promise<SessionView>;
@@ -340,6 +345,7 @@ export const IPC = {
   pickFiles: "import:pick",
   importPaths: "import:paths",
   setReference: "device:set-reference",
+  setDeviceUtc: "device:set-utc",
   renameDevice: "device:rename",
   updateSession: "session:update",
   removeSource: "source:remove",

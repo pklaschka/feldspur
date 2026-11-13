@@ -190,9 +190,9 @@ export function makePdf(path: string, pages: string[][]) {
 export function makeFieldDay(dir: string) {
   mkdirSync(join(dir, "Kamera"), { recursive: true });
   mkdirSync(join(dir, "Handy"), { recursive: true });
-  makeAudio(join(dir, "ZOOM0004.m4a"), { seconds: 6, creationTime: "2026-09-14T10:15:00.000000Z" });
-  makeVideo(join(dir, "Kamera", "C0012.MP4"), { seconds: 2, creationTime: "2026-09-14T10:18:47.000000Z" });
-  makeVideo(join(dir, "Kamera", "C0013.MP4"), { seconds: 2, creationTime: "2026-09-14T10:42:57.000000Z" });
+  makeAudio(join(dir, "ZOOM0004.m4a"), { seconds: 6, creationTime: "2026-09-14T08:15:00.000000Z" });
+  makeVideo(join(dir, "Kamera", "C0012.MP4"), { seconds: 2, creationTime: "2026-09-14T08:18:47.000000Z" });
+  makeVideo(join(dir, "Kamera", "C0013.MP4"), { seconds: 2, creationTime: "2026-09-14T08:42:57.000000Z" });
   makePhoto(join(dir, "Handy", "IMG_0231.jpg"), "0x8a4fbf", {
     make: "Beispiel",
     model: "Handy Testperson A",
@@ -262,7 +262,7 @@ export function makeSyncDay(dir: string) {
   mkdirSync(dir, { recursive: true });
   makeSyncAudio(join(dir, "ZOOM0001.m4a"), {
     seconds: 600,
-    creationTime: "2026-09-14T10:15:00.000000Z",
+    creationTime: "2026-09-14T08:15:00.000000Z",
     talk: [
       [0, 60],
       [480, 540],
@@ -270,7 +270,7 @@ export function makeSyncDay(dir: string) {
     claps: [80, 300, 502.5],
   });
   // Clip 1: echte Zeit 10:16:00 (= Rekorder 60 s), Kamera zeigt 10:18:47. Klatschen bei 20 s.
-  makeSyncVideo(join(dir, "C0001.MP4"), { seconds: 30, creationTime: "2026-09-14T10:18:47.000000Z", claps: [20] });
+  makeSyncVideo(join(dir, "C0001.MP4"), { seconds: 30, creationTime: "2026-09-14T08:18:47.000000Z", claps: [20] });
   // Clip 2: echte Zeit 10:23:00 (= Rekorder 480 s), Kamera zeigt 10:25:47. Klatschen bei 22,5 s.
-  makeSyncVideo(join(dir, "C0002.MP4"), { seconds: 30, creationTime: "2026-09-14T10:25:47.000000Z", claps: [22.5] });
+  makeSyncVideo(join(dir, "C0002.MP4"), { seconds: 30, creationTime: "2026-09-14T08:25:47.000000Z", claps: [22.5] });
 }

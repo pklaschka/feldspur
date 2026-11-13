@@ -69,11 +69,11 @@ export const Device = z.object({
   clockOffsetUncertaintyMs: z.number().int().nonnegative().default(0),
   offsetBasis: OffsetBasis.default("unknown"),
   /**
-   * Viele Kameras und Rekorder schreiben die Ortszeit in Felder, die als UTC
-   * markiert sind (creation_time "…Z"). Standard: so lesen, wie es dasteht.
-   * Bei Geräten, die echte UTC schreiben (Handys), auf true stellen.
+   * Als UTC markierte Zeitstempel (creation_time "…Z") sind laut Format UTC und werden in die
+   * Ortszeit des Einsatzes umgerechnet. Manche Kameras schreiben dort aber die Ortszeit hinein;
+   * für solche Geräte false (beim Einsammeln am Dateinamen erkannt oder von Hand umgestellt).
    */
-  timestampsAreUtc: z.boolean().default(false),
+  timestampsAreUtc: z.boolean().default(true),
   /** Eigenes Dateinamen-Muster, z. B. "REC_YYYYMMDD_hhmm". */
   filenamePattern: z.string().nullable().default(null),
 });

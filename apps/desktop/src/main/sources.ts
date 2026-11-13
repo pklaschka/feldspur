@@ -1,5 +1,5 @@
 /** Quellen und Geräte pflegen: entfernen, umhängen, Geräte zusammenlegen. */
-import type { ProjectStore } from "@feldspur/core";
+import { effectiveLocal, type ProjectStore } from "@feldspur/core";
 
 /** Quelle aus dem Projekt nehmen; die Originaldatei bleibt, wo sie ist. Gibt die Einsatz-Id zurück. */
 export function removeSource(s: ProjectStore, sourceId: string): string {
@@ -118,11 +118,14 @@ const FOLLOW_GAP_MS = 3_000;
 export function linkFollowUps(s: ProjectStore, sessionId: string): number {
   const sources = s.listSources(sessionId).filter((x) => AV_KINDS.has(x.kind) && x.deviceId && !x.partOf);
   const evidence = s.listEvidence(sessionId);
+  const devices = new Map(s.listDevices(sessionId).map((d) => [d.id, d]));
+  const tz = s.getSession(sessionId).timeZone;
+  const deviceOf = new Map(sources.map((x) => [x.id, x.deviceId ? devices.get(x.deviceId) : undefined]));
   const metaStart = (id: string) =>
     evidence
       .filter((e) => e.sourceId === id && e.enabled && (e.kind === "metadata" || e.kind === "filename"))
       .sort((a, b) => a.uncertaintyMs - b.uncertaintyMs)
-      .map((e) => e.localMs - e.atMediaMs)[0];
+      .map((e) => effectiveLocal(e, deviceOf.get(id), tz) - e.atMediaMs)[0];
   const followed = new Set(sources.map((x) => x.follows).filter(Boolean));
   let linked = 0;
   for (const b of sources) {
