@@ -45,10 +45,14 @@ writeFileSync(join(later, "Einkaufsliste.txt"), "Milch, Brot\n");
 // FELDSPUR_E2E_APP=<Programmdatei> prüft statt des Entwicklungsstands das fertige Paket.
 const packaged = process.env.FELDSPUR_E2E_APP;
 const sandbox = process.env.CI || process.getuid?.() === 0 ? ["--no-sandbox"] : [];
+const userData = join(dir, "Benutzerordner");
+const withUserData = <T extends object>(o: T) => ({ ...o, env: { ...process.env, FELDSPUR_USER_DATA: userData } });
 const app = await electron.launch(
-  packaged
-    ? { executablePath: packaged, args: [join(dir, "Test.feldspur"), ...sandbox] }
-    : { args: [".", join(dir, "Test.feldspur"), ...sandbox], cwd: join(import.meta.dirname, "..") },
+  withUserData(
+    packaged
+      ? { executablePath: packaged, args: [join(dir, "Test.feldspur"), ...sandbox] }
+      : { args: [".", join(dir, "Test.feldspur"), ...sandbox], cwd: join(import.meta.dirname, "..") },
+  ),
 );
 let failed = false;
 const page = await app.firstWindow();
@@ -506,6 +510,25 @@ try {
       .evaluate((b) => (b as HTMLElement).click());
     await shot("-dunkel");
   }
+  await page.emulateMedia({ colorScheme: "light" });
+
+  // Zuletzt geöffnet: zweites Projekt anlegen, über Strg+O zurück zum ersten.
+  await app.evaluate(
+    ({ dialog }, file) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as typeof dialog.showSaveDialog;
+    },
+    join(dir, "Zweites.feldspur"),
+  );
+  await page.keyboard.press("Control+o");
+  await page.getByRole("menuitem", { name: "Neues Projekt…" }).click();
+  await page.getByText("Lege links einen Einsatz an").waitFor();
+  await page.keyboard.press("Control+o");
+  await page.getByRole("menuitem", { name: /^Test/ }).click();
+  await page.getByRole("heading", { name: "Testmarkt" }).waitFor();
+  await page.keyboard.press("Control+o");
+  await page.getByRole("menuitem", { name: /^Zweites/ }).waitFor();
+  await shot("-zuletzt");
+  await page.keyboard.press("Escape");
   console.log("Rauchtest ok");
 } catch (e) {
   failed = true;

@@ -5,6 +5,15 @@
 import type { FieldSession, OffsetBasis, PlacementStatus, SourceKind } from "@feldspur/core";
 import type { MontagePreview } from "@feldspur/media";
 
+export interface RecentProject {
+  path: string;
+  name: string;
+  /** ISO-Zeitpunkt des letzten Öffnens. */
+  openedAt: string;
+  /** Datei nicht mehr da (verschoben, gelöscht, Laufwerk fehlt). */
+  missing: boolean;
+}
+
 export interface ProjectInfo {
   path: string;
   name: string;
@@ -285,6 +294,10 @@ export interface SessionPatch {
 export interface FeldspurApi {
   newProject(): Promise<ProjectInfo | null>;
   openProject(): Promise<ProjectInfo | null>;
+  /** Zuletzt geöffnete Projekte, neueste zuerst. */
+  recentProjects(): Promise<RecentProject[]>;
+  openRecent(path: string): Promise<ProjectInfo | null>;
+  forgetRecent(path: string): Promise<RecentProject[]>;
   currentProject(): Promise<ProjectInfo | null>;
   createSession(input: NewSessionInput): Promise<ProjectInfo>;
   getSession(sessionId: string): Promise<SessionView>;
@@ -369,6 +382,9 @@ export const mediaUrl = (sourceId: string) => `${MEDIA_SCHEME}://source/${encode
 export const IPC = {
   newProject: "project:new",
   openProject: "project:open",
+  recentProjects: "project:recent",
+  openRecent: "project:open-recent",
+  forgetRecent: "project:forget-recent",
   currentProject: "project:current",
   createSession: "session:create",
   getSession: "session:get",
