@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
-import { app, BrowserWindow, dialog, ipcMain, protocol } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
 import { localMs, ProjectStore } from "@feldspur/core";
 import { analyzeSession, applyImport, scanPaths, setToolPaths } from "@feldspur/media";
 import {
@@ -18,6 +18,7 @@ import {
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
+import { previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
@@ -158,6 +159,24 @@ function registerIpc(): void {
     const s = requireStore();
     return buildSessionView(s, deleteLine(s, lineId));
   });
+
+  registerOverlayBridge();
+  ipcMain.handle(IPC.previewExport, (_e, sessionId: string) => previewExport(requireStore(), sessionId));
+  ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: { video: boolean; dir?: string }) => {
+    const s = requireStore();
+    let parent = opts.dir;
+    if (!parent) {
+      const r = await dialog.showOpenDialog(win!, {
+        title: "Wohin ausgeben?",
+        buttonLabel: "Hier ausgeben",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (r.canceled || !r.filePaths[0]) return null;
+      parent = r.filePaths[0];
+    }
+    return runExport(s, e.sender, sessionId, parent, opts.video);
+  });
+  ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
     const s = requireStore();

@@ -4,3 +4,4 @@ export * from "./filename.ts";
 export * from "./resolve.ts";
 export { ProjectStore, FILE_FORMAT, SCHEMA_VERSION, type OpenOptions } from "./db/store.ts";
 export * from "./episodes.ts";
+export * from "./montage.ts";
