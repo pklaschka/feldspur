@@ -220,6 +220,7 @@ function SessionPane({
     move: (id, target) => update(guard(() => api.moveSource(id, target))),
     mergeDevices: (from, into) => update(guard(() => api.mergeDevices(from, into))),
     setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),
+    setDeviceTimeZone: (id, tz) => update(guard(() => api.setDeviceTimeZone(id, tz))),
     setPartOf: (id, mainId) => update(guard(() => api.setPartOf(id, mainId))),
     setFollows: (id, prevId) => update(guard(() => api.setFollows(id, prevId))),
     preview: setPreviewId,

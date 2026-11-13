@@ -388,6 +388,8 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
   const [at, setAt] = useState("");
   const [precision, setPrecision] = useState<Precision>(row.status === "unplaced" && !av ? "approx" : "exact");
   const [note, setNote] = useState("");
+  const [syncDevice, setSyncDevice] = useState(false);
+  const canSync = kind === "manual" && !!row.deviceId && row.hasDeviceClock;
   if (!open) {
     return (
       <Button variant="link" className="mt-2 text-[0.8rem]" onClick={() => setOpen(true)}>
@@ -396,8 +398,17 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
     );
   }
   const submit = async () => {
-    const ok = await onAdd({ sourceId: row.id, kind, clock: time, atMedia: av ? at : "", precision, note });
+    const ok = await onAdd({
+      sourceId: row.id,
+      kind,
+      clock: time,
+      atMedia: av ? at : "",
+      precision,
+      note,
+      syncDevice: canSync && syncDevice,
+    });
     if (ok) {
+      setSyncDevice(false);
       setTime("");
       setAt("");
       setNote("");
@@ -471,6 +482,23 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
           aria-label="Notiz"
         />
       </div>
+      {canSync && (
+        <label className="flex items-start gap-2 text-[0.85rem]">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={syncDevice}
+            onChange={(e) => setSyncDevice(e.target.checked)}
+            aria-label={`Uhr von ${row.deviceLabel} danach richten`}
+          />
+          <span>
+            Uhr von „{row.deviceLabel}“ danach richten
+            <span className="block text-[0.75rem] text-muted">
+              Aus dieser Angabe wird die Abweichung der Geräteuhr berechnet. Alle anderen Dateien des Geräts rücken mit.
+            </span>
+          </span>
+        </label>
+      )}
       <p className="text-[0.75rem] text-muted">
         {kind === "spoken"
           ? "Die angesagte Zeit gleicht die Uhr des ganzen Geräts ab, sofern die Aufnahme auch eine Zeit der Geräteuhr hat."

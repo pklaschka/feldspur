@@ -28,6 +28,7 @@ export function testmarkt() {
     clockOffsetUncertaintyMs: 0,
     offsetBasis: "unknown",
     timestampsAreUtc: false,
+    timeZone: null,
     filenamePattern: null,
     ...extra,
   });

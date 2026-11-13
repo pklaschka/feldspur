@@ -48,6 +48,7 @@ export const devices = sqliteTable(
       .notNull()
       .default("unknown"),
     timestampsAreUtc: bool("timestamps_are_utc").notNull().default(true),
+    timeZone: text("time_zone"),
     filenamePattern: text("filename_pattern"),
   },
   (t) => [index("devices_session").on(t.sessionId)],

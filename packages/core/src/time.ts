@@ -55,10 +55,14 @@ export function formatClock(t: LocalMs): string {
 export function formatDuration(ms: number, opts: { sign?: boolean } = {}): string {
   const sign = ms < 0 ? "−" : opts.sign ? "+" : "";
   let s = Math.round(Math.abs(ms) / 1000);
+  const d = Math.floor(s / 86_400);
+  s -= d * 86_400;
   const h = Math.floor(s / 3600);
   s -= h * 3600;
   const m = Math.floor(s / 60);
   s -= m * 60;
+  // Ab einem Tag (falsch gestellte Uhren): „+3 Tage 2:00:00“.
+  if (d) return `${sign}${d} ${d === 1 ? "Tag" : "Tage"} ${h}:${pad(m)}:${pad(s)}`;
   return h ? `${sign}${h}:${pad(m)}:${pad(s)}` : `${sign}${m}:${pad(s)}`;
 }
 

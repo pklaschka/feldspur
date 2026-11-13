@@ -59,7 +59,8 @@ const isAv = (s: Source) => s.kind === "audio" || s.kind === "video";
 
 export function proposeAnchors(input: ProposeInput, opts: ProposeOptions = {}): AnchorProposal[] {
   const tol = opts.toleranceMs ?? 150;
-  const maxOffset = opts.maxOffsetMs ?? 2 * 3600_000;
+  // Uhren können weit danebenliegen (Zeitzone vergessen, Datum nie gestellt); kleine Abweichungen gewinnen trotzdem.
+  const maxOffset = opts.maxOffsetMs ?? 400 * 86_400_000;
   const searchMs = opts.searchMs ?? 10 * 60_000;
   const { resolved } = input;
 
@@ -99,12 +100,15 @@ export function proposeAnchors(input: ProposeInput, opts: ProposeOptions = {}): 
     let best: AnchorProposal | null = null;
     for (const r of trusted) {
       const rp = resolved.placements.get(r.id)!;
-      const est = estimateOffset(
+      const good = (e: ReturnType<typeof estimateOffset>) => !!e && e.score >= 0.25 && e.distinctness >= 1.5;
+      let est = estimateOffset(
         input.envelopes.get(r.id)!,
         env,
         guess !== undefined ? { expectedLagMs: guess - rp.startMs, searchMs } : {},
       );
-      if (!est || est.score < 0.25 || est.distinctness < 1.5) continue;
+      // Liegt die Geräteuhr um Stunden oder Tage daneben, ist die erwartete Lage falsch: ganze Aufnahme absuchen.
+      if (!good(est) && guess !== undefined) est = estimateOffset(input.envelopes.get(r.id)!, env);
+      if (!est || !good(est)) continue;
       const clipStartTrue = rp.startMs + est.lagMs;
       const devStart = deviceStart(s);
       const cand: AnchorProposal = {

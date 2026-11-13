@@ -12,6 +12,16 @@ const mmss = (ms: number) =>
     .replace(/^[+−-]\s*/, "")
     .replace(/\.\d+/, "");
 
+/**
+ * Lage auf der Abweichungsleiste, −1 … 1. Bis zu einer Stunde linear; darüber gestaucht (asinh), damit
+ * Sekunden-Abweichungen neben Stunden oder Tagen sichtbar bleiben.
+ */
+export function scale(ms: number, span: number): number {
+  if (span <= 3_600_000) return ms / span;
+  const k = 300_000;
+  return Math.asinh(ms / k) / Math.asinh(span / k);
+}
+
 const BASIS_TEXT = {
   reference: "Referenz",
   manual: "von Hand",
@@ -108,7 +118,7 @@ export function Sync({
             <span />
             <span className="flex justify-between pb-1 text-[0.8rem] whitespace-nowrap text-muted">
               <span className="font-mono">−{mmss(span)}</span>
-              <span>Referenz</span>
+              <span>Referenz{span > 3_600_000 ? " · gestaucht" : ""}</span>
               <span className="font-mono">+{mmss(span)}</span>
             </span>
             <span />
@@ -157,7 +167,7 @@ function ClockRow({
   onConfirm: (anchorId: string) => void;
   onReject: (anchorId: string) => void;
 }) {
-  const pos = (ms: number) => `${50 + (ms / span) * 50}%`;
+  const pos = (ms: number) => `${50 + scale(ms, span) * 50}%`;
   const dot = "absolute top-1/2 -mt-[7px] -ml-[7px] size-3.5 rounded-full";
   return (
     <div className="contents" data-testid="clock" data-device={device.label}>

@@ -11,6 +11,7 @@ const api: FeldspurApi = {
   importPaths: (id, paths) => ipcRenderer.invoke(IPC.importPaths, id, paths),
   setReference: (id) => ipcRenderer.invoke(IPC.setReference, id),
   setDeviceUtc: (id, utc) => ipcRenderer.invoke(IPC.setDeviceUtc, id, utc),
+  setDeviceTimeZone: (id, tz) => ipcRenderer.invoke(IPC.setDeviceTimeZone, id, tz),
   renameDevice: (id, label) => ipcRenderer.invoke(IPC.renameDevice, id, label),
   updateSession: (id, patch) => ipcRenderer.invoke(IPC.updateSession, id, patch),
   removeSource: (id) => ipcRenderer.invoke(IPC.removeSource, id),

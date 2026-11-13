@@ -145,6 +145,25 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(formatClock(pl.startMs)).toBe("10:40:50");
   });
 
+  it("Zeitzone der Geräteuhr: Ortszeit-Belege werden in die Einsatzzeit umgerechnet", () => {
+    const input = testmarkt();
+    const ev = input.evidence.find((e) => e.sourceId === "IMG_20260914_104050.jpg")!;
+    ev.localMs = Date.UTC(2026, 8, 14, 8, 40, 50); // Handy auf UTC gestellt
+    input.devices.find((d) => d.id === "phoneB")!.timeZone = "UTC";
+    const pl = resolveTimeline(input).placements.get("IMG_20260914_104050.jpg")!;
+    expect(formatClock(pl.startMs)).toBe("10:40:50");
+  });
+
+  it("Zeitzone gilt nicht für angesagte oder von Hand gesetzte Zeiten", () => {
+    const input = testmarkt();
+    input.devices.find((d) => d.id === "phoneB")!.timeZone = "America/New_York";
+    const ev = input.evidence.find((e) => e.sourceId === "IMG_20260914_104050.jpg")!;
+    ev.kind = "manual";
+    ev.clock = "true";
+    const pl = resolveTimeline(input).placements.get("IMG_20260914_104050.jpg")!;
+    expect(formatClock(pl.startMs)).toBe("10:40:50");
+  });
+
   it("ohne Referenzuhr ist nichts sicher", () => {
     const input = testmarkt();
     for (const d of input.devices) {

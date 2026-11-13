@@ -120,6 +120,46 @@ describe("Zeiten von Hand", () => {
     expect(formatClock(view.rows.find((r) => r.id === video.id)!.startMs!)).toBe("10:16:00");
   });
 
+  it("Zeit von Hand in einem Clip richtet die Uhr des Geräts, die übrigen Clips folgen", () => {
+    const { session, video, cam } = seed();
+    const second = store.addSource({
+      sessionId: session.id,
+      originalPath: "/x",
+      sizeBytes: 1,
+      metadata: {},
+      deviceId: cam.id,
+      kind: "video",
+      fileName: "C2.MP4",
+      sha256: sha(9),
+      durationMs: 60_000,
+    });
+    store.addEvidence({
+      sourceId: second.id,
+      kind: "metadata",
+      clock: "device",
+      localMs: Date.UTC(2026, 8, 14, 10, 42, 57),
+      uncertaintyMs: 1000,
+      detail: "Metadaten",
+    });
+    // Ohne die Option gilt die Angabe nur für den einen Clip.
+    const t = { clock: "10:16:20", precision: "exact" as const, note: "", atMedia: "0:20", kind: "manual" as const };
+    addTimeEvidence(store, { ...t, sourceId: video.id });
+    expect(buildSessionView(store, session.id).devices.find((d) => d.id === cam.id)!.offsetMs).toBeNull();
+    // Mit der Option wird aus der Angabe die Abweichung der Kamera (Uhr zeigte 10:19:07, echt 10:16:20).
+    addTimeEvidence(store, { ...t, sourceId: video.id, syncDevice: true });
+    const view = buildSessionView(store, session.id);
+    const d = view.devices.find((x) => x.id === cam.id)!;
+    expect(d).toMatchObject({ offsetBasis: "manual", offsetMs: 167_000 });
+    expect(formatClock(view.rows.find((r) => r.id === second.id)!.startMs!)).toBe("10:40:10");
+  });
+
+  it("Geräteabgleich per Hand nur mit Geräteuhr und ohne Referenzgerät", () => {
+    const { audio, photo } = seed();
+    const t = { clock: "10:00", precision: "exact" as const, note: "", atMedia: "", kind: "manual" as const };
+    expect(() => addTimeEvidence(store, { ...t, sourceId: audio.id, syncDevice: true })).toThrow(/Referenzuhr/);
+    expect(() => addTimeEvidence(store, { ...t, sourceId: photo.id, syncDevice: true })).toThrow(/Geräteuhr/);
+  });
+
   it("angesagte Zeit nur in Audio und Video, Stelle nicht hinter dem Ende", () => {
     const { photo, video } = seed();
     const t = { clock: "10:00", precision: "exact" as const, note: "" };

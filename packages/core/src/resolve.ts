@@ -25,7 +25,7 @@ import type {
   SyncAnchor,
   TimeEvidence,
 } from "./model.ts";
-import { formatDuration, utcToLocal, type LocalMs } from "./time.ts";
+import { formatDuration, localToUtc, utcToLocal, type LocalMs } from "./time.ts";
 
 export type PlacementStatus = "ok" | "check" | "unplaced";
 
@@ -140,9 +140,14 @@ function initialClocks(devices: Device[]): Map<Id, DeviceClock> {
   return clocks;
 }
 
-/** Ortszeit eines Belegs laut Geräteuhr: als UTC markierte Stempel je nach Geräteeinstellung umgerechnet. */
+/**
+ * Ortszeit des Einsatzes laut Geräteuhr: als UTC markierte Stempel je nach Geräteeinstellung umgerechnet,
+ * Ortszeit-Stempel aus der Zeitzone der Geräteuhr in die des Einsatzes.
+ */
 export function effectiveLocal(ev: TimeEvidence, device: Device | undefined, tz: string): number {
   if (ev.utcMs !== null && device?.timestampsAreUtc) return utcToLocal(ev.utcMs, tz);
+  if (ev.clock === "device" && device?.timeZone && device.timeZone !== tz)
+    return utcToLocal(localToUtc(ev.localMs, device.timeZone), tz);
   return ev.localMs;
 }
 
