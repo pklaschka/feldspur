@@ -61,8 +61,10 @@ const work = mkdtempSync(join(tmpdir(), "feldspur-ffmpeg-"));
 try {
   const archive = join(work, asset);
   writeFileSync(archive, data);
-  // tar kann auf Windows 10+ auch zip entpacken (bsdtar).
-  execFileSync("tar", ["-xf", archive, "-C", work], { stdio: "inherit" });
+  // Auf Windows das mitgelieferte bsdtar nehmen: Es entpackt auch zip. Das GNU-tar aus Git Bash
+  // kann kein zip und hält „C:“ für einen entfernten Rechner.
+  const tar = platform === "win32" ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar";
+  execFileSync(tar, ["-xf", archive, "-C", work], { stdio: "inherit" });
   const dir = readdirSync(work)
     .map((n) => join(work, n))
     .find((p) => statSync(p).isDirectory());
