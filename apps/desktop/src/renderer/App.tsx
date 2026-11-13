@@ -2,6 +2,7 @@ import { Tabs } from "radix-ui";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { ProjectInfo, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
+import { DiaryEditor } from "./DiaryEditor.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { Review } from "./Review.tsx";
@@ -170,6 +171,7 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
   const [view, setView] = useState<SessionView | null>(null);
   const [step, setStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [diaryPage, setDiaryPage] = useState<string | null>(null);
 
   useEffect(() => {
     void guard(() => api.getSession(sessionId)).then((v) => {
@@ -263,6 +265,7 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
               selected={selected}
               onSelect={setSelected}
               onRename={(id, label) => update(guard(() => api.renameDevice(id, label)))}
+              onOpenDiary={setDiaryPage}
               onNext={() => setStep("sync")}
             />
           </Tabs.Content>
@@ -298,7 +301,16 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
           },
           toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
           removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
+          openDiary: setDiaryPage,
         }}
+      />
+      <DiaryEditor
+        view={view}
+        pageId={diaryPage}
+        onPage={setDiaryPage}
+        onClose={() => setDiaryPage(null)}
+        guard={guard}
+        onView={setView}
       />
     </PlaybackProvider>
   );

@@ -426,6 +426,16 @@ export class ProjectStore {
     return next;
   }
 
+  getDiaryEntry(id: Id): DiaryEntry {
+    const r = this.db.select().from(schema.diaryEntries).where(eq(schema.diaryEntries.id, id)).get();
+    if (!r) throw new Error(`Tagebucheintrag nicht gefunden: ${id}`);
+    return DiaryEntry.parse(r);
+  }
+
+  deleteDiaryEntry(id: Id): void {
+    this.db.delete(schema.diaryEntries).where(eq(schema.diaryEntries.id, id)).run();
+  }
+
   // ── Alles für die Zeitbestimmung ────────────────────────────────────────
 
   loadResolveInput(sessionId: Id): ResolveInput {

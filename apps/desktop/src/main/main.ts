@@ -7,11 +7,14 @@ import {
   IPC,
   MEDIA_SCHEME,
   type AnchorInput,
+  type DiaryPatch,
+  type Region,
   type ImportOutcome,
   type TimeInput,
   type NewSessionInput,
   type ProjectInfo,
 } from "../shared/api.ts";
+import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
 import { fileResponse } from "./media-response.ts";
 import { buildSessionView } from "./view.ts";
@@ -166,6 +169,28 @@ function registerIpc(): void {
   ipcMain.handle(IPC.addAnchor, (_e, input: AnchorInput) => {
     const s = requireStore();
     return buildSessionView(s, addManualAnchor(s, input));
+  });
+
+  ipcMain.handle(IPC.createDiaryEntry, (_e, sourceId: string, region: Region) => {
+    const s = requireStore();
+    const r = createEntry(s, sourceId, region);
+    return { view: buildSessionView(s, r.sessionId), entryId: r.entry.id };
+  });
+  ipcMain.handle(IPC.addDiaryRegion, (_e, entryId: string, sourceId: string, region: Region) => {
+    const s = requireStore();
+    return buildSessionView(s, addRegion(s, entryId, sourceId, region));
+  });
+  ipcMain.handle(IPC.removeDiaryRegion, (_e, entryId: string, index: number) => {
+    const s = requireStore();
+    return buildSessionView(s, removeRegion(s, entryId, index));
+  });
+  ipcMain.handle(IPC.deleteDiaryEntry, (_e, entryId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, deleteEntry(s, entryId));
+  });
+  ipcMain.handle(IPC.patchDiaryEntry, (_e, entryId: string, patch: DiaryPatch) => {
+    const s = requireStore();
+    return buildSessionView(s, patchEntry(s, entryId, patch));
   });
 
   ipcMain.handle(IPC.setDeviceOffset, (_e, deviceId: string, offsetMs: number | null) => {
