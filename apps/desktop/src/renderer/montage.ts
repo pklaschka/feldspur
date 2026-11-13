@@ -1,22 +1,23 @@
 /** Montage in der App abspielen: Rechenhilfen ohne Oberfläche (testbar). */
 import type { OverlayFrame } from "@feldspur/media";
-import type { PreviewPiece } from "../shared/api.ts";
+import type { PreviewMedia, PreviewPiece } from "../shared/api.ts";
 
-/** Einblendung an einer Stelle der Montage (wie im Video: Uhr läuft in Episoden sekundengenau mit). */
+/**
+ * Einblendung an einer Stelle der Montage, wie im Video: sekundenweise, die Uhr läuft außer
+ * in Tafeln mit, je Datei die Stelle im Original.
+ */
 export function previewFrame(p: PreviewPiece, montageMs: number): OverlayFrame {
-  const k = Math.floor((montageMs - p.fromMs) / 1000);
+  const offset = Math.max(0, Math.floor((montageMs - p.fromMs) / 1000) * 1000);
+  const media = (m: PreviewMedia) => ({ label: m.label, fileName: m.fileName, atMs: m.fromMs + offset });
+  const shown = new Set(p.videos.map((v) => v.sourceId));
   return {
-    montageMs,
-    clockMs: p.kind === "episode" ? p.clock0 + k * 1000 : p.clock0,
+    montageMs: p.fromMs + offset,
+    clockMs: p.kind === "card" ? p.clock0 : p.clock0 + offset,
     kind: p.kind,
     title: p.title,
-    sources: p.sources,
-    caption: p.still?.caption ?? "",
     body: p.body,
-    hasVideo: p.videos.length > 0,
-    hasStill: !!p.still?.image,
-    tiles: p.videos.length > 1 ? p.videos.map((v) => v.label) : [],
-    stillText: p.still?.text ?? "",
+    tiles: p.videos.map(media),
+    sounds: p.audios.filter((a) => !shown.has(a.sourceId)).map(media),
   };
 }
 

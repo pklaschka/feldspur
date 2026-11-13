@@ -1,11 +1,13 @@
 /**
- * Montagevideo: Episoden in voller Länge, Zwischenzeiten als Tafeln, alles nach Uhrzeit.
+ * Montagevideo: nur, was zum Zuordnen nötig ist. Episoden in voller Länge mit kurzen Tafeln
+ * für übersprungene Zwischenzeiten, oder alles in Echtzeit.
  *
- * Aufbau (1280×720, 25 fps): oben eine Leiste, links das Video (oder dunkle Fläche),
- * rechts eine Seitenspalte mit dem jüngsten Foto oder Tagebuchausschnitt, unten die Zeitleisten.
- * Text und Zeitleisten zeichnet ein OverlayRenderer (in der App: die Oberfläche per Canvas),
- * weil die LGPL-Fassung von ffmpeg nicht überall Schrift setzen kann. Ohne Renderer entsteht
- * das Video trotzdem, nur ohne Einblendungen.
+ * Aufbau (1280×720, 25 fps): oben Uhrzeit, Einsatz und Montage-ID; in der Mitte die laufenden
+ * Videos (gleichzeitige nebeneinander) mit Kurzzeichen, Datei und Stelle im Original; unten die
+ * laufenden Tonquellen. Fotos und Tagebuch stehen im Zeitgerüst, nicht im Video.
+ * Text zeichnet ein OverlayRenderer (in der App: die Oberfläche per Canvas), weil die
+ * LGPL-Fassung von ffmpeg nicht überall Schrift setzen kann. Ohne Renderer entsteht das Video
+ * trotzdem, nur ohne Einblendungen.
  *
  * Das Video entsteht stückweise mit festen Parametern und wird ohne Neukodierung verbunden.
  * Der Ton wird als PCM je Stück erzeugt und am Ende einmal kodiert, damit er auf die
@@ -18,9 +20,8 @@ import { availableParallelism } from "node:os";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
-import type { Scaffold, ScaffoldEntry } from "./scaffold.ts";
-import type { Still } from "./stills.ts";
-import { FPS, H, MAX_TILES, stillBox, videoTiles, W } from "./layout.ts";
+import type { Scaffold } from "./scaffold.ts";
+import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
 import { probeMedia } from "./probe.ts";
 import { toolPaths } from "./tools.ts";
 
@@ -29,15 +30,22 @@ const run = promisify(execFile);
 const FRAME_MS = 1000 / FPS;
 const RATE = 48_000;
 
-/** Daten für die Zeitleisten, einmal je Export. */
-export interface OverlayTimeline {
+/** Was für die ganze Montage gleich bleibt (Kopfzeile). */
+export interface OverlayHeader {
   title: string;
   date: string;
-  fromMs: number;
-  toMs: number;
-  episodes: { index: number; fromMs: number; toMs: number }[];
-  tracks: { label: string; kind: Source["kind"]; spans: { fromMs: number; toMs: number; label: string }[] }[];
-  points: { atMs: number; kind: Source["kind"] }[];
+  /** Ordnet Video und Zeitgerüst einander zu, z. B. „FS-7KQ2-M9XD“. */
+  montageId: string;
+  modeLabel: string;
+}
+
+/** Herkunft einer laufenden Datei an einer Stelle: zum Wiederfinden im Original. */
+export interface OverlayMedia {
+  /** Kurzzeichen und Gerät, z. B. „V-01 Kamera Stativ“. */
+  label: string;
+  fileName: string;
+  /** Stelle in der Originaldatei. */
+  atMs: number;
 }
 
 /** Was in einer Sekunde Montage zu sehen ist. */
@@ -45,25 +53,18 @@ export interface OverlayFrame {
   montageMs: number;
   /** Uhrzeit an dieser Stelle; in Tafeln der Beginn der Zwischenzeit. */
   clockMs: number;
-  kind: "episode" | "card" | "item";
+  /** episode: Episode; gap: Zwischenzeit in Echtzeit; card: kurze Tafel für eine Zwischenzeit. */
+  kind: "episode" | "gap" | "card";
   title: string;
-  /** Laufende Quellen, z. B. „A-01 Audiorekorder · V-01 Kamera (Testperson A)“. */
-  sources: string[];
-  /** Bildunterschrift zur Seitenspalte oder zum Standbild der Tafel. */
-  caption: string;
   /** Text einer Tafel. */
   body: string;
-  /** Hat das Hauptfeld ein Video? Sonst zeichnet der Renderer eine Fläche mit Hinweis. */
-  hasVideo: boolean;
-  /** Beschriftung je Videofeld (bei mehreren gleichzeitigen Videos nebeneinander). */
-  tiles: string[];
-  /** Text zum Standbild in der Seitenspalte, z. B. die Abschrift eines Tagebucheintrags. */
-  stillText: string;
-  /** Steht in der Seitenspalte (bzw. bei Tafeln groß) ein Standbild? */
-  hasStill: boolean;
+  /** Laufende Videos, in der Reihenfolge der Felder. */
+  tiles: OverlayMedia[];
+  /** Laufende Tonquellen ohne eigenes Bild. */
+  sounds: OverlayMedia[];
 }
 
-export type OverlayRenderer = (timeline: OverlayTimeline, frames: OverlayFrame[]) => Promise<Buffer[]>;
+export type OverlayRenderer = (header: OverlayHeader, frames: OverlayFrame[]) => Promise<Buffer[]>;
 
 export interface MediaRef {
   source: Source;
@@ -77,8 +78,8 @@ export interface Piece {
   /** Grenzen in Bildern ab Montagebeginn. */
   f0: number;
   f1: number;
-  kind: "episode" | "card" | "item";
-  /** Uhrzeit am Beginn des Stücks (in Episoden läuft sie mit). */
+  kind: OverlayFrame["kind"];
+  /** Uhrzeit am Beginn des Stücks (außer in Tafeln läuft sie mit). */
   clock0: number;
   title: string;
   body: string;
@@ -86,9 +87,6 @@ export interface Piece {
   videos: MediaRef[];
   /** Laufende Tonquellen, die Hauptquelle zuerst (Referenzgerät, sonst die längste). */
   audios: MediaRef[];
-  /** Foto oder Tagebucheintrag: Bilddatei (falls darstellbar), Unterschrift und Text. */
-  still: { file: string | null; caption: string; text: string } | null;
-  sources: string[];
 }
 
 /** ffmpeg mit Fortschritt: meldet die schon geschriebene Ausgabezeit in ms. */
@@ -142,8 +140,8 @@ export async function videoEncoder(): Promise<string[]> {
   return encoderCache;
 }
 
-/** Stücke der Montage: Grenzen dort, wo Video, Ton oder Standbild wechseln. */
-export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string | null>): Piece[] {
+/** Stücke der Montage: Grenzen dort, wo eine Aufnahme beginnt oder endet. */
+export function planPieces(sc: Scaffold): Piece[] {
   const { input, resolved, plan } = sc;
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const place = (id: Id) => resolved.placements.get(id);
@@ -158,71 +156,35 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
     const d = s.deviceId ? devices.get(s.deviceId) : undefined;
     return `${s.label} ${d?.label ?? ""}`.trim();
   };
-  const stillOf = (e: ScaffoldEntry) => {
-    const file = stillFiles.get(e) ?? null;
-    // Tagebuch: Abschrift zeigen, auch wenn sich der Scan nicht als Bild setzen lässt.
-    const text = e.kind === "diary" ? e.body : "";
-    return file || text ? { file, caption: `${e.head} · ${e.clock}`, text } : null;
-  };
-  const hasStill = (e: ScaffoldEntry) => !!stillFiles.get(e) || (e.kind === "diary" && !!e.body);
 
   const pieces: Piece[] = [];
   for (const seg of plan.segments) {
-    if (seg.kind === "card") {
-      const items = sc.entries.filter(
-        (e) =>
-          (e.kind === "photo" || e.kind === "diary") &&
-          e.montageMs >= seg.montageStartMs &&
-          e.montageMs < seg.montageStartMs + seg.montageMs,
-      );
+    // Kurze Tafel für eine übersprungene Zwischenzeit.
+    if (seg.kind === "card" && plan.mode !== "realtime") {
       const card = sc.entries.find((e) => e.kind === "card" && e.montageMs === seg.montageStartMs);
-      if (!items.length) {
-        pieces.push({
-          f0: frame(seg.montageStartMs),
-          f1: frame(seg.montageStartMs + seg.montageMs),
-          kind: "card",
-          clock0: seg.fromMs,
-          title: "Zwischentafel",
-          body: card ? `${card.clock}\n${card.body}` : "",
-          videos: [],
-          audios: [],
-          still: null,
-          sources: [],
-        });
-        continue;
-      }
-      items.forEach((e, i) => {
-        const end = i + 1 < items.length ? items[i + 1]!.montageMs : seg.montageStartMs + seg.montageMs;
-        pieces.push({
-          f0: frame(e.montageMs),
-          f1: frame(end),
-          kind: "item",
-          clock0: e.clockMs ?? seg.fromMs,
-          title: e.head,
-          body: `${e.clock}\n${e.body}`,
-          videos: [],
-          audios: [],
-          still: stillOf(e),
-          sources: [],
-        });
+      pieces.push({
+        f0: frame(seg.montageStartMs),
+        f1: frame(seg.montageStartMs + seg.montageMs),
+        kind: "card",
+        clock0: seg.fromMs,
+        title: "Zwischenzeit übersprungen",
+        body: card ? `${card.clock}\n${card.body}` : "",
+        videos: [],
+        audios: [],
       });
       continue;
     }
 
-    // Episode: Schnittpunkte an Beginn/Ende jeder Aufnahme und an jedem neuen Standbild.
+    // Episode (oder Zwischenzeit in Echtzeit): Schnittpunkte an Beginn und Ende jeder Aufnahme.
     const from = seg.fromMs;
     const to = seg.toMs;
     const toM = (t: number) => seg.montageStartMs + (t - from);
-    const stills = sc.entries
-      .filter((e) => (e.kind === "photo" || e.kind === "diary") && e.montageMs >= toM(from) && e.montageMs <= toM(to))
-      .filter(hasStill);
     const cuts = new Set<number>([from, to]);
     for (const s of av) {
       const p = place(s.id)!;
       if (p.startMs > from && p.startMs < to) cuts.add(p.startMs);
       if (p.endMs > from && p.endMs < to) cuts.add(p.endMs);
     }
-    for (const e of stills) cuts.add(from + (e.montageMs - seg.montageStartMs));
     const sorted = [...cuts].sort((a, b) => a - b);
     for (let i = 0; i + 1 < sorted.length; i++) {
       const a = sorted[i]!;
@@ -244,18 +206,15 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
       const sounding = running.filter((s) => s.kind === "audio" || s.kind === "video");
       const audios = mainAudio ? [mainAudio, ...sounding.filter((s) => s !== mainAudio)] : sounding;
       const ref = (s: Source): MediaRef => ({ source: s, fromMs: a - place(s.id)!.startMs, label: describe(s) });
-      const lastStill = stills.filter((e) => e.montageMs <= toM(a)).at(-1);
       pieces.push({
         f0,
         f1,
-        kind: "episode",
+        kind: seg.kind === "episode" ? "episode" : "gap",
         clock0: a,
-        title: `Episode ${seg.episode.index}`,
+        title: seg.kind === "episode" ? `Episode ${seg.episode.index}` : "Zwischenzeit",
         body: "",
         videos: videos.map(ref),
         audios: audios.map(ref),
-        still: lastStill ? stillOf(lastStill) : null,
-        sources: running.map(describe),
       });
     }
   }
@@ -267,58 +226,33 @@ export function planPieces(sc: Scaffold, stillFiles: Map<ScaffoldEntry, string |
 
 const span = (p: Placement) => p.endMs - p.startMs;
 
-export function overlayTimeline(sc: Scaffold): OverlayTimeline {
-  const { input, resolved } = sc;
-  const devices = new Map(input.devices.map((d) => [d.id, d]));
-  const tracks = new Map<string, OverlayTimeline["tracks"][number]>();
-  const points: OverlayTimeline["points"] = [];
-  let from = Infinity;
-  let to = -Infinity;
-  for (const s of input.sources) {
-    const p = resolved.placements.get(s.id);
-    if (!p || s.partOf) continue;
-    from = Math.min(from, p.startMs);
-    to = Math.max(to, p.endMs);
-    if (s.kind === "audio" || s.kind === "video") {
-      const key = s.deviceId ?? s.id;
-      const t = tracks.get(key) ?? { label: devices.get(s.deviceId ?? "")?.label ?? s.label, kind: s.kind, spans: [] };
-      t.spans.push({ fromMs: p.startMs, toMs: p.endMs, label: s.label });
-      tracks.set(key, t);
-    } else points.push({ atMs: p.startMs, kind: s.kind });
-  }
-  for (const d of resolved.diary.values()) {
-    points.push({ atMs: d.notedAtMs, kind: "diary" });
-    from = Math.min(from, d.notedAtMs);
-    to = Math.max(to, d.toMs);
-  }
+export function overlayHeader(sc: Scaffold): OverlayHeader {
+  const h = sc.header;
+  return { title: h.title, date: h.date, montageId: h.montageId, modeLabel: h.modeLabel };
+}
+
+/** Einblendung an einer Stelle eines Stücks (ms ab Stückbeginn). */
+export function frameAt(p: Piece, offsetMs: number): OverlayFrame {
+  const media = (m: MediaRef): OverlayMedia => ({
+    label: m.label,
+    fileName: m.source.fileName,
+    atMs: m.fromMs + offsetMs,
+  });
+  const shown = new Set(p.videos.map((v) => v.source.id));
   return {
-    title: input.session.title,
-    date: input.session.date,
-    fromMs: from,
-    toMs: to,
-    episodes: sc.plan.segments.flatMap((s) =>
-      s.kind === "episode" ? [{ index: s.episode.index, fromMs: s.fromMs, toMs: s.toMs }] : [],
-    ),
-    tracks: [...tracks.values()],
-    points,
+    montageMs: p.f0 * FRAME_MS + offsetMs,
+    clockMs: p.kind === "card" ? p.clock0 : p.clock0 + offsetMs,
+    kind: p.kind,
+    title: p.title,
+    body: p.body,
+    tiles: p.videos.map(media),
+    sounds: p.audios.filter((a) => !shown.has(a.source.id)).map(media),
   };
 }
 
 function framesFor(p: Piece): OverlayFrame[] {
   const n = Math.ceil(((p.f1 - p.f0) * FRAME_MS) / 1000);
-  return Array.from({ length: n }, (_, k) => ({
-    montageMs: p.f0 * FRAME_MS + k * 1000,
-    clockMs: p.kind === "episode" ? p.clock0 + k * 1000 : p.clock0,
-    kind: p.kind,
-    title: p.title,
-    sources: p.sources,
-    caption: p.still?.caption ?? "",
-    body: p.body,
-    hasVideo: p.videos.length > 0,
-    hasStill: !!p.still?.file,
-    tiles: p.videos.length > 1 ? p.videos.map((v) => v.label) : [],
-    stillText: p.still?.text ?? "",
-  }));
+  return Array.from({ length: n }, (_, k) => frameAt(p, k * 1000));
 }
 
 export interface MontageVideoOptions {
@@ -340,7 +274,7 @@ export interface MontageVideoOptions {
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
 const CHUNK_FRAMES = 60 * FPS;
 /** Erhöhen, wenn sich das Aussehen ändert, damit alte Abschnitte nicht wiederverwendet werden. */
-const LOOK_VERSION = 3;
+const LOOK_VERSION = 4;
 
 function chunks(pieces: Piece[]): Piece[] {
   return pieces.flatMap((p) => {
@@ -372,26 +306,13 @@ async function pool<T>(items: T[], n: number, work: (item: T, i: number) => Prom
   await Promise.all(workers);
 }
 
-export async function renderMontage(
-  sc: Scaffold,
-  stills: Map<ScaffoldEntry, (Still | null)[]>,
-  outFile: string,
-  opts: MontageVideoOptions,
-): Promise<void> {
+export async function renderMontage(sc: Scaffold, outFile: string, opts: MontageVideoOptions): Promise<void> {
   const dir = join(opts.workDir, "montage");
   await mkdir(dir, { recursive: true });
   // Erstes darstellbares Bild je Eintrag als Datei für ffmpeg, benannt nach Inhalt (für den Zwischenspeicher).
-  const stillFiles = new Map<ScaffoldEntry, string | null>();
-  for (const [e, list] of stills) {
-    const s = list.find(Boolean);
-    if (!s) continue;
-    const f = join(dir, `still-${createHash("sha1").update(s.data).digest("hex").slice(0, 16)}.jpg`);
-    await writeFile(f, s.data);
-    stillFiles.set(e, f);
-  }
-  const pieces = planPieces(sc, stillFiles);
+  const pieces = planPieces(sc);
   const parts = chunks(pieces);
-  const timeline = overlayTimeline(sc);
+  const header = overlayHeader(sc);
   const enc = await videoEncoder();
   const cacheDir = opts.cacheDir ?? join(dir, "abschnitte");
   await mkdir(cacheDir, { recursive: true });
@@ -513,10 +434,9 @@ export async function renderMontage(
           videos: await Promise.all(
             p.videos.map(async (v) => ({ id: await fileId(v.source.originalPath), fromMs: v.fromMs })),
           ),
-          still: p.still ? { file: p.still.file && basename(p.still.file), text: !!p.still.text } : null,
           // Die Stelle im Video gehört nicht zum Bild: Abschnitte bleiben gültig, wenn sich davor etwas ändert.
           frames: frames?.map(({ montageMs: _m, ...f }) => f),
-          timeline: frames ? timeline : null,
+          header: frames ? header : null,
         }),
       )
       .digest("hex");
@@ -552,18 +472,8 @@ export async function renderMontage(
       last = `[b${input}]`;
       input++;
     }
-    if (p.still?.file) {
-      const box = stillBox(p.kind, !!p.still.text);
-      args.push("-framerate", String(rate), "-loop", "1", "-t", srcDur, "-i", p.still.file);
-      filters.push(
-        `[${input}:v]scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease,setsar=1[s${input}]`,
-        `${last}[s${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}:shortest=1[b${input}]`,
-      );
-      last = `[b${input}]`;
-      input++;
-    }
     if (opts.overlay && frames) {
-      const pngs = await opts.overlay(timeline, frames);
+      const pngs = await opts.overlay(header, frames);
       await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
       args.push("-framerate", "1", "-i", join(pdir, "o%05d.png"));
       filters.push(

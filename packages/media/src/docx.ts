@@ -77,7 +77,7 @@ export async function scaffoldDocx(sc: Scaffold, opts: DocxOptions): Promise<Buf
     `Feldtag: ${d}.${m}.${y}${h.place ? `, ${h.place}` : ""}`,
     h.researchers.length ? `Forschende: ${h.researchers.join(", ")}` : "",
     h.reference ? `Referenzuhr: ${h.reference}` : "",
-    `Mediendatei: ${opts.mediaFileName}`,
+    `Mediendatei: ${opts.mediaFileName} (Montage-ID ${h.montageId}, ${h.modeLabel})`,
     h.sources.length ? `Quellen: ${h.sources.join(", ")}` : "",
     ...Object.entries(h.extra)
       .filter(([, v]) => v.trim())

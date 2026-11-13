@@ -19,7 +19,7 @@ interface ExportState {
   job: ExportJob | null;
   results: Record<string, ExportOutcome>;
   errors: Record<string, string>;
-  start(sessionId: string, opts: { video: boolean; resolve: boolean; mixAudio: boolean }): void;
+  start(sessionId: string, opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean }): void;
 }
 
 const Ctx = createContext<ExportState | null>(null);
@@ -39,7 +39,10 @@ export function ExportProvider({ children }: { children: ReactNode }) {
       ),
     [],
   );
-  const start = (sessionId: string, opts: { video: boolean; resolve: boolean; mixAudio: boolean }) => {
+  const start = (
+    sessionId: string,
+    opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean },
+  ) => {
     if (job) return;
     setJob({ sessionId, video: opts.video, progress: null, videoFrom: null });
     setErrors((x) => {

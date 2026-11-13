@@ -476,14 +476,20 @@ try {
   });
   await shot("-montage");
   await montage.getByRole("button", { name: "Pause" }).click();
-  // Tagebucheintrag: Scan-Ausschnitt groß, dazu der abgetippte Text.
-  await page.keyboard.press("Home");
-  for (let i = 0; i < 12 && !(await montageBar.innerText()).includes("Tagebuch"); i++)
-    await montage.getByRole("button", { name: "Nächstes Stück" }).click();
-  await montage.locator("canvas[aria-label^='Tagebuch']").waitFor();
-  await shot("-montage-tagebuch");
   await montage.getByRole("button", { name: "Schließen" }).click();
   await montage.waitFor({ state: "detached" });
+  // In Echtzeit läuft auch die Zeit zwischen den Episoden: das Video wird länger.
+  const lengthOf = () => page.getByText("Videolänge").locator("xpath=..").locator("b").innerText();
+  const byEpisodes = await lengthOf();
+  await page.getByRole("switch", { name: "In Echtzeit statt nach Episoden" }).click();
+  await page.getByText("Zwischenzeiten").waitFor();
+  await page.waitForFunction((l) => {
+    const b = [...document.querySelectorAll("b")].find((e) => e.nextElementSibling?.textContent === "Videolänge");
+    return !!b && b.textContent !== l;
+  }, byEpisodes);
+  console.log(`Videolänge: ${byEpisodes} nach Episoden, ${await lengthOf()} in Echtzeit`);
+  await page.getByRole("switch", { name: "In Echtzeit statt nach Episoden" }).click();
+  await page.getByText("Zwischentafeln").waitFor();
   const t0 = Date.now();
   await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
   await page.getByRole("button", { name: "Ausgeben…" }).click();

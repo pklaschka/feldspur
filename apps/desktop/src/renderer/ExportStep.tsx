@@ -12,10 +12,10 @@ const api = window.feldspur;
 
 const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const FILE_ROLE: [RegExp, string][] = [
-  [/\.mp4$/, "Montagevideo: alle Episoden am Stück, Zwischentafeln für Fotos und Tagebuch"],
+  [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
   [/\.docx$/, "Zeitgerüst für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
   [/\.csv$/, "Begleitprotokoll: Herkunft und Zeitnachweis jeder Datei"],
-  [/\.fcpxml$/, "Schnittliste für DaVinci Resolve (Datei › Importieren › Timeline), Standbilder im Ordner daneben"],
+  [/\.fcpxml$/, "Schnittliste für DaVinci Resolve (Datei › Importieren › Timeline)"],
 ];
 
 export function ExportStep({ view }: { view: SessionView }) {
@@ -24,6 +24,7 @@ export function ExportStep({ view }: { view: SessionView }) {
   const [resolve, setResolve] = useState(false);
   const [watching, setWatching] = useState(false);
   const [mixAudio, setMixAudio] = useState(true);
+  const [realtime, setRealtime] = useState(false);
   const ex = useExport();
   const sessionId = view.session.id;
   const busy = ex.job?.sessionId === sessionId;
@@ -34,15 +35,15 @@ export function ExportStep({ view }: { view: SessionView }) {
 
   useEffect(() => {
     let live = true;
-    void api.previewExport(sessionId).then(
+    void api.previewExport(sessionId, realtime).then(
       (p) => live && setPreview(p),
       () => live && setPreview(null),
     );
     return () => {
       live = false;
     };
-  }, [view, sessionId]);
-  const run = () => ex.start(sessionId, { video, resolve, mixAudio });
+  }, [view, sessionId, realtime]);
+  const run = () => ex.start(sessionId, { video, resolve, mixAudio, realtime });
 
   const fact = (n: number | string, label: string) => (
     <div className="grid">
@@ -65,10 +66,15 @@ export function ExportStep({ view }: { view: SessionView }) {
               Die Zeitmarken <code>#hh:mm:ss-z#</code> zeigen auf Stellen im Video; die echte Uhrzeit steht in jeder
               Zeile dahinter.
             </p>
+            <p className="mb-1.5">
+              Das Video zeigt nur, was zum Zuordnen nötig ist: Uhrzeit, die laufenden Videos (gleichzeitige
+              nebeneinander) mit Datei und Stelle im Original, die laufenden Tonquellen und eine Montage-ID, die auch im
+              Kopf des Zeitgerüsts steht. Fotos und Tagebuch stehen im Zeitgerüst.
+            </p>
             <p>
-              Episoden laufen im Video in voller Länge. Zeit ohne Aufnahme wird zu einer kurzen Zwischentafel, Fotos und
-              Tagebucheinträge darin bekommen je drei Sekunden. Weitertippen kannst du in MAXQDA an jeder Stelle, weil
-              jede Zeile schon eine Zeitmarke hat.
+              Episoden laufen in voller Länge, Zeit dazwischen wird zu einer kurzen Tafel. In Echtzeit läuft der ganze
+              Einsatz am Stück, auch die Zeit ohne Episode. Weitertippen kannst du in MAXQDA an jeder Stelle, weil jede
+              Zeile schon eine Zeitmarke hat.
             </p>
           </>
         }
@@ -78,12 +84,19 @@ export function ExportStep({ view }: { view: SessionView }) {
           <div className="flex gap-8">
             {fact(preview ? formatDuration(preview.durationMs) : "–", "Videolänge")}
             {fact(preview?.episodes ?? "–", "Episoden")}
-            {fact(preview?.cards ?? "–", "Zwischentafeln")}
+            {fact(preview?.cards ?? "–", realtime ? "Zwischenzeiten" : "Zwischentafeln")}
           </div>
+          <label className="mt-4 flex items-center gap-2.5 text-[0.9rem]">
+            <Toggle checked={realtime} onChange={setRealtime} label="In Echtzeit statt nach Episoden" />
+            In Echtzeit statt nach Episoden
+          </label>
+          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+            Der ganze Einsatz am Stück, auch die Zeit zwischen den Episoden. Länger, aber Videozeit = Uhrzeit ab Beginn.
+          </p>
           <Button className="mt-4" disabled={empty} onClick={() => setWatching(true)}>
             Montage ansehen
           </Button>
-          <MontageView sessionId={sessionId} open={watching} onOpenChange={setWatching} />
+          <MontageView sessionId={sessionId} realtime={realtime} open={watching} onOpenChange={setWatching} />
           <label className="mt-5 flex items-center gap-2.5 text-[0.9rem]">
             <Toggle checked={video} onChange={setVideo} label="Montagevideo mit ausgeben" />
             Montagevideo mit ausgeben
@@ -106,7 +119,7 @@ export function ExportStep({ view }: { view: SessionView }) {
           </label>
           <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
             Dieselbe Montage als FCPXML, mit Markern für Mitschrift und Ereignisse. Resolve rechnet dann selbst; die
-            Uhrzeit-Einblendungen fehlen dort.
+            Einblendungen (Uhrzeit, Herkunft, Montage-ID) fehlen dort.
           </p>
           <div className="mt-5 flex items-center gap-3">
             <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>

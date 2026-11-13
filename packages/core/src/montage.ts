@@ -1,18 +1,21 @@
 /**
  * Montage: aus Episoden und Zwischenzeiten eine durchgehende Videozeit machen.
- * Episoden laufen in voller Länge. Jede Zwischenzeit wird zu einer Tafel: Fotos und
- * Tagebucheinträge darin bekommen je ein paar Sekunden Standbild, reiner Leerlauf eine
- * kurze Tafel mit Uhrzeit. Überlappende Quellen verlängern nichts, alles folgt der Uhrzeit.
+ * - episodes: Episoden laufen in voller Länge, jede Zwischenzeit wird zu einer kurzen Tafel.
+ *   Fotos und Tagebucheinträge darin zeigen auf den Beginn der Tafel (die Bilder stehen im
+ *   Zeitgerüst, nicht im Video).
+ * - realtime: alles in Echtzeit vom ersten bis zum letzten Ereignis, auch Zeit ohne Aufnahme.
+ * Überlappende Quellen verlängern nichts, alles folgt der Uhrzeit.
  */
 import type { Episode, EpisodeResult, Gap } from "./episodes.ts";
 import type { Id } from "./model.ts";
 import type { LocalMs } from "./time.ts";
 
+export type MontageMode = "episodes" | "realtime";
+
 export interface MontageOptions {
-  /** Länge einer Tafel ohne Inhalt. */
+  mode?: MontageMode;
+  /** Länge einer Tafel für eine Zwischenzeit (nur bei episodes). */
   cardMs?: number;
-  /** Standzeit je Foto oder Tagebucheintrag in einer Zwischenzeit. */
-  itemMs?: number;
 }
 
 /** Ein Ding, das in einer Tafel gezeigt wird, in Uhrzeit-Reihenfolge. */
@@ -42,11 +45,12 @@ export type MontageSegment =
     };
 
 export interface MontagePlan {
+  mode: MontageMode;
   segments: MontageSegment[];
   durationMs: number;
   /**
-   * Stelle im Montagevideo zu einer Uhrzeit. In einer Episode genau, in einer Tafel der Beginn
-   * der Tafel. itemId legt ein Foto oder einen Tagebucheintrag auf sein eigenes Standbild.
+   * Stelle im Montagevideo zu einer Uhrzeit. In einer Episode (und in Echtzeit überall) genau,
+   * in einer Tafel der Beginn der Tafel.
    */
   toMontage(clockMs: LocalMs, itemId?: Id): number | null;
 }
@@ -60,8 +64,8 @@ export function planMontage(
   timeOf: (kind: "source" | "diary", id: Id) => LocalMs | undefined,
   opts: MontageOptions = {},
 ): MontagePlan {
-  const cardMs = opts.cardMs ?? 6_000;
-  const itemMs = opts.itemMs ?? 3_000;
+  const mode = opts.mode ?? "episodes";
+  const cardMs = opts.cardMs ?? 3_000;
   type Seg = MontageSegment extends infer S
     ? S extends MontageSegment
       ? Omit<S, "montageStartMs" | "montageMs">
@@ -83,7 +87,8 @@ export function planMontage(
         .sort((x, y) => x.atMs - y.atMs || x.id.localeCompare(y.id));
       return {
         at: g.startMs,
-        len: Math.max(cardMs, items.length * itemMs),
+        // Echtzeit: die Zwischenzeit läuft in voller Länge; sonst eine kurze Tafel.
+        len: mode === "realtime" ? g.endMs - g.startMs : cardMs,
         seg: { kind: "card" as const, gap: g, fromMs: g.startMs, toMs: g.endMs, items },
       };
     }),
@@ -96,23 +101,17 @@ export function planMontage(
     return out;
   });
 
-  const toMontage = (clockMs: LocalMs, itemId?: Id): number | null => {
-    if (itemId) {
-      for (const s of segments) {
-        if (s.kind !== "card") continue;
-        const i = s.items.findIndex((x) => x.id === itemId);
-        if (i >= 0) return s.montageStartMs + i * itemMs;
-      }
-    }
+  const toMontage = (clockMs: LocalMs): number | null => {
     // Episoden zuerst: An den Grenzen gehört die Uhrzeit zur laufenden Aufnahme, nicht zur Tafel.
     for (const s of segments) {
       if (s.kind === "episode" && clockMs >= s.fromMs && clockMs <= s.toMs)
         return s.montageStartMs + (clockMs - s.fromMs);
     }
     for (const s of segments) {
-      if (s.kind === "card" && clockMs >= s.fromMs && clockMs <= s.toMs) return s.montageStartMs;
+      if (s.kind === "card" && clockMs >= s.fromMs && clockMs <= s.toMs)
+        return mode === "realtime" ? s.montageStartMs + (clockMs - s.fromMs) : s.montageStartMs;
     }
     return null;
   };
-  return { segments, durationMs: t, toMontage };
+  return { mode, segments, durationMs: t, toMontage };
 }

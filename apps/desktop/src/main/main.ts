@@ -71,6 +71,8 @@ function openStore(path: string, create: boolean): ProjectInfo | null {
   return info;
 }
 
+type ExportRequest = { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string };
+
 function registerIpc(): void {
   ipcMain.handle(IPC.currentProject, () => projectInfo());
 
@@ -199,25 +201,26 @@ function registerIpc(): void {
       return { view: buildSessionView(s, r.sessionId), count: r.count, dropped: r.dropped };
     },
   );
-  ipcMain.handle(IPC.previewExport, (_e, sessionId: string) => previewExport(requireStore(), sessionId));
-  ipcMain.handle(IPC.montagePreview, (_e, sessionId: string) => montagePlan(requireStore(), sessionId));
-  ipcMain.handle(
-    IPC.exportSession,
-    async (e, sessionId: string, opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; dir?: string }) => {
-      const s = requireStore();
-      let parent = opts.dir;
-      if (!parent) {
-        const r = await dialog.showOpenDialog(win!, {
-          title: "Wohin ausgeben?",
-          buttonLabel: "Hier ausgeben",
-          properties: ["openDirectory", "createDirectory"],
-        });
-        if (r.canceled || !r.filePaths[0]) return null;
-        parent = r.filePaths[0];
-      }
-      return runExport(s, e.sender, sessionId, parent, opts);
-    },
+  ipcMain.handle(IPC.previewExport, (_e, sessionId: string, realtime?: boolean) =>
+    previewExport(requireStore(), sessionId, realtime),
   );
+  ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
+    montagePlan(requireStore(), sessionId, realtime),
+  );
+  ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: ExportRequest) => {
+    const s = requireStore();
+    let parent = opts.dir;
+    if (!parent) {
+      const r = await dialog.showOpenDialog(win!, {
+        title: "Wohin ausgeben?",
+        buttonLabel: "Hier ausgeben",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (r.canceled || !r.filePaths[0]) return null;
+      parent = r.filePaths[0];
+    }
+    return runExport(s, e.sender, sessionId, parent, opts);
+  });
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
@@ -330,11 +333,11 @@ function registerIpc(): void {
       offsetMs === null
         ? { offsetBasis: "unknown", clockOffsetMs: 0, isReference: false }
         : {
-          offsetBasis: "manual",
-          clockOffsetMs: Math.round(offsetMs),
-          clockOffsetUncertaintyMs: 1000,
-          isReference: false,
-        },
+            offsetBasis: "manual",
+            clockOffsetMs: Math.round(offsetMs),
+            clockOffsetUncertaintyMs: 1000,
+            isReference: false,
+          },
     );
     return buildSessionView(s, d.sessionId);
   });

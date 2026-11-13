@@ -257,7 +257,7 @@ export interface ExportProgress {
 }
 
 /** Zeitgerüst ohne Video, zur Vorschau im Schritt „Ausgeben“. */
-export type { MontagePreview, PreviewPiece } from "@feldspur/media";
+export type { MontagePreview, PreviewMedia, PreviewPiece } from "@feldspur/media";
 
 export interface ScaffoldPreview {
   base: string;
@@ -353,16 +353,17 @@ export interface FeldspurApi {
   updateTranscriptLine(lineId: string, patch: TranscriptPatch): Promise<SessionView>;
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
-  previewExport(sessionId: string): Promise<ScaffoldPreview>;
+  /** realtime: alles in Echtzeit statt Episoden mit kurzen Tafeln. */
+  previewExport(sessionId: string, realtime?: boolean): Promise<ScaffoldPreview>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
-  montagePreview(sessionId: string): Promise<MontagePreview>;
+  montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
    * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = abgebrochen.
    */
   exportSession(
     sessionId: string,
-    opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; dir?: string },
+    opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string },
   ): Promise<ExportOutcome | null>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
   /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */

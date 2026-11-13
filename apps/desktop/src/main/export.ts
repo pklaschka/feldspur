@@ -14,7 +14,7 @@ import {
   type MontagePreview,
   type OverlayFrame,
   type OverlayRenderer,
-  type OverlayTimeline,
+  type OverlayHeader,
 } from "@feldspur/media";
 import { IPC, type ExportOutcome, type ScaffoldPreview } from "../shared/api.ts";
 
@@ -57,7 +57,7 @@ export function registerOverlayBridge(): void {
 
 /** Lässt die Oberfläche die Einblendungen zeichnen, in Häppchen, damit die IPC-Nachrichten klein bleiben. */
 function overlayVia(wc: WebContents): OverlayRenderer {
-  const ask = (tl: OverlayTimeline, frames: OverlayFrame[]) =>
+  const ask = (tl: OverlayHeader, frames: OverlayFrame[]) =>
     new Promise<Buffer[]>((resolve, reject) => {
       const id = nextId++;
       pending.set(id, { resolve, reject });
@@ -70,12 +70,14 @@ function overlayVia(wc: WebContents): OverlayRenderer {
   };
 }
 
-export function montagePlan(s: ProjectStore, sessionId: string): MontagePreview {
-  return montagePreview(buildScaffold(s, sessionId));
+const modeOf = (realtime?: boolean) => ({ mode: realtime ? ("realtime" as const) : ("episodes" as const) });
+
+export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
+  return montagePreview(buildScaffold(s, sessionId, modeOf(realtime)));
 }
 
-export function previewExport(s: ProjectStore, sessionId: string): ScaffoldPreview {
-  const sc = buildScaffold(s, sessionId);
+export function previewExport(s: ProjectStore, sessionId: string, realtime?: boolean): ScaffoldPreview {
+  const sc = buildScaffold(s, sessionId, modeOf(realtime));
   return {
     base: baseName(sc),
     durationMs: sc.plan.durationMs,
@@ -90,19 +92,20 @@ export async function runExport(
   wc: WebContents,
   sessionId: string,
   parent: string,
-  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean },
+  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
 ): Promise<ExportOutcome> {
   // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
   running = sessionId;
   try {
-    const dir = join(parent, baseName(buildScaffold(s, sessionId)));
+    const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(opts.realtime))));
     const r = await exportSession(s, sessionId, dir, {
       video: opts.video,
       resolve: opts.resolve,
       overlay: overlayVia(wc),
       renderImage: stillVia(wc),
       audioMix: opts.mixAudio === false ? "main" : "all",
+      ...modeOf(opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
     });
