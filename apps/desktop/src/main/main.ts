@@ -71,6 +71,8 @@ function openStore(path: string, create: boolean): ProjectInfo | null {
   return info;
 }
 
+type ExportRequest = { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string };
+
 function registerIpc(): void {
   ipcMain.handle(IPC.currentProject, () => projectInfo());
 
@@ -205,27 +207,20 @@ function registerIpc(): void {
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
     montagePlan(requireStore(), sessionId, realtime),
   );
-  ipcMain.handle(
-    IPC.exportSession,
-    async (
-      e,
-      sessionId: string,
-      opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string },
-    ) => {
-      const s = requireStore();
-      let parent = opts.dir;
-      if (!parent) {
-        const r = await dialog.showOpenDialog(win!, {
-          title: "Wohin ausgeben?",
-          buttonLabel: "Hier ausgeben",
-          properties: ["openDirectory", "createDirectory"],
-        });
-        if (r.canceled || !r.filePaths[0]) return null;
-        parent = r.filePaths[0];
-      }
-      return runExport(s, e.sender, sessionId, parent, opts);
-    },
-  );
+  ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: ExportRequest) => {
+    const s = requireStore();
+    let parent = opts.dir;
+    if (!parent) {
+      const r = await dialog.showOpenDialog(win!, {
+        title: "Wohin ausgeben?",
+        buttonLabel: "Hier ausgeben",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (r.canceled || !r.filePaths[0]) return null;
+      parent = r.filePaths[0];
+    }
+    return runExport(s, e.sender, sessionId, parent, opts);
+  });
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
