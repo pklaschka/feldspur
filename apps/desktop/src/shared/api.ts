@@ -224,6 +224,27 @@ export interface SessionView {
   avCount: number;
 }
 
+export interface ExportOutcome {
+  dir: string;
+  files: string[];
+  durationMs: number;
+}
+
+export interface ExportProgress {
+  step: string;
+  done: number;
+  total: number;
+}
+
+/** Zeitgerüst ohne Video, zur Vorschau im Schritt „Ausgeben“. */
+export interface ScaffoldPreview {
+  base: string;
+  durationMs: number;
+  episodes: number;
+  cards: number;
+  lines: string[];
+}
+
 export interface ImportOutcome {
   added: number;
   duplicates: number;
@@ -295,6 +316,17 @@ export interface FeldspurApi {
   ): Promise<{ view: SessionView; lineId: string }>;
   updateTranscriptLine(lineId: string, patch: TranscriptPatch): Promise<SessionView>;
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
+  /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
+  previewExport(sessionId: string): Promise<ScaffoldPreview>;
+  /**
+   * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
+   * Ordner; darin entsteht ein Unterordner je Einsatz. null = abgebrochen.
+   */
+  exportSession(sessionId: string, opts: { video: boolean; dir?: string }): Promise<ExportOutcome | null>;
+  onExportProgress(cb: (p: ExportProgress) => void): () => void;
+  /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */
+  onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
+  showInFolder(path: string): Promise<void>;
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
@@ -339,4 +371,10 @@ export const IPC = {
   deleteDiaryEntry: "diary:delete",
   patchDiaryEntry: "diary:patch",
   progress: "progress",
+  previewExport: "export:preview",
+  exportSession: "export:run",
+  exportProgress: "export:progress",
+  overlayRequest: "overlay:request",
+  overlayReply: "overlay:reply",
+  showInFolder: "shell:show-in-folder",
 } as const;

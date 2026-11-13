@@ -6,7 +6,7 @@
  *   FELDSPUR_SCREENSHOT=bild.png …                 speichert ein Bildschirmfoto
  *   FELDSPUR_E2E_APP=release/…/feldspur vpx test/smoke.e2e.ts   prüft das fertige Paket
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
@@ -378,6 +378,30 @@ try {
   await details.getByRole("button", { name: "Speichern" }).click();
   await details.waitFor({ state: "detached" });
   await page.locator("main header").getByText("Südstadt").waitFor();
+  // Ausgeben: Ordnerwahl ersetzen, Video mit Einblendungen aus der Oberfläche.
+  const out = join(dir, "Ausgabe");
+  mkdirSync(out);
+  await app.evaluate(({ dialog }, target) => {
+    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [target] })) as typeof dialog.showOpenDialog;
+  }, out);
+  await page.getByRole("tab", { name: /Ausgeben/ }).click();
+  const scaffold = page.getByTestId("scaffold-preview");
+  await scaffold
+    .getByText(/#00:00:00-0# .*Zwischentafel|#00:00:00-0# .*Episode 1/)
+    .first()
+    .waitFor();
+  console.log(`Zeitgerüst: ${await scaffold.locator("li").count()} Zeilen`);
+  await shot("-ausgeben");
+  const t0 = Date.now();
+  await page.getByRole("button", { name: "Ausgeben…" }).click();
+  await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
+  const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
+  console.log(`Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`);
+  if (!files.some((f) => f.includes(".mp4")) || !files.some((f) => f.includes(".docx")))
+    throw new Error("Ausgabe unvollständig");
+  await shot("-ausgegeben");
+  if (process.env.FELDSPUR_EXPORT_KEEP) cpSync(out, process.env.FELDSPUR_EXPORT_KEEP, { recursive: true });
+
   await page.getByRole("tab", { name: /Durchsehen/ }).click();
   if (process.env.FELDSPUR_SCREENSHOT) {
     await page.emulateMedia({ colorScheme: "dark" });

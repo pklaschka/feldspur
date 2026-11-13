@@ -71,6 +71,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   oder Videos ohne ffprobe-Zeit gebraucht werden.
 - **Eigene Lautstärkekurve** statt FFmpeg-silencedetect: dieselbe Hüllkurve liefert Stille, laute Stellen und
   Klatscher für den Abgleich, ein Durchlauf statt zwei.
+- **docx** (9.15.0, MIT) schreibt das Zeitgerüst als Word-Datei, mit eingebetteten Bildern. Kein Zusatzprogramm
+  nötig; Pandoc oder LibreOffice wären schwerer mitzuliefern.
 - **pdf.js** (`pdfjs-dist`, fest auf 5.4.624) für PDF-Scans in Vorschau und Abtipp-Ansicht. Neuere 5.x-Fassungen nutzen
   `Map.getOrInsertComputed`, das Electron 39 noch nicht kennt.
 
@@ -97,6 +99,12 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Dazwischen liegen Zwischenzeiten mit Fotos und Tagebucheinträgen.
 - **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
+- **Ausgabe**: ein Ordner pro Einsatz. Das **Montagevideo** zeigt alle Episoden in voller Länge; Zeit ohne Episode
+  wird zur Zwischentafel, Fotos und Tagebucheinträge darin stehen je 3 s. Eingeblendet sind Uhrzeit, laufende Quellen
+  und zwei Zeitleisten (ganzer Einsatz, ± 2,5 Min.); gezeichnet in der Oberfläche, weil die LGPL-Fassung von FFmpeg
+  keine Schrift setzt. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins Montagevideo und die
+  Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft
+  und Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz).
 
@@ -147,7 +155,7 @@ von selbst; `FELDSPUR_FFMPEG`/`FELDSPUR_FFPROBE` überschreiben das. Das Paket i
 
 ## Noch offen
 
-- Exportformat (Zeitgerüst + Tagesvideo) wartet auf den MAXQDA-Test.
+- Ausgabe: gleichzeitige Videos nebeneinander zeigen, PDF-Seiten als Bild ins Zeitgerüst, Dokumentvariablen.
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - ExifTool statt exifr für RAW/HEIC.

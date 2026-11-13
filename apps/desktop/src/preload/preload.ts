@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import { IPC, type FeldspurApi } from "../shared/api.ts";
+import { IPC, type ExportProgress, type FeldspurApi } from "../shared/api.ts";
 
 const api: FeldspurApi = {
   newProject: () => ipcRenderer.invoke(IPC.newProject),
@@ -41,6 +41,24 @@ const api: FeldspurApi = {
     return () => ipcRenderer.removeListener(IPC.progress, listener);
   },
   pathForFile: (file) => webUtils.getPathForFile(file),
+  previewExport: (id) => ipcRenderer.invoke(IPC.previewExport, id),
+  exportSession: (id, opts) => ipcRenderer.invoke(IPC.exportSession, id, opts),
+  onExportProgress: (cb) => {
+    const listener = (_e: unknown, p: ExportProgress) => cb(p);
+    ipcRenderer.on(IPC.exportProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.exportProgress, listener);
+  },
+  onOverlayRequest: (render) => {
+    const listener = (_e: unknown, id: number, timeline: unknown, frames: unknown[]) => {
+      render(timeline, frames).then(
+        (pngs) => ipcRenderer.send(IPC.overlayReply, id, pngs, null),
+        (err: unknown) => ipcRenderer.send(IPC.overlayReply, id, [], String(err)),
+      );
+    };
+    ipcRenderer.on(IPC.overlayRequest, listener);
+    return () => ipcRenderer.removeListener(IPC.overlayRequest, listener);
+  },
+  showInFolder: (path) => ipcRenderer.invoke(IPC.showInFolder, path),
 };
 
 contextBridge.exposeInMainWorld("feldspur", api);

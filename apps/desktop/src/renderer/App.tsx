@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
+import { ExportStep } from "./ExportStep.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
+import { renderOverlays } from "./overlay.ts";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
 import { Preview } from "./Preview.tsx";
@@ -12,7 +14,7 @@ import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Transcriber } from "./Transcriber.tsx";
 import { Sync } from "./Sync.tsx";
-import { Button, cx, Panel, StepHeader, TooltipProvider } from "./ui.tsx";
+import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -50,6 +52,15 @@ export function App() {
       return undefined;
     }
   }, []);
+
+  // Einblendungen fürs Montagevideo zeichnet die Oberfläche (Schrift kann die LGPL-Fassung von ffmpeg nicht).
+  useEffect(
+    () =>
+      api.onOverlayRequest((tl, frames) =>
+        renderOverlays(tl as Parameters<typeof renderOverlays>[0], frames as Parameters<typeof renderOverlays>[1]),
+      ),
+    [],
+  );
 
   useEffect(() => {
     void api.currentProject().then((p) => {
@@ -326,7 +337,7 @@ function SessionPane({
               )}
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
-              <ExportPlaceholder view={view} />
+              <ExportStep view={view} guard={guard} />
             </Tabs.Content>
           </main>
         </Tabs.Root>
@@ -367,34 +378,5 @@ function SessionPane({
         <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
       </SourceActionsProvider>
     </PlaybackProvider>
-  );
-}
-
-function ExportPlaceholder({ view }: { view: SessionView }) {
-  const fact = (n: number | string, label: string) => (
-    <div className="grid">
-      <b className="text-2xl font-semibold">{n}</b>
-      <span className="text-[0.8rem] text-muted">{label}</span>
-    </div>
-  );
-  return (
-    <>
-      <StepHeader title="Ausgeben" summary="Noch in Vorbereitung: wartet auf den Test in MAXQDA." />
-      <Panel className="max-w-[640px]">
-        <p className="mb-2">
-          Hier entsteht das Dokument für MAXQDA: ein Dokument pro Einsatz, mit Zeitmarken, Episoden und den
-          eingebetteten Tagebuchseiten und Fotos.
-        </p>
-        <p className="text-muted">
-          Das genaue Format steht noch aus. Sobald dein Test in MAXQDA zeigt, welche Variante sich am besten importieren
-          lässt, baue ich diesen Schritt.
-        </p>
-        <div className="mt-4 flex gap-8">
-          {fact(view.rows.length, "Quellen")}
-          {fact(view.episodes?.length ?? "–", "Episoden")}
-          {fact(view.rows.filter((r) => r.status === "ok").length, "sicher verortet")}
-        </div>
-      </Panel>
-    </>
   );
 }
