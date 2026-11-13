@@ -23,6 +23,7 @@ export function ExportStep({ view }: { view: SessionView }) {
   const [video, setVideo] = useState(true);
   const [resolve, setResolve] = useState(false);
   const [watching, setWatching] = useState(false);
+  const [mixAudio, setMixAudio] = useState(true);
   const ex = useExport();
   const sessionId = view.session.id;
   const busy = ex.job?.sessionId === sessionId;
@@ -41,7 +42,7 @@ export function ExportStep({ view }: { view: SessionView }) {
       live = false;
     };
   }, [view, sessionId]);
-  const run = () => ex.start(sessionId, { video, resolve });
+  const run = () => ex.start(sessionId, { video, resolve, mixAudio });
 
   const fact = (n: number | string, label: string) => (
     <div className="grid">
@@ -90,6 +91,14 @@ export function ExportStep({ view }: { view: SessionView }) {
           <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
             Dauert je nach Länge einige Minuten; bei der nächsten Ausgabe wird nur neu gerechnet, was sich geändert hat.
             Ohne Video entstehen nur Zeitgerüst und Protokoll.
+          </p>
+          <label className="mt-3 flex items-center gap-2.5 text-[0.9rem]">
+            <Toggle checked={mixAudio} onChange={setMixAudio} label="Ton aller Geräte mischen" />
+            Ton aller Geräte mischen
+          </label>
+          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+            Laufen mehrere Aufnahmen gleichzeitig, liegt ihr Ton übereinander. Aus: nur die Hauptquelle (Referenzgerät,
+            sonst die längste). Bei ungenauem Abgleich klingt die Mischung hallig.
           </p>
           <label className="mt-3 flex items-center gap-2.5 text-[0.9rem]">
             <Toggle checked={resolve} onChange={setResolve} label="Schnittliste für DaVinci Resolve" />

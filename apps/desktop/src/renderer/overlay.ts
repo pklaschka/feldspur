@@ -5,15 +5,14 @@
  */
 import type { OverlayFrame, OverlayTimeline } from "@feldspur/media";
 import { formatClock } from "@feldspur/core/time";
+import { H, LAYOUT, SIDE_CAPTION_H, stillBox, videoTiles, W } from "@feldspur/media/layout";
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
-const W = 1280;
-const H = 720;
-const TOP = 52;
-const MAIN = { x: 0, y: 52, w: 944, h: 531 };
-const SIDE = { x: 944, y: 52, w: W - 944, h: 531 };
-const BOTTOM = { y: 583, h: H - 583 };
+const TOP = LAYOUT.top.h;
+const MAIN = LAYOUT.main;
+const SIDE = LAYOUT.side;
+const BOTTOM = LAYOUT.bottom;
 const ZOOM_MS = 5 * 60_000;
 
 const C = {
@@ -187,11 +186,41 @@ export function drawOverlay(ctx: Ctx2D, tl: OverlayTimeline, f: OverlayFrame): v
     lines.forEach((l, i) => ctx.fillText(l, MAIN.x + 20, MAIN.y + MAIN.h - h + 19 + i * 22));
   }
 
+  // Mehrere Videos nebeneinander: Kurzzeichen und Gerät oben links in jedem Feld.
+  if (f.tiles.length > 1) {
+    ctx.font = `600 13px ${FONT}`;
+    videoTiles(f.tiles.length).forEach((b, i) => {
+      const label = truncate(ctx, f.tiles[i] ?? "", b.w - 24);
+      const w = ctx.measureText(label).width + 14;
+      ctx.fillStyle = C.bar;
+      ctx.fillRect(b.x + 6, b.y + 6, w, 22);
+      ctx.fillStyle = C.ink;
+      ctx.fillText(label, b.x + 13, b.y + 17);
+    });
+  }
+
+  // Seitenspalte: Text zum Standbild (Tagebuch-Abschrift) unter dem Bild, ohne Bild von oben an.
+  if (f.kind === "episode" && f.stillText) {
+    const box = stillBox("episode", true);
+    const top = f.hasStill ? box.y + box.h + 10 : SIDE.y + 14;
+    const bottom = SIDE.y + SIDE.h - SIDE_CAPTION_H - 8;
+    ctx.font = `15px ${FONT}`;
+    const lh = 21;
+    const max = Math.max(1, Math.floor((bottom - top) / lh));
+    const lines = wrap(ctx, f.stillText, SIDE.w - 24);
+    const shown = lines.slice(0, max);
+    if (lines.length > max) shown[max - 1] = truncate(ctx, `${shown[max - 1]} …`, SIDE.w - 24);
+    ctx.fillStyle = C.bar;
+    ctx.fillRect(SIDE.x + 1, top - 6, SIDE.w - 1, shown.length * lh + 10);
+    ctx.fillStyle = C.ink;
+    shown.forEach((l, i) => ctx.fillText(l, SIDE.x + 12, top + lh / 2 + i * lh));
+  }
+
   // Seitenspalte: Unterschrift zum Standbild (das Bild selbst setzt ffmpeg darunter).
   ctx.fillStyle = C.bar;
-  ctx.fillRect(SIDE.x, SIDE.y + SIDE.h - 32, SIDE.w, 32);
+  ctx.fillRect(SIDE.x, SIDE.y + SIDE.h - SIDE_CAPTION_H, SIDE.w, SIDE_CAPTION_H);
   ctx.font = `13px ${FONT}`;
-  ctx.fillStyle = f.hasStill && f.kind === "episode" ? C.ink : C.muted;
+  ctx.fillStyle = (f.hasStill || f.stillText) && f.kind === "episode" ? C.ink : C.muted;
   ctx.fillText(
     truncate(ctx, f.kind === "episode" ? f.caption || "Foto/Tagebuch erscheinen hier" : "", SIDE.w - 20),
     SIDE.x + 10,

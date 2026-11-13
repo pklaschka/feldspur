@@ -349,11 +349,13 @@ export interface FeldspurApi {
    */
   exportSession(
     sessionId: string,
-    opts: { video: boolean; resolve?: boolean; dir?: string },
+    opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; dir?: string },
   ): Promise<ExportOutcome | null>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
   /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */
   onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
+  /** Die Oberfläche zeichnet Bildausschnitte, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG. */
+  onStillRequest(render: (ref: unknown, pdf: boolean) => Promise<Uint8Array>): () => void;
   showInFolder(path: string): Promise<void>;
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
@@ -407,5 +409,7 @@ export const IPC = {
   exportProgress: "export:progress",
   overlayRequest: "overlay:request",
   overlayReply: "overlay:reply",
+  stillRequest: "still:request",
+  stillReply: "still:reply",
   showInFolder: "shell:show-in-folder",
 } as const;

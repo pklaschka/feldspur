@@ -1,11 +1,12 @@
 /**
  * Schnittliste für DaVinci Resolve (und Final Cut Pro): dieselbe Montage als FCPXML 1.9.
- * Resolve rechnet dann selbst (mit Grafikkarte). Enthalten sind Video, Hauptton, Standbilder
+ * Resolve rechnet dann selbst (mit Grafikkarte). Enthalten sind Videos (gleichzeitige nebeneinander), Ton je Gerät auf eigener Spur, Standbilder
  * und Marker für Episoden, Tafeln, Fotos, Tagebuch und Mitschrift. Die Einblendungen (Uhrzeit,
  * Zeitleisten) fehlen; die Uhrzeit steht in den Markern.
  */
 import { pathToFileURL } from "node:url";
-import { FPS, H, LAYOUT, W, type Piece } from "./montage-video.ts";
+import { FPS, H, stillBox, videoTiles, W, type Box } from "./layout.ts";
+import type { Piece } from "./montage-video.ts";
 import { entryText, type Scaffold } from "./scaffold.ts";
 
 const esc = (s: string) =>
@@ -13,13 +14,22 @@ const esc = (s: string) =>
 /** Rationale Zeit in Bildern der Sequenz. */
 const t = (frames: number) => (frames === 0 ? "0s" : `${frames}/${FPS}s`);
 const msFrames = (ms: number) => Math.round((ms * FPS) / 1000);
-/** Mitte der Seitenspalte, in FCPXML-Einheiten (Bildhöhe = 100, Ursprung in der Mitte). */
-const SIDE_X = (((LAYOUT.side.x + LAYOUT.side.w / 2 - W / 2) / H) * 100).toFixed(2);
+/**
+ * Ein Bild in ein Feld setzen: Mitte in FCPXML-Einheiten (Bildhöhe = 100, Ursprung in der Mitte,
+ * y nach oben), Maßstab bezogen auf das ganze Bild.
+ */
+const transform = (b: Box, scale = Math.min(b.w / W, b.h / H)) => {
+  const x = (((b.x + b.w / 2 - W / 2) / H) * 100).toFixed(2);
+  const y = (((H / 2 - (b.y + b.h / 2)) / H) * 100).toFixed(2);
+  return `<adjust-transform position="${x} ${y}" scale="${scale.toFixed(3)} ${scale.toFixed(3)}"/>`;
+};
 
 export interface FcpxmlOptions {
   projectName: string;
   /** Bilddateien je Standbild-Datei aus der Montage → Pfad, unter dem Resolve sie findet. */
   stillPath: (file: string) => string;
+  /** Ton wie im Montagevideo: alle laufenden Geräte (Standard) oder nur die Hauptquelle. */
+  audioMix?: "all" | "main";
 }
 
 export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions): string {
@@ -56,51 +66,46 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
   for (const p of pieces) {
     const len = p.f1 - p.f0;
     const children: string[] = [];
-    if (p.video) {
-      const v = p.video.source;
-      const vid = asset(v.originalPath, v.fileName, "av", v.durationMs);
-      const start = msFrames(p.video.fromMs);
-      const ownAudio = p.audio?.source.id === v.id;
-      if (p.audio && !ownAudio) {
-        const a = p.audio.source;
-        const aid = asset(a.originalPath, a.fileName, a.kind === "video" ? "av" : "audio", a.durationMs);
-        children.push(
-          `          <asset-clip ref="${aid}" lane="-1" offset="${t(start)}" start="${t(msFrames(p.audio.fromMs))}" duration="${t(len)}" srcEnable="audio" name="${esc(a.label)}"/>`,
-        );
-      }
-      if (p.still) {
-        const sid = asset(opts.stillPath(p.still.file), p.still.caption, "image", null);
-        children.push(
-          `          <video ref="${sid}" lane="1" offset="${t(start)}" start="0s" duration="${t(len)}" name="${esc(p.still.caption)}">\n            <adjust-transform position="${SIDE_X} 0" scale="0.25 0.25"/>\n          </video>`,
-        );
-      }
-      children.push(...markersIn(p, start));
-      spine.push(
-        `        <asset-clip ref="${vid}" offset="${t(p.f0)}" start="${t(start)}" duration="${t(len)}" name="${esc(`${p.title} · ${v.label}`)}"${ownAudio || !p.audio ? "" : ` srcEnable="video"`}>\n${children.join("\n")}\n        </asset-clip>`,
-      );
-      continue;
-    }
-    // Ohne Video: Lücke, darin Ton und Standbild als verbundene Clips.
-    if (p.audio) {
-      const a = p.audio.source;
-      const aid = asset(a.originalPath, a.fileName, a.kind === "video" ? "av" : "audio", a.durationMs);
+    const [main, ...more] = p.videos;
+    // Verbundene Clips liegen in der Zeit der Hauptspur-Clips: beim Video ab dessen Startstelle.
+    const base = main ? msFrames(main.fromMs) : 0;
+    const tiles = videoTiles(p.videos.length);
+    more.forEach((v, k) => {
+      const id = asset(v.source.originalPath, v.source.fileName, "av", v.source.durationMs);
       children.push(
-        `          <asset-clip ref="${aid}" lane="-1" offset="0s" start="${t(msFrames(p.audio.fromMs))}" duration="${t(len)}" srcEnable="audio" name="${esc(a.label)}"/>`,
+        `          <asset-clip ref="${id}" lane="${k + 1}" offset="${t(base)}" start="${t(msFrames(v.fromMs))}" duration="${t(len)}" srcEnable="video" name="${esc(v.label)}">\n            ${transform(tiles[k + 1]!)}\n          </asset-clip>`,
       );
-    }
-    if (p.still) {
-      const sid = asset(opts.stillPath(p.still.file), p.still.caption, "image", null);
-      const side = p.kind === "episode";
+    });
+    // Ton jeder laufenden Quelle auf eigener Spur, damit er sich in Resolve einzeln regeln lässt.
+    const sounds = opts.audioMix === "main" ? p.audios.slice(0, 1) : p.audios;
+    sounds.forEach((a, k) => {
+      const s = a.source;
+      const id = asset(s.originalPath, s.fileName, s.kind === "video" ? "av" : "audio", s.durationMs);
       children.push(
-        `          <video ref="${sid}" lane="1" offset="0s" start="0s" duration="${t(len)}" name="${esc(p.still.caption)}">${
-          side ? `\n            <adjust-transform position="${SIDE_X} 0" scale="0.25 0.25"/>\n          ` : ""
+        `          <asset-clip ref="${id}" lane="${-(k + 1)}" offset="${t(base)}" start="${t(msFrames(a.fromMs))}" duration="${t(len)}" srcEnable="audio" name="${esc(a.label)}"/>`,
+      );
+    });
+    if (p.still?.file) {
+      const id = asset(opts.stillPath(p.still.file), p.still.caption, "image", null);
+      const box = stillBox(p.kind, !!p.still.text);
+      children.push(
+        `          <video ref="${id}" lane="${more.length + 1}" offset="${t(base)}" start="0s" duration="${t(len)}" name="${esc(p.still.caption)}">${
+          p.kind === "episode" ? `\n            ${transform(box)}\n          ` : ""
         }</video>`,
       );
     }
-    children.push(...markersIn(p, 0));
-    spine.push(
-      `        <gap name="${esc(p.title)}" offset="${t(p.f0)}" start="0s" duration="${t(len)}">\n${children.join("\n")}\n        </gap>`,
-    );
+    children.push(...markersIn(p, base));
+    if (main) {
+      const id = asset(main.source.originalPath, main.source.fileName, "av", main.source.durationMs);
+      const own = more.length ? [`          ${transform(tiles[0]!)}`] : [];
+      spine.push(
+        `        <asset-clip ref="${id}" offset="${t(p.f0)}" start="${t(base)}" duration="${t(len)}" name="${esc(`${p.title} · ${main.label}`)}" srcEnable="video">\n${[...own, ...children].join("\n")}\n        </asset-clip>`,
+      );
+    } else {
+      spine.push(
+        `        <gap name="${esc(p.title)}" offset="${t(p.f0)}" start="0s" duration="${t(len)}">\n${children.join("\n")}\n        </gap>`,
+      );
+    }
   }
 
   const total = pieces.at(-1)?.f1 ?? 0;

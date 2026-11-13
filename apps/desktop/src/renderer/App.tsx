@@ -8,6 +8,8 @@ import { ExportProvider, percent, useExport } from "./exportState.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector } from "./Inspector.tsx";
 import { renderOverlays } from "./overlay.ts";
+import { ResizeHandle, usePaneWidth } from "./resize.tsx";
+import { renderImageRefJpeg } from "./stillRender.ts";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
 import { Preview } from "./Preview.tsx";
@@ -41,6 +43,8 @@ function Logo({ small }: { small?: boolean }) {
 }
 
 export function App() {
+  const nav = usePaneWidth("einsaetze", 210, 150, 420);
+  const inspector = usePaneWidth("seitenleiste", 310, 260, 720);
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +65,12 @@ export function App() {
       api.onOverlayRequest((tl, frames) =>
         renderOverlays(tl as Parameters<typeof renderOverlays>[0], frames as Parameters<typeof renderOverlays>[1]),
       ),
+    [],
+  );
+
+  // Ausschnitte aus PDF-Scans für Montage und Zeitgerüst zeichnet ebenfalls die Oberfläche.
+  useEffect(
+    () => api.onStillRequest((ref, pdf) => renderImageRefJpeg(ref as Parameters<typeof renderImageRefJpeg>[0], pdf)),
     [],
   );
 
@@ -98,7 +108,17 @@ export function App() {
   return (
     <ExportProvider>
       <TooltipProvider delayDuration={250}>
-        <div className="grid h-full grid-cols-[210px_minmax(0,1fr)_310px]">
+        <div
+          className="relative grid h-full"
+          style={{ gridTemplateColumns: `${nav.width}px minmax(0,1fr) ${inspector.width}px` }}
+        >
+          <ResizeHandle pane={nav} side="left" label="Breite der Einsatzliste" left={`${nav.width}px`} />
+          <ResizeHandle
+            pane={inspector}
+            side="right"
+            label="Breite der Seitenleiste"
+            left={`calc(100% - ${inspector.width}px)`}
+          />
           <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4">
             <div className="px-2">
               <Logo small />
