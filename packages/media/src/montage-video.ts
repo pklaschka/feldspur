@@ -274,7 +274,7 @@ export interface MontageVideoOptions {
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
 const CHUNK_FRAMES = 60 * FPS;
 /** Erhöhen, wenn sich das Aussehen ändert, damit alte Abschnitte nicht wiederverwendet werden. */
-const LOOK_VERSION = 4;
+const LOOK_VERSION = 5;
 
 function chunks(pieces: Piece[]): Piece[] {
   return pieces.flatMap((p) => {
@@ -285,7 +285,7 @@ function chunks(pieces: Piece[]): Piece[] {
         ...p,
         f0,
         f1: Math.min(p.f1, f0 + CHUNK_FRAMES),
-        clock0: p.kind === "episode" ? p.clock0 + shift : p.clock0,
+        clock0: p.kind === "card" ? p.clock0 : p.clock0 + shift,
         videos: p.videos.map((v) => ({ ...v, fromMs: v.fromMs + shift })),
         audios: p.audios.map((v) => ({ ...v, fromMs: v.fromMs + shift })),
       });
