@@ -1,8 +1,8 @@
 import { useEffect, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
-import { Button, cx, Glyph, Notice, Pill, StatusDot, Tip } from "./ui.tsx";
+import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { Button, cx, Glyph, Notice, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -58,9 +58,23 @@ export function Collect({
       onDragLeave={() => setHover(false)}
       onDrop={onDrop}
     >
+      <StepHeader
+        title="Einsammeln"
+        summary={
+          empty
+            ? "Alle Aufzeichnungen dieses Einsatzes hierher ziehen."
+            : `${view.rows.length} ${view.rows.length === 1 ? "Quelle" : "Quellen"} von ${view.allDevices.length} ${view.allDevices.length === 1 ? "Gerät" : "Geräten"}.`
+        }
+      >
+        {!empty && (
+          <Button variant="primary" onClick={onNext}>
+            Weiter: Uhren abgleichen →
+          </Button>
+        )}
+      </StepHeader>
       <div
         className={cx(
-          "mb-4.5 flex items-center gap-4 rounded-[10px] border-[1.5px] border-dashed px-4 py-3",
+          "mb-5 flex items-center gap-4 rounded-[10px] border-[1.5px] border-dashed px-4 py-3",
           hover ? "border-accent bg-accent-soft" : "border-line-2 bg-panel-2",
           empty && "flex-col px-8 py-16 text-center",
         )}
@@ -78,17 +92,15 @@ export function Collect({
       {notice && <Notice>{notice}</Notice>}
       {!empty && (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">Geräte</h2>
+          <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h3 className="font-semibold">Geräte</h3>
             <span className="text-[0.8rem] text-muted">
               erkannt aus Kameramodell oder Dateinamen · Namen anklicken zum Ändern
             </span>
             <span className="flex-1" />
-            <Button variant="primary" onClick={onNext}>
-              Weiter: Uhren abgleichen →
-            </Button>
+            <StatusLegend />
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] items-start gap-3.5">
+          <div className="columns-[300px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
             {view.allDevices.map((d) => (
               <DeviceCard
                 key={d.id}
@@ -183,8 +195,12 @@ function SourceList({
             <span className="truncate" title={r.fileName}>
               {r.fileName}
             </span>
-            <span className="font-mono text-[0.78rem] text-ink-2">
-              {r.startMs === null ? "–" : lage(r.startMs, r.endMs)}
+            <span className="font-mono text-[0.78rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
+              {r.startMs === null
+                ? "–"
+                : r.endMs !== null && r.endMs !== r.startMs
+                  ? `${hm(r.startMs)}–${hm(r.endMs)}`
+                  : lage(r.startMs, null)}
             </span>
             <Tip content={STATUS_TEXT[r.status]}>
               <span>

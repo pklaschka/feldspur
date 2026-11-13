@@ -8,7 +8,12 @@ import { hm } from "./format.ts";
 export const MIN = 60_000;
 export const RULER_H = 30;
 export const EPISODE_H = 40;
-export const TRACK_H = 46;
+export const TRACK_H = 52;
+/** Höhe der Balken in einer Spur. */
+const BAR_H = 32;
+const BAR_Y = (TRACK_H - BAR_H) / 2;
+/** Kurze Clips bleiben sichtbar und anklickbar. */
+export const MIN_CLIP_W = 6;
 
 export interface Track {
   device: DeviceRow | null;
@@ -69,7 +74,7 @@ export function hitTest(items: Item[], s: Scale, x: number, y: number): Item | n
   let best: Item | null = null;
   for (const it of items) {
     const x0 = xOf(s, it.t0);
-    const x1 = Math.max(x0 + 2, xOf(s, it.t1));
+    const x1 = Math.max(x0 + (it.type === "clip" ? MIN_CLIP_W : 2), xOf(s, it.t1));
     if (it.type === "episode" || it.type === "gap") {
       if (y >= RULER_H + 9 && y <= RULER_H + 31 && x >= x0 && x <= x1) best = it.type === "episode" ? it : (best ?? it);
       continue;
@@ -215,6 +220,20 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
   }
 
   const visible = (it: Item) => x(it.t1) >= -20 && x(it.t0) <= W + 20;
+  // Wo das nächste Element derselben Spur beginnt: Beschriftungen neben Clips dürfen nicht hineinragen.
+  const nextStart = new Map<Item, number>();
+  const byTrack = new Map<number, Item[]>();
+  for (const it of st.items) {
+    if (it.type === "episode" || it.type === "gap") continue;
+    byTrack.set(it.track, [...(byTrack.get(it.track) ?? []), it]);
+  }
+  for (const list of byTrack.values()) {
+    list.sort((a, b) => a.t0 - b.t0);
+    list.forEach((it, i) => {
+      const next = list.slice(i + 1).find((n) => n.t0 > it.t1);
+      if (next) nextStart.set(it, x(next.t0) - (next.type === "point" ? 10 : 0));
+    });
+  }
   const gapPattern = hatch(ctx, p.sunken, null);
 
   for (const it of st.items) {
@@ -240,11 +259,17 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
     } else if (it.type === "episode") {
       const y = RULER_H + 9;
       const ww = Math.max(24, w);
-      roundRect(ctx, x0, y, ww, 22, 5);
-      ctx.fillStyle = p.ink;
-      ctx.fill();
+      roundRect(ctx, x0 + 0.5, y + 0.5, ww - 1, 21, 5);
       ctx.fillStyle = p.panel;
+      ctx.fill();
+      ctx.fillStyle = alpha(p.accent, hovEp(st, it) ? 0.22 : 0.12);
+      ctx.fill();
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = p.accent;
       ctx.font = `600 11px ${p.sans}`;
+      ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillText(`E${it.ep.index}`, x0 + 6, y + 11);
     } else {
@@ -254,8 +279,9 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
       const on = st.selected === r.id;
       const hov = st.hover !== null && "row" in st.hover && st.hover.row.id === r.id;
       if (it.type === "clip") {
-        const y = top + 9;
-        roundRect(ctx, x0, y, w, 28, 4);
+        const y = top + BAR_Y;
+        const w = Math.max(MIN_CLIP_W, x(it.t1) - x0);
+        roundRect(ctx, x0, y, w, BAR_H, 4);
         ctx.fillStyle = p.panel;
         ctx.fill();
         ctx.globalAlpha = hov ? 0.3 : 0.22;
@@ -267,40 +293,32 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
         const idle = hatch(ctx, alpha(k, 0.3), p.panel);
         for (const i of r.idle) {
           ctx.fillStyle = idle ?? p.sunken;
-          ctx.fillRect(x(i.startMs), y, Math.max(1, x(i.endMs) - x(i.startMs)), 28);
+          ctx.fillRect(x(i.startMs), y, Math.max(1, x(i.endMs) - x(i.startMs)), BAR_H);
         }
         ctx.fillStyle = k;
-        ctx.fillRect(x0, y, 3, 28);
+        ctx.fillRect(x0, y, 3, BAR_H);
         ctx.fillStyle = p.warn;
-        for (const t of r.loudAtMs) ctx.fillRect(x(t) - 1, y + 3, 2, 22);
-        if (w > 30) {
-          ctx.fillStyle = p.ink;
-          ctx.textBaseline = "middle";
-          ctx.font = `600 11px ${p.sans}`;
-          const lw = ctx.measureText(r.label).width;
-          ctx.fillText(r.label, x0 + 8, y + 14);
-          ctx.font = `11px ${p.sans}`;
-          ctx.fillText(r.fileName, x0 + 12 + lw, y + 14);
-        }
+        for (const t of r.loudAtMs) ctx.fillRect(x(t) - 1, y + 3, 2, BAR_H - 6);
         ctx.restore();
-        outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, 28, 4));
+        clipLabel(ctx, p, r.label, r.fileName, x0, w, y, nextStart.get(it) ?? W);
+        outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, BAR_H, 4));
       } else if (it.type === "diary") {
-        const y = top + 9;
+        const y = top + BAR_Y;
         const grad = ctx.createLinearGradient(x0, 0, x0 + w, 0);
         grad.addColorStop(0, alpha(k, 0.06));
         grad.addColorStop(1, alpha(k, hov ? 0.38 : 0.28));
-        roundRect(ctx, x0, y, w, 28, [4, 0, 0, 4]);
+        roundRect(ctx, x0, y, w, BAR_H, [4, 0, 0, 4]);
         ctx.fillStyle = grad;
         ctx.fill();
         ctx.fillStyle = k;
-        ctx.fillRect(x0 + w - 3, y, 3, 28);
-        if (w > 30) {
+        ctx.fillRect(x0 + w - 3, y, 3, BAR_H);
+        if (w > 44) {
           ctx.font = `600 11px ${p.sans}`;
           ctx.textAlign = "right";
           ctx.textBaseline = "middle";
-          ctx.fillText(`${r.label} · ${it.entry.number}`, x0 + w - 9, y + 14);
+          ctx.fillText(`${r.label} · ${it.entry.number}`, x0 + w - 9, y + BAR_H / 2);
         }
-        outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, 28, [4, 0, 0, 4]));
+        outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, BAR_H, [4, 0, 0, 4]));
       } else {
         const cy = top + TRACK_H / 2;
         ctx.translate(x0, cy);
@@ -313,7 +331,8 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
         ctx.fillStyle = k;
         ctx.fill();
         ctx.lineWidth = 1;
-        outline(ctx, p, r.status, on, () => roundRect(ctx, -sz / 2, -sz / 2, sz, sz, 3));
+        const ring = sz + 6;
+        outline(ctx, p, r.status, on, () => roundRect(ctx, -ring / 2, -ring / 2, ring, ring, 4), true);
       }
     }
     ctx.restore();
@@ -341,7 +360,59 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
   }
 }
 
-function outline(ctx: CanvasRenderingContext2D, p: Palette, status: string, on: boolean, path: () => void) {
+function hovEp(st: DrawState, it: Item): boolean {
+  return st.hover?.type === "episode" && it.type === "episode" && st.hover.ep.index === it.ep.index;
+}
+
+/**
+ * Beschriftung eines Clips: passt sie hinein, steht sie im Clip; sonst die Kurzbezeichnung daneben,
+ * aber nur bis zum nächsten Element der Spur. Nie zwei Texte übereinander.
+ */
+function clipLabel(
+  ctx: CanvasRenderingContext2D,
+  p: Palette,
+  label: string,
+  fileName: string,
+  x0: number,
+  w: number,
+  y: number,
+  limit: number,
+) {
+  ctx.save();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.font = `600 11px ${p.sans}`;
+  const lw = ctx.measureText(label).width;
+  ctx.font = `11px ${p.sans}`;
+  const fw = ctx.measureText(fileName).width;
+  const cy = y + BAR_H / 2;
+  if (w >= lw + 16) {
+    roundRect(ctx, x0, y, w, BAR_H, 4);
+    ctx.clip();
+    ctx.fillStyle = p.ink;
+    ctx.font = `600 11px ${p.sans}`;
+    ctx.fillText(label, x0 + 8, cy);
+    if (w >= lw + fw + 22) {
+      ctx.font = `11px ${p.sans}`;
+      ctx.fillStyle = p.muted;
+      ctx.fillText(fileName, x0 + 13 + lw, cy);
+    }
+  } else if (x0 + w + 6 + lw <= limit - 4) {
+    ctx.fillStyle = p.muted;
+    ctx.font = `600 11px ${p.sans}`;
+    ctx.fillText(label, x0 + w + 6, cy);
+  }
+  ctx.restore();
+}
+
+function outline(
+  ctx: CanvasRenderingContext2D,
+  p: Palette,
+  status: string,
+  on: boolean,
+  path: () => void,
+  solid = false,
+) {
   if (on) {
     ctx.save();
     path();
@@ -355,7 +426,7 @@ function outline(ctx: CanvasRenderingContext2D, p: Palette, status: string, on: 
   } else if (status === "check") {
     ctx.save();
     path();
-    ctx.setLineDash([4, 3]);
+    ctx.setLineDash(solid ? [] : [4, 3]);
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = p.warn;
     ctx.stroke();

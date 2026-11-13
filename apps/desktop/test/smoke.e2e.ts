@@ -207,11 +207,11 @@ try {
     .innerText();
   const [from, to] = rangeText.match(/\d\d:\d\d/g)!.map((t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3)));
   const xAt = (min: number) => box.x + ((min - from!) / (to! - from!)) * box.width;
-  await page.mouse.click(xAt(10 * 60 + 5), box.y + 30 + 40 + (tracks.length - 1) * 46 + 23);
+  await page.mouse.click(xAt(10 * 60 + 5), box.y + 30 + 40 + (tracks.length - 1) * 52 + 26);
   await page.getByTestId("inspector").getByText("Tagebuch_S01.jpg").first().waitFor();
   await page.getByRole("button", { name: "Schließen" }).click();
   // Klick in die Tonspur spult den Player dorthin: 10:16:20 ist im Rekorder 1:20.
-  await page.mouse.click(xAt(10 * 60 + 16 + 1 / 3), box.y + 30 + 40 + 23);
+  await page.mouse.click(xAt(10 * 60 + 16 + 1 / 3), box.y + 30 + 40 + 26);
   const pos = page.getByTestId("player-position");
   await pos.waitFor();
   const posText = await pos.innerText();
@@ -225,8 +225,12 @@ try {
   await shot("-wiedergabe");
   await page.getByRole("button", { name: "Abbrechen" }).click();
   await page.getByRole("button", { name: "Schließen" }).click();
-  await page.mouse.move(xAt(10 * 60 + 16), box.y + 30 + 40 + 23);
+  await page.mouse.move(xAt(10 * 60 + 16), box.y + 30 + 40 + 26);
   await shot("-durchsehen");
+  await page.getByRole("tab", { name: /Ausgeben/ }).click();
+  await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
+  await shot("-ausgeben");
+  await page.getByRole("tab", { name: /Durchsehen/ }).click();
   if (process.env.FELDSPUR_SCREENSHOT) {
     await page.emulateMedia({ colorScheme: "dark" });
     await page

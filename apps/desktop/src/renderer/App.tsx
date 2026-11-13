@@ -8,7 +8,7 @@ import { Inspector } from "./Inspector.tsx";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
 import { Sync } from "./Sync.tsx";
-import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
+import { Button, cx, Panel, StepHeader, TooltipProvider } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -196,9 +196,9 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
       badge: !view.devices.length
         ? null
         : !hasRef
-          ? "Referenz?"
+          ? "Referenz fehlt"
           : view.proposals.length
-            ? `${view.proposals.length} Vorschl.`
+            ? `${view.proposals.length} zu prüfen`
             : unsynced
               ? `${unsynced} offen`
               : "✓",
@@ -281,7 +281,9 @@ function SessionPane({ sessionId, guard, error }: { sessionId: string; guard: Gu
             />
           </Tabs.Content>
           <Tabs.Content value="review" className={tabContent}>
-            {step === "review" && <Review view={view} selected={selected} onSelect={setSelected} />}
+            {step === "review" && (
+              <Review view={view} selected={selected} onSelect={setSelected} onNext={() => setStep("export")} />
+            )}
           </Tabs.Content>
           <Tabs.Content value="export" className={tabContent}>
             <ExportPlaceholder view={view} />
@@ -324,21 +326,23 @@ function ExportPlaceholder({ view }: { view: SessionView }) {
     </div>
   );
   return (
-    <Panel className="max-w-[640px]">
-      <h2 className="text-base font-semibold">Ausgeben</h2>
-      <p className="my-2">
-        Hier entsteht das Dokument für MAXQDA: ein Dokument pro Einsatz, mit Zeitmarken, Episoden und den eingebetteten
-        Tagebuchseiten und Fotos.
-      </p>
-      <p className="text-muted">
-        Das genaue Format steht noch aus. Sobald dein Test in MAXQDA zeigt, welche Variante sich am besten importieren
-        lässt, baue ich diesen Schritt.
-      </p>
-      <div className="mt-4 flex gap-8">
-        {fact(view.rows.length, "Quellen")}
-        {fact(view.episodes?.length ?? "–", "Episoden")}
-        {fact(view.rows.filter((r) => r.status === "ok").length, "sicher verortet")}
-      </div>
-    </Panel>
+    <>
+      <StepHeader title="Ausgeben" summary="Noch in Vorbereitung: wartet auf den Test in MAXQDA." />
+      <Panel className="max-w-[640px]">
+        <p className="mb-2">
+          Hier entsteht das Dokument für MAXQDA: ein Dokument pro Einsatz, mit Zeitmarken, Episoden und den
+          eingebetteten Tagebuchseiten und Fotos.
+        </p>
+        <p className="text-muted">
+          Das genaue Format steht noch aus. Sobald dein Test in MAXQDA zeigt, welche Variante sich am besten importieren
+          lässt, baue ich diesen Schritt.
+        </p>
+        <div className="mt-4 flex gap-8">
+          {fact(view.rows.length, "Quellen")}
+          {fact(view.episodes?.length ?? "–", "Episoden")}
+          {fact(view.rows.filter((r) => r.status === "ok").length, "sicher verortet")}
+        </div>
+      </Panel>
+    </>
   );
 }

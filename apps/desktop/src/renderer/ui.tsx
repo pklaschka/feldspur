@@ -1,8 +1,7 @@
 /** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
-import { Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
+import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { SourceKind } from "@feldspur/core/model";
-import { KIND_GLYPH } from "./format.ts";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -55,10 +54,116 @@ export function Glyph({ kind, size = "md" }: { kind: SourceKind; size?: "sm" | "
         size === "sm" ? "size-[22px]" : "size-[26px]",
       )}
     >
-      {KIND_GLYPH[kind]}
+      <KindIcon kind={kind} size={size === "sm" ? 13 : 15} />
     </span>
   );
 }
+
+/** Kleine Linien-Symbole je Quellenart, statt Unicode-Zeichen, die je nach Schrift verschieden groß sind. */
+const KIND_PATHS: Record<SourceKind, string> = {
+  video: "M3 5.5h7.5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1ZM11.5 8.2 15 6v6l-3.5-2.2",
+  audio: "M8 2.5a2 2 0 0 1 2 2v3.5a2 2 0 0 1-4 0V4.5a2 2 0 0 1 2-2ZM4 8a4 4 0 0 0 8 0M8 12v2.5",
+  photo:
+    "M2.5 5h2.2l1.2-1.5h4.2L11.3 5h2.2a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM8 7a2.3 2.3 0 1 0 0 4.6A2.3 2.3 0 0 0 8 7Z",
+  diary: "M4 2.5h7.5a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4ZM4 2.5v11M2.8 5h2.4M2.8 8h2.4M2.8 11h2.4M7 5.5h3.5M7 8h3.5",
+  note: "M3.5 4h9M3.5 7h9M3.5 10h6M3.5 13h4",
+  gps: "M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14ZM8 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z",
+  other: "M4 8h.01M8 8h.01M12 8h.01",
+};
+export function KindIcon({ kind, size = 15 }: { kind: SourceKind; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={kind === "other" ? 2.5 : 1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d={KIND_PATHS[kind]} />
+    </svg>
+  );
+}
+
+/**
+ * Kopf eines Arbeitsschritts: Titel, ein Satz Stand, rechts die Aktionen (der Weiter-Knopf immer zuletzt).
+ * Längere Erklärungen stehen eingeklappt unter „Wie funktioniert das?“.
+ */
+export function StepHeader({
+  title,
+  summary,
+  help,
+  children,
+}: {
+  title: string;
+  summary?: ReactNode;
+  help?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <Collapsible.Root className="mb-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="min-w-56 flex-[1_1_0%]">
+          <h2 className="text-[1.05rem] font-semibold">{title}</h2>
+          {(summary || help) && (
+            <p className="text-[0.85rem] text-muted">
+              {summary}
+              {help && (
+                <>
+                  {summary && " "}
+                  <Collapsible.Trigger className="cursor-pointer text-accent hover:underline data-[state=open]:font-medium">
+                    Wie funktioniert das?
+                  </Collapsible.Trigger>
+                </>
+              )}
+            </p>
+          )}
+        </div>
+        {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+      </div>
+      {help && (
+        <Collapsible.Content className="mt-2 max-w-[72ch] rounded-lg border border-line bg-panel-2 px-3.5 py-2.5 text-[0.85rem] text-ink-2">
+          {help}
+        </Collapsible.Content>
+      )}
+    </Collapsible.Root>
+  );
+}
+
+/** Schließen-Knopf mit ausreichend großer Fläche. */
+export function CloseButton({ onClick, label = "Schließen" }: { onClick: () => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="grid size-7 flex-none cursor-pointer place-items-center rounded-md text-muted hover:bg-sunken hover:text-ink"
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="m4 4 8 8M12 4l-8 8" />
+      </svg>
+    </button>
+  );
+}
+
+/** Erklärt die Statuspunkte. */
+export function StatusLegend() {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem] text-muted">
+      {(["ok", "check", "unplaced"] as const).map((s) => (
+        <span key={s} className="inline-flex items-center gap-1.5">
+          <StatusDot status={s} />
+          {STATUS_LEGEND[s]}
+        </span>
+      ))}
+    </span>
+  );
+}
+const STATUS_LEGEND = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -95,10 +200,10 @@ export function Tip({ content, children }: { content: ReactNode; children: React
         <Tooltip.Content
           side="top"
           sideOffset={6}
-          className="z-50 max-w-xs rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] whitespace-pre-line text-panel shadow-lg"
+          className="z-50 max-w-xs rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] whitespace-pre-line text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
         >
           {content}
-          <Tooltip.Arrow className="fill-ink" />
+          <Tooltip.Arrow className="fill-ink dark:fill-panel-2" />
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>
