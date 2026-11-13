@@ -16,6 +16,8 @@ export interface ExportOptions {
   /** Zeichnet Uhrzeit, Leisten und Tafeltexte ins Video (in der App über die Oberfläche). */
   overlay?: OverlayRenderer;
   onProgress?: (step: string, done: number, total: number) => void;
+  /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
+  cacheDir?: string;
 }
 
 export interface ExportResult {
@@ -126,6 +128,7 @@ export async function exportSession(
       await renderMontage(sc, stills, join(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
+        cacheDir: opts.cacheDir,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
       });
       files.push(media);

@@ -2,7 +2,7 @@
  * Ausgeben aus der App: Ordner wählen, Export anstoßen, Einblendungen von der Oberfläche zeichnen lassen.
  */
 import { join } from "node:path";
-import { ipcMain, type WebContents } from "electron";
+import { app, ipcMain, type WebContents } from "electron";
 import type { ProjectStore } from "@feldspur/core";
 import {
   baseName,
@@ -76,6 +76,7 @@ export async function runExport(
     const r = await exportSession(s, sessionId, dir, {
       video,
       overlay: overlayVia(wc),
+      cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
     });
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };

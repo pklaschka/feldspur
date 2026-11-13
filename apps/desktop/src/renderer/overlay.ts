@@ -4,7 +4,7 @@
  * Das Hauptfeld bleibt durchsichtig, darunter liegt das Video oder Standbild.
  */
 import type { OverlayFrame, OverlayTimeline } from "@feldspur/media";
-import { formatClock, formatDuration } from "@feldspur/core/time";
+import { formatClock } from "@feldspur/core/time";
 
 const W = 1280;
 const H = 720;
@@ -206,7 +206,6 @@ export function drawOverlay(ctx: OffscreenCanvasRenderingContext2D, tl: OverlayT
   ctx.textBaseline = "middle";
   ctx.fillText("Ganzer Einsatz", 12, BOTTOM.y + 12);
   ctx.fillText("±2,5 Min.", 12, BOTTOM.y + 68);
-  ctx.fillText(`Video ${formatDuration(f.montageMs)}`, W - 90, BOTTOM.y + 12);
   const pad = (tl.toMs - tl.fromMs) * 0.01 || 60_000;
   drawTimeline(
     ctx,

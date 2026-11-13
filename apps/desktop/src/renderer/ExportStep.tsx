@@ -3,7 +3,7 @@
  */
 import { useEffect, useState } from "react";
 import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
-import { percent, useExport } from "./exportState.tsx";
+import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
@@ -106,7 +106,10 @@ export function ExportStep({ view }: { view: SessionView }) {
             <div className="mt-4" data-testid="export-progress">
               <div className="mb-1 flex justify-between text-[0.8rem] text-muted">
                 <span>{progress?.step ?? "Vorbereiten"}</span>
-                <span className="tabular-nums">{pct} %</span>
+                <span className="tabular-nums">
+                  {progress?.step === "Montagevideo" && `${remainingText(remainingMs(ex.job))} · `}
+                  {pct} %
+                </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
                 <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
