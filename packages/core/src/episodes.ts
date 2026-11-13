@@ -101,7 +101,7 @@ export function computeEpisodes(
     ...sources
       .filter((s) => s.kind !== "audio" && s.kind !== "video")
       .map((s) => ({ id: s.id, diary: false, t: resolved.placements.get(s.id)?.startMs })),
-    ...[...resolved.diary.values()].map((d) => ({ id: d.entryId, diary: true, t: d.fromMs })),
+    ...[...resolved.diary.values()].map((d) => ({ id: d.entryId, diary: true, t: d.notedAtMs })),
   ].filter((x): x is { id: Id; diary: boolean; t: number } => x.t !== undefined);
   const inEpisode = (t: number) => episodes.some((e) => t >= e.startMs && t <= e.endMs);
   const outside = points.filter((p) => !inEpisode(p.t)).sort((a, b) => a.t - b.t);

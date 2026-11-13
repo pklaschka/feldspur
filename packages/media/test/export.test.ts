@@ -41,7 +41,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     store.setReferenceDevice(src("ZOOM0001.m4a").deviceId!);
     await analyzeSession(store, sessionId);
     for (const a of store.listAnchors(sessionId).filter((x) => x.proposed)) store.confirmAnchor(a.id);
-    // Tagebuch: Eintrag notiert 10:12, Bezug 15 Min. davor (vor der ersten Aufnahme).
+    // Tagebuch: Eintrag notiert 10:12 (vor der ersten Aufnahme), Bezug 15 Min. davor.
     store.addDiaryEntry({
       sessionId,
       regions: [{ sourceId: src("Tagebuch_S01.jpg").id, page: 0, x: 0, y: 0, w: 1, h: 0.5 }],
@@ -66,7 +66,9 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const lines = sc.entries.map(entryText);
     // Tagebuch vor der ersten Aufnahme: eigene Tafel ganz vorne.
     expect(lines[0]).toMatch(/^#00:00:00-0# Uhrzeit .*Zwischentafel/);
-    expect(lines.find((l) => l.includes("Tagebuch"))).toMatch(/^#00:00:00-0# Uhrzeit ca\. 09:57 \(notiert 10:12\)/);
+    expect(lines.find((l) => l.includes("Tagebuch"))).toMatch(
+      /^#00:00:00-0# Uhrzeit 10:12 \(notiert, bezieht sich auf ca\. 09:57–10:12\)/,
+    );
     const episode = sc.plan.segments.find((s) => s.kind === "episode")!;
     expect(formatClock(episode.fromMs)).toBe("10:15:00");
     const line = sc.entries.find((e) => e.kind === "line")!;

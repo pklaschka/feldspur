@@ -102,7 +102,7 @@ describe("Projektdatei", () => {
     const res = resolveTimeline(input);
     expect(formatClock(res.placements.get(video.id)!.startMs)).toBe("10:16:00");
     expect(formatClock(res.placements.get(audio.id)!.startMs)).toBe("10:15:00");
-    expect(formatClock(res.placements.get(page.id)!.startMs)).toBe("10:05:00");
+    expect(formatClock(res.placements.get(page.id)!.startMs)).toBe("10:12:00");
     again.close();
   });
 

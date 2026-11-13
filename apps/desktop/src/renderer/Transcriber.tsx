@@ -502,11 +502,11 @@ function eventsIn(view: SessionView, row: SourceRow): Event[] {
     out.push({ key: `r:${r.id}`, atMs: r.startMs! - start, text: `${what} · ${r.fileName}` });
   }
   for (const d of view.diary) {
-    if (!d.window || !inside(d.window.fromMs)) continue;
+    if (!d.window || !inside(d.window.toMs)) continue;
     const short = d.shortText || d.fullText;
     out.push({
       key: `d:${d.id}`,
-      atMs: d.window.fromMs - start,
+      atMs: d.window.toMs - start,
       text: `Tagebuch ${d.regions[0]?.pageLabel ?? ""}, Eintrag ${d.number}${d.notedAt ? ` (notiert ${d.notedAt})` : ""}${short ? `: ${short}` : ""}`,
     });
   }

@@ -111,7 +111,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft
   und Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
-  **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz).
+  **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Zeitgerüst, Montage, Mitschrift
+  und Suche führen den Eintrag an der Notierzeit; der Bezugszeitraum steht als Hinweis dabei.
 
 Alle Uhrzeiten sind Ortszeit des Einsatzes, intern als `LocalMs` (Wanduhrzeit in ms, gelesen als UTC). Unsicherheiten
 werden als Wurzel der Quadratsumme kombiniert; „sicher“ heißt ± 2 s oder besser bei bekannter Geräteuhr.

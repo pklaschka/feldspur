@@ -52,7 +52,9 @@ describe("Schnellsuche", () => {
   });
 
   it("findet über die Uhrzeit und den Dateinamen", () => {
-    expect(search(items, "10:15").map((x) => x.kind)).toEqual(["diary"]);
+    // Tagebuch steht an seiner Notierzeit.
+    expect(search(items, "10:30").map((x) => x.kind)).toContain("diary");
+    expect(search(items, "10:15").map((x) => x.kind)).not.toContain("diary");
     expect(search(items, "marktplatz").map((x) => x.kind)).toEqual(["source"]);
   });
 

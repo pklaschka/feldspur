@@ -42,7 +42,7 @@ describe("Zeitbestimmung am Testmarkt", () => {
   it("Tagebuch: Bezugszeitraum reicht vor die Notierzeit zurück", () => {
     expect(clock(res.diary.get("d1")!.fromMs)).toBe("10:05:00");
     expect(clock(res.diary.get("d2")!.fromMs)).toBe("10:17:00");
-    expect(clock(p("Tagebuch_S01.jpg").startMs)).toBe("10:05:00");
+    expect(clock(p("Tagebuch_S01.jpg").startMs)).toBe("10:12:00");
     expect(clock(p("Tagebuch_S01.jpg").endMs)).toBe("10:12:00");
   });
 

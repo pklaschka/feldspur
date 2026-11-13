@@ -287,8 +287,8 @@ export function overlayTimeline(sc: Scaffold): OverlayTimeline {
     } else points.push({ atMs: p.startMs, kind: s.kind });
   }
   for (const d of resolved.diary.values()) {
-    points.push({ atMs: d.fromMs, kind: "diary" });
-    from = Math.min(from, d.fromMs);
+    points.push({ atMs: d.notedAtMs, kind: "diary" });
+    from = Math.min(from, d.notedAtMs);
     to = Math.max(to, d.toMs);
   }
   return {
