@@ -95,6 +95,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   abstimmen. Vorschläge zählen erst nach Bestätigung.
 - **Episode**: Zeitraum, in dem eine Aufnahme läuft und nicht Leerlauf ist (Lücken unter 5 Min. werden verbunden).
   Dazwischen liegen Zwischenzeiten mit Fotos und Tagebucheinträgen.
+- **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
+  Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz).
 

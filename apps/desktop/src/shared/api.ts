@@ -113,6 +113,23 @@ export interface Region {
 
 export type DiaryMode = "scan" | "short" | "full";
 
+/** Eine Zeile Mitschrift; clockMs = Uhrzeit, solange die Quelle verortet ist. */
+export interface TranscriptRow {
+  id: string;
+  sourceId: string;
+  /** Stelle in der Aufnahme */
+  atMs: number;
+  clockMs: number | null;
+  speaker: string;
+  text: string;
+}
+
+export interface TranscriptPatch {
+  atMs?: number;
+  speaker?: string;
+  text?: string;
+}
+
 export interface DiaryEntryRow {
   id: string;
   /** Laufende Nummer im Einsatz, nach Seite und Lage auf der Seite. */
@@ -192,6 +209,8 @@ export interface SessionView {
   proposals: ProposalRow[];
   anchors: AnchorRow[];
   diary: DiaryEntryRow[];
+  /** Mitschrift aller Ton- und Videoquellen, je Quelle nach Stelle sortiert. */
+  transcript: TranscriptRow[];
   /** Standard-Bezugszeitraum des Einsatzes in Minuten. */
   diaryLookbackMin: number;
   /** null = Tonspuren noch nicht analysiert */
@@ -264,6 +283,13 @@ export interface FeldspurApi {
   removeDiaryRegion(entryId: string, index: number): Promise<SessionView>;
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
   patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
+  /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
+  addTranscriptLine(
+    sourceId: string,
+    line: { atMs: number; speaker: string; text: string },
+  ): Promise<{ view: SessionView; lineId: string }>;
+  updateTranscriptLine(lineId: string, patch: TranscriptPatch): Promise<SessionView>;
+  deleteTranscriptLine(lineId: string): Promise<SessionView>;
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
@@ -289,6 +315,9 @@ export const IPC = {
   mergeDevices: "device:merge",
   setPartOf: "source:part-of",
   setFollows: "source:follows",
+  addTranscriptLine: "transcript:add",
+  updateTranscriptLine: "transcript:update",
+  deleteTranscriptLine: "transcript:delete",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",

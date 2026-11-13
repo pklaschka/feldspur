@@ -32,6 +32,7 @@ export interface InspectorActions {
   toggleEvidence: (evidenceId: string, enabled: boolean) => void;
   removeEvidence: (evidenceId: string) => void;
   openDiary: (pageId: string) => void;
+  transcribe: (sourceId: string) => void;
 }
 
 export function Inspector({
@@ -198,11 +199,15 @@ function SourceDetails({
       {(row.kind === "audio" || row.kind === "video") && (
         <>
           <Player row={row} />
-          <div className="mt-1.5 flex justify-end">
+          <div className="mt-1.5 flex justify-end gap-1.5">
             <Button size="sm" onClick={() => sa.preview(row.id)}>
               Groß ansehen
             </Button>
+            <Button size="sm" variant="primary" onClick={() => actions.transcribe(row.id)}>
+              Mitschreiben…
+            </Button>
           </div>
+          <TranscriptSummary view={view} row={row} />
         </>
       )}
       {(row.previewable || row.isPdf) && (
@@ -591,5 +596,16 @@ function DiaryPage({
         Abtippen…
       </Button>
     </>
+  );
+}
+
+function TranscriptSummary({ view, row }: { view: SessionView; row: SourceRow }) {
+  const lines = view.transcript.filter((l) => l.sourceId === row.id);
+  if (!lines.length) return null;
+  const last = lines.at(-1)!;
+  return (
+    <p className="mt-1.5 text-[0.8rem] text-muted" data-testid="transcript-summary">
+      Mitschrift: {lines.length} {lines.length === 1 ? "Zeile" : "Zeilen"}, bis {positionText(last.atMs)}
+    </p>
   );
 }

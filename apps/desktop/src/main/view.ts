@@ -16,6 +16,7 @@ import type {
   ProposalRow,
   SessionView,
   SourceRow,
+  TranscriptRow,
 } from "../shared/api.ts";
 
 const mmss = (ms: number) => formatDuration(ms);
@@ -222,8 +223,21 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       };
     });
 
+  const transcript: TranscriptRow[] = store.listTranscript(sessionId).map((l) => {
+    const p = res.placements.get(l.sourceId);
+    return {
+      id: l.id,
+      sourceId: l.sourceId,
+      atMs: l.atMs,
+      clockMs: p ? p.startMs + l.atMs : null,
+      speaker: l.speaker,
+      text: l.text,
+    };
+  });
+
   return {
     session: input.session,
+    transcript,
     rows,
     anchors,
     diary,

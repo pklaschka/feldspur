@@ -13,6 +13,7 @@ import {
   type TimeInput,
   type NewSessionInput,
   type SessionPatch,
+  type TranscriptPatch,
   type ProjectInfo,
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
@@ -21,6 +22,7 @@ import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
 import { resolveToolPaths } from "./tools.ts";
+import { addLine, deleteLine, updateLine } from "./transcript.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -138,6 +140,23 @@ function registerIpc(): void {
   ipcMain.handle(IPC.setFollows, (_e, sourceId: string, prevId: string | null) => {
     const s = requireStore();
     return buildSessionView(s, setFollows(s, sourceId, prevId));
+  });
+
+  ipcMain.handle(
+    IPC.addTranscriptLine,
+    (_e, sourceId: string, line: { atMs: number; speaker: string; text: string }) => {
+      const s = requireStore();
+      const l = addLine(s, sourceId, line);
+      return { view: buildSessionView(s, s.getSource(sourceId).sessionId), lineId: l.id };
+    },
+  );
+  ipcMain.handle(IPC.updateTranscriptLine, (_e, lineId: string, patch: TranscriptPatch) => {
+    const s = requireStore();
+    return buildSessionView(s, updateLine(s, lineId, patch));
+  });
+  ipcMain.handle(IPC.deleteTranscriptLine, (_e, lineId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, deleteLine(s, lineId));
   });
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {

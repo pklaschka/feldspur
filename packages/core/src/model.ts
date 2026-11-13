@@ -201,6 +201,21 @@ export const DiaryEntry = z.object({
 });
 export type DiaryEntry = z.infer<typeof DiaryEntry>;
 
+/**
+ * Eine Zeile Mitschrift zu einer Ton- oder Videoquelle. Gespeichert wird die Stelle in der Aufnahme,
+ * nicht die Uhrzeit: So bleibt die Zeile richtig, wenn sich der Abgleich oder die Montage ändert.
+ */
+export const TranscriptLine = z.object({
+  id: Id,
+  sourceId: Id,
+  /** Stelle in der Aufnahme in ms ab Dateibeginn. */
+  atMs: z.number().int().nonnegative(),
+  /** Sprecherkürzel, z. B. „B1“ oder „H“; leer = ohne Angabe. */
+  speaker: z.string().default(""),
+  text: z.string().default(""),
+});
+export type TranscriptLine = z.infer<typeof TranscriptLine>;
+
 export const Interval = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 export type Interval = z.infer<typeof Interval>;
 

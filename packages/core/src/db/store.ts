@@ -19,6 +19,7 @@ import {
   Source,
   SyncAnchor,
   TimeEvidence,
+  TranscriptLine,
   type Id,
   type SourceKind,
 } from "../model.ts";
@@ -469,6 +470,42 @@ export class ProjectStore {
 
   deleteDiaryEntry(id: Id): void {
     this.db.delete(schema.diaryEntries).where(eq(schema.diaryEntries.id, id)).run();
+  }
+
+  // ── Mitschrift ───────────────────────────────────────────────────────────
+
+  addTranscriptLine(input: WithOptionalId<In<typeof TranscriptLine>>): TranscriptLine {
+    const l = TranscriptLine.parse({ ...input, id: input.id ?? randomUUID() });
+    this.db.insert(schema.transcriptLines).values(l).run();
+    return l;
+  }
+
+  /** Alle Zeilen der Quellen eines Einsatzes, je Quelle nach Stelle sortiert. */
+  listTranscript(sessionId: Id): TranscriptLine[] {
+    return this.db
+      .select({ l: schema.transcriptLines })
+      .from(schema.transcriptLines)
+      .innerJoin(schema.sources, eq(schema.sources.id, schema.transcriptLines.sourceId))
+      .where(eq(schema.sources.sessionId, sessionId))
+      .orderBy(asc(schema.transcriptLines.sourceId), asc(schema.transcriptLines.atMs))
+      .all()
+      .map(({ l }) => TranscriptLine.parse(l));
+  }
+
+  getTranscriptLine(id: Id): TranscriptLine {
+    const r = this.db.select().from(schema.transcriptLines).where(eq(schema.transcriptLines.id, id)).get();
+    if (!r) throw new Error(`Zeile nicht gefunden: ${id}`);
+    return TranscriptLine.parse(r);
+  }
+
+  updateTranscriptLine(id: Id, patch: Partial<Omit<TranscriptLine, "id" | "sourceId">>): TranscriptLine {
+    const next = TranscriptLine.parse({ ...this.getTranscriptLine(id), ...patch });
+    this.db.update(schema.transcriptLines).set(next).where(eq(schema.transcriptLines.id, id)).run();
+    return next;
+  }
+
+  deleteTranscriptLine(id: Id): void {
+    this.db.delete(schema.transcriptLines).where(eq(schema.transcriptLines.id, id)).run();
   }
 
   // ── Alles für die Zeitbestimmung ────────────────────────────────────────

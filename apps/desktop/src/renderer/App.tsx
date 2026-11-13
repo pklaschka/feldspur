@@ -10,6 +10,7 @@ import { PlaybackProvider } from "./playback.tsx";
 import { Preview } from "./Preview.tsx";
 import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
+import { Transcriber } from "./Transcriber.tsx";
 import { Sync } from "./Sync.tsx";
 import { Button, cx, Panel, StepHeader, TooltipProvider } from "./ui.tsx";
 
@@ -184,6 +185,7 @@ function SessionPane({
   const [view, setView] = useState<SessionView | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [transcribeId, setTranscribeId] = useState<string | null>(null);
   const [step, setStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
@@ -341,6 +343,7 @@ function SessionPane({
             toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
             removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
             openDiary: setDiaryPage,
+            transcribe: setTranscribeId,
           }}
         />
         <DiaryEditor
@@ -348,6 +351,14 @@ function SessionPane({
           pageId={diaryPage}
           onPage={setDiaryPage}
           onClose={() => setDiaryPage(null)}
+          guard={guard}
+          onView={setView}
+        />
+        <Transcriber
+          view={view}
+          sourceId={transcribeId}
+          onSource={setTranscribeId}
+          onClose={() => setTranscribeId(null)}
           guard={guard}
           onView={setView}
         />

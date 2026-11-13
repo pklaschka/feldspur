@@ -294,6 +294,45 @@ try {
   console.log(`Folgeaufnahme ${zoomLabel} beginnt 10:25:00`);
   await shot("-quellen");
 
+  // Mitschreiben: A-01 bei etwa 1:00 (10:16:00) abhören und zwei Zeilen tippen.
+  await src("ZOOM0001.m4a").click();
+  await page.getByTestId("inspector").getByRole("button", { name: "Mitschreiben…" }).click();
+  const tr = page.getByTestId("transcriber");
+  await tr.waitFor();
+  await tr
+    .getByTestId("event")
+    .filter({ hasText: /V-\d+ \(Video\) beginnt/ })
+    .first()
+    .waitFor();
+  const scrub = tr.getByRole("slider", { name: "Stelle in der Aufnahme" });
+  const sb = (await scrub.boundingBox())!;
+  await page.mouse.click(sb.x + sb.width * 0.1, sb.y + sb.height / 2);
+  await tr
+    .getByTestId("transcriber-position")
+    .getByText(/^(0:59|1:0)/)
+    .waitFor();
+  const newLine = tr.getByLabel("Neue Zeile");
+  await newLine.fill("B1: Wie lange stehen Sie schon hier?");
+  await newLine.press("Enter");
+  await tr.getByTestId("line").first().waitFor();
+  if ((await tr.getByLabel("Sprecher", { exact: true }).inputValue()) !== "B1")
+    throw new Error("Sprecher nicht übernommen");
+  await page.mouse.click(sb.x + sb.width * 0.105, sb.y + sb.height / 2);
+  await newLine.fill("H: Zwölf Jahre, seit mein Vater aufgehört hat.");
+  await newLine.press("Enter");
+  await tr.getByTestId("line").nth(1).waitFor();
+  const firstLine = await tr.getByTestId("line").first().innerText();
+  console.log(`Mitschrift: ${firstLine.replace(/\s+/g, " ")}`);
+  if (!/10:1(5:59|6:0\d)/.test(firstLine)) throw new Error(`Erste Zeile nicht bei etwa 10:16:00: ${firstLine}`);
+  // Esc schaltet die Wiedergabe um und schließt den Dialog nicht.
+  await newLine.press("Escape");
+  await newLine.press("Escape");
+  await tr.waitFor();
+  await shot("-mitschreiben");
+  await tr.getByRole("button", { name: "Fertig" }).click();
+  await tr.waitFor({ state: "detached" });
+  await page.getByTestId("transcript-summary").getByText("2 Zeilen").waitFor();
+
   // Große Vorschau und PDF.
   await src("Feldnotizen_Scan.pdf").click();
   await page.getByRole("button", { name: "Feldnotizen_Scan.pdf groß ansehen" }).click();

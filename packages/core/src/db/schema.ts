@@ -157,6 +157,20 @@ export const diaryEntries = sqliteTable(
   (t) => [index("diary_session").on(t.sessionId)],
 );
 
+export const transcriptLines = sqliteTable(
+  "transcript_lines",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    atMs: integer("at_ms").notNull(),
+    speaker: text("speaker").notNull().default(""),
+    text: text("text").notNull().default(""),
+  },
+  (t) => [index("transcript_source").on(t.sourceId, t.atMs)],
+);
+
 export const audioAnalysis = sqliteTable("audio_analysis", {
   sourceId: text("source_id")
     .primaryKey()
