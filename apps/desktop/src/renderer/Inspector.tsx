@@ -9,7 +9,9 @@ import {
   type TimeInput,
 } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
+import { PdfPageCanvas } from "./pdf.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
+import { SourceMenu, useActions } from "./SourceMenu.tsx";
 import {
   Button,
   Choice,
@@ -154,6 +156,28 @@ function SourceDetails({
     </>,
   ]);
   if (row.correctionMs !== 0) items.push(["Uhrkorrektur", offsetText(row.correctionMs), "font-mono"]);
+  const byId = (id: string | null) => view.rows.find((r) => r.id === id);
+  const main = byId(row.partOf);
+  if (main)
+    items.push([
+      "Seite",
+      <>
+        weiteres Bild zu <b className="font-mono">{main.label}</b>
+      </>,
+    ]);
+  if (row.parts.length) {
+    items.push([
+      "Seite",
+      <>
+        mit {row.parts.length} weiteren {row.parts.length === 1 ? "Bild" : "Bildern"}:{" "}
+        <span className="font-mono">{row.parts.map((id) => byId(id)?.label ?? "?").join(", ")}</span>
+      </>,
+    ]);
+  }
+  if (row.follows) items.push(["Fortsetzung von", byId(row.follows)?.label ?? "?", "font-mono"]);
+  if (row.followedBy) items.push(["Fortgesetzt in", byId(row.followedBy)?.label ?? "?", "font-mono"]);
+  const pageIds = new Set([main?.id ?? row.id, ...(main ? main.parts : row.parts)]);
+  const sa = useActions();
 
   return (
     <>
@@ -166,25 +190,51 @@ function SourceDetails({
           </div>
         </div>
         <span className="flex-1" />
-        <span className="-mt-1 -mr-1.5">
+        <span className="-mt-1 -mr-1.5 flex">
+          <SourceMenu row={row} view={view} />
           <CloseButton onClick={onClose} />
         </span>
       </div>
-      {(row.kind === "audio" || row.kind === "video") && <Player row={row} />}
-      {row.previewable && (
-        <img
-          className="mt-3.5 mb-1 block max-h-60 w-full rounded-lg border border-line bg-sunken object-contain"
-          src={mediaUrl(row.id)}
-          alt={`Vorschau ${row.fileName}`}
-        />
+      {(row.kind === "audio" || row.kind === "video") && (
+        <>
+          <Player row={row} />
+          <div className="mt-1.5 flex justify-end">
+            <Button size="sm" onClick={() => sa.preview(row.id)}>
+              Groß ansehen
+            </Button>
+          </div>
+        </>
+      )}
+      {(row.previewable || row.isPdf) && (
+        <button
+          type="button"
+          className="group relative mt-3.5 mb-1 block w-full cursor-zoom-in overflow-hidden rounded-lg border border-line bg-sunken"
+          onClick={() => sa.preview(row.id)}
+          aria-label={`${row.fileName} groß ansehen`}
+        >
+          {row.isPdf ? (
+            <div className="max-h-60 overflow-hidden bg-white">
+              <PdfPageCanvas sourceId={row.id} page={0} maxWidth={320} className="block" />
+            </div>
+          ) : (
+            <img
+              className="block max-h-60 w-full object-contain"
+              src={mediaUrl(row.id)}
+              alt={`Vorschau ${row.fileName}`}
+            />
+          )}
+          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[0.72rem] text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            Groß ansehen
+          </span>
+        </button>
       )}
       <KV items={items} />
 
       {row.kind === "diary" && (
         <DiaryPage
           row={row}
-          entries={view.diary.filter((e) => e.regions.some((r) => r.sourceId === row.id))}
-          onNote={(c) => actions.diaryNote(row.id, c)}
+          entries={view.diary.filter((e) => e.regions.some((r) => pageIds.has(r.sourceId)))}
+          onNote={(c) => actions.diaryNote(main?.id ?? row.id, c)}
           onOpen={() => actions.openDiary(row.id)}
         />
       )}
@@ -210,7 +260,10 @@ function SourceDetails({
 
       <Eyebrow>Zeitbelege</Eyebrow>
       <EvidenceList row={row} actions={actions} />
-      {row.kind !== "diary" && <TimeForm row={row} onAdd={actions.addTime} />}
+      {row.kind !== "diary" && !row.partOf && <TimeForm row={row} onAdd={actions.addTime} />}
+      {row.partOf && (
+        <p className="mt-1.5 text-[0.8rem] text-muted">Die Zeit kommt von {main?.label ?? "der Seite"}.</p>
+      )}
 
       <Eyebrow>Datei</Eyebrow>
       <KV

@@ -12,11 +12,14 @@ import {
   type ImportOutcome,
   type TimeInput,
   type NewSessionInput,
+  type SessionPatch,
   type ProjectInfo,
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
 import { fileResponse } from "./media-response.ts";
+import { updateSessionDetails } from "./session.ts";
+import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
 import { resolveToolPaths } from "./tools.ts";
 import { buildSessionView } from "./view.ts";
 
@@ -96,6 +99,7 @@ function registerIpc(): void {
     const s = requireStore();
     const plan = await scanPaths(paths);
     const res = applyImport(s, sessionId, plan);
+    linkFollowUps(s, sessionId);
     return {
       added: res.sources.length,
       duplicates: res.duplicates.length,
@@ -108,6 +112,32 @@ function registerIpc(): void {
     const s = requireStore();
     const d = s.updateDevice(deviceId, { label: label.trim() || s.getDevice(deviceId).label });
     return buildSessionView(s, d.sessionId);
+  });
+
+  ipcMain.handle(IPC.updateSession, (_e, sessionId: string, patch: SessionPatch) => {
+    const s = requireStore();
+    updateSessionDetails(s, sessionId, patch);
+    return { view: buildSessionView(s, sessionId), project: projectInfo()! };
+  });
+  ipcMain.handle(IPC.removeSource, (_e, sourceId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, removeSource(s, sourceId));
+  });
+  ipcMain.handle(IPC.moveSource, (_e, sourceId: string, target: string | { newLabel: string }) => {
+    const s = requireStore();
+    return buildSessionView(s, moveSource(s, sourceId, target));
+  });
+  ipcMain.handle(IPC.mergeDevices, (_e, fromId: string, intoId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, mergeDevices(s, fromId, intoId));
+  });
+  ipcMain.handle(IPC.setPartOf, (_e, sourceId: string, mainId: string | null) => {
+    const s = requireStore();
+    return buildSessionView(s, setPartOf(s, sourceId, mainId));
+  });
+  ipcMain.handle(IPC.setFollows, (_e, sourceId: string, prevId: string | null) => {
+    const s = requireStore();
+    return buildSessionView(s, setFollows(s, sourceId, prevId));
   });
 
   ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
@@ -257,7 +287,10 @@ setToolPaths(
 );
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  {
+    scheme: MEDIA_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
+  },
 ]);
 
 /** Originale für Vorschau und Wiedergabe ausliefern: nur Quellen des offenen Projekts, nur Bild-, Audio- und Videodateien. */

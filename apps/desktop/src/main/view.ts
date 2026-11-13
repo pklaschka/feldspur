@@ -35,9 +35,17 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     evidenceBySource.set(e.sourceId, [...(evidenceBySource.get(e.sourceId) ?? []), e]);
   }
 
+  const pageOf = (id: string) => sourceById.get(id)?.partOf ?? id;
+  const pageLabel = (id: string, page: number) => {
+    const s = sourceById.get(id);
+    return `${s?.label ?? "?"}${s && /\.pdf$/i.test(s.fileName) ? ` S. ${page + 1}` : ""}`;
+  };
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
-    const entry = input.diaryEntries.find((e) => e.regions.some((r) => r.sourceId === s.id) && e.notedAtMs !== null);
+    const page = pageOf(s.id);
+    const entry = input.diaryEntries.find(
+      (e) => e.regions.some((r) => pageOf(r.sourceId) === page) && e.notedAtMs !== null,
+    );
     const dp = entry ? res.diary.get(entry.id) : undefined;
     const d = s.deviceId ? devices.get(s.deviceId) : undefined;
     const an = analysisBySource.get(s.id);
@@ -65,9 +73,14 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       idle: p && an ? an.idle.map((i) => ({ startMs: p.startMs + i.startMs, endMs: p.startMs + i.endMs })) : [],
       loudAtMs: p && an ? an.loudInIdle.map((l) => p.startMs + l.atMs) : [],
       previewable: (s.kind === "photo" || s.kind === "diary") && /\.(jpe?g|png|webp|gif)$/i.test(s.fileName),
+      isPdf: /\.pdf$/i.test(s.fileName),
       id: s.id,
       label: s.label,
       kind: s.kind,
+      partOf: s.partOf,
+      parts: input.sources.filter((x) => x.partOf === s.id).map((x) => x.id),
+      follows: s.follows,
+      followedBy: input.sources.find((x) => x.follows === s.id)?.id ?? null,
       fileName: s.fileName,
       deviceId: s.deviceId,
       deviceLabel: d?.label ?? "",
@@ -180,10 +193,14 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
 
   const diary: DiaryEntryRow[] = input.diaryEntries
     .map((e) => {
+      // Nummerierung nach Seite (Hauptquelle, dann weitere Bilder, PDF-Seite) und Lage auf der Seite.
       const first = e.regions[0];
+      const src = sourceById.get(first?.sourceId ?? "");
+      const main = src?.partOf ? sourceById.get(src.partOf) : src;
+      const page = String(first?.page ?? 0).padStart(4, "0");
       return {
         e,
-        key: `${sourceById.get(first?.sourceId ?? "")?.label ?? "~"}:${(first?.y ?? 0).toFixed(4)}:${(first?.x ?? 0).toFixed(4)}`,
+        key: `${main?.label ?? "~"}:${src?.partOf ? src.label : ""}:${page}:${(first?.y ?? 0).toFixed(4)}:${(first?.x ?? 0).toFixed(4)}`,
       };
     })
     .sort((a, b) => a.key.localeCompare(b.key))
@@ -198,7 +215,10 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         mode: e.mode,
         shortText: e.shortText,
         fullText: e.fullText,
-        regions: e.regions.map((r) => ({ ...r, pageLabel: sourceById.get(r.sourceId)?.label ?? "?" })),
+        regions: e.regions.map((r) => ({
+          ...r,
+          pageLabel: pageLabel(r.sourceId, r.page),
+        })),
       };
     });
 

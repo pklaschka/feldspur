@@ -150,6 +150,42 @@ export function makeDiaryPage(path: string, seed: number) {
   ff("-f", "lavfi", "-i", `color=c=0xf6f0e1:size=${w}x${h}:duration=1`, "-vf", boxes.join(","), "-frames:v", "1", path);
 }
 
+/**
+ * Erfundener PDF-Scan: je Seite ein paar Zeilen Text auf hellem Papier.
+ * Von Hand geschrieben, damit die Tests ohne PDF-Bibliothek auskommen.
+ */
+export function makePdf(path: string, pages: string[][]) {
+  const esc = (t: string) => t.replace(/[\\()]/g, (c) => `\\${c}`);
+  const objs: string[] = [];
+  const add = (body: string) => objs.push(body) && objs.length;
+  const catalog = add("");
+  const tree = add("");
+  const font = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  const kids = pages.map((lines) => {
+    const ops = ["0.96 0.94 0.88 rg 0 0 420 595 re f", "0.23 0.25 0.35 rg", "BT /F1 14 Tf 40 540 Td 22 TL"];
+    for (const l of lines) ops.push(`(${esc(l)}) Tj T*`);
+    ops.push("ET");
+    const stream = ops.join("\n");
+    const content = add(`<< /Length ${Buffer.byteLength(stream, "latin1")} >>\nstream\n${stream}\nendstream`);
+    return add(
+      `<< /Type /Page /Parent ${tree} 0 R /MediaBox [0 0 420 595] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${content} 0 R >>`,
+    );
+  });
+  objs[catalog - 1] = `<< /Type /Catalog /Pages ${tree} 0 R >>`;
+  objs[tree - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(" ")}] /Count ${kids.length} >>`;
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objs.forEach((body, i) => {
+    offsets.push(Buffer.byteLength(out, "latin1"));
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(out, "latin1");
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  for (const o of offsets) out += `${String(o).padStart(10, "0")} 00000 n \n`;
+  out += `trailer\n<< /Size ${objs.length + 1} /Root ${catalog} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  writeFileSync(path, out, "latin1");
+}
+
 /** Ein kleiner erfundener Feldtag wie im Testpaket, nur kürzer. */
 export function makeFieldDay(dir: string) {
   mkdirSync(join(dir, "Kamera"), { recursive: true });

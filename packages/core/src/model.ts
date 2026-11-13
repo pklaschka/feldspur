@@ -97,6 +97,16 @@ export const Source = z.object({
   /** Ausgelesene technische Metadaten, unverändert zur Dokumentation. */
   metadata: z.record(z.string(), z.unknown()).default({}),
   importedAt: z.iso.datetime(),
+  /**
+   * Weiteres Bild derselben Seite (z. B. Seite in zwei Fotos, Rückseite): Id der Hauptquelle.
+   * Teile übernehmen Lage und Kurzzeichen der Hauptquelle.
+   */
+  partOf: Id.nullable().default(null),
+  /**
+   * Folgeaufnahme: Diese Datei setzt die genannte Aufnahme nahtlos fort (Rekorder teilt einen
+   * Dauermitschnitt in mehrere Dateien). Beginn = Ende der Vorgängerdatei.
+   */
+  follows: Id.nullable().default(null),
 });
 export type Source = z.infer<typeof Source>;
 
@@ -172,6 +182,8 @@ export const DiaryEntry = z.object({
     .array(
       z.object({
         sourceId: Id,
+        /** Seite innerhalb eines mehrseitigen PDF-Scans (ab 0); bei Bildern immer 0. */
+        page: z.number().int().nonnegative().default(0),
         x: z.number().min(0).max(1).default(0),
         y: z.number().min(0).max(1).default(0),
         w: z.number().min(0).max(1).default(1),

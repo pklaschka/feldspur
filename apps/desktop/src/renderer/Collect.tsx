@@ -2,6 +2,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
 import { Button, cx, Glyph, Notice, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -105,6 +106,7 @@ export function Collect({
               <DeviceCard
                 key={d.id}
                 device={d}
+                view={view}
                 rows={view.rows.filter((r) => r.deviceId === d.id)}
                 selected={selected}
                 onSelect={onSelect}
@@ -118,7 +120,7 @@ export function Collect({
                   <Glyph kind="other" />
                   <span className="font-semibold">Ohne Gerät</span>
                 </header>
-                <SourceList rows={unassigned} selected={selected} onSelect={onSelect} />
+                <SourceList view={view} rows={unassigned} selected={selected} onSelect={onSelect} />
               </section>
             )}
           </div>
@@ -130,6 +132,7 @@ export function Collect({
 
 function DeviceCard({
   device,
+  view,
   rows,
   selected,
   onSelect,
@@ -137,6 +140,7 @@ function DeviceCard({
   onOpenDiary,
 }: {
   device: DeviceRow;
+  view: SessionView;
   rows: SourceRow[];
   selected: string | null;
   onSelect: (id: string) => void;
@@ -160,40 +164,67 @@ function DeviceCard({
             Abtippen…
           </Button>
         )}
+        <DeviceMenu device={device} view={view} />
       </header>
       <div className="pr-3 pb-2 pl-[3.1rem] text-[0.8rem] text-muted">
         {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
         {device.personName && ` · ${device.personName}`}
       </div>
-      <SourceList rows={rows} selected={selected} onSelect={onSelect} />
+      <SourceList view={view} rows={rows} selected={selected} onSelect={onSelect} />
     </section>
   );
 }
 
+/** Weitere Bilder einer Seite stehen eingerückt unter ihrer Hauptquelle. */
+function ordered(rows: SourceRow[]): { row: SourceRow; nested: boolean }[] {
+  const ids = new Set(rows.map((r) => r.id));
+  const out: { row: SourceRow; nested: boolean }[] = [];
+  for (const r of rows) {
+    if (r.partOf && ids.has(r.partOf)) continue;
+    out.push({ row: r, nested: false });
+    for (const p of rows.filter((x) => x.partOf === r.id)) out.push({ row: p, nested: true });
+  }
+  return out;
+}
+
 function SourceList({
+  view,
   rows,
   selected,
   onSelect,
 }: {
+  view: SessionView;
   rows: SourceRow[];
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
+  const label = (id: string | null) => view.rows.find((r) => r.id === id)?.label ?? "?";
   return (
     <ul className="border-t border-line pb-1">
-      {rows.map((r) => (
-        <li key={r.id}>
+      {ordered(rows).map(({ row: r, nested }) => (
+        <li
+          key={r.id}
+          className={cx("group flex items-center pr-1.5", selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2")}
+        >
           <button
             data-testid="source"
+            data-label={r.label}
             className={cx(
-              "grid w-full cursor-pointer grid-cols-[3.4rem_minmax(0,1fr)_auto_8px] items-center gap-2.5 px-3 py-1.5 text-left",
-              selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2",
+              "grid min-w-0 flex-1 cursor-pointer grid-cols-[3.4rem_minmax(0,1fr)_auto_8px] items-center gap-2.5 py-1.5 pr-1.5 text-left",
+              nested ? "pl-7" : "pl-3",
             )}
             onClick={() => onSelect(r.id)}
           >
-            <span className={`k-${r.kind} font-mono text-[0.78rem] font-medium text-k`}>{r.label}</span>
-            <span className="truncate" title={r.fileName}>
-              {r.fileName}
+            <span className={`k-${r.kind} font-mono text-[0.78rem] font-medium text-k`}>
+              {nested && <span className="mr-1 text-muted">↳</span>}
+              {r.label}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate" title={r.fileName}>
+                {r.fileName}
+              </span>
+              {r.follows && <span className="block text-[0.75rem] text-muted">setzt {label(r.follows)} fort</span>}
+              {nested && <span className="block text-[0.75rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
             </span>
             <span className="font-mono text-[0.78rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
               {r.startMs === null
@@ -208,6 +239,7 @@ function SourceList({
               </span>
             </Tip>
           </button>
+          <SourceMenu row={r} view={view} />
         </li>
       ))}
     </ul>

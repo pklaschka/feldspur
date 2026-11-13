@@ -11,9 +11,11 @@ import {
   type DiaryPatch,
   type Region,
   type SessionView,
+  type SourceRow,
 } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { hm } from "./format.ts";
+import { loadPdf, PdfPageCanvas } from "./pdf.tsx";
 import { Button, Choice, cx, Notice } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -24,6 +26,51 @@ const MODE_OPTIONS: { value: DiaryMode; label: string; title: string }[] = [
   { value: "full", label: "Volltext", title: "Wortgetreu abgetippt" },
 ];
 
+interface Surface {
+  sourceId: string;
+  /** PDF-Seite ab 0; bei Bildern 0. */
+  page: number;
+  isPdf: boolean;
+}
+interface NavPage {
+  key: string;
+  /** Hauptquelle der Seite. */
+  mainId: string;
+  label: string;
+  surfaces: Surface[];
+}
+const sKey = (x: { sourceId: string; page?: number }) => `${x.sourceId}#${x.page ?? 0}`;
+
+/** Seiten für die Abtipp-Ansicht: Bild samt weiteren Bildern als eine Seite, PDF je Seite einzeln. */
+function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
+  const mains = rows.filter((r) => r.kind === "diary" && !r.partOf).sort((a, b) => a.label.localeCompare(b.label));
+  const surfacesOf = (r: SourceRow): Surface[] =>
+    r.isPdf
+      ? Array.from({ length: pdfPages.get(r.id) ?? 1 }, (_, page) => ({ sourceId: r.id, page, isPdf: true }))
+      : [{ sourceId: r.id, page: 0, isPdf: false }];
+  return mains.flatMap((m) => {
+    const parts = rows.filter((r) => r.partOf === m.id).sort((a, b) => a.label.localeCompare(b.label));
+    if (m.isPdf) {
+      const own = surfacesOf(m);
+      return own.map((sf, i) => ({
+        key: sKey(sf),
+        mainId: m.id,
+        label: own.length > 1 ? `${m.label} S. ${i + 1}` : m.label,
+        // Weitere Bilder hängen an der letzten Seite des PDF.
+        surfaces: i === own.length - 1 ? [sf, ...parts.flatMap(surfacesOf)] : [sf],
+      }));
+    }
+    return [
+      {
+        key: sKey({ sourceId: m.id }),
+        mainId: m.id,
+        label: m.label,
+        surfaces: [...surfacesOf(m), ...parts.flatMap(surfacesOf)],
+      },
+    ];
+  });
+}
+
 export function DiaryEditor({
   view,
   pageId,
@@ -33,27 +80,58 @@ export function DiaryEditor({
   onView,
 }: {
   view: SessionView;
-  /** Offene Seite; null = Dialog geschlossen. */
+  /** Offene Seite (Quelle); null = Dialog geschlossen. */
   pageId: string | null;
   onPage: (id: string) => void;
   onClose: () => void;
   guard: Guard;
   onView: (v: SessionView) => void;
 }) {
-  const pages = view.rows.filter((r) => r.kind === "diary").sort((a, b) => a.label.localeCompare(b.label));
-  const page = pages.find((p) => p.id === pageId) ?? null;
+  const pdfIds = view.rows.filter((r) => r.kind === "diary" && r.isPdf).map((r) => r.id);
+  const [pdfPages, setPdfPages] = useState(new Map<string, number>());
+  useEffect(() => {
+    let alive = true;
+    for (const id of pdfIds) {
+      if (pdfPages.has(id)) continue;
+      loadPdf(id).then(
+        (d) => alive && setPdfPages((m) => new Map(m).set(id, d.numPages)),
+        () => alive && setPdfPages((m) => new Map(m).set(id, 1)),
+      );
+    }
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfIds.join(",")]);
+
+  const pages = navPages(view.rows, pdfPages);
+  const [navKey, setNavKey] = useState<string | null>(null);
+  // Von außen geöffnete Quelle: ihre (erste) Seite zeigen.
+  useEffect(() => {
+    if (!pageId) return setNavKey(null);
+    const hit = pages.find((p) => p.surfaces.some((sf) => sf.sourceId === pageId));
+    setNavKey(hit?.key ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageId]);
+  const page = pageId ? (pages.find((p) => p.key === navKey) ?? pages.find((p) => p.mainId === pageId) ?? null) : null;
   const [selected, setSelected] = useState<string | null>(null);
   const [continuing, setContinuing] = useState<string | null>(null);
 
-  const onPage_ = (id: string) => onPage(id);
-  const entriesOn = (id: string) => view.diary.filter((e) => e.regions.some((r) => r.sourceId === id));
-  const here = page ? entriesOn(page.id) : [];
+  const onSurface = (sf: { sourceId: string; page?: number }) =>
+    view.diary.filter((e) => e.regions.some((r) => sKey(r) === sKey(sf)));
+  const entriesOn = (p: NavPage) =>
+    view.diary.filter((e) => e.regions.some((r) => p.surfaces.some((sf) => sKey(sf) === sKey(r))));
+  const here = page ? entriesOn(page) : [];
   const contEntry = view.diary.find((e) => e.id === continuing) ?? null;
+  const goto = (p: NavPage) => {
+    setNavKey(p.key);
+    onPage(p.mainId);
+  };
 
-  const draw = async (region: Region) => {
-    if (!page) return;
+  const draw = async (sf: Surface, region: Region) => {
+    const r = { ...region, page: sf.page };
     if (contEntry) {
-      const v = await guard(() => api.addDiaryRegion(contEntry.id, page.id, region));
+      const v = await guard(() => api.addDiaryRegion(contEntry.id, sf.sourceId, r));
       if (v) {
         onView(v);
         setSelected(contEntry.id);
@@ -61,10 +139,10 @@ export function DiaryEditor({
       setContinuing(null);
       return;
     }
-    const r = await guard(() => api.createDiaryEntry(page.id, region));
-    if (r) {
-      onView(r.view);
-      setSelected(r.entryId);
+    const res = await guard(() => api.createDiaryEntry(sf.sourceId, r));
+    if (res) {
+      onView(res.view);
+      setSelected(res.entryId);
     }
   };
   const patch = (id: string, p: DiaryPatch) => void guard(() => api.patchDiaryEntry(id, p)).then((v) => v && onView(v));
@@ -80,9 +158,9 @@ export function DiaryEditor({
         >
           <header className="col-span-3 flex items-center gap-3 border-b border-line px-4 py-2.5">
             <Dialog.Title className="text-base font-semibold">Tagebuch abtippen</Dialog.Title>
-            <span className="text-[0.8rem] text-muted">
-              Rahmen um einen Eintrag ziehen, rechts Notierzeit und Text eintragen.
-            </span>
+            {page && page.surfaces.length > 1 && (
+              <span className="text-[0.8rem] text-muted">{page.surfaces.length} Bilder auf dieser Seite</span>
+            )}
             <span className="flex-1" />
             <Dialog.Close asChild>
               <Button size="sm">Fertig</Button>
@@ -92,23 +170,20 @@ export function DiaryEditor({
           <nav className="overflow-y-auto border-r border-line bg-panel-2 p-2" aria-label="Seiten">
             {pages.map((p) => (
               <button
-                key={p.id}
-                onClick={() => onPage_(p.id)}
+                key={p.key}
+                onClick={() => goto(p)}
                 className={cx(
                   "mb-2 block w-full cursor-pointer rounded-lg border p-1.5 text-left",
-                  p.id === page?.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:border-line-2",
+                  p.key === page?.key ? "border-accent bg-accent-soft" : "border-line bg-panel hover:border-line-2",
                 )}
               >
-                {p.previewable ? (
-                  <img src={mediaUrl(p.id)} alt="" className="mb-1 max-h-28 w-full rounded object-contain" />
-                ) : (
-                  <div className="mb-1 grid h-16 place-items-center rounded bg-sunken text-[0.75rem] text-muted">
-                    PDF
-                  </div>
-                )}
+                <Thumb surface={p.surfaces[0]!} />
                 <div className="flex justify-between text-[0.78rem]">
                   <b className="font-mono">{p.label}</b>
-                  <span className="text-muted">{entriesOn(p.id).length || "–"}</span>
+                  <span className="text-muted">
+                    {p.surfaces.length > 1 && `${p.surfaces.length} Bilder · `}
+                    {entriesOn(p).length || "–"}
+                  </span>
                 </div>
               </button>
             ))}
@@ -125,36 +200,44 @@ export function DiaryEditor({
                 </Notice>
               </div>
             )}
-            {page &&
-              (page.previewable ? (
-                <PageCanvas
-                  key={page.id}
-                  pageId={page.id}
-                  entries={here}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onDraw={(r) => void draw(r)}
-                />
-              ) : (
-                <p className="text-muted">
-                  PDF-Scans lassen sich noch nicht anzeigen. Bitte als JPG oder PNG einsammeln; Einträge ohne Rahmen
-                  gehen über die Randnotiz in der Detailleiste.
-                </p>
-              ))}
+            {here.length === 0 && !contEntry && (
+              <p className="mb-2 text-center text-[0.85rem] text-muted">
+                Zieh mit der Maus einen Rahmen um den ersten Eintrag. Für eine ganze Seite reicht ein Rahmen über alles.
+              </p>
+            )}
+            <div className="grid gap-4">
+              {page?.surfaces.map((sf) => {
+                const row = view.rows.find((r) => r.id === sf.sourceId);
+                if (!row) return null;
+                if (!row.previewable && !row.isPdf) {
+                  return (
+                    <p key={sKey(sf)} className="text-muted">
+                      {row.fileName}: Dieses Format lässt sich nicht anzeigen.
+                    </p>
+                  );
+                }
+                return (
+                  <PageCanvas
+                    key={sKey(sf)}
+                    surface={sf}
+                    label={page.surfaces.length > 1 ? `${row.label} · ${row.fileName}` : null}
+                    entries={onSurface(sf)}
+                    selected={selected}
+                    onSelect={setSelected}
+                    onDraw={(r) => void draw(sf, r)}
+                  />
+                );
+              })}
+            </div>
           </div>
 
           <aside className="overflow-y-auto border-l border-line p-3" aria-label="Einträge">
-            {here.length === 0 && (
-              <p className="text-[0.85rem] text-muted">
-                Noch keine Einträge auf dieser Seite. Zieh mit der Maus einen Rahmen um den ersten Eintrag. Für eine
-                ganze Seite reicht ein Rahmen über alles.
-              </p>
-            )}
+            {here.length === 0 && <p className="text-[0.85rem] text-muted">Noch keine Einträge auf dieser Seite.</p>}
             {here.map((e) => (
               <EntryCard
                 key={e.id}
                 entry={e}
-                pageId={page?.id ?? ""}
+                isHere={(r) => !!page?.surfaces.some((sf) => sKey(sf) === sKey(r))}
                 defaultLookback={view.diaryLookbackMin}
                 active={selected === e.id}
                 onFocus={() => setSelected(e.id)}
@@ -162,7 +245,10 @@ export function DiaryEditor({
                 onContinue={() => setContinuing(e.id)}
                 onRemoveRegion={(i) => void guard(() => api.removeDiaryRegion(e.id, i)).then((v) => v && onView(v))}
                 onDelete={() => void guard(() => api.deleteDiaryEntry(e.id)).then((v) => v && onView(v))}
-                onGoto={(id) => onPage_(id)}
+                onGoto={(r) => {
+                  const target = pages.find((p) => p.surfaces.some((sf) => sKey(sf) === sKey(r)));
+                  if (target) goto(target);
+                }}
               />
             ))}
           </aside>
@@ -172,15 +258,28 @@ export function DiaryEditor({
   );
 }
 
-/** Scan mit Rahmen; Ziehen mit der Maus legt einen neuen Rahmen an. */
+function Thumb({ surface }: { surface: Surface }) {
+  if (surface.isPdf) {
+    return (
+      <div className="mb-1 max-h-28 overflow-hidden rounded bg-white">
+        <PdfPageCanvas sourceId={surface.sourceId} page={surface.page} maxWidth={140} className="block" />
+      </div>
+    );
+  }
+  return <img src={mediaUrl(surface.sourceId)} alt="" className="mb-1 max-h-28 w-full rounded object-contain" />;
+}
+
+/** Scan (Bild oder PDF-Seite) mit Rahmen; Ziehen mit der Maus legt einen neuen Rahmen an. */
 function PageCanvas({
-  pageId,
+  surface,
+  label,
   entries,
   selected,
   onSelect,
   onDraw,
 }: {
-  pageId: string;
+  surface: Surface;
+  label: string | null;
   entries: DiaryEntryRow[];
   selected: string | null;
   onSelect: (id: string) => void;
@@ -205,68 +304,77 @@ function PageCanvas({
     height: `${r.h * 100}%`,
   });
   return (
-    <div
-      ref={box}
-      data-testid="diary-page"
-      className="relative mx-auto w-fit cursor-crosshair touch-none select-none"
-      onPointerDown={(e) => {
-        if ((e.target as HTMLElement).closest("[data-region]")) return;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        const p = rel(e);
-        setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
-      }}
-      onPointerMove={(e) => {
-        if (!drag) return;
-        const p = rel(e);
-        setDrag({ ...drag, x1: p.x, y1: p.y });
-      }}
-      onPointerUp={() => {
-        if (rect && rect.w > 0.01 && rect.h > 0.01) onDraw(rect);
-        setDrag(null);
-      }}
-    >
-      <img
-        src={mediaUrl(pageId)}
-        alt="Tagebuchseite"
-        draggable={false}
-        className="block max-h-[calc(100vh-9rem)] max-w-full rounded shadow"
-      />
-      {entries.flatMap((e) =>
-        e.regions
-          .map((r, i) => ({ r, i }))
-          .filter(({ r }) => r.sourceId === pageId)
-          .map(({ r, i }) => (
-            <div
-              key={`${e.id}-${i}`}
-              style={pct(r)}
-              className={cx(
-                "pointer-events-none absolute rounded-sm border-2",
-                selected === e.id ? "border-accent bg-accent/15" : "border-k-diary bg-k-diary/10",
-              )}
-            >
-              <button
-                data-region
-                onClick={() => onSelect(e.id)}
-                aria-label={`Eintrag ${e.number}`}
+    <figure className={cx("mx-auto max-w-full", surface.isPdf ? "w-[min(900px,100%)]" : "w-fit")}>
+      {label && <figcaption className="mb-1 font-mono text-[0.78rem] text-muted">{label}</figcaption>}
+      <div
+        ref={box}
+        data-testid="diary-page"
+        className="relative cursor-crosshair touch-none select-none"
+        onPointerDown={(e) => {
+          if ((e.target as HTMLElement).closest("[data-region]")) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          const p = rel(e);
+          setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+        }}
+        onPointerMove={(e) => {
+          if (!drag) return;
+          const p = rel(e);
+          setDrag({ ...drag, x1: p.x, y1: p.y });
+        }}
+        onPointerUp={() => {
+          if (rect && rect.w > 0.01 && rect.h > 0.01) onDraw(rect);
+          setDrag(null);
+        }}
+      >
+        {surface.isPdf ? (
+          <PdfPageCanvas sourceId={surface.sourceId} page={surface.page} className="block rounded bg-white shadow" />
+        ) : (
+          <img
+            src={mediaUrl(surface.sourceId)}
+            alt="Tagebuchseite"
+            draggable={false}
+            className="block max-h-[calc(100vh-9rem)] max-w-full rounded shadow"
+          />
+        )}
+        {entries.flatMap((e) =>
+          e.regions
+            .map((r, i) => ({ r, i }))
+            .filter(({ r }) => sKey(r) === sKey(surface))
+            .map(({ r, i }) => (
+              <div
+                key={`${e.id}-${i}`}
+                style={pct(r)}
                 className={cx(
-                  "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.75rem] font-semibold text-white",
-                  selected === e.id ? "bg-accent" : "bg-k-diary",
+                  "pointer-events-none absolute rounded-sm border-2",
+                  selected === e.id ? "border-accent bg-accent/15" : "border-k-diary bg-k-diary/10",
                 )}
               >
-                {e.number}
-                {e.notedAt ? ` · ${e.notedAt}` : ""}
-              </button>
-            </div>
-          )),
-      )}
-      {rect && <div style={pct(rect)} className="pointer-events-none absolute border-2 border-dashed border-accent" />}
-    </div>
+                <button
+                  data-region
+                  onClick={() => onSelect(e.id)}
+                  aria-label={`Eintrag ${e.number}`}
+                  className={cx(
+                    "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.75rem] font-semibold text-white",
+                    selected === e.id ? "bg-accent" : "bg-k-diary",
+                  )}
+                >
+                  {e.number}
+                  {e.notedAt ? ` · ${e.notedAt}` : ""}
+                </button>
+              </div>
+            )),
+        )}
+        {rect && (
+          <div style={pct(rect)} className="pointer-events-none absolute border-2 border-dashed border-accent" />
+        )}
+      </div>
+    </figure>
   );
 }
 
 function EntryCard({
   entry,
-  pageId,
+  isHere,
   defaultLookback,
   active,
   onFocus,
@@ -277,7 +385,7 @@ function EntryCard({
   onGoto,
 }: {
   entry: DiaryEntryRow;
-  pageId: string;
+  isHere: (r: { sourceId: string; page?: number }) => boolean;
   defaultLookback: number;
   active: boolean;
   onFocus: () => void;
@@ -285,7 +393,7 @@ function EntryCard({
   onContinue: () => void;
   onRemoveRegion: (index: number) => void;
   onDelete: () => void;
-  onGoto: (pageId: string) => void;
+  onGoto: (r: { sourceId: string; page?: number }) => void;
 }) {
   const [noted, setNoted] = useState(entry.notedAt ?? "");
   const [back, setBack] = useState(entry.lookbackMin === null ? "" : String(entry.lookbackMin));
@@ -317,8 +425,8 @@ function EntryCard({
           {entry.regions.map((r, i) => (
             <span key={i} className="mr-1.5 inline-flex items-center gap-0.5">
               <button
-                className={cx("cursor-pointer font-mono", r.sourceId === pageId ? "text-ink" : "text-accent underline")}
-                onClick={() => r.sourceId !== pageId && onGoto(r.sourceId)}
+                className={cx("cursor-pointer font-mono", isHere(r) ? "text-ink" : "text-accent underline")}
+                onClick={() => !isHere(r) && onGoto(r)}
               >
                 {r.pageLabel}
               </button>

@@ -8,10 +8,11 @@ import { parseClockOnDate } from "./edits.ts";
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
-function cleanRegion(r: Region): Region {
+function cleanRegion(r: Region): Required<Region> {
   const x = clamp01(r.x);
   const y = clamp01(r.y);
-  return { x, y, w: clamp01(Math.min(r.w, 1 - x)), h: clamp01(Math.min(r.h, 1 - y)) };
+  const page = Number.isInteger(r.page) && r.page! >= 0 ? r.page! : 0;
+  return { page, x, y, w: clamp01(Math.min(r.w, 1 - x)), h: clamp01(Math.min(r.h, 1 - y)) };
 }
 
 function requirePage(s: ProjectStore, sourceId: Id) {

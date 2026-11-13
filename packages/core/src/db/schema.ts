@@ -73,6 +73,8 @@ export const sources = sqliteTable(
       .notNull()
       .default(sql`'{}'`),
     importedAt: text("imported_at").notNull(),
+    partOf: text("part_of"),
+    follows: text("follows"),
   },
   (t) => [
     index("sources_session").on(t.sessionId),
