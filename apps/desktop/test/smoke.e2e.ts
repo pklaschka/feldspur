@@ -4,6 +4,7 @@
  *
  *   pnpm --filter @feldspur/desktop e2e            (Linux ohne Bildschirm: xvfb-run -a …)
  *   FELDSPUR_SCREENSHOT=bild.png …                 speichert ein Bildschirmfoto
+ *   FELDSPUR_E2E_APP=release/…/feldspur vpx test/smoke.e2e.ts   prüft das fertige Paket
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,10 +26,14 @@ makeDiaryPage(join(fixtures, "Tagebuch_S02.jpg"), 2);
 makePhoto(join(fixtures, "Marktstand.jpg"), "0x2a52be"); // ohne jede Zeitangabe
 const sources = process.env.FELDSPUR_E2E_SOURCES ?? fixtures;
 
-const app = await electron.launch({
-  args: [".", join(dir, "Test.feldspur"), ...(process.env.CI || process.getuid?.() === 0 ? ["--no-sandbox"] : [])],
-  cwd: join(import.meta.dirname, ".."),
-});
+// FELDSPUR_E2E_APP=<Programmdatei> prüft statt des Entwicklungsstands das fertige Paket.
+const packaged = process.env.FELDSPUR_E2E_APP;
+const sandbox = process.env.CI || process.getuid?.() === 0 ? ["--no-sandbox"] : [];
+const app = await electron.launch(
+  packaged
+    ? { executablePath: packaged, args: [join(dir, "Test.feldspur"), ...sandbox] }
+    : { args: [".", join(dir, "Test.feldspur"), ...sandbox], cwd: join(import.meta.dirname, "..") },
+);
 let failed = false;
 try {
   const page = await app.firstWindow();

@@ -82,6 +82,23 @@ pnpm probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
 Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 `FELDSPUR_TESTPAKET=/pfad/1_Rohquellen pnpm test`.
 
+## Installationspaket
+
+Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Installationspaket“ in GitHub Actions,
+von Hand oder bei einem Tag `v*`; die Dateien liegen danach als Artefakte am Lauf. Lokal für die eigene Plattform:
+
+```sh
+pnpm --filter @feldspur/desktop build
+pnpm --filter @feldspur/desktop native
+node scripts/fetch-ffmpeg.mjs          # LGPL-FFmpeg; auf macOS wird aus den Quellen gebaut
+node scripts/package-desktop.mjs       # --dir: nur entpackt, ohne Installer
+```
+
+Mitgeliefert wird die **LGPL-Fassung** von FFmpeg als eigenständige Programme unter `resources/bin`
+(Windows/Linux: BtbN-Builds, macOS: eigener Build ohne GPL-Teile). Lizenztexte und Build-Angaben liegen unter
+`resources/licenses`, siehe [`packaging/THIRD-PARTY.md`](packaging/THIRD-PARTY.md). Die App findet die Programme dort
+von selbst; `FELDSPUR_FFMPEG`/`FELDSPUR_FFPROBE` überschreiben das. Das Paket ist noch nicht signiert.
+
 **Keine echten Forschungsdaten** ins Repository oder in Tests. Fixtures werden erzeugt oder sind erfunden.
 
 ## Noch offen
@@ -90,4 +107,5 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - Tagebuch: PDF-Scans in der Abtipp-Ansicht anzeigen (bisher nur JPG/PNG).
-- ExifTool statt exifr für RAW/HEIC, mitgelieferte FFmpeg-Programme, Paketierung mit electron-builder.
+- ExifTool statt exifr für RAW/HEIC.
+- Code-Signatur (Windows, macOS-Notarisierung) und ein App-Symbol.
