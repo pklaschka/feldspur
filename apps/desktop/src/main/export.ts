@@ -9,6 +9,8 @@ import {
   buildScaffold,
   entryText,
   exportSession,
+  montagePreview,
+  type MontagePreview,
   type OverlayFrame,
   type OverlayRenderer,
   type OverlayTimeline,
@@ -48,6 +50,10 @@ function overlayVia(wc: WebContents): OverlayRenderer {
     for (let i = 0; i < frames.length; i += CHUNK) out.push(...(await ask(tl, frames.slice(i, i + CHUNK))));
     return out;
   };
+}
+
+export function montagePlan(s: ProjectStore, sessionId: string): MontagePreview {
+  return montagePreview(buildScaffold(s, sessionId));
 }
 
 export function previewExport(s: ProjectStore, sessionId: string): ScaffoldPreview {

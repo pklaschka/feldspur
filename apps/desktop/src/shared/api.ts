@@ -3,6 +3,7 @@
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
 import type { FieldSession, OffsetBasis, PlacementStatus, SourceKind } from "@feldspur/core";
+import type { MontagePreview } from "@feldspur/media";
 
 export interface ProjectInfo {
   path: string;
@@ -247,6 +248,8 @@ export interface ExportProgress {
 }
 
 /** Zeitgerüst ohne Video, zur Vorschau im Schritt „Ausgeben“. */
+export type { MontagePreview, PreviewPiece } from "@feldspur/media";
+
 export interface ScaffoldPreview {
   base: string;
   durationMs: number;
@@ -338,6 +341,8 @@ export interface FeldspurApi {
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
   previewExport(sessionId: string): Promise<ScaffoldPreview>;
+  /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
+  montagePreview(sessionId: string): Promise<MontagePreview>;
   /**
    * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = abgebrochen.
@@ -397,6 +402,7 @@ export const IPC = {
   patchDiaryEntry: "diary:patch",
   progress: "progress",
   previewExport: "export:preview",
+  montagePreview: "export:montage",
   exportSession: "export:run",
   exportProgress: "export:progress",
   overlayRequest: "overlay:request",

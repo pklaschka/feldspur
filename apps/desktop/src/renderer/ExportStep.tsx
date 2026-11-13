@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
+import { MontageView } from "./MontageView.tsx";
 import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -21,6 +22,7 @@ export function ExportStep({ view }: { view: SessionView }) {
   const [preview, setPreview] = useState<ScaffoldPreview | null>(null);
   const [video, setVideo] = useState(true);
   const [resolve, setResolve] = useState(false);
+  const [watching, setWatching] = useState(false);
   const ex = useExport();
   const sessionId = view.session.id;
   const busy = ex.job?.sessionId === sessionId;
@@ -77,6 +79,10 @@ export function ExportStep({ view }: { view: SessionView }) {
             {fact(preview?.episodes ?? "–", "Episoden")}
             {fact(preview?.cards ?? "–", "Zwischentafeln")}
           </div>
+          <Button className="mt-4" disabled={empty} onClick={() => setWatching(true)}>
+            Montage ansehen
+          </Button>
+          <MontageView sessionId={sessionId} open={watching} onOpenChange={setWatching} />
           <label className="mt-5 flex items-center gap-2.5 text-[0.9rem]">
             <Toggle checked={video} onChange={setVideo} label="Montagevideo mit ausgeben" />
             Montagevideo mit ausgeben

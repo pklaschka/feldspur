@@ -7,6 +7,7 @@ import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { analyzeSession } from "../src/analyze.ts";
 import { exportSession } from "../src/export.ts";
+import { montagePreview } from "../src/montage-preview.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { buildScaffold, entryText, timestamp } from "../src/scaffold.ts";
 import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay } from "./fixtures.ts";
@@ -108,6 +109,21 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const csv = readFileSync(join(out, r.files[2]!), "utf8");
     expect(csv.split("\r\n")[0]).toContain("Kurzzeichen;Art;Datei");
     expect(csv).toContain("ZOOM0001.m4a");
+  });
+
+  it("plant die Montage zum Ansehen in der App wie das Video", () => {
+    const sc = buildScaffold(store, sessionId);
+    const p = montagePreview(sc);
+    expect(p.durationMs).toBeCloseTo(sc.plan.durationMs, -2);
+    let at = 0;
+    for (const piece of p.pieces) {
+      expect(piece.fromMs).toBeCloseTo(at, 6);
+      at = piece.toMs;
+    }
+    const ep = p.pieces.find((x) => x.kind === "episode" && x.audio)!;
+    expect(sc.input.sources.some((s) => s.id === ep.audio!.sourceId)).toBe(true);
+    expect(p.pieces.some((x) => x.still?.image.sourceId)).toBe(true);
+    expect(p.timeline.episodes.length).toBeGreaterThan(0);
   });
 
   it("schreibt eine Schnittliste für DaVinci Resolve", async () => {

@@ -430,6 +430,34 @@ try {
     .waitFor();
   console.log(`Zeitgerüst: ${await scaffold.locator("li").count()} Zeilen`);
   await shot("-ausgeben");
+
+  // Montage in der App ansehen: springt ins erste Episodenstück und spielt ab.
+  await page.getByRole("button", { name: "Montage ansehen" }).click();
+  const montage = page.getByTestId("montage");
+  const montageTime = montage.getByTestId("montage-time");
+  await montageTime.waitFor();
+  const montageBar = montage.getByTestId("montage-bar");
+  for (let i = 0; i < 8 && !(await montageBar.innerText()).includes("Episode"); i++)
+    await montage.getByRole("button", { name: "Nächstes Stück" }).click();
+  const before = await montageTime.innerText();
+  await montage.getByRole("button", { name: "Abspielen" }).click();
+  // In der Episode laufen die Originale (Ton oder Video) an der passenden Stelle mit.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll<HTMLMediaElement>("[data-testid=montage] :is(video, audio)")].some(
+      (m) => !m.paused && m.currentTime > 0.5,
+    ),
+  );
+  console.log(`Montage-Vorschau: ${before} → ${await montageTime.innerText()} · ${await montageBar.innerText()}`);
+  // Eine Minute weiter (←/→ springen je 10 s) läuft die Kamera: Ihr Bild steht im Hauptfeld.
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => {
+    const v = document.querySelector<HTMLVideoElement>("[data-testid=montage] video");
+    return !!v && !v.paused && v.currentTime > 0.2 && v.readyState >= 2;
+  });
+  await shot("-montage");
+  await montage.getByRole("button", { name: "Pause" }).click();
+  await montage.getByRole("button", { name: "Schließen" }).click();
+  await montage.waitFor({ state: "detached" });
   const t0 = Date.now();
   await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
   await page.getByRole("button", { name: "Ausgeben…" }).click();
