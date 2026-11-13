@@ -17,6 +17,7 @@ import {
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
 import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
 import { fileResponse } from "./media-response.ts";
+import { resolveToolPaths } from "./tools.ts";
 import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
@@ -251,12 +252,9 @@ function createWindow(): void {
   else void win.loadFile(join(__dirname, "..", "renderer", "index.html"));
 }
 
-if (process.env.FELDSPUR_FFPROBE || process.env.FELDSPUR_FFMPEG) {
-  setToolPaths({
-    ...(process.env.FELDSPUR_FFPROBE ? { ffprobe: process.env.FELDSPUR_FFPROBE } : {}),
-    ...(process.env.FELDSPUR_FFMPEG ? { ffmpeg: process.env.FELDSPUR_FFMPEG } : {}),
-  });
-}
+setToolPaths(
+  resolveToolPaths(process.env, process.resourcesPath ?? null, process.platform === "win32" ? ".exe" : "", existsSync),
+);
 
 protocol.registerSchemesAsPrivileged([
   { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },

@@ -1,0 +1,85 @@
+name: Installationspaket
+
+# Baut die Installer mit mitgelieferter LGPL-Fassung von FFmpeg.
+# Läuft von Hand, bei Versions-Tags und wenn sich die Paketierung ändert.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "scripts/fetch-ffmpeg.mjs"
+      - "scripts/build-ffmpeg-macos.sh"
+      - "scripts/package-desktop.mjs"
+      - "packaging/**"
+      - ".github/workflows/package.yml"
+      - "apps/desktop/vite.config.ts"
+      - "apps/desktop/package.json"
+
+env:
+  FFMPEG_LINE: "8.1"
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x64
+          - os: windows-latest
+            name: win32-x64
+          - os: macos-latest
+            name: darwin-arm64
+          - os: macos-15-intel
+            name: darwin-x64
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+      # Vite+ bringt Node, pnpm und den Abhängigkeits-Cache mit und führt `vp install` aus.
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: 22
+          cache: true
+
+      # FFmpeg (LGPL): Windows/Linux fertig von BtbN, macOS aus den Quellen gebaut (dauert, daher Cache).
+      - name: FFmpeg-Cache (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/vendor/ffmpeg
+          key: ffmpeg-lgpl-${{ matrix.name }}-${{ env.FFMPEG_LINE }}-${{ hashFiles('scripts/build-ffmpeg-macos.sh') }}
+      - name: nasm (macOS Intel)
+        if: matrix.name == 'darwin-x64'
+        run: brew install nasm
+      - name: FFmpeg (LGPL) holen oder bauen
+        shell: bash
+        run: |
+          if [ -x "apps/desktop/vendor/ffmpeg/${{ matrix.name }}/ffmpeg" ]; then
+            echo "aus dem Cache"; head -n 3 "apps/desktop/vendor/ffmpeg/${{ matrix.name }}/BUILD.txt"
+          else
+            node scripts/fetch-ffmpeg.mjs
+          fi
+
+      - run: vp run @feldspur/desktop#build
+      - run: vp run @feldspur/desktop#native
+      - run: node scripts/package-desktop.mjs
+
+      - name: Rauchtest mit dem fertigen Paket (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg xvfb
+          cd apps/desktop
+          FELDSPUR_E2E_APP="$PWD/release/dist/linux-unpacked/feldspur" xvfb-run -a vpx test/smoke.e2e.ts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feldspur-${{ matrix.name }}
+          path: |
+            apps/desktop/release/dist/*.exe
+            apps/desktop/release/dist/*.dmg
+            apps/desktop/release/dist/*.zip
+            apps/desktop/release/dist/*.AppImage
+            apps/desktop/release/dist/*.tar.gz
+          if-no-files-found: error

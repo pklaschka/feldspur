@@ -61,26 +61,43 @@ werden als Wurzel der Quadratsumme kombiniert; „sicher“ heißt ± 2 s oder b
 
 ## Entwickeln
 
-Voraussetzungen: Node 22+, pnpm 10, FFmpeg (`ffmpeg`, `ffprobe`) im PATH.
+Voraussetzungen: [Vite+](https://viteplus.dev) (`vp`, bringt Node und pnpm mit), FFmpeg (`ffmpeg`, `ffprobe`) im PATH.
 
 ```sh
-pnpm install
-pnpm check         # Format, Lint, Typen
-pnpm test          # Vitest; Medien-Fixtures werden zur Laufzeit mit FFmpeg erzeugt
-pnpm --filter @feldspur/desktop native   # better-sqlite3 für Electron holen (einmalig)
-pnpm desktop       # App bauen und starten
-pnpm e2e           # Rauchtest der App (Linux ohne Bildschirm: xvfb-run -a pnpm e2e)
+vp install
+vp run check       # Format, Lint, Typen
+vp run test        # Vitest; Medien-Fixtures werden zur Laufzeit mit FFmpeg erzeugt
+vp run @feldspur/desktop#native   # better-sqlite3 für Electron holen (einmalig)
+vp run desktop     # App bauen und starten
+vp run e2e         # Rauchtest der App (Linux ohne Bildschirm: xvfb-run -a vp run e2e)
 ```
 
 Einen Ordner ohne App durchprobieren, z. B. das erfundene Testpaket:
 
 ```sh
-pnpm probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
+vp run probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
   --anchor ZOOM0004.m4a@80=C0012.MP4@20 --diary Tagebuch_S01.jpg@10:12
 ```
 
 Abgleich mit dem Begleitprotokoll des Testpakets als Test:
-`FELDSPUR_TESTPAKET=/pfad/1_Rohquellen pnpm test`.
+`FELDSPUR_TESTPAKET=/pfad/1_Rohquellen vp run test`.
+
+## Installationspaket
+
+Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Installationspaket“ in GitHub Actions,
+von Hand oder bei einem Tag `v*`; die Dateien liegen danach als Artefakte am Lauf. Lokal für die eigene Plattform:
+
+```sh
+vp run @feldspur/desktop#build
+vp run @feldspur/desktop#native
+node scripts/fetch-ffmpeg.mjs          # LGPL-FFmpeg; auf macOS wird aus den Quellen gebaut
+node scripts/package-desktop.mjs       # --dir: nur entpackt, ohne Installer
+```
+
+Mitgeliefert wird die **LGPL-Fassung** von FFmpeg als eigenständige Programme unter `resources/bin`
+(Windows/Linux: BtbN-Builds, macOS: eigener Build ohne GPL-Teile). Lizenztexte und Build-Angaben liegen unter
+`resources/licenses`, siehe [`packaging/THIRD-PARTY.md`](packaging/THIRD-PARTY.md). Die App findet die Programme dort
+von selbst; `FELDSPUR_FFMPEG`/`FELDSPUR_FFPROBE` überschreiben das. Das Paket ist noch nicht signiert.
 
 **Keine echten Forschungsdaten** ins Repository oder in Tests. Fixtures werden erzeugt oder sind erfunden.
 
@@ -90,4 +107,5 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - Tagebuch: PDF-Scans in der Abtipp-Ansicht anzeigen (bisher nur JPG/PNG).
-- ExifTool statt exifr für RAW/HEIC, mitgelieferte FFmpeg-Programme, Paketierung mit electron-builder.
+- ExifTool statt exifr für RAW/HEIC.
+- Code-Signatur (Windows, macOS-Notarisierung) und ein App-Symbol.

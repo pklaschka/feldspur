@@ -14,11 +14,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      # Vite+ bringt Node, pnpm und den Abhängigkeits-Cache mit und führt `vp install` aus.
+      - uses: voidzero-dev/setup-vp@v1.21.2
         with:
           node-version: 22
-          cache: pnpm
+          cache: true
       - name: FFmpeg (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg xvfb
@@ -28,11 +28,10 @@ jobs:
       - name: FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y --no-progress
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm test
+      - run: vp run check
+      - run: vp run test
       - name: Desktop-Rauchtest (Linux)
         if: runner.os == 'Linux'
         run: |
-          pnpm --filter @feldspur/desktop native
-          xvfb-run -a pnpm e2e
+          vp run @feldspur/desktop#native
+          xvfb-run -a vp run e2e

@@ -13,8 +13,9 @@ const shared: PackConfig = {
   platform: "node",
   target: "node22",
   dts: false,
-  noExternal: [/^@feldspur\//],
-  external: ["electron", "better-sqlite3"],
+  noExternal: [/^@feldspur\//, "better-sqlite3", "bindings", "file-uri-to-path"],
+  // better-sqlite3 wird mit eingebündelt; die native Bibliothek kommt immer über nativeBinding.
+  external: ["electron"],
 };
 
 export default defineConfig({
