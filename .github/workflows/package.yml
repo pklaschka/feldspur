@@ -27,7 +27,7 @@ jobs:
         include:
           - os: ubuntu-latest
             name: linux-x64
-          - os: windows-latest
+          - os: windows-2022
             name: win32-x64
           - os: macos-latest
             name: darwin-arm64
