@@ -2,6 +2,7 @@
  * Metadaten aus Audio/Video lesen (ffprobe) und aus Bildern (EXIF).
  */
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import exifr from "exifr";
 import { toolPaths } from "./tools.ts";
@@ -61,7 +62,8 @@ export interface ImageExif {
 export async function readImageExif(path: string): Promise<ImageExif | null> {
   let raw: Record<string, unknown> | undefined;
   try {
-    raw = (await exifr.parse(path, {
+    // Ein Buffer umgeht exifr 7.1.3s FileHandle-Pfad, der mit Node 26 inkompatibel ist.
+    raw = (await exifr.parse(await readFile(path), {
       tiff: true,
       exif: true,
       gps: true,

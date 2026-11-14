@@ -13,9 +13,13 @@ const shared: PackConfig = {
   platform: "node",
   target: "node22",
   dts: false,
-  noExternal: [/^@feldspur\//, "better-sqlite3", "bindings", "file-uri-to-path"],
-  // better-sqlite3 wird mit eingebündelt; die native Bibliothek kommt immer über nativeBinding.
-  external: ["electron"],
+  deps: {
+    alwaysBundle: [/^@feldspur\//, "better-sqlite3", "bindings", "file-uri-to-path"],
+    // Die gebündelten Abhängigkeiten sind für die eigenständige Electron-Ausgabe beabsichtigt.
+    onlyBundle: false,
+    // better-sqlite3 wird mit eingebündelt; die native Bibliothek kommt immer über nativeBinding.
+    neverBundle: ["electron"],
+  },
 };
 
 export default defineConfig({
@@ -26,6 +30,16 @@ export default defineConfig({
   build: {
     outDir: "../../out/renderer",
     emptyOutDir: true,
+    // Der PDF-Worker ist absichtlich größer als Vites Standard-Schwelle.
+    chunkSizeWarningLimit: 1200,
+    rolldownOptions: {
+      onLog(level, log, defaultHandler) {
+        if (level === "warn" && log.code === "MODULE_LEVEL_DIRECTIVE" && log.message.includes('"use client"')) {
+          return;
+        }
+        defaultHandler(level, log);
+      },
+    },
   },
   pack: [
     { ...shared, entry: { main: "src/main/main.ts" }, clean: true },
