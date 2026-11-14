@@ -17,6 +17,7 @@ authors:
 repository-code: "https://github.com/pklaschka/feldspur"
 url: "https://github.com/pklaschka/feldspur"
 version: 0.1.0
+license: EUPL-1.2
 keywords:
   - Ethnografie
   - Feldforschung

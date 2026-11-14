@@ -50,6 +50,11 @@ Autor*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/000
 
 Bitte die tatsächlich verwendete Version oder den Commit angeben, da sich das Werkzeug noch stark verändert.
 
+Für die Spiegelung nach Zenodo ist das Repository dort einmalig zu aktivieren. Danach erzeugt ein GitHub-Release
+automatisch den Zenodo-Datensatz; die Metadaten stehen in [`.zenodo.json`](.zenodo.json).
+
+Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/).
+
 ## Aufbau
 
 | Paket                              | Inhalt                                                                                                              |

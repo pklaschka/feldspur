@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen",
-  "license": "UNLICENSED",
+  "license": "EUPL-1.2",
   "type": "module",
   "scripts": {
     "test": "vp test run",
