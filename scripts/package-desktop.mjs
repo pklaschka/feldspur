@@ -3,7 +3,7 @@
  *
  * Voraussetzungen (für die Zielplattform):
  *   vp run @feldspur/desktop#build            App gebaut nach apps/desktop/out
- *   vp run @feldspur/desktop#native           better-sqlite3 für Electron
+ *   vp run @feldspur/desktop#native           better-sqlite3 bereitstellen
  *   node scripts/fetch-ffmpeg.mjs             ffmpeg/ffprobe (LGPL)
  *
  *   node scripts/package-desktop.mjs [--dir]  --dir: nur entpackt, ohne Installer

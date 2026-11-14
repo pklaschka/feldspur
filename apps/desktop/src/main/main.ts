@@ -38,7 +38,7 @@ import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 let store: ProjectStore | null = null;
 let win: BrowserWindow | null = null;
 
-/** Electron braucht eine eigene Bauart von better-sqlite3 (siehe scripts/fetch-electron-sqlite.mjs). */
+/** Die gebündelte App lädt better-sqlite3 über eine Datei neben der App (siehe scripts/fetch-electron-sqlite.mjs). */
 function nativeBinding(): string | undefined {
   const candidates = [
     join(process.resourcesPath ?? "", "native", "better_sqlite3.node"),

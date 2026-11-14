@@ -11,3 +11,4 @@ test-fixtures/
 apps/desktop/native/
 apps/desktop/vendor/
 apps/desktop/release/
+.vitest/
