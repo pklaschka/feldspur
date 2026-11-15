@@ -34,3 +34,63 @@ export function splitLine(
 export function oneParagraph(text: string): string {
   return text.replace(/\s*[\r\n]+\s*/g, " ");
 }
+
+export type TranscriberKey = "toggle" | "back" | "forward" | "slower" | "faster" | "type" | null;
+
+/** Was beim Mitschreiben aus einem Tastendruck folgt; nur die Felder, die dafür zählen. */
+export interface KeyLike {
+  key: string;
+  shiftKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  isComposing: boolean;
+  defaultPrevented: boolean;
+}
+
+interface TargetLike {
+  closest(selector: string): unknown;
+}
+
+const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
+const PRESSABLE =
+  "button, a[href], summary, [role='button'], [role='radio'], [role='switch'], [role='checkbox'], [role='tab']";
+/** Aufgeklappte Auswahl oder Menü: dort gelten deren eigene Tasten (Esc schließt sie). */
+const POPUP = "[role='listbox'], [role='menu']";
+/** Ein weiterer Dialog über dem Mitschreiben (z. B. eine Rückfrage). */
+const OTHER_DIALOG = "[role='dialog']:not([data-testid='transcriber']), [role='alertdialog']";
+
+/**
+ * Tastenkürzel des Mitschreibens, unabhängig davon, wo der Fokus gerade ist.
+ * Esc, F7, F8 und F9 gelten überall im Dialog; ein Buchstabe ohne Fokus in einem Textfeld
+ * springt in die neue Zeile. Strg/⌘+Enter bleibt beim Textfeld (Zeile teilen).
+ */
+export function transcriberKey(e: KeyLike, target: TargetLike | null, newLine: unknown): TranscriberKey {
+  if (e.defaultPrevented || e.isComposing) return null;
+  if (target?.closest(POPUP) || target?.closest(OTHER_DIALOG)) return null;
+  switch (e.key) {
+    case "Escape":
+      return "toggle";
+    case "F8":
+      return "back";
+    case "F9":
+      return "forward";
+    case "F7":
+      return e.shiftKey ? "faster" : "slower";
+  }
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey || !newLine) return null;
+  if (target?.closest(EDITABLE)) return null;
+  // Leertaste auf einem Knopf drückt den Knopf.
+  if (e.key === " " && target?.closest(PRESSABLE)) return null;
+  return "type";
+}
+
+/**
+ * Sprecherkürzel am Zeilenanfang („B1: …“), schon während des Tippens: sobald nach dem Doppelpunkt
+ * ein Leerzeichen steht, wandert das Kürzel ins Sprecherfeld. Das Kürzel beginnt mit einem Buchstaben,
+ * damit Uhrzeiten wie „10: …“ Text bleiben.
+ */
+export function leadingSpeaker(text: string): { speaker: string; rest: string } | null {
+  const m = /^\s*(\p{L}[\p{L}\d]{0,5}):\s+(.*)$/su.exec(text);
+  return m ? { speaker: m[1]!, rest: m[2]! } : null;
+}

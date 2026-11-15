@@ -82,6 +82,8 @@ export const sources = sqliteTable(
       .default("auto"),
     levelGainDb: real("level_gain_db").notNull().default(0),
     levelCompress: bool("level_compress").notNull().default(true),
+    firstPage: integer("first_page"),
+    pageSpread: bool("page_spread").notNull().default(false),
   },
   (t) => [
     index("sources_session").on(t.sessionId),
@@ -141,6 +143,7 @@ export interface DiaryRegionRow {
   y: number;
   w: number;
   h: number;
+  pageNo?: number | null;
 }
 
 export const diaryEntries = sqliteTable(

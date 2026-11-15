@@ -66,6 +66,8 @@ export function testmarkt() {
     levelMode: "auto",
     levelGainDb: 0,
     levelCompress: true,
+    firstPage: null,
+    pageSpread: false,
   });
   const sources = [
     src("ZOOM0004.m4a", "A-01", "audio", "zoom", 1_590_000),

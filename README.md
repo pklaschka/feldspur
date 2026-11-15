@@ -119,8 +119,7 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Klatscher für den Abgleich, ein Durchlauf statt zwei.
 - **docx** (9.15.0, MIT) schreibt das Zeitgerüst als Word-Datei, mit eingebetteten Bildern. Kein Zusatzprogramm
   nötig; Pandoc oder LibreOffice wären schwerer mitzuliefern.
-- **pdf.js** (`pdfjs-dist`, fest auf 5.4.624) für PDF-Scans in Vorschau und Abtipp-Ansicht. Neuere 5.x-Fassungen nutzen
-  `Map.getOrInsertComputed`, das Electron 39 noch nicht kennt.
+- **pdf.js** (`pdfjs-dist`, 6.x) für PDF-Scans in Vorschau und Abtipp-Ansicht.
 
 ## Begriffe im Code
 
@@ -252,4 +251,4 @@ Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zu
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - ExifTool statt exifr für RAW/HEIC.
-- Code-Signatur (Windows, macOS-Notarisierung) und ein App-Symbol.
+- Code-Signatur (Windows, macOS-Notarisierung).

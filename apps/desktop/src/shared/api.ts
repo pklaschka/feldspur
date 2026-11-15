@@ -62,6 +62,10 @@ export interface SourceRow {
   previewable: boolean;
   /** PDF-Datei (Scan), wird mit pdf.js angezeigt. */
   isPdf: boolean;
+  /** Tagebuch: Seitenzahl im Notizbuch für das (erste) Bild; null = nicht gezählt. */
+  firstPage: number | null;
+  /** Tagebuch: Jedes Bild zeigt eine Doppelseite. */
+  pageSpread: boolean;
   status: PlacementStatus;
   notes: string[];
   /** Lautstärke-Angleichung (nur Audio/Video). */
@@ -169,6 +173,13 @@ export interface Region {
 
 export type DiaryMode = "scan" | "short" | "full";
 
+export interface PageNumberingInput {
+  sourceId: string;
+  /** Seitenzahl im Notizbuch; null = nicht zählen. */
+  firstPage: number | null;
+  spread: boolean;
+}
+
 /** Eine Zeile Mitschrift; clockMs = Uhrzeit, solange die Quelle verortet ist. */
 export interface TranscriptRow {
   id: string;
@@ -216,7 +227,8 @@ export interface DiaryEntryRow {
   mode: DiaryMode;
   shortText: string;
   fullText: string;
-  regions: (Region & { sourceId: string; pageLabel: string })[];
+  /** pageNo = Seitenzahl im Notizbuch (von Hand oder aus der Zählung des Scans), null = unbekannt. */
+  regions: (Region & { sourceId: string; pageLabel: string; pageNo: number | null; pageNoOwn: boolean })[];
 }
 
 export interface DiaryPatch {
@@ -409,10 +421,14 @@ export interface FeldspurApi {
   setLevel(sourceId: string, input: LevelInput): Promise<SessionView>;
   /** Sprachpegel einer Quelle messen (dekodiert die ganze Datei). */
   measureLevel(sourceId: string): Promise<SessionView>;
+  /** Seitenzählung von Tagebuch-Scans setzen (mehrere auf einmal, z. B. beim Weiterzählen). */
+  setPageNumbering(items: PageNumberingInput[]): Promise<SessionView>;
   /** Neuer Tagebucheintrag mit Rahmen; gibt die Id des Eintrags mit zurück. */
   createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
   addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
   removeDiaryRegion(entryId: string, index: number): Promise<SessionView>;
+  /** Seitenzahl im Notizbuch an einem Rahmen; null = aus der Zählung des Scans. */
+  setDiaryRegionPage(entryId: string, index: number, pageNo: number | null): Promise<SessionView>;
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
   patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
   /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
@@ -509,9 +525,11 @@ export const IPC = {
   alignRefine: "anchor:refine",
   setLevel: "level:set",
   measureLevel: "level:measure",
+  setPageNumbering: "diary:page-numbering",
   createDiaryEntry: "diary:create",
   addDiaryRegion: "diary:add-region",
   removeDiaryRegion: "diary:remove-region",
+  setDiaryRegionPage: "diary:region-page",
   deleteDiaryEntry: "diary:delete",
   patchDiaryEntry: "diary:patch",
   progress: "progress",

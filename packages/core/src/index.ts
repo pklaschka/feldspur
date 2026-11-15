@@ -7,3 +7,4 @@ export * from "./episodes.ts";
 export * from "./montage.ts";
 export * from "./waveform.ts";
 export * from "./level.ts";
+export * from "./pages.ts";

@@ -1,6 +1,6 @@
 /** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
 import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Fragment, type ButtonHTMLAttributes, type ReactNode } from "react";
 import type { SourceKind } from "@feldspur/core/model";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -258,7 +258,8 @@ export function Picker({
 }: {
   value: string;
   onChange: (v: string) => void;
-  options: { value: string; label: string }[];
+  /** groupStart: Trennlinie mit dieser Überschrift vor der Option. */
+  options: { value: string; label: string; groupStart?: string }[];
   placeholder: string;
   label: string;
   className?: string;
@@ -285,13 +286,20 @@ export function Picker({
         >
           <Select.Viewport className="p-1">
             {options.map((o) => (
-              <Select.Item
-                key={o.value}
-                value={o.value}
-                className="cursor-pointer rounded px-2 py-1 outline-none data-[highlighted]:bg-accent-soft data-[state=checked]:font-medium"
-              >
-                <Select.ItemText>{o.label}</Select.ItemText>
-              </Select.Item>
+              <Fragment key={o.value}>
+                {o.groupStart !== undefined && (
+                  <>
+                    <Select.Separator className="my-1 h-px bg-line" />
+                    <div className="px-2 pt-0.5 pb-1 text-[0.72rem] text-muted">{o.groupStart}</div>
+                  </>
+                )}
+                <Select.Item
+                  value={o.value}
+                  className="cursor-pointer rounded px-2 py-1 outline-none data-[highlighted]:bg-accent-soft data-[state=checked]:font-medium"
+                >
+                  <Select.ItemText>{o.label}</Select.ItemText>
+                </Select.Item>
+              </Fragment>
             ))}
           </Select.Viewport>
         </Select.Content>
