@@ -28,10 +28,12 @@ format:
     toc-depth: 3
     toc-title: "Inhalt"
     include-after-body: fusszeile.html
-    format-links:
-      - format: typst
-        text: PDF
+    # Quartos eigener Formatlink hieße „Typst“; das PDF steht stattdessen unter „Weitere Links“.
+    format-links: false
     other-links:
+      - text: PDF
+        icon: file-pdf
+        href: Feldspur-Handbuch.pdf
       - text: Quelltext auf GitHub
         icon: github
         href: https://github.com/pklaschka/feldspur
