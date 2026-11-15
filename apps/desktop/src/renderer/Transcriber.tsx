@@ -7,13 +7,13 @@
  * Bild der Wiedergabe), Textfelder wachsen mit, und die Liste läuft der Wiedergabe nach.
  */
 import { Dialog } from "radix-ui";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mediaUrl, type SessionView, type SourceNoteRow, type SourceRow, type TranscriptRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
-import { oneParagraph, splitLine, waveWindow } from "./transcribe.ts";
+import { oneParagraph, splitLine, transcriberKey, waveWindow } from "./transcribe.ts";
 import { Button, Choice, CloseButton, cx, Glyph, Picker, Toggle } from "./ui.tsx";
 import { usePeakTiles, Waveform, type WaveBand, type WaveMarker } from "./Waveform.tsx";
 import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
@@ -34,6 +34,17 @@ const WAVE_BUCKETS = 1600;
 interface Event {
   key: string;
   atMs: number;
+  text: string;
+  /** Zeile aus der Mitschrift einer anderen, gleichzeitig laufenden Spur (nur lesen). */
+  other?: OtherLine;
+}
+
+interface OtherLine {
+  sourceId: string;
+  /** Stelle in der anderen Aufnahme. */
+  atMs: number;
+  label: string;
+  speaker: string;
   text: string;
 }
 
@@ -115,6 +126,7 @@ function Body({
   const [span, setSpan] = useState<Span>("30");
   const [logScale, setLogScale] = useState(true);
   const [follow, setFollow] = useState(true);
+  const [showOthers, setShowOthers] = useState(true);
   const [failed, setFailed] = useState(false);
   const [draft, setDraft] = useState("");
   const [speaker, setSpeaker] = useState("");
@@ -128,7 +140,9 @@ function Body({
     () => [...new Set(view.transcript.map((l) => l.speaker).filter(Boolean))].sort(),
     [view.transcript],
   );
-  const events = useMemo(() => eventsIn(view, row), [view, row]);
+  const allEvents = useMemo(() => eventsIn(view, row), [view, row]);
+  const events = useMemo(() => (showOthers ? allEvents : allEvents.filter((e) => !e.other)), [allEvents, showOthers]);
+  const othersCount = useMemo(() => allEvents.filter((e) => e.other).length, [allEvents]);
   const items = useMemo<Item[]>(
     () =>
       [
@@ -192,21 +206,40 @@ function Body({
     if (i >= 0 && i < SPEEDS.length) setSpeed(SPEEDS[i]!);
   };
 
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      toggle();
-    } else if (e.key === "F8") {
-      e.preventDefault();
-      seekTo(pos - JUMP_MS);
-    } else if (e.key === "F9") {
-      e.preventDefault();
-      seekTo(pos + JUMP_MS);
-    } else if (e.key === "F7") {
-      e.preventDefault();
-      nextSpeed(e.shiftKey ? 1 : -1);
+  // Tastenkürzel gelten im ganzen Dialog, egal wo der Fokus gerade ist (auch nach einem Klick auf
+  // Video, Waveform oder eine freie Fläche). Deshalb am Fenster statt am Eingabefeld.
+  const shortcut = useRef<(e: globalThis.KeyboardEvent) => void>(() => {});
+  shortcut.current = (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    switch (transcriberKey(e, target, input.current)) {
+      case "toggle":
+        e.preventDefault();
+        toggle();
+        break;
+      case "back":
+        e.preventDefault();
+        seekTo(posRef.current - JUMP_MS);
+        break;
+      case "forward":
+        e.preventDefault();
+        seekTo(posRef.current + JUMP_MS);
+        break;
+      case "slower":
+      case "faster":
+        e.preventDefault();
+        nextSpeed(e.shiftKey ? 1 : -1);
+        break;
+      case "type":
+        // Tippen ohne Fokus landet in der neuen Zeile; der Buchstabe geht mit.
+        input.current?.focus();
+        break;
     }
   };
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => shortcut.current(e);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
 
   const scrollToLine = (id: string) =>
     requestAnimationFrame(() =>
@@ -289,7 +322,7 @@ function Body({
   const at = (ms: number) => <At ms={ms} startMs={row.startMs} />;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" onKeyDownCapture={onKey}>
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-3 border-b border-line px-4 py-2.5">
         <Glyph kind={row.kind} />
         <Dialog.Title className="text-base font-semibold">Mitschreiben</Dialog.Title>
@@ -363,7 +396,19 @@ function Body({
               </li>
             )}
             {items.map((it) =>
-              it.kind === "event" ? (
+              it.kind === "event" && it.event.other ? (
+                <OtherLineItem
+                  key={it.event.key}
+                  atMs={it.atMs}
+                  line={it.event.other}
+                  startMs={row.startMs}
+                  onSeek={seekTo}
+                  onOpen={(o) => {
+                    seek(o.sourceId, o.atMs);
+                    onSource(o.sourceId);
+                  }}
+                />
+              ) : it.kind === "event" ? (
                 <li
                   key={it.event.key}
                   className="my-1 flex items-baseline gap-3 rounded-md bg-panel-2 px-2 py-1 text-[0.8rem] text-ink-2"
@@ -503,6 +548,16 @@ function Body({
                 Liste läuft mit
               </label>
             </div>
+            <div className="mt-1.5">
+              <label
+                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                title="Zeilen, die in gleichzeitig laufenden Aufnahmen schon mitgeschrieben sind (nur lesen)"
+              >
+                <Toggle checked={showOthers} onChange={setShowOthers} label="Andere Spuren zeigen" />
+                Andere Spuren zeigen
+                {othersCount > 0 && <span className="text-muted">({othersCount})</span>}
+              </label>
+            </div>
           </div>
           <NotesPanel row={row} notes={notes} pos={pos} apply={apply} onSeek={seekTo} />
           <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.8rem]">
@@ -522,10 +577,15 @@ function Body({
             <dt className="font-mono font-medium">B1: …</dt>
             <dd>Sprecher wechseln, wenn die Zeile so beginnt</dd>
           </dl>
+          <p className="-mt-1 text-[0.8rem] text-muted">
+            Die Tasten gelten überall im Dialog. Tippst du, während nichts ausgewählt ist, geht es in der neuen Zeile
+            weiter.
+          </p>
           <p className="text-[0.8rem] text-muted">
             Jede Zeile speichert die Stelle in {row.label}. Die Uhrzeit folgt dem Abgleich, auch wenn du ihn später
-            änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Notizen sind Arbeitsstand und gehen
-            nicht ins Zeitgerüst.
+            änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Grau hinterlegte Zeilen mit
+            Kurzzeichen stammen aus der Mitschrift einer anderen Spur, die zur selben Zeit lief: Was dort schon steht,
+            musst du hier nicht noch einmal abtippen. Notizen sind Arbeitsstand und gehen nicht ins Zeitgerüst.
           </p>
           {row.kind === "video" && (
             <p className="text-[0.8rem] text-muted">{KIND_LABEL.video}: Ton und Bild aus der Datei.</p>
@@ -533,6 +593,48 @@ function Body({
         </aside>
       </div>
     </div>
+  );
+}
+
+/** Zeile aus einer anderen Spur: nur lesen; Klick auf die Zeit spult hier, auf das Kurzzeichen öffnet dort. */
+function OtherLineItem({
+  atMs,
+  line,
+  startMs,
+  onSeek,
+  onOpen,
+}: {
+  atMs: number;
+  line: OtherLine;
+  startMs: number | null;
+  onSeek: (ms: number) => void;
+  onOpen: (line: OtherLine) => void;
+}) {
+  return (
+    <li
+      className="my-0.5 flex items-start gap-3 rounded-md bg-panel-2 px-2 py-0.5 text-ink-2"
+      data-testid="other-line"
+      title={`Aus der Mitschrift von ${line.label}, nur lesen`}
+    >
+      <button
+        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.8rem] hover:text-accent"
+        onClick={() => onSeek(atMs)}
+        title="Hierhin springen"
+      >
+        <At ms={atMs} startMs={startMs} />
+      </button>
+      <button
+        className="w-14 flex-none cursor-pointer truncate pt-1 text-left font-mono text-[0.8rem] font-medium hover:text-accent"
+        onClick={() => onOpen(line)}
+        title={`In ${line.label} mitschreiben (an dieser Stelle)`}
+      >
+        {line.label}
+      </button>
+      <span className="min-w-0 flex-1 py-1 text-[0.9rem] break-words">
+        {line.speaker && <span className="mr-1.5 font-mono font-medium">{line.speaker}:</span>}
+        {line.text}
+      </span>
+    </li>
   );
 }
 
@@ -737,6 +839,18 @@ function eventsIn(view: SessionView, row: SourceRow): Event[] {
           ? `${r.label} (Audio) beginnt`
           : `${KIND_LABEL[r.kind]} ${r.label}`;
     out.push({ key: `r:${r.id}`, atMs: r.startMs! - start, text: `${what} · ${r.fileName}` });
+  }
+  const byId = new Map(view.rows.map((r) => [r.id, r]));
+  for (const l of view.transcript) {
+    if (l.sourceId === row.id || l.clockMs === null || !inside(l.clockMs)) continue;
+    const r = byId.get(l.sourceId);
+    if (!r) continue;
+    out.push({
+      key: `t:${l.id}`,
+      atMs: l.clockMs - start,
+      text: `${r.label}: ${l.speaker ? `${l.speaker}: ` : ""}${l.text}`,
+      other: { sourceId: r.id, atMs: l.atMs, label: r.label, speaker: l.speaker, text: l.text },
+    });
   }
   for (const d of view.diary) {
     if (!d.window || !inside(d.window.toMs)) continue;

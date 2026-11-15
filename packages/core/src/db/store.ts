@@ -273,7 +273,17 @@ export class ProjectStore {
     patch: Partial<
       Pick<
         Source,
-        "deviceId" | "kind" | "title" | "label" | "partOf" | "follows" | "levelMode" | "levelGainDb" | "levelCompress"
+        | "deviceId"
+        | "kind"
+        | "title"
+        | "label"
+        | "partOf"
+        | "follows"
+        | "levelMode"
+        | "levelGainDb"
+        | "levelCompress"
+        | "firstPage"
+        | "pageSpread"
       >
     >,
   ): Source {

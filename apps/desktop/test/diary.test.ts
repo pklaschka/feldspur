@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "../src/main/diary.ts";
+import { setPageNumbering } from "../src/main/edits.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
 let dir: string;
@@ -71,6 +72,29 @@ describe("Tagebuch abtippen", () => {
     expect(buildSessionView(store, session.id).diary[0]!.regions).toHaveLength(1);
     removeRegion(store, e.id, 0);
     expect(buildSessionView(store, session.id).diary).toHaveLength(0);
+  });
+
+  it("Doppelseiten: erst links, dann rechts, mit Seitenzahlen aus dem Notizbuch", () => {
+    const { session, p1, p2 } = seed();
+    // Rechts oben wurde vor links unten angelegt; gezählt wird trotzdem links zuerst.
+    const right = createEntry(store, p1.id, { x: 0.55, y: 0.05, w: 0.4, h: 0.3 }).entry;
+    const left = createEntry(store, p1.id, { x: 0.05, y: 0.6, w: 0.4, h: 0.3 }).entry;
+    const next = createEntry(store, p2.id, { x: 0.05, y: 0.1, w: 0.4, h: 0.3 }).entry;
+    setPageNumbering(store, [
+      { sourceId: p1.id, firstPage: 11, spread: true },
+      { sourceId: p2.id, firstPage: 13, spread: true },
+    ]);
+    const view = buildSessionView(store, session.id);
+    expect(view.diary.map((d) => [d.id, d.regions[0]!.pageLabel])).toEqual([
+      [left.id, "T-01 · S. 11"],
+      [right.id, "T-01 · S. 12"],
+      [next.id, "T-02 · S. 13"],
+    ]);
+    expect(view.rows.find((r) => r.id === p1.id)).toMatchObject({ firstPage: 11, pageSpread: true });
+    // Zählung wieder entfernen: Kurzzeichen und Hälfte bleiben.
+    setPageNumbering(store, [{ sourceId: p1.id, firstPage: null, spread: true }]);
+    expect(buildSessionView(store, session.id).diary[1]!.regions[0]!.pageLabel).toBe("T-01 rechts");
+    expect(() => setPageNumbering(store, [{ sourceId: p1.id, firstPage: -1, spread: false }])).toThrow();
   });
 
   it("Rahmen werden auf die Seite begrenzt, zu kleine abgelehnt", () => {

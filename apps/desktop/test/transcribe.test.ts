@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { oneParagraph, splitLine, waveWindow } from "../src/renderer/transcribe.ts";
+import { oneParagraph, splitLine, transcriberKey, waveWindow } from "../src/renderer/transcribe.ts";
 
 describe("Mitschreiben: Hilfen", () => {
   it("Waveform-Ausschnitt läuft mit und bleibt in der Datei", () => {
@@ -31,5 +31,49 @@ describe("Mitschreiben: Hilfen", () => {
 
   it("macht aus eingefügten Zeilenumbrüchen Leerzeichen", () => {
     expect(oneParagraph("eins\n zwei\r\n\ndrei")).toBe("eins zwei drei");
+  });
+
+  describe("Tastenkürzel unabhängig vom Fokus", () => {
+    const key = (k: string, mods: Partial<{ shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }> = {}) => ({
+      key: k,
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      isComposing: false,
+      defaultPrevented: false,
+      ...mods,
+    });
+    /** Ziel, das auf die genannten Selektoren passt (Teilzeichenkette genügt). */
+    const on = (...matches: string[]) => ({
+      closest: (sel: string) => (matches.some((m) => sel.includes(m)) ? {} : null),
+    });
+    const body = on();
+    const field = {};
+
+    it("Esc, F7, F8, F9 gelten auch ohne Fokus im Textfeld", () => {
+      expect(transcriberKey(key("Escape"), body, field)).toBe("toggle");
+      expect(transcriberKey(key("F8"), on("button"), field)).toBe("back");
+      expect(transcriberKey(key("F9"), on("textarea"), field)).toBe("forward");
+      expect(transcriberKey(key("F7"), null, field)).toBe("slower");
+      expect(transcriberKey(key("F7", { shiftKey: true }), null, field)).toBe("faster");
+    });
+
+    it("lässt offene Auswahllisten, Menüs und weitere Dialoge in Ruhe", () => {
+      expect(transcriberKey(key("Escape"), on("listbox"), field)).toBeNull();
+      expect(transcriberKey(key("F8"), on("menu"), field)).toBeNull();
+      expect(transcriberKey(key("Escape"), on("alertdialog"), field)).toBeNull();
+    });
+
+    it("Tippen ohne Textfeld springt in die neue Zeile, Kürzel und Textfelder bleiben, wie sie sind", () => {
+      expect(transcriberKey(key("a"), body, field)).toBe("type");
+      expect(transcriberKey(key("a"), on("button"), field)).toBe("type");
+      expect(transcriberKey(key(" "), body, field)).toBe("type");
+      expect(transcriberKey(key(" "), on("button"), field)).toBeNull();
+      expect(transcriberKey(key("a"), on("textarea"), field)).toBeNull();
+      expect(transcriberKey(key("k", { ctrlKey: true }), body, field)).toBeNull();
+      expect(transcriberKey(key("Enter", { ctrlKey: true }), on("textarea"), field)).toBeNull();
+      expect(transcriberKey(key("a"), body, null)).toBeNull();
+    });
   });
 });

@@ -17,6 +17,7 @@ import {
   type ResolveInput,
   type ResolveResult,
   type Source,
+  diaryPageLabel,
 } from "@feldspur/core";
 
 export type ScaffoldKind = "card" | "episode" | "start" | "photo" | "diary" | "line" | "sync" | "end";
@@ -226,7 +227,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
       kind: "diary",
       clock: `${hm(dp.notedAtMs)} (notiert, bezieht sich auf ca. ${hm(dp.fromMs)}–${hm(dp.toMs)})`,
       clockMs: dp.notedAtMs,
-      head: `Tagebuch ${page?.label ?? "?"}${page && who(page) ? ` (${who(page)})` : ""}`,
+      head: `Tagebuch ${first && e.regions[0] ? diaryPageLabel(first, e.regions[0]) : (page?.label ?? "?")}${page && who(page) ? ` (${who(page)})` : ""}`,
       body: text ? `${modeLabel}: ${text}` : modeLabel,
       images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),
     });

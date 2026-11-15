@@ -42,6 +42,7 @@ const api: FeldspurApi = {
   replaceAnchor: (id, input) => ipcRenderer.invoke(IPC.replaceAnchor, id, input),
   alignRefine: (input) => ipcRenderer.invoke(IPC.alignRefine, input),
   setLevel: (id, input) => ipcRenderer.invoke(IPC.setLevel, id, input),
+  setPageNumbering: (items) => ipcRenderer.invoke(IPC.setPageNumbering, items),
   measureLevel: (id) => ipcRenderer.invoke(IPC.measureLevel, id),
   createDiaryEntry: (sourceId, region) => ipcRenderer.invoke(IPC.createDiaryEntry, sourceId, region),
   addDiaryRegion: (entryId, sourceId, region) => ipcRenderer.invoke(IPC.addDiaryRegion, entryId, sourceId, region),

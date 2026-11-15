@@ -125,6 +125,13 @@ export const Source = z.object({
   levelGainDb: z.number().default(0),
   /** Leise Stellen anheben (Kompressor). */
   levelCompress: z.boolean().default(true),
+  /**
+   * Tagebuch-Scans: Seitenzahl im Notizbuch für das (erste) Bild; null = nicht gezählt.
+   * Bei PDFs zählt jede PDF-Seite weiter. Siehe pages.ts.
+   */
+  firstPage: z.number().int().nullable().default(null),
+  /** Tagebuch-Scans: Ein Bild zeigt eine Doppelseite (links und rechts je eine Seite). */
+  pageSpread: z.boolean().default(false),
 });
 export type Source = z.infer<typeof Source>;
 

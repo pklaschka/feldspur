@@ -2,6 +2,7 @@
  * Tagebuch abtippen: Scan groß, Einträge als Rahmen aufziehen, daneben
  * Notierzeit, Kurzform und Volltext. Läuft als Vollbild-Dialog (Radix Dialog).
  */
+import { diaryPageLabel } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
@@ -31,6 +32,8 @@ interface Surface {
   /** PDF-Seite ab 0; bei Bildern 0. */
   page: number;
   isPdf: boolean;
+  /** Doppelseite: Falz in der Mitte andeuten. */
+  spread: boolean;
 }
 interface NavPage {
   key: string;
@@ -46,8 +49,20 @@ function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
   const mains = rows.filter((r) => r.kind === "diary" && !r.partOf).sort((a, b) => a.label.localeCompare(b.label));
   const surfacesOf = (r: SourceRow): Surface[] =>
     r.isPdf
-      ? Array.from({ length: pdfPages.get(r.id) ?? 1 }, (_, page) => ({ sourceId: r.id, page, isPdf: true }))
-      : [{ sourceId: r.id, page: 0, isPdf: false }];
+      ? Array.from({ length: pdfPages.get(r.id) ?? 1 }, (_, page) => ({
+          sourceId: r.id,
+          page,
+          isPdf: true,
+          spread: r.pageSpread,
+        }))
+      : [{ sourceId: r.id, page: 0, isPdf: false, spread: r.pageSpread }];
+  // Mit Seitenzahl aus dem Notizbuch: „T-01 · S. 7–8“; sonst wie gehabt nach Scan und PDF-Seite.
+  const navLabel = (m: SourceRow, page: number, ofPages: number) =>
+    m.firstPage !== null
+      ? diaryPageLabel(m, { page, x: 0, w: 1 })
+      : ofPages > 1
+        ? `${m.label} S. ${page + 1}`
+        : m.label;
   return mains.flatMap((m) => {
     const parts = rows.filter((r) => r.partOf === m.id).sort((a, b) => a.label.localeCompare(b.label));
     if (m.isPdf) {
@@ -55,7 +70,7 @@ function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
       return own.map((sf, i) => ({
         key: sKey(sf),
         mainId: m.id,
-        label: own.length > 1 ? `${m.label} S. ${i + 1}` : m.label,
+        label: navLabel(m, i, own.length),
         // Weitere Bilder hängen an der letzten Seite des PDF.
         surfaces: i === own.length - 1 ? [sf, ...parts.flatMap(surfacesOf)] : [sf],
       }));
@@ -64,7 +79,7 @@ function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
       {
         key: sKey({ sourceId: m.id }),
         mainId: m.id,
-        label: m.label,
+        label: navLabel(m, 0, 1),
         surfaces: [...surfacesOf(m), ...parts.flatMap(surfacesOf)],
       },
     ];
@@ -326,6 +341,13 @@ function PageCanvas({
           setDrag(null);
         }}
       >
+        {surface.spread && (
+          <span
+            className="pointer-events-none absolute inset-y-0 left-1/2 z-[1] border-l border-dashed border-k-diary/60"
+            data-testid="diary-fold"
+            aria-hidden
+          />
+        )}
         {surface.isPdf ? (
           <PdfPageCanvas sourceId={surface.sourceId} page={surface.page} className="block rounded bg-white shadow" />
         ) : (

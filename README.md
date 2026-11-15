@@ -10,8 +10,8 @@ Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchs
 > Versionen ohne Übergang ändern. Wer es trotzdem ausprobieren möchte, ist willkommen, sollte aber mit Ecken und Kanten
 > rechnen.
 
-Arbeitstitel, Stand: in Entwicklung (Einsammeln, Zeitbestimmung, Abgleich, Durchsehen und Tagebuch abtippen
-funktionieren; der Export steht noch aus). Konzept und Tech-Stack sind außerhalb des Repositorys dokumentiert.
+Arbeitstitel, Stand: in Entwicklung (Einsammeln, Zeitbestimmung, Abgleich, Durchsehen, Mitschreiben, Tagebuch
+abtippen und Ausgeben funktionieren). Konzept und Tech-Stack sind außerhalb des Repositorys dokumentiert.
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
@@ -89,8 +89,7 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Klatscher für den Abgleich, ein Durchlauf statt zwei.
 - **docx** (9.15.0, MIT) schreibt das Zeitgerüst als Word-Datei, mit eingebetteten Bildern. Kein Zusatzprogramm
   nötig; Pandoc oder LibreOffice wären schwerer mitzuliefern.
-- **pdf.js** (`pdfjs-dist`, fest auf 5.4.624) für PDF-Scans in Vorschau und Abtipp-Ansicht. Neuere 5.x-Fassungen nutzen
-  `Map.getOrInsertComputed`, das Electron 39 noch nicht kennt.
+- **pdf.js** (`pdfjs-dist`, 6.x) für PDF-Scans in Vorschau und Abtipp-Ansicht.
 
 ## Begriffe im Code
 
@@ -205,4 +204,4 @@ Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zu
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - ExifTool statt exifr für RAW/HEIC.
-- Code-Signatur (Windows, macOS-Notarisierung) und ein App-Symbol.
+- Code-Signatur (Windows, macOS-Notarisierung).
