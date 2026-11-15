@@ -19,7 +19,7 @@ import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Transcriber } from "./Transcriber.tsx";
 import { Sync } from "./Sync.tsx";
-import { Button, cx, FlagMark, Panel, TooltipProvider } from "./ui.tsx";
+import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
 
 import iconUrl from "../../../../packaging/icon.svg?url";
 
@@ -370,7 +370,7 @@ function SessionPane({
                 </Button>
               </div>
               {/* Die vier Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur.
-                  Am aktiven Schritt steht der Feldmarker aus dem App-Symbol. */}
+               */}
               <Tabs.List className="mt-3 -mb-px flex items-center @container" aria-label="Arbeitsschritte">
                 {steps.map((s, i) => (
                   <Fragment key={s.id}>
@@ -385,9 +385,8 @@ function SessionPane({
                       title={s.badge ? `${s.title}: ${s.badge}` : s.title}
                       className="group flex min-w-0 flex-none cursor-pointer items-center gap-2 border-b-[3px] border-transparent px-1.5 pt-1.5 pb-2.5 whitespace-nowrap text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-ink"
                     >
-                      <span className="relative grid size-[22px] flex-none place-items-center rounded-full border border-line-2 bg-panel font-serif text-[0.85rem] text-muted group-data-[state=active]:border-accent group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
+                      <span className="grid size-[22px] flex-none place-items-center rounded-full border border-line-2 bg-panel font-serif text-[0.85rem] text-muted group-data-[state=active]:border-accent group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
                         {s.n}
-                        <FlagMark className="absolute -top-2.5 left-[13px] hidden text-accent group-data-[state=active]:block" />
                       </span>
                       {s.title}
                       {s.badge && (
