@@ -13,6 +13,7 @@ import {
 } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { NotesPanel, type ApplyView } from "./Notes.tsx";
+import { PageNumbering } from "./PageNumbering.tsx";
 import { PdfPageCanvas } from "./pdf.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { SourceMenu, useActions } from "./SourceMenu.tsx";
@@ -297,6 +298,7 @@ function SourceDetails({
           onOpen={() => actions.openDiary(row.id)}
         />
       )}
+      {row.kind === "diary" && <PageNumbering row={row} view={view} apply={actions.apply} />}
 
       {row.idle.length > 0 && (
         <>

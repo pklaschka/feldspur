@@ -25,5 +25,18 @@ auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
 Ein Eintrag kann auf einer anderen Seite weitergehen; dann ziehst du dort einen weiteren Rahmen für denselben Eintrag.
 Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
 
+### Seitenzahlen und Doppelseiten
+
+Oft passt die Reihenfolge der Scans nicht zur Seitenzählung im Notizbuch, zum Beispiel wenn du Doppelseiten
+zusammen fotografiert hast. Unter **Seitenzählung** in der Detailleiste eines Scans trägst du deshalb die
+Seitenzahl ein und schaltest **Doppelseite** ein, wenn ein Bild zwei Seiten zeigt. Ein Rahmen links gehört dann zur
+linken Seite, ein Rahmen rechts zur rechten. In der Abtipp-Ansicht deutet eine gestrichelte Linie den Falz an. Einträge
+heißen danach etwa "T-01 · S. 7". **Weiterzählen** setzt die Zählung über die folgenden Scans desselben Geräts fort;
+PDF-Scans zählen dabei Seite für Seite weiter.
+
+Passt die Zählung für einen Eintrag nicht, trägst du die Seite direkt am Eintrag unter **Seite** ein. Das geht auch
+in PDF-Scans. Klickst du in ein leeres Feld, steht schon ein Vorschlag darin: dieselbe Seite wie beim vorigen Eintrag
+oder die nächste. Enter übernimmt ihn. Ein leeres Feld gilt wieder als Zählung des Scans.
+
 Zeitgerüst, Montagevideo, Mitschrift und Suche führen jeden Eintrag an seiner **Notierzeit**. Der Bezugszeitraum steht
 als Hinweis dabei.

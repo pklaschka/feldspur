@@ -152,4 +152,9 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE sources ADD COLUMN level_compress INTEGER NOT NULL DEFAULT 1;
   ALTER TABLE audio_analysis ADD COLUMN speech_level_db REAL;
   `,
+  // 10: Seitenzählung von Tagebuch-Scans (erste Seitenzahl, Doppelseiten)
+  `
+  ALTER TABLE sources ADD COLUMN first_page INTEGER;
+  ALTER TABLE sources ADD COLUMN page_spread INTEGER NOT NULL DEFAULT 0;
+  `,
 ];

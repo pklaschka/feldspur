@@ -13,7 +13,7 @@ import {
   type Id,
   type ProjectStore,
 } from "@feldspur/core";
-import type { AnchorInput, LevelInput, TimeInput } from "../shared/api.ts";
+import type { AnchorInput, LevelInput, PageNumberingInput, TimeInput } from "../shared/api.ts";
 
 /** ± je Genauigkeitsstufe. */
 export const PRECISION_MS = { exact: 1_000, approx: 60_000, rough: 15 * 60_000 } as const;
@@ -196,4 +196,22 @@ export function setLevel(s: ProjectStore, sourceId: Id, input: LevelInput): Id {
     levelCompress: input.compress,
   });
   return src.sessionId;
+}
+
+/** Seitenzählung von Tagebuch-Scans setzen; alle in einem Schritt. */
+export function setPageNumbering(s: ProjectStore, items: PageNumberingInput[]): Id {
+  if (!items.length) throw new Error("Keine Seiten angegeben");
+  let sessionId: Id | null = null;
+  s.transaction(() => {
+    for (const i of items) {
+      const src = s.getSource(i.sourceId);
+      if (src.kind !== "diary") throw new Error(`${src.label} ist keine Tagebuchseite`);
+      if (i.firstPage !== null && (!Number.isInteger(i.firstPage) || i.firstPage < 0 || i.firstPage > 99_999))
+        throw new Error("Seitenzahl bitte als ganze Zahl ab 0");
+      if (sessionId && src.sessionId !== sessionId) throw new Error("Seiten aus verschiedenen Einsätzen");
+      sessionId = src.sessionId;
+      s.updateSource(i.sourceId, { firstPage: i.firstPage, pageSpread: i.spread });
+    }
+  });
+  return sessionId!;
 }

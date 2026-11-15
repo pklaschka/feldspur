@@ -304,6 +304,14 @@ try {
   console.log(`Folgeaufnahme ${zoomLabel} beginnt 10:25:00`);
   await shot("-quellen");
 
+  // Im parallel laufenden Video eine Zeile mitschreiben; sie erscheint dann beim Mitschreiben von A-01 (nur lesen).
+  await src("C0001.MP4").click();
+  await page.getByTestId("inspector").getByRole("button", { name: "Mitschreiben…" }).click();
+  await page.getByTestId("transcriber").getByLabel("Neue Zeile").fill("B2: Das hört man auch im Video.");
+  await page.getByTestId("transcriber").getByLabel("Neue Zeile").press("Enter");
+  await page.getByTestId("transcriber").getByTestId("line").first().waitFor();
+  await page.getByTestId("transcriber").getByRole("button", { name: "Fertig" }).click();
+  await page.getByTestId("transcriber").waitFor({ state: "detached" });
   // Mitschreiben: A-01 bei etwa 1:00 (10:16:00) abhören und zwei Zeilen tippen.
   await src("ZOOM0001.m4a").click();
   await page.getByTestId("inspector").getByRole("button", { name: "Mitschreiben…" }).click();
@@ -314,9 +322,23 @@ try {
     .filter({ hasText: /V-\d+ \(Video\) beginnt/ })
     .first()
     .waitFor();
+  await tr.getByTestId("other-line").filter({ hasText: "Das hört man auch im Video." }).waitFor();
+  console.log("Andere Spur: Zeile aus dem Video sichtbar");
+  // Tonquelle: erst dasselbe Gerät, dann mit Trennlinie die anderen.
+  await tr.getByRole("combobox", { name: "Tonquelle" }).click();
+  const opts = page.getByRole("listbox");
+  await opts.getByText("Andere Geräte").waitFor();
+  const optTexts = await opts.getByRole("option").allInnerTexts();
+  if (!/ZOOM0002/.test(optTexts[1] ?? "")) throw new Error(`Reihenfolge der Tonquellen: ${optTexts.join(" | ")}`);
+  await shot("-tonquelle");
+  await page.keyboard.press("Escape");
+  await opts.waitFor({ state: "detached" });
   const scrub = tr.getByRole("slider", { name: "Stelle in der Aufnahme" });
   const sb = (await scrub.boundingBox())!;
-  await page.mouse.click(sb.x + sb.width * 0.1, sb.y + sb.height / 2);
+  // Stelle aus der Länge der Aufnahme, damit der Klick genau 1:00 trifft.
+  const durMs = Number(await scrub.getAttribute("aria-valuemax"));
+  const atFrac = (ms: number) => (ms + 200) / durMs;
+  await page.mouse.click(sb.x + sb.width * atFrac(60_000), sb.y + sb.height / 2);
   await tr
     .getByTestId("transcriber-position")
     .getByText(/^(0:59|1:0)/)
@@ -327,7 +349,7 @@ try {
   await tr.getByTestId("line").first().waitFor();
   if ((await tr.getByLabel("Sprecher", { exact: true }).inputValue()) !== "B1")
     throw new Error("Sprecher nicht übernommen");
-  await page.mouse.click(sb.x + sb.width * 0.105, sb.y + sb.height / 2);
+  await page.mouse.click(sb.x + sb.width * atFrac(63_000), sb.y + sb.height / 2);
   await newLine.fill("H: Zwölf Jahre, seit mein Vater aufgehört hat.");
   await newLine.press("Enter");
   await tr.getByTestId("line").nth(1).waitFor();
@@ -365,10 +387,24 @@ try {
     .getByTestId("note")
     .getByText(/^1:0\d\S* – (2:5|3:0)\d/)
     .waitFor();
-  // Esc schaltet die Wiedergabe um und schließt den Dialog nicht.
+  // Esc schaltet die Wiedergabe um und schließt den Dialog nicht, auch ohne Fokus im Textfeld.
   await newLine.press("Escape");
   await newLine.press("Escape");
   await tr.waitFor();
+  await tr.getByTestId("transcriber-position").click();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  const pos0 = await tr.getByTestId("transcriber-position").innerText();
+  await page.keyboard.press("F9");
+  await tr.getByTestId("transcriber-position").filter({ hasNotText: pos0 }).waitFor();
+  await page.keyboard.press("Escape");
+  await tr.getByRole("button", { name: "Pause" }).waitFor();
+  await page.keyboard.press("Escape");
+  await tr.getByRole("button", { name: "Abspielen" }).waitFor();
+  // Tippen ohne Fokus landet in der neuen Zeile.
+  await page.keyboard.type("Wei");
+  if ((await newLine.inputValue()) !== "Wei") throw new Error(`Tippen ohne Fokus: „${await newLine.inputValue()}“`);
+  await newLine.fill("");
+  console.log("Tastenkürzel ohne Fokus: F9, Esc, Tippen gehen");
   await shot("-mitschreiben");
   await tr.getByRole("button", { name: "Fertig" }).click();
   await tr.waitFor({ state: "detached" });
@@ -477,6 +513,36 @@ try {
   await shot("-tagebuch-seiten");
   await editor.getByRole("button", { name: "Fertig" }).click();
   await editor.waitFor({ state: "detached" });
+
+  // Seitenzählung: T-01 ist eine Doppelseite ab S. 1, T-02 zählt weiter.
+  await src("Tagebuch_S01.jpg").click();
+  const numbering = page.getByTestId("page-numbering");
+  await numbering.getByLabel("Doppelseite T-01").click();
+  await numbering.getByLabel("Seitenzahl im Notizbuch für T-01").fill("1");
+  await numbering.getByLabel("Seitenzahl im Notizbuch für T-01").press("Enter");
+  await numbering.getByText("T-01 zeigt S. 1–2", { exact: false }).waitFor();
+  await numbering.getByRole("button", { name: /weiterzählen/ }).click();
+  await src("Tagebuch_S02.jpg").click();
+  await numbering.getByText("T-02 zeigt S. 3–4", { exact: false }).waitFor();
+  await shot("-seitenzaehlung");
+  await page.getByTestId("inspector").getByRole("button", { name: "Abtippen…" }).click();
+  await editor.waitFor();
+  await editor.getByTestId("diary-fold").first().waitFor();
+  await nav.getByText("T-01 · S. 1–2").waitFor();
+  await editor.getByText("T-02 · S. 3–4").first().waitFor();
+  // Seitenzahl am Eintrag: von Hand, der nächste Eintrag bekommt sie vorgeschlagen.
+  await editor.getByLabel("Seite Eintrag 2").fill("15");
+  await editor.getByLabel("Seite Eintrag 2").press("Enter");
+  await editor.getByText("T-02 · S. 15").first().waitFor();
+  await editor.getByLabel("Seite Eintrag 3").click();
+  if ((await editor.getByLabel("Seite Eintrag 3").inputValue()) !== "15")
+    throw new Error(`Vorschlag für Eintrag 3: ${await editor.getByLabel("Seite Eintrag 3").inputValue()}`);
+  await editor.getByLabel("Seite Eintrag 3").press("Enter");
+  await editor.getByText("T-02 · S. 15").nth(1).waitFor();
+  await shot("-tagebuch-doppelseite");
+  await editor.getByRole("button", { name: "Fertig" }).click();
+  await editor.waitFor({ state: "detached" });
+  console.log("Seitenzählung: Doppelseiten T-01 S. 1–2, T-02 S. 3–4, Eintrag von Hand S. 15");
 
   // Einsatzdaten bearbeiten.
   await page.getByRole("button", { name: "Einsatzdaten bearbeiten" }).click();

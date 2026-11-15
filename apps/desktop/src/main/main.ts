@@ -19,6 +19,7 @@ import {
   MEDIA_SCHEME,
   type AnchorInput,
   type LevelInput,
+  type PageNumberingInput,
   type DiaryPatch,
   type Region,
   type ImportOutcome,
@@ -29,7 +30,7 @@ import {
   type SourceNoteInput,
   type ProjectInfo,
 } from "../shared/api.ts";
-import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
+import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion, setRegionPage } from "./diary.ts";
 import {
   addManualAnchor,
   addTimeEvidence,
@@ -37,6 +38,7 @@ import {
   removeEvidence,
   replaceAnchor,
   setLevel,
+  setPageNumbering,
   toggleEvidence,
 } from "./edits.ts";
 import { exportRunning, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
@@ -369,6 +371,10 @@ function registerIpc(): void {
     const s = requireStore();
     return buildSessionView(s, setLevel(s, sourceId, input));
   });
+  ipcMain.handle(IPC.setPageNumbering, (_e, items: PageNumberingInput[]) => {
+    const s = requireStore();
+    return buildSessionView(s, setPageNumbering(s, items));
+  });
   ipcMain.handle(IPC.measureLevel, async (_e, sourceId: string) => {
     const s = requireStore();
     await measureSource(s, sourceId);
@@ -387,6 +393,10 @@ function registerIpc(): void {
   ipcMain.handle(IPC.removeDiaryRegion, (_e, entryId: string, index: number) => {
     const s = requireStore();
     return buildSessionView(s, removeRegion(s, entryId, index));
+  });
+  ipcMain.handle(IPC.setDiaryRegionPage, (_e, entryId: string, index: number, pageNo: number | null) => {
+    const s = requireStore();
+    return buildSessionView(s, setRegionPage(s, entryId, index, pageNo));
   });
   ipcMain.handle(IPC.deleteDiaryEntry, (_e, entryId: string) => {
     const s = requireStore();

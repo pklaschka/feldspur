@@ -17,7 +17,7 @@
     "@fontsource-variable/source-sans-3": "^5.3.1",
     "@fontsource-variable/source-serif-4": "^5.3.1",
     "better-sqlite3": "^13.2.0",
-    "pdfjs-dist": "5.4.624",
+    "pdfjs-dist": "6.5.438",
     "radix-ui": "1.8.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

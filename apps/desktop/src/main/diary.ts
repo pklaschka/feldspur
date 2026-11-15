@@ -53,6 +53,21 @@ export function removeRegion(s: ProjectStore, entryId: Id, index: number): Id {
   return e.sessionId;
 }
 
+/** Seitenzahl im Notizbuch an einem Rahmen eintragen; null = wieder aus der Zählung des Scans. */
+export function setRegionPage(s: ProjectStore, entryId: Id, index: number, pageNo: number | null): Id {
+  const e = s.getDiaryEntry(entryId);
+  if (!e.regions[index]) throw new Error("Rahmen nicht gefunden");
+  if (pageNo !== null && (!Number.isInteger(pageNo) || pageNo < 0 || pageNo > 99_999))
+    throw new Error("Seitenzahl bitte als ganze Zahl ab 0");
+  const regions = e.regions.map((r, i) => {
+    if (i !== index) return r;
+    const { pageNo: _old, ...rest } = r;
+    return pageNo === null ? rest : { ...rest, pageNo };
+  });
+  s.updateDiaryEntry(entryId, { regions });
+  return e.sessionId;
+}
+
 export function deleteEntry(s: ProjectStore, entryId: Id): Id {
   const e = s.getDiaryEntry(entryId);
   s.deleteDiaryEntry(entryId);

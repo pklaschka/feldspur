@@ -2,6 +2,7 @@
  * Tagebuch abtippen: Scan groß, Einträge als Rahmen aufziehen, daneben
  * Notierzeit, Kurzform und Volltext. Läuft als Vollbild-Dialog (Radix Dialog).
  */
+import { diaryPageLabel, suggestPageNo } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
@@ -31,6 +32,8 @@ interface Surface {
   /** PDF-Seite ab 0; bei Bildern 0. */
   page: number;
   isPdf: boolean;
+  /** Doppelseite: Falz in der Mitte andeuten. */
+  spread: boolean;
 }
 interface NavPage {
   key: string;
@@ -46,8 +49,20 @@ function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
   const mains = rows.filter((r) => r.kind === "diary" && !r.partOf).sort((a, b) => a.label.localeCompare(b.label));
   const surfacesOf = (r: SourceRow): Surface[] =>
     r.isPdf
-      ? Array.from({ length: pdfPages.get(r.id) ?? 1 }, (_, page) => ({ sourceId: r.id, page, isPdf: true }))
-      : [{ sourceId: r.id, page: 0, isPdf: false }];
+      ? Array.from({ length: pdfPages.get(r.id) ?? 1 }, (_, page) => ({
+          sourceId: r.id,
+          page,
+          isPdf: true,
+          spread: r.pageSpread,
+        }))
+      : [{ sourceId: r.id, page: 0, isPdf: false, spread: r.pageSpread }];
+  // Mit Seitenzahl aus dem Notizbuch: „T-01 · S. 7–8“; sonst wie gehabt nach Scan und PDF-Seite.
+  const navLabel = (m: SourceRow, page: number, ofPages: number) =>
+    m.firstPage !== null
+      ? diaryPageLabel(m, { page, x: 0, w: 1 })
+      : ofPages > 1
+        ? `${m.label} S. ${page + 1}`
+        : m.label;
   return mains.flatMap((m) => {
     const parts = rows.filter((r) => r.partOf === m.id).sort((a, b) => a.label.localeCompare(b.label));
     if (m.isPdf) {
@@ -55,7 +70,7 @@ function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
       return own.map((sf, i) => ({
         key: sKey(sf),
         mainId: m.id,
-        label: own.length > 1 ? `${m.label} S. ${i + 1}` : m.label,
+        label: navLabel(m, i, own.length),
         // Weitere Bilder hängen an der letzten Seite des PDF.
         surfaces: i === own.length - 1 ? [sf, ...parts.flatMap(surfacesOf)] : [sf],
       }));
@@ -64,7 +79,7 @@ function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavPage[] {
       {
         key: sKey({ sourceId: m.id }),
         mainId: m.id,
-        label: m.label,
+        label: navLabel(m, 0, 1),
         surfaces: [...surfacesOf(m), ...parts.flatMap(surfacesOf)],
       },
     ];
@@ -122,6 +137,21 @@ export function DiaryEditor({
   const entriesOn = (p: NavPage) =>
     view.diary.filter((e) => e.regions.some((r) => p.surfaces.some((sf) => sKey(sf) === sKey(r))));
   const here = page ? entriesOn(page) : [];
+  // Vorschläge für die Seitenzahl je Rahmen: aus dem vorigen Rahmen in Lesereihenfolge weitergezählt.
+  const suggestions = new Map<string, number>();
+  {
+    const spread = new Map(view.rows.map((r) => [r.id, r.pageSpread]));
+    let prev: Parameters<typeof suggestPageNo>[0] = null;
+    for (const e of view.diary)
+      e.regions.forEach((r, i) => {
+        const cur = { region: r, spread: spread.get(r.sourceId) ?? false };
+        const n = r.pageNo ?? suggestPageNo(prev, cur);
+        if (n !== null) {
+          suggestions.set(`${e.id}#${i}`, n);
+          prev = { ...cur, pageNo: n };
+        }
+      });
+  }
   const contEntry = view.diary.find((e) => e.id === continuing) ?? null;
   const goto = (p: NavPage) => {
     setNavKey(p.key);
@@ -239,6 +269,8 @@ export function DiaryEditor({
                 entry={e}
                 isHere={(r) => !!page?.surfaces.some((sf) => sKey(sf) === sKey(r))}
                 defaultLookback={view.diaryLookbackMin}
+                suggestPage={(i) => suggestions.get(`${e.id}#${i}`) ?? null}
+                onPage={(i, n) => void guard(() => api.setDiaryRegionPage(e.id, i, n)).then((v) => v && onView(v))}
                 active={selected === e.id}
                 onFocus={() => setSelected(e.id)}
                 onPatch={(p) => patch(e.id, p)}
@@ -326,6 +358,13 @@ function PageCanvas({
           setDrag(null);
         }}
       >
+        {surface.spread && (
+          <span
+            className="pointer-events-none absolute inset-y-0 left-1/2 z-[1] border-l border-dashed border-k-diary/60"
+            data-testid="diary-fold"
+            aria-hidden
+          />
+        )}
         {surface.isPdf ? (
           <PdfPageCanvas sourceId={surface.sourceId} page={surface.page} className="block rounded bg-white shadow" />
         ) : (
@@ -372,10 +411,66 @@ function PageCanvas({
   );
 }
 
+/**
+ * Seitenzahl im Notizbuch am Eintrag. Leer zeigt die Zählung des Scans oder einen Vorschlag
+ * (vom vorigen Eintrag weitergezählt); beim Hineinklicken steht der Vorschlag schon drin.
+ */
+function PageField({
+  label,
+  ariaLabel,
+  pageNo,
+  own,
+  suggestion,
+  onCommit,
+}: {
+  label: string;
+  ariaLabel: string;
+  pageNo: number | null;
+  own: boolean;
+  suggestion: number | null;
+  onCommit: (pageNo: number | null) => void;
+}) {
+  const [text, setText] = useState(own && pageNo !== null ? String(pageNo) : "");
+  useEffect(() => setText(own && pageNo !== null ? String(pageNo) : ""), [own, pageNo]);
+  const hint = pageNo ?? suggestion;
+  const commit = () => {
+    const t = text.trim();
+    const n = t === "" ? null : Number(t);
+    if (n !== null && !Number.isInteger(n)) return setText(own && pageNo !== null ? String(pageNo) : "");
+    if (n === null) {
+      if (own) onCommit(null);
+    } else if (n !== pageNo) onCommit(n); // was die Zählung des Scans ohnehin ergibt, nicht eigens speichern
+  };
+  return (
+    <label className="grid gap-0.5" title="Seitenzahl im Notizbuch. Leer: aus der Seitenzählung des Scans.">
+      <span className="text-muted">{label}</span>
+      <input
+        className="w-16 font-mono"
+        inputMode="numeric"
+        placeholder={hint === null ? "–" : String(hint)}
+        value={text}
+        aria-label={ariaLabel}
+        onFocus={(e) => {
+          if (text === "" && hint !== null) {
+            setText(String(hint));
+            const el = e.currentTarget;
+            requestAnimationFrame(() => el.select());
+          }
+        }}
+        onChange={(e) => setText(e.target.value.replace(/[^\d]/g, ""))}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      />
+    </label>
+  );
+}
+
 function EntryCard({
   entry,
   isHere,
   defaultLookback,
+  suggestPage,
+  onPage,
   active,
   onFocus,
   onPatch,
@@ -387,6 +482,8 @@ function EntryCard({
   entry: DiaryEntryRow;
   isHere: (r: { sourceId: string; page?: number }) => boolean;
   defaultLookback: number;
+  suggestPage: (index: number) => number | null;
+  onPage: (index: number, pageNo: number | null) => void;
   active: boolean;
   onFocus: () => void;
   onPatch: (p: DiaryPatch) => void;
@@ -480,6 +577,17 @@ function EntryCard({
             <span className="text-muted">Min. davor</span>
           </span>
         </label>
+        {entry.regions.map((r, i) => (
+          <PageField
+            key={i}
+            label={entry.regions.length > 1 ? `Seite (${i + 1}. Teil)` : "Seite"}
+            ariaLabel={`Seite ${label}${entry.regions.length > 1 ? `, ${i + 1}. Teil` : ""}`}
+            pageNo={r.pageNo}
+            own={r.pageNoOwn}
+            suggestion={suggestPage(i)}
+            onCommit={(n) => onPage(i, n)}
+          />
+        ))}
       </div>
       <Choice
         label={`Form ${label}`}

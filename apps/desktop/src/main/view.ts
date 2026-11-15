@@ -1,6 +1,9 @@
 import {
   computeEpisodes,
+  diaryPageLabel,
+  regionPageNo,
   effectiveLocal,
+  sideOrder,
   formatDuration,
   formatClock,
   resolveTimeline,
@@ -57,9 +60,9 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   }
 
   const pageOf = (id: string) => sourceById.get(id)?.partOf ?? id;
-  const pageLabel = (id: string, page: number) => {
+  const pageLabel = (id: string, region: { page: number; x: number; w: number }) => {
     const s = sourceById.get(id);
-    return `${s?.label ?? "?"}${s && /\.pdf$/i.test(s.fileName) ? ` S. ${page + 1}` : ""}`;
+    return s ? diaryPageLabel(s, region) : "?";
   };
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
@@ -96,6 +99,8 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       loudAtMs: p && an ? an.loudInIdle.map((l) => p.startMs + l.atMs) : [],
       previewable: (s.kind === "photo" || s.kind === "diary") && /\.(jpe?g|png|webp|gif)$/i.test(s.fileName),
       isPdf: /\.pdf$/i.test(s.fileName),
+      firstPage: s.firstPage,
+      pageSpread: s.pageSpread,
       id: s.id,
       label: s.label,
       kind: s.kind,
@@ -228,14 +233,16 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
 
   const diary: DiaryEntryRow[] = input.diaryEntries
     .map((e) => {
-      // Nummerierung nach Seite (Hauptquelle, dann weitere Bilder, PDF-Seite) und Lage auf der Seite.
+      // Nummerierung nach Seite (Hauptquelle, dann weitere Bilder, PDF-Seite) und Lage auf der Seite;
+      // auf Doppelseiten erst die linke, dann die rechte Seite.
       const first = e.regions[0];
       const src = sourceById.get(first?.sourceId ?? "");
       const main = src?.partOf ? sourceById.get(src.partOf) : src;
       const page = String(first?.page ?? 0).padStart(4, "0");
+      const side = src && first ? sideOrder(src, first) : 0;
       return {
         e,
-        key: `${main?.label ?? "~"}:${src?.partOf ? src.label : ""}:${page}:${(first?.y ?? 0).toFixed(4)}:${(first?.x ?? 0).toFixed(4)}`,
+        key: `${main?.label ?? "~"}:${src?.partOf ? src.label : ""}:${page}:${side}:${(first?.y ?? 0).toFixed(4)}:${(first?.x ?? 0).toFixed(4)}`,
       };
     })
     .sort((a, b) => a.key.localeCompare(b.key))
@@ -250,10 +257,15 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         mode: e.mode,
         shortText: e.shortText,
         fullText: e.fullText,
-        regions: e.regions.map((r) => ({
-          ...r,
-          pageLabel: pageLabel(r.sourceId, r.page),
-        })),
+        regions: e.regions.map((r) => {
+          const s = sourceById.get(r.sourceId);
+          return {
+            ...r,
+            pageLabel: pageLabel(r.sourceId, r),
+            pageNo: s ? regionPageNo(s, r) : (r.pageNo ?? null),
+            pageNoOwn: r.pageNo != null,
+          };
+        }),
       };
     });
 
