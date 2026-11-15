@@ -25,7 +25,7 @@ Literatur ein und legt offen, wie es mit generativer KI entsteht.
 >
 > Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
 > und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
-> ändern. Wer es ausprobieren möchte, ist herzlich eingeladen, sollte aber mit Ecken und Kanten rechnen. Ergebnisse, die in eine
+> ändern. Wer es ausprobieren möchte, ist herzlich eingeladen. Mit Ecken und Kanten ist aber zu rechnen. Ergebnisse, die in eine
 > Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
@@ -42,11 +42,12 @@ Ein Eintrag kann auf einer anderen Seite weitergehen.
 Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests, der Skripte und
 der Dokumentation, auch dieses Texts, wurde von Claude (Anthropic) über Claude Code geschrieben, im Dialog mit mir.
 Von mir stammen die Fragestellung, das Konzept, die Anforderungen aus der Feldforschung und die Entscheidungen. Ich gebe
-die Richtung vor, sehe Ergebnisse durch und probiere sie aus. Ich lese aber nicht jede Zeile Code selbst gegen.
+die Richtung vor, sehe Ergebnisse durch und probiere sie aus. Jede Zeile Code lese ich allerdings nicht selbst gegen.
+Das gehört zur Ehrlichkeit dazu.
 Commits, an denen die KI beteiligt war, tragen im Repository eine `Co-Authored-By`-Zeile.
 
 Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat). Auch das kann sich nicht jede\*r leisten. Ich
-erwähne es deshalb zur Transparenz, und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu
+erwähne es deshalb zur Transparenz. Und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu
 stellen.
 
 ### Was das für die Nutzung heißt
@@ -54,8 +55,8 @@ stellen.
 - Der Code kann Fehler enthalten, die weder Tests noch ich bemerkt haben. Ergebnisse, die in eine Analyse oder
   Veröffentlichung eingehen, bitte an den Originalaufnahmen prüfen.
 - Feldspur ist deshalb bewusst auf Nachvollziehbarkeit gebaut: Originale werden nie verändert und über Prüfsummen
-  belegt. Jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet. Automatische Vorschläge, etwa
-  Sync-Anker, zählen erst, wenn sie von Hand bestätigt wurden.
+  belegt. Jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet. Automatische Vorschläge (z. B.
+  Sync-Anker) zählen erst, wenn sie von Hand bestätigt wurden.
 - Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: keine automatische Transkription, keine Cloud-Dienste.
   Alles läuft lokal.
 
@@ -64,8 +65,8 @@ Meine Haltung zur Nutzung sogenannter KI steht ausführlich im
 
 ## Zitieren und archivieren
 
-Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bitte mit Version oder Commit, da sich
-das Werkzeug noch stark verändert:
+Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bitte mit Version oder Commit. Denn
+das Werkzeug verändert sich (noch) stark:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
 > (Version 0.1.0) \[Software\]. <https://github.com/pklaschka/feldspur>

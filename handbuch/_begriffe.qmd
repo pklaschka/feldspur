@@ -20,7 +20,7 @@ Episode
 : Zeitraum, in dem eine Aufnahme läuft und nicht nur Stille ist.
 
 Folgeaufnahme
-: Datei, die die vorige Datei desselben Geräts nahtlos fortsetzt.
+: Datei, die die vorige Datei desselben Geräts ohne Lücke fortsetzt.
 
 Gerät
 : Alles mit einer eigenen Uhr: Kamera, Rekorder, Handy, aber auch das Tagebuch.

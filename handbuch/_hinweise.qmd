@@ -13,6 +13,6 @@ Haltung zur Nutzung sogenannter KI, im Abschnitt „Entstehung mit generativer K
 
 Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
 und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
-ändern. Wer es ausprobieren möchte, ist herzlich eingeladen, sollte aber mit Ecken und Kanten rechnen. Ergebnisse, die in eine
+ändern. Wer es ausprobieren möchte, ist herzlich eingeladen. Mit Ecken und Kanten ist aber zu rechnen. Ergebnisse, die in eine
 Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
 :::

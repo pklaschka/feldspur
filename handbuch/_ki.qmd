@@ -1,7 +1,7 @@
 # Entstehung mit generativer KI {#sec-ki}
 
-Transparenz ist etwas, das es in der Wissenschaft leider viel zu wenig gibt. Deshalb steht hier ausführlich, wie
-Feldspur entsteht und wie ich dazu stehe. Entwickelt wird mit Claude Code [@claudecode].
+Transparenz ist etwas, das es in der Wissenschaft leider viel zu wenig gibt. Deshalb lege ich hier ausführlich offen,
+wie Feldspur entsteht – mit Claude Code [@claudecode] – und wie ich dazu stehe.
 
 {{< include _ki-kern.qmd >}}
 

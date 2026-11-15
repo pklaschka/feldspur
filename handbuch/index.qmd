@@ -10,12 +10,13 @@ date: last-modified
 date-format: "D. MMMM YYYY"
 lang: de
 abstract: |
-  Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen von vielen Geräten, deren
-  Uhren selten übereinstimmen. Feldspur ist ein Open-Source-Werkzeug, das dieses Material nach Uhrzeit auf eine
-  gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus ein Dokument mit
-  Zeitmarken für die Analyse in MAXQDA erzeugt. Der Begleittext beschreibt den Anlass, ordnet Feldspur in bestehende
-  Werkzeuge ein und legt offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch führt durch die Arbeit
-  mit dem Programm.
+  Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
+  deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
+  (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
+  Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
+  ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
+  Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
+  führt durch die Arbeit mit dem Programm.
 keywords: [Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science]
 bibliography: literatur.bib
 citation:
@@ -27,10 +28,10 @@ license: "CC BY 4.0"
 
 {{< include _hinweise.qmd >}}
 
-Diesen Text gibt es als Webseite und als PDF; das PDF liegt außerdem jedem Release bei. Er hat zwei Teile: Der
-Begleittext erzählt, warum es Feldspur gibt (@sec-motivation), wie es sich zu bestehenden Werkzeugen verhält
+Diesen Text gibt es als Webseite und als PDF (das außerdem jedem Release beiliegt). Er hat zwei Teile. Im
+Begleittext erzähle ich, warum es Feldspur gibt (@sec-motivation), wie es sich zu bestehenden Werkzeugen verhält
 (@sec-einordnung) und wie es mithilfe generativer KI entstanden ist (@sec-ki). Das Handbuch (@sec-handbuch) führt
-Schritt für Schritt durch die Arbeit mit Feldspur.
+dann Schritt für Schritt durch die Arbeit mit Feldspur.
 
 {{< include _einleitung.qmd >}}
 
@@ -44,8 +45,8 @@ Schritt für Schritt durch die Arbeit mit Feldspur.
 ## Bildschirmfotos veraltet
 
 Die Bildschirmfotos in diesem Handbuch zeigen einen älteren Stand der Oberfläche. Vor dem nächsten Release steht ein
-Redesign an; danach werden sie erneuert. Sie zeigen erfundene Beispieldaten („Testmarkt“), keine echten
-Forschungsdaten.
+Redesign an, danach erneuere ich sie. Zu sehen sind übrigens nur erfundene Beispieldaten (ein „Testmarkt“), keine
+echten Forschungsdaten.
 :::
 
 {{< include _handbuch-erste-schritte.qmd >}}

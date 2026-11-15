@@ -1,7 +1,7 @@
 # Zitieren und archivieren {#sec-zitieren}
 
-Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bitte mit Version oder Commit, da sich
-das Werkzeug noch stark verändert:
+Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bitte mit Version oder Commit. Denn
+das Werkzeug verändert sich (noch) stark:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
 > (Version 0.1.0) [Software]. <https://github.com/pklaschka/feldspur>
