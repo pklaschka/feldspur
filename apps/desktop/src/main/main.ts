@@ -7,6 +7,7 @@ import {
   analyzeSession,
   applyImport,
   parseTranscript,
+  readPeaks,
   scanPaths,
   setToolPaths,
   TRANSCRIPT_EXTENSIONS,
@@ -22,15 +23,17 @@ import {
   type NewSessionInput,
   type SessionPatch,
   type TranscriptPatch,
+  type SourceNoteInput,
   type ProjectInfo,
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
-import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
+import { addManualAnchor, addTimeEvidence, confirmPlacement, removeEvidence, toggleEvidence } from "./edits.ts";
 import { exportRunning, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
 import { resolveToolPaths } from "./tools.ts";
+import { addNote, deleteNote, updateNote } from "./notes.ts";
 import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
 import { buildSessionView } from "./view.ts";
 import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
@@ -190,6 +193,24 @@ function registerIpc(): void {
     return buildSessionView(s, deleteLine(s, lineId));
   });
 
+  ipcMain.handle(IPC.addSourceNote, (_e, sourceId: string, note: SourceNoteInput) => {
+    const s = requireStore();
+    return buildSessionView(s, addNote(s, sourceId, note));
+  });
+  ipcMain.handle(IPC.updateSourceNote, (_e, noteId: string, patch: SourceNoteInput) => {
+    const s = requireStore();
+    return buildSessionView(s, updateNote(s, noteId, patch));
+  });
+  ipcMain.handle(IPC.deleteSourceNote, (_e, noteId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, deleteNote(s, noteId));
+  });
+  ipcMain.handle(IPC.waveformPeaks, (_e, sourceId: string, fromMs: number, toMs: number, buckets: number) => {
+    const src = requireStore().getSource(sourceId);
+    if (src.kind !== "audio" && src.kind !== "video") throw new Error(`${src.label} hat keine Tonspur`);
+    return readPeaks(src.originalPath, fromMs, toMs, buckets);
+  });
+
   registerOverlayBridge();
   ipcMain.handle(
     IPC.importTranscript,
@@ -293,6 +314,10 @@ function registerIpc(): void {
     return buildSessionView(s, a.sessionId);
   });
 
+  ipcMain.handle(IPC.confirmPlacement, (_e, sourceId: string, startMs: number) => {
+    const s = requireStore();
+    return buildSessionView(s, confirmPlacement(s, sourceId, startMs));
+  });
   ipcMain.handle(IPC.addTime, (_e, input: TimeInput) => {
     const s = requireStore();
     return buildSessionView(s, addTimeEvidence(s, input));

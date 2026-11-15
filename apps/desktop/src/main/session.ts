@@ -5,7 +5,7 @@ import type { SessionPatch } from "../shared/api.ts";
 const DAY = 86_400_000;
 
 /**
- * Titel, Datum, Ort, Zeitzone, Standard-Bezugszeitraum und Zusatzfelder ändern.
+ * Titel, Datum, Ort, Zeitzone, Standard-Bezugszeitraum, Episoden und Zusatzfelder ändern.
  * Wird das Datum verschoben, wandern alle von Hand eingetragenen Uhrzeiten (Zeitbelege von Hand,
  * angesagte Zeiten, Notierzeiten im Tagebuch) mit, weil sie als Uhrzeit an diesem Tag gemeint waren.
  * Zeiten aus Metadaten und Dateinamen bleiben, wie sie sind.
@@ -37,6 +37,7 @@ export function updateSessionDetails(s: ProjectStore, sessionId: string, patch: 
     if (!Number.isFinite(m) || m < 0 || m > 1440) throw new Error("Bezugszeitraum bitte zwischen 0 und 1440 Minuten");
     next.diaryLookbackMs = Math.round(m * 60_000);
   }
+  if (patch.episodes !== undefined) next.episodes = patch.episodes;
   if (patch.extra !== undefined) {
     next.extra = Object.fromEntries(
       Object.entries(patch.extra)
@@ -49,7 +50,7 @@ export function updateSessionDetails(s: ProjectStore, sessionId: string, patch: 
     s.updateSession(sessionId, next);
     if (!shift) return;
     for (const e of s.listEvidence(sessionId)) {
-      if (e.kind !== "manual" && e.kind !== "spoken") continue;
+      if (e.kind !== "manual" && e.kind !== "spoken" && e.kind !== "checked") continue;
       s.updateEvidenceTime(e.id, e.localMs + shift);
     }
     for (const d of s.listDiaryEntries(sessionId)) {

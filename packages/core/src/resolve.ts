@@ -106,6 +106,7 @@ export function combineUncertainty(...parts: number[]): number {
 }
 
 const KIND_RANK: Record<EvidenceKind, number> = {
+  checked: 0,
   manual: 0,
   anchor: 1,
   metadata: 2,
@@ -184,7 +185,9 @@ function candidatesFor(
 
 function pickBest(cands: Candidate[]): Candidate | undefined {
   return [...cands].sort((a, b) => {
-    if ((a.ev.kind === "manual") !== (b.ev.kind === "manual")) return a.ev.kind === "manual" ? -1 : 1;
+    // Bestätigt vor von Hand: eine neue Handeingabe entfernt die Bestätigung (siehe edits.ts).
+    for (const k of ["checked", "manual"] as const)
+      if ((a.ev.kind === k) !== (b.ev.kind === k)) return a.ev.kind === k ? -1 : 1;
     if (a.trusted !== b.trusted) return a.trusted ? -1 : 1;
     if (a.uncertaintyMs !== b.uncertaintyMs) return a.uncertaintyMs - b.uncertaintyMs;
     return KIND_RANK[a.ev.kind] - KIND_RANK[b.ev.kind];
@@ -270,7 +273,10 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
       if (best.uncertaintyMs >= 30_000 && best.uncertaintyMs < 60_000) notes.push("nur Minute");
       else if (best.uncertaintyMs > OK_UNCERTAINTY_MS) notes.push(`± ${formatDuration(best.uncertaintyMs)}`);
       for (const c of conflicts) notes.push(`Widerspruch ${formatDuration(c.differenceMs, { sign: true })}`);
-      const ok = best.trusted && best.uncertaintyMs <= OK_UNCERTAINTY_MS && conflicts.length === 0;
+      // Geprüft heißt: Die Forscherin hat die Lage gesehen und für richtig befunden. Hinweise bleiben stehen.
+      const checked = best.ev.kind === "checked";
+      if (checked) notes.unshift("geprüft");
+      const ok = checked || (best.trusted && best.uncertaintyMs <= OK_UNCERTAINTY_MS && conflicts.length === 0);
       placements.set(src.id, {
         sourceId: src.id,
         startMs: best.startMs,
@@ -298,7 +304,8 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         const prevSrc = sourceById.get(src.follows!);
         if (!prev || !prevSrc || prevSrc.durationMs === null) continue;
         const own = placements.get(src.id);
-        if (own && (own.basis.kind === "manual" || own.basis.kind === "spoken")) continue;
+        if (own && (own.basis.kind === "manual" || own.basis.kind === "spoken" || own.basis.kind === "checked"))
+          continue;
         if (own?.basis.kind === "follows" && own.startMs === prev.endMs) continue;
         placements.set(src.id, {
           sourceId: src.id,
@@ -308,7 +315,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
           basis: { kind: "follows", detail: `Folgeaufnahme von ${prevSrc.label}` },
           deviceCorrectionMs: prev.deviceCorrectionMs,
           status: prev.status,
-          notes: prev.notes.filter((n) => !n.startsWith("Widerspruch")),
+          notes: prev.notes.filter((n) => !n.startsWith("Widerspruch") && n !== "geprüft"),
           conflicts: [],
         });
         if (trustedPlacement(prevSrc.id)) chainTrusted.add(src.id);

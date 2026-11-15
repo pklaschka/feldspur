@@ -37,6 +37,11 @@ export const FieldSession = z.object({
     .default(15 * 60_000),
   /** Optionale Felder für den Quellennachweis (DOI, Projektnummer, …). */
   extra: z.record(z.string(), z.string()).default({}),
+  /**
+   * Episoden bilden (Zeiträume mit hörbarer Aufnahme, dazwischen Zwischenzeiten). Nur auf Wunsch:
+   * ohne sie zeigt die Zeitachse keine Episoden und die Ausgabe läuft in Echtzeit ohne Episodenzeilen.
+   */
+  episodes: z.boolean().default(false),
 });
 export type FieldSession = z.infer<typeof FieldSession>;
 
@@ -122,8 +127,9 @@ export type Source = z.infer<typeof Source>;
  * - spoken: angesagte Uhrzeit („es ist jetzt halb elf“), beim Anhören markiert
  * - anchor: abgeleitet aus einem Sync-Anker zu einer bereits eingeordneten Quelle
  * - manual: von Hand auf der Zeitachse platziert; gewinnt immer
+ * - checked: eine unsichere Lage wurde geprüft und so bestätigt, wie sie war; gilt dann als sicher
  */
-export const EvidenceKind = z.enum(["metadata", "filename", "spoken", "anchor", "manual"]);
+export const EvidenceKind = z.enum(["metadata", "filename", "spoken", "anchor", "manual", "checked"]);
 export type EvidenceKind = z.infer<typeof EvidenceKind>;
 
 export const TimeEvidence = z.object({
@@ -220,6 +226,25 @@ export const TranscriptLine = z.object({
   text: z.string().default(""),
 });
 export type TranscriptLine = z.infer<typeof TranscriptLine>;
+
+/**
+ * Arbeitsnotiz zu einer Datei, z. B. „ab 12:30 noch abtippen, zwei Stimmen durcheinander“.
+ * Mit Strecke (fromMs/toMs, Stelle in der Aufnahme) oder ohne (gilt für die ganze Datei).
+ * Notizen sind Arbeitsstand, kein Forschungsmaterial: sie gehen nicht ins Zeitgerüst.
+ */
+export const SourceNote = z.object({
+  id: Id,
+  sourceId: Id,
+  /** Beginn der Strecke in ms ab Dateibeginn; null = ganze Datei. */
+  fromMs: z.number().int().nonnegative().nullable().default(null),
+  /** Ende der Strecke; null = nur ein Zeitpunkt (oder ganze Datei, wenn fromMs null ist). */
+  toMs: z.number().int().nonnegative().nullable().default(null),
+  text: z.string().default(""),
+  /** Abgehakt, z. B. wenn der Abschnitt inzwischen abgetippt ist. */
+  done: z.boolean().default(false),
+  createdAt: z.iso.datetime(),
+});
+export type SourceNote = z.infer<typeof SourceNote>;
 
 export const Interval = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 export type Interval = z.infer<typeof Interval>;

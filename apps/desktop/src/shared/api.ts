@@ -2,7 +2,7 @@
  * Schnittstelle zwischen Oberfläche (Renderer) und Hauptprozess.
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
-import type { FieldSession, OffsetBasis, PlacementStatus, SourceKind } from "@feldspur/core";
+import type { FieldSession, OffsetBasis, Peaks, PlacementStatus, SourceKind } from "@feldspur/core";
 import type { MontagePreview } from "@feldspur/media";
 
 export interface RecentProject {
@@ -141,6 +141,23 @@ export interface TranscriptRow {
   text: string;
 }
 
+/** Arbeitsnotiz zu einer Datei; fromMs/toMs = Stelle in der Aufnahme, null = ganze Datei. */
+export interface SourceNoteRow {
+  id: string;
+  sourceId: string;
+  fromMs: number | null;
+  toMs: number | null;
+  text: string;
+  done: boolean;
+}
+
+export interface SourceNoteInput {
+  fromMs?: number | null;
+  toMs?: number | null;
+  text?: string;
+  done?: boolean;
+}
+
 export interface TranscriptPatch {
   atMs?: number;
   speaker?: string;
@@ -234,9 +251,11 @@ export interface SessionView {
   diary: DiaryEntryRow[];
   /** Mitschrift aller Ton- und Videoquellen, je Quelle nach Stelle sortiert. */
   transcript: TranscriptRow[];
+  /** Arbeitsnotizen zu den Dateien des Einsatzes. */
+  notes: SourceNoteRow[];
   /** Standard-Bezugszeitraum des Einsatzes in Minuten. */
   diaryLookbackMin: number;
-  /** null = Tonspuren noch nicht analysiert */
+  /** null = Episoden aus (session.episodes) oder Tonspuren noch nicht analysiert */
   episodes: EpisodeRow[] | null;
   gaps: GapRow[];
   analyzedCount: number;
@@ -287,6 +306,8 @@ export interface SessionPatch {
   place?: string;
   timeZone?: string;
   diaryLookbackMin?: number;
+  /** Episoden bilden (nur auf Wunsch). */
+  episodes?: boolean;
   /** Zusatzfelder für den Quellennachweis, z. B. { DOI: "10.…" }. Ersetzt alle bisherigen. */
   extra?: Record<string, string>;
 }
@@ -328,6 +349,8 @@ export interface FeldspurApi {
   /** Vorschlag verwerfen oder Anker löschen. */
   rejectAnchor(anchorId: string): Promise<SessionView>;
   addTime(input: TimeInput): Promise<SessionView>;
+  /** Unsichere Lage so bestätigen, wie sie zu sehen war (startMs = gesehene Lage). */
+  confirmPlacement(sourceId: string, startMs: number): Promise<SessionView>;
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
@@ -352,8 +375,16 @@ export interface FeldspurApi {
   ): Promise<{ view: SessionView; lineId: string }>;
   updateTranscriptLine(lineId: string, patch: TranscriptPatch): Promise<SessionView>;
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
+  /**
+   * Waveform-Spitzen eines Ausschnitts einer Ton- oder Videoquelle (ms ab Dateianfang).
+   * Dekodiert nur das Fenster; bis ca. 2 min und 4000 Fächer geht das zügig.
+   */
+  addSourceNote(sourceId: string, note: SourceNoteInput): Promise<SessionView>;
+  updateSourceNote(noteId: string, patch: SourceNoteInput): Promise<SessionView>;
+  deleteSourceNote(noteId: string): Promise<SessionView>;
+  waveformPeaks(sourceId: string, fromMs: number, toMs: number, buckets: number): Promise<Peaks>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
-  /** realtime: alles in Echtzeit statt Episoden mit kurzen Tafeln. */
+  /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
   previewExport(sessionId: string, realtime?: boolean): Promise<ScaffoldPreview>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
@@ -405,12 +436,17 @@ export const IPC = {
   importTranscript: "transcript:import",
   updateTranscriptLine: "transcript:update",
   deleteTranscriptLine: "transcript:delete",
+  waveformPeaks: "waveform:peaks",
+  addSourceNote: "note:add",
+  updateSourceNote: "note:update",
+  deleteSourceNote: "note:delete",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",
   confirmAnchor: "anchor:confirm",
   rejectAnchor: "anchor:reject",
   addTime: "evidence:add",
+  confirmPlacement: "evidence:confirm",
   setEvidenceEnabled: "evidence:enable",
   removeEvidence: "evidence:remove",
   addAnchor: "anchor:add",

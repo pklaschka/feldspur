@@ -23,6 +23,7 @@ export const sessions = sqliteTable("sessions", {
   extra: json<Record<string, string>>("extra")
     .notNull()
     .default(sql`'{}'`),
+  episodes: bool("episodes").notNull().default(false),
 });
 
 export const persons = sqliteTable("persons", {
@@ -91,7 +92,7 @@ export const evidence = sqliteTable(
     sourceId: text("source_id")
       .notNull()
       .references(() => sources.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: ["metadata", "filename", "spoken", "anchor", "manual"] }).notNull(),
+    kind: text("kind", { enum: ["metadata", "filename", "spoken", "anchor", "manual", "checked"] }).notNull(),
     clock: text("clock", { enum: ["device", "true"] }).notNull(),
     atMediaMs: integer("at_media_ms").notNull().default(0),
     localMs: integer("local_ms").notNull(),
@@ -170,6 +171,22 @@ export const transcriptLines = sqliteTable(
     text: text("text").notNull().default(""),
   },
   (t) => [index("transcript_source").on(t.sourceId, t.atMs)],
+);
+
+export const sourceNotes = sqliteTable(
+  "source_notes",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    fromMs: integer("from_ms"),
+    toMs: integer("to_ms"),
+    text: text("text").notNull().default(""),
+    done: integer("done", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("source_notes_source").on(t.sourceId)],
 );
 
 export const audioAnalysis = sqliteTable("audio_analysis", {
