@@ -1,5 +1,8 @@
 # Mitgelieferte Software Dritter
 
+Feldspur selbst steht unter der EUPL-1.2 (`Feldspur-LICENSE.txt`, deutsche Sprachfassung `Feldspur-LIZENZ.txt`).
+Die folgenden Bestandteile behalten ihre eigenen Lizenzen.
+
 ## FFmpeg (LGPL 2.1 oder später)
 
 Feldspur liefert die Programme `ffmpeg` und `ffprobe` aus dem FFmpeg-Projekt (https://ffmpeg.org) mit.
@@ -29,3 +32,5 @@ FFmpeg ist eine Marke von Fabrice Bellard, Begründer des FFmpeg-Projekts.
 | Zod                | MIT                                                   |
 | exifr              | MIT                                                   |
 | Tailwind CSS       | MIT                                                   |
+| PDF.js (pdfjs-dist) | Apache-2.0                                           |
+| docx               | MIT                                                   |
