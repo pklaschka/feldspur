@@ -1,11 +1,11 @@
 # Über dieses Buch {.unnumbered}
 
 Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen)
-auf **eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zuerst für MAXQDA.
+auf **eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zum Beispiel für MAXQDA.
 
 Dieses Buch hat zwei Teile:
 
-- Der **Begleittext** erzählt, warum es Feldspur gibt (@sec-motivation) und wie es mit generativer KI entstanden ist
+- Der **Begleittext** erzählt, warum es Feldspur gibt (@sec-motivation) und wie es mithilfe generativer KI entstanden ist
   (@sec-ki).
 - Das **Handbuch** führt Schritt für Schritt durch die Arbeit mit Feldspur, vom Einsammeln der Dateien bis zum
   Zeitgerüst für MAXQDA (@sec-erste-schritte bis @sec-ausgeben).
@@ -17,7 +17,7 @@ Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil
 Handbuchs wurde von Claude (Anthropic) geschrieben, im Dialog mit mir. Fragestellung, Konzept, Anforderungen und
 Entscheidungen stammen von mir. Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: Es transkribiert nicht
 automatisch, nutzt keine Cloud-Dienste und arbeitet vollständig auf dem eigenen Rechner. Mehr dazu, auch zu meiner
-Haltung, in @sec-ki.
+Haltung zur Nutzung sogenannter KI, in @sec-ki.
 :::
 
 ::: {.callout-warning}
@@ -25,8 +25,8 @@ Haltung, in @sec-ki.
 
 Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
 und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
-ändern. Wer es ausprobieren möchte, ist willkommen, sollte aber mit Ecken und Kanten rechnen. Ergebnisse, die in eine
-Analyse oder Veröffentlichung eingehen, bitte an den Originalaufnahmen prüfen.
+ändern. Wer es ausprobieren möchte, ist herzlich eingeladen, sollte aber mit Ecken und Kanten rechnen. Ergebnisse, die in eine
+Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
 :::
 
 Das Handbuch gibt es auf der Webseite und als PDF; das PDF liegt außerdem jedem Release bei. Die Bildschirmfotos
