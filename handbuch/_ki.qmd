@@ -1,0 +1,36 @@
+# Entstehung mit generativer KI {#sec-ki}
+
+Transparenz ist etwas, das es in der Wissenschaft leider viel zu wenig gibt. Deshalb lege ich hier ausführlich offen,
+wie Feldspur entsteht – mit Claude Code [@claudecode] – und wie ich dazu stehe.
+
+{{< include _ki-kern.qmd >}}
+
+## Meine Haltung
+
+Ich halte nichts davon, qualitative Forschung so zu betreiben, dass man Ergebnisse veröffentlicht, die ein
+generatives Sprachmodell ausspuckt. Da steckt dann effektiv genau das Subjektive, Qualitative nicht mehr drin.
+
+Als Softwareentwicklerin wurde ich durch generative KI beruflich aus einem Feld gedrängt, das ich gern gemacht habe.
+Noch vor fünf Jahren hätte ich für ein solches Programm mehr als 20 000 € verlangen müssen und hätte damit einige
+Monate meines Lebens finanzieren können. Ich bin daher weit davon entfernt, dieser Sache unkritisch gegenüberzustehen.
+Wenn jemand ohne Verständnis davon, wie man Software entwickelt, mithilfe dieser Technologien teuer Software verkauft,
+die er\*sie gar nicht warten kann, finde ich das verurteilenswert.
+
+Aber:
+
+- Hier übernimmt die KI nur die Entwicklung eines Werkzeugs, das ich für meine manuelle Auswertung brauche. Die
+  Forschung bleibt bei mir.
+- Die Software steht allen Forschenden offen zur Verfügung. Falls es, das sei mal dahingestellt, einen wirklich
+  ethisch einwandfreien Zweck für die Nutzung dieser Systeme gibt, dann doch die gemeinnützige Förderung zugänglicher
+  Forschung.
+- Ich fürchte, wir können es uns in Zeiten von "publish or perish" nicht leisten, ohne aus der Wissenschaft verdrängt
+  zu werden, auf dem hohen Ross des Schwarz-Weiß-Denkens zu sitzen und sogenannte KI-Systeme pauschal zu verurteilen.
+  Umso mehr möchte ich sie dort einsetzen, wo sie uns als Forschende unterstützen, statt uns zu ersetzen: um unsere
+  Forschung zu vereinfachen und teilweise vielleicht erst zu ermöglichen. Für so einen Einsatz halte ich dieses
+  Projekt.
+
+Letztendlich gibt es hier kein Schwarz und Weiß der moralischen Wertung. Nein, dieses Projekt hat keine weiße Weste.
+Die ethische Bewertung generativer KI-Systeme **muss** kritisch hinterfragt werden. Aber sie ist eben auch nicht
+schwarz. Es ist der Ton Hellgrau, den ich realistisch, in der Welt, in der wir leben, für rechtfertigbar halte, um
+größeres Übel zu verhindern, etwa die gänzliche Übernahme der Wissenschaft durch AI-Slop mangels
+wettbewerbsfähiger Forschender. But to each their own.

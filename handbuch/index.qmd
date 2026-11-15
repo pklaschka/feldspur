@@ -1,0 +1,73 @@
+---
+title: "Feldspur"
+subtitle: "Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
+author:
+  - name:
+      given: Zuri Nimca
+      family: Klaschka
+    orcid: 0009-0005-9995-5687
+date: last-modified
+date-format: "D. MMMM YYYY"
+lang: de
+abstract: |
+  Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
+  deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
+  (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
+  Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
+  ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
+  Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
+  führt durch die Arbeit mit dem Programm.
+keywords: [Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science]
+bibliography: literatur.bib
+citation:
+  type: article
+  title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
+  url: https://pklaschka.github.io/feldspur/
+license: "CC BY 4.0"
+---
+
+{{< include _hinweise.qmd >}}
+
+Diesen Text gibt es als Webseite und als PDF (das außerdem jedem Release beiliegt). Er hat zwei Teile. Im
+Begleittext erzähle ich, warum es Feldspur gibt (@sec-motivation), wie es sich zu bestehenden Werkzeugen verhält
+(@sec-einordnung) und wie es mithilfe generativer KI entstanden ist (@sec-ki). Das Handbuch (@sec-handbuch) führt
+dann Schritt für Schritt durch die Arbeit mit Feldspur.
+
+{{< include _einleitung.qmd >}}
+
+{{< include _einordnung.qmd >}}
+
+{{< include _ki.qmd >}}
+
+# Handbuch {#sec-handbuch}
+
+::: {.callout-note}
+## Bildschirmfotos veraltet
+
+Die Bildschirmfotos in diesem Handbuch zeigen einen älteren Stand der Oberfläche. Vor dem nächsten Release steht ein
+Redesign an, danach erneuere ich sie. Zu sehen sind übrigens nur erfundene Beispieldaten (ein "Testmarkt"), keine
+echten Forschungsdaten.
+:::
+
+{{< include _handbuch-erste-schritte.qmd >}}
+
+{{< include _handbuch-einsammeln.qmd >}}
+
+{{< include _handbuch-abgleichen.qmd >}}
+
+{{< include _handbuch-durchsehen.qmd >}}
+
+{{< include _handbuch-tagebuch.qmd >}}
+
+{{< include _handbuch-mitschreiben.qmd >}}
+
+{{< include _handbuch-ausgeben.qmd >}}
+
+{{< include _zitieren.qmd >}}
+
+# Literatur {.unnumbered}
+
+::: {#refs}
+:::
+
+{{< include _begriffe.qmd >}}
