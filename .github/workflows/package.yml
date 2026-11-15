@@ -1,17 +1,27 @@
 name: Installationspaket
 
 # Baut die Installer mit mitgelieferter LGPL-Fassung von FFmpeg.
-# Läuft von Hand, bei Versions-Tags und wenn sich die Paketierung ändert.
+# Läuft von Hand, wenn sich die Paketierung ändert, und als Teil des Release-Workflows (release.yml).
 on:
   workflow_dispatch:
-  push:
-    tags: ["v*"]
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit oder Tag, der gebaut wird
+        type: string
+        default: ""
+      version:
+        description: Version für Paket und Dateinamen (leer = aus package.json)
+        type: string
+        default: ""
   pull_request:
     paths:
       - "scripts/fetch-ffmpeg.mjs"
       - "scripts/build-ffmpeg-macos.sh"
       - "scripts/package-desktop.mjs"
       - "packaging/**"
+      - "LICENSE"
+      - "LIZENZ"
       - ".github/workflows/package.yml"
       - "apps/desktop/vite.config.ts"
       - "apps/desktop/package.json"
@@ -37,6 +47,8 @@ jobs:
     name: ${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       # Vite+ bringt Node, pnpm und den Abhängigkeits-Cache mit und führt `vp install` aus.
       - uses: voidzero-dev/setup-vp@v1.21.2
         with:
@@ -65,6 +77,8 @@ jobs:
       - run: vp run @feldspur/desktop#build
       - run: vp run @feldspur/desktop#native
       - run: node scripts/package-desktop.mjs
+        env:
+          FELDSPUR_VERSION: ${{ inputs.version }}
 
       - name: Rauchtest mit dem fertigen Paket (Linux)
         if: runner.os == 'Linux'

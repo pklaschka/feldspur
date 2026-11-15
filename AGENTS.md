@@ -37,3 +37,6 @@ release. Add a tool name to select part of the graph. For example, run
 - Migrationen in `packages/core/src/db/migrations.ts` nur anhängen, nie ändern.
 - Keine echten Forschungsdaten in Tests oder Fixtures.
 - Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
+- Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
+  setzen: `neu`, `verbessert`, `behoben`, `doku`, `intern` oder `kein-changelog` (siehe `.github/release.yml`).
+- Versionen nie von Hand ändern: das macht der Release-Workflow (`.github/workflows/release.yml`, `scripts/release.ts`).

@@ -50,10 +50,21 @@ Autor*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/000
 
 Bitte die tatsächlich verwendete Version oder den Commit angeben, da sich das Werkzeug noch stark verändert.
 
-Für die Spiegelung nach Zenodo ist das Repository dort einmalig zu aktivieren. Danach erzeugt ein GitHub-Release
-automatisch den Zenodo-Datensatz; die Metadaten stehen in [`.zenodo.json`](.zenodo.json).
+Für die Spiegelung nach Zenodo ist das Repository dort einmalig zu aktivieren. Danach erzeugt jede veröffentlichte
+GitHub-Release automatisch einen Zenodo-Datensatz mit eigener DOI; die Metadaten stehen in [`.zenodo.json`](.zenodo.json),
+die Versionsnummer setzt der Release-Workflow (siehe [Releases](#releases)).
 
-Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/).
+## Lizenz
+
+Copyright © 2026 Zuri Nimca Klaschka. Lizenziert unter der **Open-Source-Lizenz für die Europäische Union
+(EUPL) v. 1.2**. Der Lizenztext liegt als [`LICENSE`](LICENSE) (englisch) und [`LIZENZ`](LIZENZ) (deutsch) bei;
+alle Sprachfassungen sind gleichermaßen verbindlich, siehe auch [eupl.eu/1.2/de](https://eupl.eu/1.2/de/).
+Die EUPL ist eine Copyleft-Lizenz: Wer eine veränderte Fassung weitergibt oder als Dienst anbietet, muss den Quellcode
+unter der EUPL (oder einer der im Anhang genannten kompatiblen Lizenzen) zugänglich machen.
+
+Mitgelieferte Software Dritter, etwa FFmpeg (LGPL), behält ihre eigenen Lizenzen, siehe
+[`packaging/THIRD-PARTY.md`](packaging/THIRD-PARTY.md). Das Installationspaket enthält alle Lizenztexte unter
+`resources/licenses`.
 
 ## Aufbau
 
@@ -148,7 +159,9 @@ Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 ## Installationspaket
 
 Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Installationspaket“ in GitHub Actions,
-von Hand oder bei einem Tag `v*`; die Dateien liegen danach als Artefakte am Lauf. Lokal für die eigene Plattform:
+von Hand, bei Änderungen an der Paketierung und als Teil jeder Release; die Dateien liegen danach als Artefakte am
+Lauf. Das App-Symbol liegt als [`packaging/icon.svg`](packaging/icon.svg) (Quelle) und `packaging/icon.png` (1024 px,
+daraus erzeugt electron-builder `.icns` und `.ico`). Lokal für die eigene Plattform:
 
 ```sh
 vp run @feldspur/desktop#build
@@ -163,6 +176,28 @@ Mitgeliefert wird die **LGPL-Fassung** von FFmpeg als eigenständige Programme u
 von selbst; `FELDSPUR_FFMPEG`/`FELDSPUR_FFPROBE` überschreiben das. Das Paket ist noch nicht signiert.
 
 **Keine echten Forschungsdaten** ins Repository oder in Tests. Fixtures werden erzeugt oder sind erfunden.
+
+## Releases
+
+Versioniert wird nur die App (Tags `v0.2.0`, `v0.2.0-rc.1`); `packages/*` laufen ohne eigene Releases mit.
+Eine Release startet von Hand: **Actions → Release → Run workflow**, Version eintragen.
+
+- **Version:** `0.2.0` für ein Release, `0.2.0-rc.1` (oder `-alpha.N`, `-beta.N`) für eine Vorabversion.
+- **Sichtbarkeit:** Standard ist „Vorabversionen als Entwurf“. Entwürfe sehen nur Personen mit Schreibrechten, und
+  Zenodo archiviert sie nicht. So bekommen Release Candidates keine eigene DOI. Ein Entwurf lässt sich später unter
+  Releases von Hand veröffentlichen; dann archiviert Zenodo ihn doch.
+- **Probelauf:** baut alles und zeigt Changelog und Release-Text in der Zusammenfassung, pusht aber nichts.
+
+Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
+`package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, committet „Release vX“ auf `main`,
+taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und (sobald
+es eins gibt) dem PDF-Handbuch an. Das Handbuch hängt über [`handbook.yml`](.github/workflows/handbook.yml) ein: ein
+Skript `handbook` in der Wurzel-`package.json`, das PDFs nach `dist/handbuch/` legt.
+
+Das Changelog entsteht aus den **Titeln der zusammengeführten Pull Requests**, deshalb sollten die Titel für
+Nutzer*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `neu`, `verbessert`, `behoben`, `doku`, `intern`;
+`kein-changelog` lässt einen PR weg (siehe [`.github/release.yml`](.github/release.yml)). Direkt auf `main` gepushte
+Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zugehörigen Vorabversionen zusammen.
 
 ## Noch offen
 

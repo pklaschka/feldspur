@@ -8,6 +8,8 @@
  *
  *   node scripts/package-desktop.mjs [--dir]  --dir: nur entpackt, ohne Installer
  *
+ * FELDSPUR_VERSION überschreibt die Version aus package.json (Probelauf des Release-Workflows).
+ *
  * Das Paket enthält keine node_modules: Haupt- und Preload-Prozess sind fertig gebündelt
  * (inkl. better-sqlite3), die native Bibliothek und FFmpeg liegen unter resources/.
  */
@@ -28,6 +30,7 @@ const exe = platform === "win32" ? ".exe" : "";
 const dirOnly = process.argv.includes("--dir");
 
 const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const version = process.env.FELDSPUR_VERSION || rootPkg.version;
 const electronVersion = require("electron/package.json").version;
 
 const need = (p, hint) => {
@@ -52,18 +55,18 @@ writeFileSync(
     {
       name: "feldspur",
       productName: "Feldspur",
-      version: rootPkg.version,
+      version,
       description: rootPkg.description,
       main: "out/main/main.cjs",
       license: rootPkg.license,
-      author: "Feldspur",
+      author: "Zuri Nimca Klaschka",
     },
     null,
     2,
   ),
 );
 
-// Ressourcen neben der App: native Bibliothek, FFmpeg, Lizenzen.
+// Ressourcen neben der App: native Bibliothek, FFmpeg, Lizenzen, App-Symbol.
 mkdirSync(join(res, "native"), { recursive: true });
 cpSync(binding, join(res, "native", "better_sqlite3.node"));
 mkdirSync(join(res, "bin"), { recursive: true });
@@ -76,6 +79,11 @@ for (const [from, to] of [
   if (existsSync(join(ffmpegDir, from))) cpSync(join(ffmpegDir, from), join(res, "licenses", to));
 }
 cpSync(join(root, "packaging", "THIRD-PARTY.md"), join(res, "licenses", "THIRD-PARTY.md"));
+// Feldspur selbst: EUPL-1.2, englische und deutsche Sprachfassung (beide gleichermaßen verbindlich).
+cpSync(join(root, "LICENSE"), join(res, "licenses", "Feldspur-LICENSE.txt"));
+cpSync(join(root, "LIZENZ"), join(res, "licenses", "Feldspur-LIZENZ.txt"));
+const icon = join(root, "packaging", "icon.png");
+cpSync(icon, join(res, "icon.png"));
 
 const targets = {
   darwin: Platform.MAC.createTarget(dirOnly ? "dir" : ["dmg", "zip"]),
@@ -91,7 +99,7 @@ const files = await build({
   config: {
     appId: "app.feldspur.desktop",
     productName: "Feldspur",
-    copyright: "Feldspur",
+    copyright: "© 2026 Zuri Nimca Klaschka, lizenziert unter der EUPL-1.2",
     electronVersion,
     directories: { output: join(release, "dist") },
     files: ["out/**/*", "package.json"],
@@ -101,6 +109,8 @@ const files = await build({
     extraResources: [{ from: res, to: ".", filter: ["**/*"] }],
     fileAssociations: [{ ext: "feldspur", name: "Feldspur-Projekt", role: "Editor" }],
     artifactName: "Feldspur-${version}-${os}-${arch}.${ext}",
+    // Aus dem 1024er PNG erzeugt electron-builder .icns (macOS) und .ico (Windows).
+    icon,
     mac: {
       category: "public.app-category.education",
       // Noch keine Signatur: macOS fragt beim ersten Start nach („Trotzdem öffnen“).
@@ -108,7 +118,7 @@ const files = await build({
     },
     win: {},
     nsis: { oneClick: false, perMachine: false, allowToChangeInstallationDirectory: true },
-    linux: { category: "Science", maintainer: "Feldspur" },
+    linux: { category: "Science", maintainer: "Zuri Nimca Klaschka", icon },
   },
 });
 console.log(files.map((f) => `→ ${f}`).join("\n"));
