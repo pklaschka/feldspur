@@ -13,6 +13,9 @@ Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchs
 Arbeitstitel, Stand: in Entwicklung (Einsammeln, Zeitbestimmung, Abgleich, Durchsehen und Tagebuch abtippen
 funktionieren; der Export steht noch aus). Konzept und Tech-Stack sind außerhalb des Repositorys dokumentiert.
 
+**Handbuch und Begleittext:** [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/) (auch als PDF,
+das jeder Release beiliegt). Der Begleittext erzählt, warum es Feldspur gibt und wie es mit generativer KI entsteht.
+
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
 Tagebuch abtippen: Rahmen um einen Eintrag ziehen, Notierzeit, Bezugszeitraum und Kurzform oder Volltext eintragen.
@@ -144,6 +147,21 @@ vp run probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
 
 Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 `FELDSPUR_TESTPAKET=/pfad/1_Rohquellen vp run test`.
+
+## Handbuch
+
+Handbuch und Begleittext liegen als [Quarto](https://quarto.org)-Buch in [`handbuch/`](handbuch) (Text unter
+CC BY 4.0). Bauen mit Quarto 1.9 im PATH:
+
+```sh
+vp run handbook                        # PDF nach dist/handbuch/Feldspur-Handbuch-<version>.pdf
+node scripts/handbook.mjs --site       # zusätzlich die Webseite nach handbuch/_site/
+```
+
+Das PDF setzt das in Quarto enthaltene Typst, LaTeX ist nicht nötig. Die Webseite lädt nichts von fremden Servern
+(keine CDNs, keine Webfonts) und setzt keine Cookies; das Skript prüft das beim Bauen. Der Workflow
+„Handbuch-Webseite“ veröffentlicht sie bei Änderungen auf main über GitHub Pages (einmalig unter Settings → Pages
+die Quelle „GitHub Actions“ wählen). Bildschirmfotos in `handbuch/bilder/` zeigen nur erfundene Daten.
 
 ## Installationspaket
 

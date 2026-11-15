@@ -25,7 +25,8 @@ Mit **Tonspuren abgleichen** hört Feldspur alle Audio- und Videodateien durch u
   ab.
 
 Daraus entstehen **Vorschläge** („Uhr geht +2:47, gefunden in V-01“). Ein Vorschlag zählt erst, wenn du ihn
-**übernimmst**. Steht dabei „unsicher, bitte anhören“, prüfe die Stelle vorher. Was nicht passt, **verwirfst** du.
+**übernimmst**. Steht dabei „unsicher, bitte anhören“, prüfe die Stelle vorher, am besten mit **Fein justieren…**
+(siehe unten). Was nicht passt, **verwirfst** du.
 
 Dabei erkennt Feldspur auch längere **Stille** (ab 5 Minuten) und laute Stellen darin. Das braucht es später für die
 Episoden (@sec-durchsehen).
@@ -38,6 +39,15 @@ Genauigkeit und optional eine Notiz an. Aus dem Anker ergibt sich die Abweichung
 eigene Uhrzeit erbt ihre Lage.
 
 ![Einen Anker zwischen zwei Aufnahmen setzen](bilder/anker.png){#fig-anker}
+
+## Feinabgleich an einer markanten Stelle
+
+Für einen genauen Abgleich zweier Tonspuren öffnest du mit **Fein abgleichen…** (beim Anker) oder
+**Fein justieren…** (bei einem Vorschlag) den **Feinabgleich**. Er legt die Waveforms beider Aufnahmen übereinander,
+etwa um eine Stimme, die laut einen bestimmten Satz sagt, einen Klatscher oder eine Tür. Du ziehst die zweite
+Waveform, bis beide deckungsgleich sind, und zoomst dafür hinein. **Einrasten** sucht die genaue Lage im Umkreis
+(auf wenige Millisekunden), **Anhören** spielt beide Aufnahmen zugleich ab, eine links, eine rechts. Der Anker sitzt
+danach auf etwa ± 20 ms genau.
 
 ## Uhrzeit von Hand
 

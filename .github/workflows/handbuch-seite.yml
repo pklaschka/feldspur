@@ -1,0 +1,57 @@
+name: Handbuch-Webseite
+
+# Baut Handbuch und Begleittext (handbuch/) als Webseite mit PDF und veröffentlicht sie auf GitHub Pages.
+# Einmalig nötig: Settings → Pages → Source „GitHub Actions“.
+# In Pull Requests wird nur gebaut und geprüft, nicht veröffentlicht.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "handbuch/**"
+      - "scripts/handbook.mjs"
+      - ".github/actions/quarto/**"
+      - ".github/workflows/handbuch-seite.yml"
+  pull_request:
+    paths:
+      - "handbuch/**"
+      - "scripts/handbook.mjs"
+      - ".github/actions/quarto/**"
+      - ".github/workflows/handbuch-seite.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: handbuch-seite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: ./.github/actions/quarto
+      # Baut das PDF und die Webseite und prüft, dass die Seite nichts von fremden Servern lädt.
+      - run: node scripts/handbook.mjs --site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: handbuch/_site
+
+  veroeffentlichen:
+    name: veröffentlichen
+    if: github.event_name != 'pull_request'
+    needs: bauen
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

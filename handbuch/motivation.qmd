@@ -35,7 +35,7 @@ Uhrzeit und gibt ein Dokument aus, das MAXQDA mit Zeitmarken einliest.
 ## Offen und zitierbar
 
 Ich bin große Verfechterin von Open Source und Open Science. Deshalb entsteht Feldspur im Offenen und wird gut
-zitierbar archiviert, zur Förderung der Wissenschaft (siehe [Zitieren und archivieren](zitieren.qmd)).
+zitierbar archiviert, zur Förderung der Wissenschaft (@sec-zitieren).
 
 Daher kommt auch eine zweite Motivation: meine Forschungsartefakte nicht nur in einer, für mich gerade so
 nachvollziehbaren, Zettelwirtschaft zu haben, sondern sauber archivierbar sortiert. Denn wo immer möglich ist es in

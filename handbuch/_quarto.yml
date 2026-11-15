@@ -15,8 +15,6 @@ book:
   repo-url: https://github.com/pklaschka/feldspur
   repo-subdir: handbuch
   search: true
-  output-file: Feldspur-Handbuch
-  downloads: [pdf]
   chapters:
     - index.qmd
     - part: "Begleittext"
@@ -58,15 +56,10 @@ format:
     lightbox: false
     link-external-newwindow: false
     toc-title: "Auf dieser Seite"
-  pdf:
-    documentclass: scrreprt
-    papersize: a4
-    toc: true
-    toc-depth: 2
-    number-sections: true
-    colorlinks: true
-    fig-pos: "H"
-    pdf-engine: lualatex
+    other-links:
+      - text: Handbuch als PDF
+        icon: file-earmark-pdf
+        href: Feldspur-Handbuch.pdf
 
 fig-cap-location: bottom
 crossref:

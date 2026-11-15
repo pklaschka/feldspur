@@ -1,4 +1,4 @@
-# Zitieren und archivieren {#sec-zitieren .unnumbered}
+# Zitieren und archivieren {#sec-zitieren}
 
 Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bitte mit Version oder Commit, da sich
 das Werkzeug noch stark verändert:

@@ -3,7 +3,7 @@
 Zieh alle Aufzeichnungen des Einsatzes in das Fenster: einzelne Dateien oder ganze Ordner. Feldspur liest dabei für
 jede Datei
 
-- die **Art** (Video, Audio, Foto, Tagebuchscan, auch PDF),
+- die **Art** (Video, Audio, Foto, Tagebuchscan als JPG oder PDF, Notiz als TXT oder MD),
 - die **Länge** bei Audio und Video,
 - eine **Prüfsumme** (SHA-256), mit der sich später belegen lässt, dass das Original unverändert ist,
 - alle **Zeitbelege**, die es findet: Aufnahmezeit aus den Metadaten (z. B. EXIF bei Fotos, `creation_time` bei

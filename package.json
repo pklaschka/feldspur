@@ -11,7 +11,8 @@
     "fix": "vp check --fix",
     "probe": "vpx scripts/probe-folder.ts",
     "desktop": "vp run @feldspur/desktop#build && vp run @feldspur/desktop#start",
-    "e2e": "vp run @feldspur/desktop#e2e"
+    "e2e": "vp run @feldspur/desktop#e2e",
+    "handbook": "node scripts/handbook.mjs"
   },
   "devDependencies": {
     "@feldspur/core": "workspace:*",
