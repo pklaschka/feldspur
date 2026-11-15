@@ -21,16 +21,17 @@ FFmpeg ist eine Marke von Fabrice Bellard, Begründer des FFmpeg-Projekts.
 
 ## Weitere Bestandteile
 
-| Paket               | Lizenz                                                |
-| ------------------- | ----------------------------------------------------- |
-| Electron, Chromium  | MIT bzw. siehe `LICENSES.chromium.html` im App-Ordner |
-| better-sqlite3      | MIT                                                   |
-| SQLite              | gemeinfrei                                            |
-| React, React DOM    | MIT                                                   |
-| Radix UI            | MIT                                                   |
-| Drizzle ORM         | Apache-2.0                                            |
-| Zod                 | MIT                                                   |
-| exifr               | MIT                                                   |
-| Tailwind CSS        | MIT                                                   |
-| PDF.js (pdfjs-dist) | Apache-2.0                                            |
-| docx                | MIT                                                   |
+| Paket                                     | Lizenz                                                |
+| ----------------------------------------- | ----------------------------------------------------- |
+| Electron, Chromium                        | MIT bzw. siehe `LICENSES.chromium.html` im App-Ordner |
+| better-sqlite3                            | MIT                                                   |
+| SQLite                                    | gemeinfrei                                            |
+| React, React DOM                          | MIT                                                   |
+| Radix UI                                  | MIT                                                   |
+| Drizzle ORM                               | Apache-2.0                                            |
+| Zod                                       | MIT                                                   |
+| exifr                                     | MIT                                                   |
+| Tailwind CSS                              | MIT                                                   |
+| PDF.js (pdfjs-dist)                       | Apache-2.0                                            |
+| docx                                      | MIT                                                   |
+| Source Sans 3, Source Serif 4 (Schriften) | SIL Open Font License 1.1                             |
