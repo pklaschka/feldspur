@@ -1,6 +1,6 @@
 /** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
 import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
-import { Fragment, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import type { SourceKind } from "@feldspur/core/model";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -34,6 +34,44 @@ export function Button({
       )}
       {...rest}
     />
+  );
+}
+
+/**
+ * Löschen in zwei Schritten: Der erste Klick fragt nach („Wirklich löschen?“), erst der zweite löscht.
+ * Nach ein paar Sekunden oder beim Verlassen fällt der Knopf von selbst zurück.
+ */
+export function ConfirmButton({
+  onConfirm,
+  children,
+  confirmLabel = "Wirklich löschen?",
+  className,
+  ...rest
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
+  onConfirm: () => void;
+  confirmLabel?: string;
+  variant?: Variant;
+  size?: "sm" | "md";
+}) {
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), 4000);
+    return () => clearTimeout(t);
+  }, [asking]);
+  return (
+    <Button
+      {...rest}
+      className={cx(className, asking && "font-semibold !text-bad")}
+      onBlur={() => setAsking(false)}
+      onClick={() => {
+        if (!asking) return setAsking(true);
+        setAsking(false);
+        onConfirm();
+      }}
+    >
+      {asking ? confirmLabel : children}
+    </Button>
   );
 }
 
@@ -145,13 +183,44 @@ export function FlagMark({ className, size = 14 }: { className?: string; size?: 
 }
 
 /** Schließen-Knopf mit ausreichend großer Fläche. */
-export function CloseButton({ onClick, label = "Schließen" }: { onClick: () => void; label?: string }) {
+export function CloseButton({
+  onClick,
+  label = "Schließen",
+  confirm = false,
+}: {
+  onClick: () => void;
+  label?: string;
+  /** Zum Löschen: erst nachfragen („löschen?“), dann ausführen. */
+  confirm?: boolean;
+}) {
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), 4000);
+    return () => clearTimeout(t);
+  }, [asking]);
+  if (asking) {
+    return (
+      <button
+        type="button"
+        autoFocus
+        onBlur={() => setAsking(false)}
+        onClick={() => {
+          setAsking(false);
+          onClick();
+        }}
+        className="h-7 flex-none cursor-pointer rounded-full bg-bad/10 px-2.5 text-[0.85rem] font-semibold whitespace-nowrap text-bad"
+      >
+        Wirklich löschen?
+      </button>
+    );
+  }
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      onClick={onClick}
+      onClick={confirm ? () => setAsking(true) : onClick}
       className="grid size-7 flex-none cursor-pointer place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink"
     >
       <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

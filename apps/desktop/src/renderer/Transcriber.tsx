@@ -189,6 +189,11 @@ function Body({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.id]);
+  // Sprung von außen (Suche, während Mitschreiben offen ist) an eine andere Stelle derselben Aufnahme.
+  useEffect(() => {
+    if (position?.sourceId === row.id && Math.abs(position.atMs - posRef.current) > 1000) seekTo(position.atMs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position]);
   useEffect(() => {
     if (media.current) media.current.playbackRate = Number(speed);
   }, [speed]);
@@ -784,7 +789,7 @@ const Line = memo(function Line({
         >
           Zeit hierher
         </Button>
-        <CloseButton label="Zeile löschen" onClick={() => actions.remove(line.id)} />
+        <CloseButton label="Zeile löschen" confirm={!!line.text.trim()} onClick={() => actions.remove(line.id)} />
       </span>
     </li>
   );

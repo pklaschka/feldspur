@@ -6,6 +6,7 @@ import { positionText, usePlayback } from "./playback.tsx";
 import {
   Button,
   Choice,
+  ConfirmButton,
   cx,
   FlagMark,
   Glyph,
@@ -63,7 +64,9 @@ export function Sync({
   onSelect: (id: string) => void;
 }) {
   const [progress, setProgress] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  /** Ergebnis der letzten Tonspur-Analyse; was davon noch offen ist, steht in `view`. */
+  const [analysis, setAnalysis] = useState<{ analyzed: number; failed: number } | null>(null);
+  const [accepting, setAccepting] = useState(false);
   const [fine, setFine] = useState<FineAlignStart | null>(null);
   const hasReference = view.devices.some((d) => d.isReference);
 
@@ -83,15 +86,29 @@ export function Sync({
     setProgress(null);
     if (!r) return;
     onView(r.view);
-    const n = r.view.proposals.length;
-    setNotice(
-      [
-        `${r.analyzed} ${r.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert`,
-        n ? `${n} ${n === 1 ? "Vorschlag" : "Vorschläge"}` : "keine neuen Vorschläge",
-        ...(r.failed.length ? [`${r.failed.length} nicht lesbar`] : []),
-      ].join(" · "),
-    );
+    setAnalysis({ analyzed: r.analyzed, failed: r.failed.length });
   };
+
+  const sure = view.proposals.filter(isSure);
+  /** Alle eindeutigen Vorschläge nacheinander übernehmen (unsichere bleiben zum Anhören stehen). */
+  const acceptSure = async () => {
+    setAccepting(true);
+    let last: SessionView | undefined;
+    for (const p of sure) last = (await guard(() => api.confirmAnchor(p.anchorId))) ?? last;
+    setAccepting(false);
+    if (last) onView(last);
+  };
+  const openClocks = view.devices.filter((d) => !d.isReference && d.offsetMs === null);
+  const done = hasReference && !openClocks.length && !view.proposals.length;
+  const notice =
+    analysis &&
+    [
+      `${analysis.analyzed} ${analysis.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert`,
+      view.proposals.length
+        ? `${view.proposals.length} ${view.proposals.length === 1 ? "Vorschlag wartet" : "Vorschläge warten"} auf dich`
+        : "alle Vorschläge erledigt",
+      ...(analysis.failed ? [`${analysis.failed} nicht lesbar`] : []),
+    ].join(" · ");
 
   const span = Math.max(
     5 * 60_000,
@@ -121,14 +138,41 @@ export function Sync({
         <Button disabled={!!progress || !hasReference || !view.avCount} onClick={() => void run()}>
           {view.analyzedCount ? "Tonspuren erneut abgleichen" : "Tonspuren abgleichen"}
         </Button>
-        <Button variant="primary" onClick={onNext}>
+        {/* Erst wenn alles steht, ist „Weiter“ der Hauptknopf; vorher bleibt der Blick auf dem Offenen. */}
+        <Button variant={done ? "primary" : "default"} onClick={onNext}>
           Weiter: Durchsehen →
         </Button>
       </StepHeader>
       <div className="grid gap-4">
         <Panel>
           {progress && <Notice>{progress}</Notice>}
-          {notice && !progress && <Notice>{notice}</Notice>}
+          {notice && !progress && !done && sure.length < 2 && <Notice>{notice}</Notice>}
+          {done && (
+            <p
+              className="my-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-good/10 px-3 py-2 text-[0.95rem]"
+              role="status"
+              data-testid="sync-done"
+            >
+              <span>
+                <b className="font-semibold text-good">Alle {view.devices.length} Uhren stimmen jetzt überein.</b> Die
+                Aufnahmen liegen auf einer gemeinsamen Zeit.
+              </span>
+              <Button variant="link" onClick={onNext}>
+                Auf der Zeitachse ansehen →
+              </Button>
+            </p>
+          )}
+          {sure.length > 1 && (
+            <div className="my-2 flex flex-wrap items-center gap-3 rounded-lg border border-warn/30 bg-warn-soft px-3 py-2">
+              <span className="flex-1">
+                {analysis && `${analysis.analyzed} ${analysis.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert. `}
+                {view.proposals.length} Vorschläge, davon {sure.length} eindeutig. Unsichere bleiben zum Anhören stehen.
+              </span>
+              <Button variant="primary" size="sm" disabled={accepting} onClick={() => void acceptSure()}>
+                Alle eindeutigen übernehmen ({sure.length})
+              </Button>
+            </div>
+          )}
           <div className="grid grid-cols-[minmax(140px,190px)_minmax(160px,1fr)_180px] gap-x-5">
             <span />
             <span className="flex justify-between pb-1 text-[0.85rem] whitespace-nowrap text-muted">
@@ -276,7 +320,8 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
       <input
         className="w-[5.5rem] text-right font-mono disabled:bg-sunken"
         value={text}
-        placeholder="±m:ss"
+        placeholder="z. B. +2:47"
+        title="Wie weit diese Uhr von der Referenz abweicht: +2:47 = geht 2 Minuten 47 vor, −0:30 = geht 30 Sekunden nach"
         aria-label={`Abweichung ${device.label}`}
         disabled={device.offsetBasis === "anchor" || device.offsetBasis === "spoken"}
         onChange={(e) => setText(e.target.value)}
@@ -301,7 +346,7 @@ function Proposal({
   onReject: () => void;
   onFine: () => void;
 }) {
-  const sure = (p.confidence ?? 0) >= 0.5;
+  const sure = isSure(p);
   return (
     <div
       data-testid="proposal"
@@ -330,6 +375,8 @@ function Proposal({
     </div>
   );
 }
+
+const isSure = (p: ProposalRow) => (p.confidence ?? 0) >= 0.5;
 
 /** "1:20.5" → ms; leer oder unlesbar → null. */
 function safePos(text: string): number | null {
@@ -365,6 +412,8 @@ function ManualAnchors({
   const [bAt, setBAt] = useState("");
   const [precision, setPrecision] = useState<Precision>("exact");
   const [note, setNote] = useState("");
+  // Das Formular steht erst auf Wunsch da: Anker sind der Ausweg, nicht der Normalfall.
+  const [showForm, setFormOpen] = useState(false);
 
   const rowOf = (id: string) => view.rows.find((r) => r.id === id);
   const isAv = (id: string) => ["audio", "video"].includes(rowOf(id)?.kind ?? "");
@@ -378,6 +427,7 @@ function ManualAnchors({
     setAAt("");
     setBAt("");
     setNote("");
+    setFormOpen(false);
   };
   const side = (label: string, value: string, set: (v: string) => void, at: string, setAt: (v: string) => void) => (
     <fieldset className="grid min-w-0 content-start gap-1.5">
@@ -419,11 +469,19 @@ function ManualAnchors({
 
   return (
     <Panel>
-      <h3 className="font-semibold">Anker</h3>
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h3 className="font-semibold">Anker</h3>
+        {!showForm && (
+          <Button variant="link" aria-expanded={false} onClick={() => setFormOpen(true)}>
+            + Neuer Anker
+          </Button>
+        )}
+      </div>
       <p className="mt-0.5 mb-3 max-w-[72ch] text-[0.9rem] text-muted">
         Derselbe Moment in zwei Aufnahmen, etwa eine knallende Tür. Liegt eine davon schon sicher, gleicht das die Uhr
-        des anderen Geräts ab. Gewählte Aufnahmen spielen rechts ab; die gehörte Stelle übernimmst du mit „aus
-        Wiedergabe“.
+        des anderen Geräts ab.
+        {showForm && " Gewählte Aufnahmen spielen rechts ab; die gehörte Stelle übernimmst du mit „aus Wiedergabe“."}
+        {!view.anchors.length && !showForm && " Nur nötig, wo Tonspuren und Abweichung nicht weiterhelfen."}
       </p>
       {view.anchors.length > 0 && (
         <ul className="mb-4 grid gap-1.5" data-testid="anchor-list">
@@ -450,66 +508,71 @@ function ManualAnchors({
               >
                 fein justieren
               </Button>
-              <Button
+              <ConfirmButton
                 variant="link"
                 className="text-[0.85rem]"
-                onClick={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
+                onConfirm={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
               >
                 löschen
-              </Button>
+              </ConfirmButton>
             </li>
           ))}
         </ul>
       )}
-      <form
-        className="grid gap-2"
-        data-testid="anchor-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-          {side("Erste Aufnahme", a, setA, aAt, setAAt)}
-          <span className="text-lg font-semibold text-muted" title="derselbe Moment">
-            =
-          </span>
-          {side("Zweite Aufnahme", b, setB, bAt, setBAt)}
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <Choice
-            label="Genauigkeit des Ankers"
-            value={precision}
-            onChange={setPrecision}
-            options={PRECISION_OPTIONS}
-          />
-          <input
-            className="min-w-48 flex-1"
-            placeholder="Notiz, z. B. „Tür knallt“"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            aria-label="Notiz zum Anker"
-          />
-          <Button
-            size="sm"
-            type="button"
-            disabled={!a || !b || a === b || !isAv(a) || !isAv(b)}
-            title="Waveforms beider Aufnahmen übereinander legen und genau ausrichten"
-            onClick={() => {
-              const ra = rowOf(a);
-              const aMs = safePos(aAt) ?? (position?.sourceId === a ? position.atMs : 0);
-              const bMs = safePos(bAt) ?? guessB(ra, rowOf(b), aMs);
-              onFine({ aSourceId: a, aAtMs: aMs, bSourceId: b, bAtMs: bMs, note });
-            }}
-            data-testid="fine-open"
-          >
-            Fein abgleichen…
-          </Button>
-          <Button variant="primary" size="sm" type="submit" disabled={!a || !b || a === b}>
-            Anker setzen
-          </Button>
-        </div>
-      </form>
+      {showForm && (
+        <form
+          className="grid gap-2"
+          data-testid="anchor-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+            {side("Erste Aufnahme", a, setA, aAt, setAAt)}
+            <span className="text-lg font-semibold text-muted" title="derselbe Moment">
+              =
+            </span>
+            {side("Zweite Aufnahme", b, setB, bAt, setBAt)}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <Choice
+              label="Genauigkeit des Ankers"
+              value={precision}
+              onChange={setPrecision}
+              options={PRECISION_OPTIONS}
+            />
+            <input
+              className="min-w-48 flex-1"
+              placeholder="Notiz, z. B. „Tür knallt“"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Notiz zum Anker"
+            />
+            <Button
+              size="sm"
+              type="button"
+              disabled={!a || !b || a === b || !isAv(a) || !isAv(b)}
+              title="Waveforms beider Aufnahmen übereinander legen und genau ausrichten"
+              onClick={() => {
+                const ra = rowOf(a);
+                const aMs = safePos(aAt) ?? (position?.sourceId === a ? position.atMs : 0);
+                const bMs = safePos(bAt) ?? guessB(ra, rowOf(b), aMs);
+                onFine({ aSourceId: a, aAtMs: aMs, bSourceId: b, bAtMs: bMs, note });
+              }}
+              data-testid="fine-open"
+            >
+              Fein abgleichen…
+            </Button>
+            <Button variant="primary" size="sm" type="submit" disabled={!a || !b || a === b}>
+              Anker setzen
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={() => setFormOpen(false)}>
+              Abbrechen
+            </Button>
+          </div>
+        </form>
+      )}
     </Panel>
   );
 }

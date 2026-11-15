@@ -168,7 +168,7 @@ function NoteItem({
         />
       </div>
       <span className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
-        <CloseButton label="Notiz löschen" onClick={() => apply(() => api.deleteSourceNote(note.id))} />
+        <CloseButton label="Notiz löschen" confirm onClick={() => apply(() => api.deleteSourceNote(note.id))} />
       </span>
     </li>
   );

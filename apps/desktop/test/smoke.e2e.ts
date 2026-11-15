@@ -126,6 +126,7 @@ try {
     await page.getByRole("combobox", { name: label }).click();
     await page.getByRole("option", { name: option }).click();
   };
+  await page.getByRole("button", { name: "+ Neuer Anker" }).click();
   await pick("Erste Aufnahme", /A-01/);
   await page.getByLabel("Erste Aufnahme, Stelle").fill("9:00");
   await pick("Zweite Aufnahme", /IMG_20260914_104050/);
@@ -139,6 +140,12 @@ try {
     .getByTestId("anchor-list")
     .locator("li", { hasText: "Glocke" })
     .getByRole("button", { name: "löschen" })
+    .click();
+  // Löschen fragt einmal nach.
+  await page
+    .getByTestId("anchor-list")
+    .locator("li", { hasText: "Glocke" })
+    .getByRole("button", { name: "Wirklich löschen?" })
     .click();
   await fotoClock.getByText("offen").waitFor();
 
@@ -626,7 +633,7 @@ try {
   console.log(`Videolänge: ${inRealtime} in Echtzeit, ${await lengthOf()} nach Episoden`);
   const t0 = Date.now();
   await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
-  await page.getByRole("button", { name: "Ausgeben…" }).click();
+  await page.getByRole("button", { name: /^(Trotzdem a|A)usgeben…$/ }).click();
   // Während der Ausgabe den Reiter wechseln: Sie läuft weiter, der Reiter zeigt den Fortschritt.
   await page.getByTestId("export-progress").waitFor();
   await page.getByRole("tab", { name: /Durchsehen/ }).click();

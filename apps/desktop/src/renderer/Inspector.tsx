@@ -17,6 +17,7 @@ import { PageNumbering } from "./PageNumbering.tsx";
 import { PdfPageCanvas } from "./pdf.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { SourceMenu, useActions } from "./SourceMenu.tsx";
+import type { Step } from "./App.tsx";
 import {
   Button,
   Choice,
@@ -58,49 +59,115 @@ export interface InspectorActions {
 export function Inspector({
   view,
   row,
+  step,
   onClose,
+  onGo,
   actions,
 }: {
   view: SessionView;
   row: SourceRow | null;
+  /** Aktueller Schritt: bestimmt, was oben steht. */
+  step: Step;
   onClose: () => void;
+  onGo: (t: Todo) => void;
   actions: InspectorActions;
 }) {
   return (
     <aside className="min-w-0 overflow-x-hidden overflow-y-auto border-l border-line bg-panel" data-testid="inspector">
       <div className="px-4.5 pt-4 pb-6">
         {row ? (
-          <SourceDetails key={row.id} row={row} view={view} onClose={onClose} actions={actions} />
+          <SourceDetails key={row.id} row={row} view={view} step={step} onClose={onClose} actions={actions} />
         ) : (
-          <Summary view={view} />
+          <Summary view={view} onGo={onGo} />
         )}
       </div>
     </aside>
   );
 }
 
-function Summary({ view }: { view: SessionView }) {
-  const count = (s: SourceRow["status"]) => view.rows.filter((r) => r.status === s).length;
+/** Was als Nächstes zu tun ist, mit Sprungziel (Schritt und ggf. Quelle). */
+export interface Todo {
+  text: string;
+  step: Step;
+  sourceId?: string;
+  action: string;
+}
+
+/** Offene Punkte eines Einsatzes, in der Reihenfolge der Schritte. Auch Ausgeben zeigt sie vor dem Knopf. */
+export function todos(view: SessionView): Todo[] {
   const hasRef = view.devices.some((d) => d.isReference);
   const open = view.devices.filter((d) => !d.isReference && d.offsetMs === null);
-  const todo: string[] = [];
-  if (!view.rows.length) todo.push("Dateien des Einsatzes einsammeln.");
-  if (view.devices.length && !hasRef) todo.push("Eine Referenzuhr wählen.");
-  if (hasRef && open.length) todo.push(`Abweichung für ${open.map((d) => d.label).join(", ")} klären.`);
-  if (view.proposals.length) todo.push(`${view.proposals.length} Vorschläge aus der Tonspur prüfen.`);
-  const checks = view.rows.filter((r) => r.status === "check" && !r.partOf).length;
-  if (checks)
-    todo.push(
-      `${checks} ${checks === 1 ? "Lage" : "Lagen"} prüfen: auf der Zeitachse „Nächste prüfen“ wählen und rechts bestätigen, wenn sie passt.`,
-    );
+  const out: Todo[] = [];
+  if (!view.rows.length) out.push({ text: "Dateien des Einsatzes einsammeln.", step: "collect", action: "Einsammeln" });
+  if (view.devices.length && !hasRef)
+    out.push({ text: "Eine Referenzuhr wählen.", step: "sync", action: "Uhren abgleichen" });
+  if (hasRef && open.length)
+    out.push({
+      text: `Abweichung für ${open.map((d) => d.label).join(", ")} klären.`,
+      step: "sync",
+      action: "Uhren abgleichen",
+    });
+  if (view.proposals.length)
+    out.push({
+      text: `${view.proposals.length} ${view.proposals.length === 1 ? "Vorschlag" : "Vorschläge"} aus der Tonspur prüfen.`,
+      step: "sync",
+      action: "Vorschläge ansehen",
+    });
+  const checks = view.rows
+    .filter((r) => r.status === "check" && !r.partOf)
+    .sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
+  if (checks.length)
+    out.push({
+      text: `${checks.length} ${checks.length === 1 ? "Lage" : "Lagen"} prüfen.`,
+      step: "review",
+      sourceId: checks[0]!.id,
+      action: "Erste prüfen",
+    });
+  const unplaced = view.rows.filter((r) => r.status === "unplaced" && !r.partOf);
+  if (unplaced.length)
+    out.push({
+      text: `${unplaced.length} ${unplaced.length === 1 ? "Quelle hat" : "Quellen haben"} noch keine Uhrzeit.`,
+      step: "review",
+      sourceId: unplaced[0]!.id,
+      action: "Ansehen",
+    });
   if (view.avCount && !view.analyzedCount)
-    todo.push(
-      view.session.episodes
+    out.push({
+      text: view.session.episodes
         ? "Tonspuren abgleichen, damit Episoden und Stille erkannt werden."
         : "Tonspuren abgleichen, damit Klatscher und Stille erkannt werden.",
-    );
-  const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote).length;
-  if (diaryOpen) todo.push(`${diaryOpen} Tagebuchseiten ohne Randnotiz.`);
+      step: "sync",
+      action: "Uhren abgleichen",
+    });
+  const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote && !r.partOf);
+  if (diaryOpen.length)
+    out.push({
+      text: `${diaryOpen.length} ${diaryOpen.length === 1 ? "Tagebuchseite" : "Tagebuchseiten"} ohne Randnotiz.`,
+      step: "collect",
+      sourceId: diaryOpen[0]!.id,
+      action: "Erste ansehen",
+    });
+  return out;
+}
+
+export function TodoList({ items, onGo }: { items: Todo[]; onGo: (t: Todo) => void }) {
+  return (
+    <ul className="grid gap-1.5">
+      {items.map((t) => (
+        <li key={t.text} className="flex flex-wrap items-baseline gap-x-2">
+          <span>{t.text}</span>
+          <Button variant="link" className="text-[0.88rem]" onClick={() => onGo(t)}>
+            {t.action} →
+          </Button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Summary({ view, onGo }: { view: SessionView; onGo: (t: Todo) => void }) {
+  const count = (s: SourceRow["status"]) => view.rows.filter((r) => r.status === s).length;
+  const todo = todos(view);
   const total = view.rows.length;
   const parts = (["ok", "check", "unplaced"] as const).filter((st) => count(st) > 0);
   return (
@@ -125,13 +192,14 @@ function Summary({ view }: { view: SessionView }) {
       </p>
       <Eyebrow>Als Nächstes</Eyebrow>
       {todo.length ? (
-        <ul className="grid list-disc gap-1 pl-4.5">
-          {todo.map((t) => (
-            <li key={t}>{t}</li>
-          ))}
-        </ul>
+        <TodoList items={todo} onGo={onGo} />
       ) : (
-        <p className="text-[0.85rem] text-good">Alles verortet. Bereit für die Ausgabe, sobald das Format steht.</p>
+        <p className="text-[0.9rem]">
+          <span className="text-good">Alles verortet und geprüft.</span>{" "}
+          <Button variant="link" onClick={() => onGo({ text: "", step: "export", action: "" })}>
+            Bereit zum Ausgeben →
+          </Button>
+        </p>
       )}
       <p className="mt-6 text-[0.85rem] text-muted">
         Wähle eine Quelle aus, um Vorschau, Zeitbelege und Dateiangaben zu sehen.
@@ -158,14 +226,18 @@ function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: b
 function SourceDetails({
   row,
   view,
+  step,
   onClose,
   actions,
 }: {
   row: SourceRow;
   view: SessionView;
+  step: Step;
   onClose: () => void;
   actions: InspectorActions;
 }) {
+  // In Durchsehen ist das Prüfen die Hauptsache: dann steht es oben, vor Player und Vorschau.
+  const checkFirst = step === "review";
   const items: [string, ReactNode, string?][] = [
     [
       "Lage",
@@ -237,6 +309,7 @@ function SourceDetails({
           <CloseButton onClick={onClose} />
         </span>
       </div>
+      {checkFirst && <CheckPanel row={row} view={view} actions={actions} />}
       {(row.kind === "audio" || row.kind === "video") && (
         <>
           <Player row={row} />
@@ -277,7 +350,7 @@ function SourceDetails({
         </button>
       )}
       <KV items={items} />
-      <CheckPanel row={row} view={view} actions={actions} />
+      {!checkFirst && <CheckPanel row={row} view={view} actions={actions} />}
 
       <div className="mt-3">
         <NotesPanel
@@ -301,8 +374,7 @@ function SourceDetails({
       {row.kind === "diary" && <PageNumbering row={row} view={view} apply={actions.apply} />}
 
       {row.idle.length > 0 && (
-        <>
-          <Eyebrow>Stille</Eyebrow>
+        <Fold title={`Stille (${row.idle.length})`}>
           <ul className="font-mono text-[0.85rem]">
             {row.idle.map((i) => (
               <li key={i.startMs}>
@@ -316,7 +388,7 @@ function SourceDetails({
               {row.loudAtMs.length > 5 ? " …" : ""}
             </p>
           )}
-        </>
+        </Fold>
       )}
 
       <Eyebrow>Zeitbelege</Eyebrow>
@@ -326,29 +398,45 @@ function SourceDetails({
         <p className="mt-1.5 text-[0.85rem] text-muted">Die Zeit kommt von {main?.label ?? "der Seite"}.</p>
       )}
 
-      <Eyebrow>Datei</Eyebrow>
-      <KV
-        small
-        items={[
-          ["Größe", bytes(row.sizeBytes)],
-          [
-            "SHA-256",
-            <span key="sha" title={row.sha256}>
-              {row.sha256.slice(0, 16)}…
-            </span>,
-            "font-mono",
-          ],
-          [
-            "Original",
-            <span key="p" title={row.originalPath} className="block truncate text-left [direction:rtl]">
-              {"\u200e"}
-              {row.originalPath}
-            </span>,
-            "text-[0.82rem] text-ink-2",
-          ],
-        ]}
-      />
+      <Fold title="Datei">
+        <KV
+          small
+          items={[
+            ["Größe", bytes(row.sizeBytes)],
+            [
+              "SHA-256",
+              <span key="sha" title={row.sha256}>
+                {row.sha256.slice(0, 16)}…
+              </span>,
+              "font-mono",
+            ],
+            [
+              "Original",
+              <span key="p" title={row.originalPath} className="block truncate text-left [direction:rtl]">
+                {"\u200e"}
+                {row.originalPath}
+              </span>,
+              "text-[0.82rem] text-ink-2",
+            ],
+          ]}
+        />
+      </Fold>
     </>
+  );
+}
+
+/** Eingeklappter Abschnitt für Nachschlage-Angaben (Datei, Stille). */
+function Fold({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details className="group mt-5">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[1rem] font-semibold text-ink [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="text-[0.8rem] text-muted transition-transform group-open:rotate-90">
+          ▸
+        </span>
+        <span className="font-serif">{title}</span>
+      </summary>
+      <div className="mt-1">{children}</div>
+    </details>
   );
 }
 
@@ -402,7 +490,12 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
         Passt die Lage, bestätige sie hier.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="primary" onClick={() => actions.confirm(row.id, row.startMs!)}>
+        {/* Ohne Referenzuhr ist erst die Uhr dran; „Lage passt“ wäre dann ein voreiliger Klick. */}
+        <Button
+          size="sm"
+          variant={hasRef ? "primary" : "default"}
+          onClick={() => actions.confirm(row.id, row.startMs!)}
+        >
           ✓ Lage passt, als geprüft markieren
         </Button>
         {unknownClock && hasRef && (
@@ -416,7 +509,12 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
           </Button>
         )}
         {device && !hasRef && (
-          <Button size="sm" className="!whitespace-normal text-left" onClick={() => actions.setReference(device.id)}>
+          <Button
+            size="sm"
+            variant="primary"
+            className="!whitespace-normal text-left"
+            onClick={() => actions.setReference(device.id)}
+          >
             {device.label} als Referenzuhr
           </Button>
         )}

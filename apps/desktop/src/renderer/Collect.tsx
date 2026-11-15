@@ -3,7 +3,7 @@ import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
 import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
-import { Button, cx, FlagMark, Glyph, Notice, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
+import { Button, cx, FlagMark, Glyph, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -16,6 +16,7 @@ export function Collect({
   onRename,
   onNext,
   onOpenDiary,
+  onTranscribe,
 }: {
   view: SessionView;
   guard: Guard;
@@ -25,10 +26,13 @@ export function Collect({
   onRename: (deviceId: string, label: string) => void;
   onNext: () => void;
   onOpenDiary: (pageId: string) => void;
+  onTranscribe: (sourceId: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [hover, setHover] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; warnings: { fileName: string; message: string }[] } | null>(
+    null,
+  );
 
   const importPaths = async (paths: string[]) => {
     if (!paths.length) return;
@@ -39,8 +43,7 @@ export function Collect({
     onView(r.view);
     const parts = [`${r.added} ${r.added === 1 ? "Quelle" : "Quellen"} übernommen`];
     if (r.duplicates) parts.push(`${r.duplicates} schon vorhanden`);
-    if (r.warnings.length) parts.push(`${r.warnings.length} Hinweise`);
-    setNotice(parts.join(" · "));
+    setNotice({ text: parts.join(" · "), warnings: r.warnings });
   };
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -90,7 +93,41 @@ export function Collect({
           Dateien wählen…
         </Button>
       </div>
-      {notice && <Notice>{notice}</Notice>}
+      {notice && (
+        <div
+          className="my-2 rounded-lg bg-accent-soft px-3 py-2 text-[0.9rem]"
+          role="status"
+          data-testid="import-notice"
+        >
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <span>{notice.text}.</span>
+            {/* Nach dem Einsammeln ist die Referenzuhr der nächste Schritt. */}
+            {!view.devices.some((d) => d.isReference) && view.devices.length > 0 && (
+              <Button variant="link" onClick={onNext}>
+                Weiter: Referenzuhr wählen →
+              </Button>
+            )}
+            <span className="flex-1" />
+            <Button variant="link" className="text-[0.85rem] text-muted" onClick={() => setNotice(null)}>
+              Ausblenden
+            </Button>
+          </div>
+          {notice.warnings.length > 0 && (
+            <details className="mt-1">
+              <summary className="cursor-pointer text-warn">
+                {notice.warnings.length} {notice.warnings.length === 1 ? "Hinweis" : "Hinweise"} ansehen
+              </summary>
+              <ul className="mt-1 grid gap-0.5 pl-4 text-[0.85rem]">
+                {notice.warnings.map((w, i) => (
+                  <li key={i}>
+                    <b className="font-medium">{w.fileName}</b>: {w.message}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
       {!empty && (
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -112,6 +149,7 @@ export function Collect({
                 onSelect={onSelect}
                 onRename={(label) => onRename(d.id, label)}
                 onOpenDiary={onOpenDiary}
+                onTranscribe={onTranscribe}
               />
             ))}
             {unassigned.length > 0 && (
@@ -138,6 +176,7 @@ function DeviceCard({
   onSelect,
   onRename,
   onOpenDiary,
+  onTranscribe,
 }: {
   device: DeviceRow;
   view: SessionView;
@@ -146,7 +185,11 @@ function DeviceCard({
   onSelect: (id: string) => void;
   onRename: (label: string) => void;
   onOpenDiary: (pageId: string) => void;
+  onTranscribe: (sourceId: string) => void;
 }) {
+  // Mitschreiben beginnt bei der ersten Aufnahme, die noch keine Zeile hat (sonst bei der ersten).
+  const av = rows.filter((r) => r.kind === "audio" || r.kind === "video");
+  const firstOpen = av.find((r) => !view.transcript.some((l) => l.sourceId === r.id)) ?? av[0];
   const kinds = [...new Set(rows.map((r) => r.kind))];
   return (
     <section
@@ -168,6 +211,15 @@ function DeviceCard({
         {device.kind === "diary" && rows[0] && (
           <Button size="sm" onClick={() => onOpenDiary(rows[0]!.id)}>
             Abtippen…
+          </Button>
+        )}
+        {firstOpen && (
+          <Button
+            size="sm"
+            onClick={() => onTranscribe(firstOpen.id)}
+            title={`${firstOpen.label} abhören und mitschreiben`}
+          >
+            Mitschreiben…
           </Button>
         )}
         <DeviceMenu device={device} view={view} />

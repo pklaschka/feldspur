@@ -6,7 +6,7 @@ import { DiaryEditor } from "./DiaryEditor.tsx";
 import { ExportStep } from "./ExportStep.tsx";
 import { ExportProvider, percent, useExport } from "./exportState.tsx";
 import { formatDay } from "./format.ts";
-import { Inspector } from "./Inspector.tsx";
+import { Inspector, type Todo } from "./Inspector.tsx";
 import { renderOverlays } from "./overlay.ts";
 import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
@@ -14,7 +14,7 @@ import { renderImageRefJpeg } from "./stillRender.ts";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
 import { Preview } from "./Preview.tsx";
-import { QuickSearch } from "./SearchDialog.tsx";
+import { QuickSearch, type Reveal } from "./SearchDialog.tsx";
 import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Transcriber } from "./Transcriber.tsx";
@@ -57,7 +57,7 @@ export function App() {
         void api.openProject().then((p) => {
           if (!p) return;
           setProject(p);
-          setSessionId(p.sessions.at(-1)?.id ?? null);
+          setSessionId(lastSession(p));
         });
     };
     window.addEventListener("keydown", onKey);
@@ -94,15 +94,30 @@ export function App() {
   useEffect(() => {
     void api.currentProject().then((p) => {
       setProject(p);
-      setSessionId(p?.sessions[0]?.id ?? null);
+      setSessionId(p ? lastSession(p) : null);
     });
   }, []);
 
   const adopt = (p: ProjectInfo | null | undefined) => {
     if (!p) return;
     setProject(p);
-    setSessionId(p.sessions.at(-1)?.id ?? null);
+    setSessionId(lastSession(p));
   };
+  /** Neuer Einsatz: gleich dorthin wechseln. */
+  const adoptNew = (p: ProjectInfo | null | undefined) => {
+    if (!p) return;
+    setProject(p);
+    setSessionId(p.sessions.find((s) => !project?.sessions.some((o) => o.id === s.id))?.id ?? lastSession(p));
+  };
+  // Den zuletzt gewählten Einsatz je Projekt merken, damit man beim nächsten Öffnen dort weitermacht.
+  useEffect(() => {
+    if (!project || !sessionId) return;
+    try {
+      localStorage.setItem(`feldspur.session:${project.path}`, sessionId);
+    } catch {
+      // ohne Speicher beginnt das Projekt beim ersten Einsatz
+    }
+  }, [project, sessionId]);
 
   if (!project) {
     return (
@@ -172,7 +187,7 @@ export function App() {
                 <span>{s.title}</span>
               </button>
             ))}
-            <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adopt)} />
+            <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
           </nav>
           {sessionId ? (
             <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} onProject={setProject} />
@@ -239,6 +254,17 @@ const isMac = navigator.platform.toLowerCase().includes("mac");
 
 export type Step = "collect" | "sync" | "review" | "export";
 
+/** Zuletzt gewählter Einsatz eines Projekts (sonst der erste). */
+function lastSession(p: ProjectInfo): string | null {
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(`feldspur.session:${p.path}`);
+  } catch {
+    // kein Speicher
+  }
+  return p.sessions.find((s) => s.id === stored)?.id ?? p.sessions[0]?.id ?? null;
+}
+
 function SessionPane({
   sessionId,
   guard,
@@ -259,6 +285,8 @@ function SessionPane({
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
   const exporting = useExport();
   const [searching, setSearching] = useState(false);
+  /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
+  const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -294,6 +322,7 @@ function SessionPane({
     setPartOf: (id, mainId) => update(guard(() => api.setPartOf(id, mainId))),
     setFollows: (id, prevId) => update(guard(() => api.setFollows(id, prevId))),
     preview: setPreviewId,
+    transcribe: setTranscribeId,
   };
   const saveDetails = async (patch: SessionPatch) => {
     const res = await guard(() => api.updateSession(sessionId, patch));
@@ -337,6 +366,15 @@ function SessionPane({
     },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;
+  /** Sprung zu einem offenen Punkt: Schritt wechseln und die betroffene Quelle wählen. */
+  const go = (t: Todo) => {
+    setStep(t.step);
+    if (t.sourceId) {
+      setSelected(t.sourceId);
+      const r = view.rows.find((x) => x.id === t.sourceId);
+      if (t.step === "review" && r?.startMs != null) setReveal((old) => ({ fromMs: r.startMs!, n: (old?.n ?? 0) + 1 }));
+    }
+  };
   const tabContent = "flex-1 overflow-auto px-6 pt-5 pb-8 data-[state=inactive]:hidden";
 
   return (
@@ -417,6 +455,7 @@ function SessionPane({
                 onSelect={setSelected}
                 onRename={(id, label) => update(guard(() => api.renameDevice(id, label)))}
                 onOpenDiary={setDiaryPage}
+                onTranscribe={setTranscribeId}
                 onNext={() => setStep("sync")}
               />
             </Tabs.Content>
@@ -431,26 +470,29 @@ function SessionPane({
                 onSelect={setSelected}
               />
             </Tabs.Content>
-            <Tabs.Content value="review" className={tabContent}>
-              {step === "review" && (
-                <Review
-                  view={view}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onNext={() => setStep("export")}
-                  onEpisodes={(on) => void saveDetails({ episodes: on })}
-                />
-              )}
+            {/* Durchsehen bleibt geladen, damit Zoom und Ausschnitt einen Schrittwechsel überstehen. */}
+            <Tabs.Content value="review" className={tabContent} forceMount>
+              <Review
+                view={view}
+                selected={selected}
+                onSelect={setSelected}
+                onNext={() => setStep("export")}
+                onEpisodes={(on) => void saveDetails({ episodes: on })}
+                reveal={reveal}
+              />
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
-              <ExportStep view={view} />
+              <ExportStep view={view} onGo={go} />
             </Tabs.Content>
           </main>
         </Tabs.Root>
         <Inspector
           view={view}
-          row={selectedRow}
+          // In Ausgeben zählt der Stand des ganzen Einsatzes, nicht eine einzelne Quelle.
+          row={step === "export" ? null : selectedRow}
+          step={step}
           onClose={() => setSelected(null)}
+          onGo={go}
           actions={{
             diaryNote: (id, clock) => update(guard(() => api.setDiaryNote(id, clock))),
             addTime: async (input) => {
@@ -500,9 +542,12 @@ function SessionPane({
           view={view}
           open={searching}
           onOpenChange={setSearching}
+          transcribing={transcribeId !== null}
           onSource={setSelected}
+          onTranscribe={setTranscribeId}
           onDiary={setDiaryPage}
           onReview={() => setStep("review")}
+          onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
         <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
       </SourceActionsProvider>

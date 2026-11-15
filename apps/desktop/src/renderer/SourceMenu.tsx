@@ -16,6 +16,8 @@ export interface SourceActions {
   setPartOf(sourceId: string, mainId: string | null): void;
   setFollows(sourceId: string, prevId: string | null): void;
   preview(sourceId: string): void;
+  /** Mitschreiben für eine Audio- oder Videoquelle öffnen. */
+  transcribe(sourceId: string): void;
 }
 
 const Ctx = createContext<SourceActions | null>(null);
@@ -100,6 +102,11 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
             {(row.previewable || row.isPdf || AV.has(row.kind)) && (
               <DropdownMenu.Item className={item} onSelect={() => a.preview(row.id)}>
                 Groß ansehen
+              </DropdownMenu.Item>
+            )}
+            {AV.has(row.kind) && (
+              <DropdownMenu.Item className={item} onSelect={() => a.transcribe(row.id)}>
+                Mitschreiben…
               </DropdownMenu.Item>
             )}
             {!row.partOf && (

@@ -20,6 +20,7 @@ import {
   type Track,
 } from "./timeline.ts";
 import { usePlayback } from "./playback.tsx";
+import type { Reveal } from "./SearchDialog.tsx";
 import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
 
 const LABEL_W = 180;
@@ -32,6 +33,7 @@ export function Review({
   onSelect,
   onNext,
   onEpisodes,
+  reveal,
 }: {
   view: SessionView;
   selected: string | null;
@@ -39,6 +41,8 @@ export function Review({
   onNext: () => void;
   /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
   onEpisodes: (on: boolean) => void;
+  /** Sprungziel von außen (Suche): Uhrzeit oder Bereich ins Bild holen. */
+  reveal: (Reveal & { n: number }) | null;
 }) {
   // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
   const rows = view.rows.filter((r) => !r.partOf);
@@ -65,6 +69,7 @@ export function Review({
       onSelect={onSelect}
       onNext={onNext}
       onEpisodes={onEpisodes}
+      reveal={reveal}
     />
   );
 }
@@ -77,6 +82,7 @@ function Timeline({
   onSelect,
   onNext,
   onEpisodes,
+  reveal,
 }: {
   view: SessionView;
   placed: SourceRow[];
@@ -85,6 +91,7 @@ function Timeline({
   onSelect: (id: string) => void;
   onNext: () => void;
   onEpisodes: (on: boolean) => void;
+  reveal: (Reveal & { n: number }) | null;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -126,9 +133,17 @@ function Timeline({
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    // Solange Durchsehen ausgeblendet ist, ist die Breite 0: dann den alten Ausschnitt behalten und beim
+    // Wiedereinblenden die Scrollposition erneut setzen (ausgeblendete Elemente verlieren sie).
+    const measure = () => {
+      if (!el.clientWidth) return;
+      live.current = { ...live.current, pendingScroll: live.current.scrollX };
+      setWidth(el.clientWidth);
+      setScrollX(live.current.scrollX);
+    };
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setWidth(el.clientWidth);
+    measure();
     return () => ro.disconnect();
   }, []);
 
@@ -191,6 +206,20 @@ function Timeline({
     live.current = { ...live.current, scrollX: target, pendingScroll: target };
     setScrollX(target);
   };
+
+  // Sprung von außen (Suche): einen Bereich einpassen, eine Uhrzeit ins Bild holen, falls sie draußen liegt.
+  useEffect(() => {
+    if (!reveal) return;
+    const { fromMs, toMs } = reveal;
+    if (toMs !== undefined && toMs > fromMs) {
+      const p = Math.min(MAX_PPM, Math.max(fit, (width * 0.8) / ((toMs - fromMs) / MIN)));
+      zoomTo(p, { t: (fromMs + toMs) / 2, x: width / 2 });
+      return;
+    }
+    const px = xOf(scale, fromMs);
+    if (px < 0 || px > width) centerOn(fromMs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal?.n]);
 
   // Neue Scrollposition anwenden, sobald die Breite zum neuen Zoom passt.
   useLayoutEffect(() => {
@@ -381,10 +410,13 @@ function Timeline({
             >
               <Glyph kind={t.device?.kind ?? "other"} />
               <span className="grid min-w-0 leading-tight">
-                <b className="truncate font-medium" title={t.device?.label}>
+                {/* Lange Gerätenamen brechen um statt abgeschnitten zu werden; die Zusatzzeile weicht dann. */}
+                <b className="line-clamp-2 text-[0.92rem] font-medium break-words" title={t.device?.label}>
                   {t.device?.label ?? "Ohne Gerät"}
                 </b>
-                <span className="text-[0.85rem] text-muted">{trackSub(t, view.rows)}</span>
+                <span className="truncate text-[0.8rem] text-muted" title={trackSub(t, view.rows)}>
+                  {trackSub(t, view.rows)}
+                </span>
               </span>
             </div>
           ))}
