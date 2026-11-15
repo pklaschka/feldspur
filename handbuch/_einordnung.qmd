@@ -1,7 +1,7 @@
 # Einordnung: Werkzeuge und Literatur {#sec-einordnung}
 
 Bevor ich selbst etwas baue, drängt sich natürlich die Frage auf: Gibt es das nicht längst? Die kurze Antwort lautet
-für mich: in Teilen ja, als Ganzes (soweit ich sehe) nein. Die etwas längere Antwort folgt hier.
+für mich: in Teilen ja, als Ganzes nein.
 
 ## Multimodales Feldmaterial
 
@@ -17,7 +17,7 @@ einen hybriden methodischen Werkzeugkasten zurückgreift [@kirksey2010, S. 564].
 
 Und die Quellen stehen in sehr unterschiedlichem Verhältnis zur Zeit: Eine Kamera stempelt jede Datei, ein
 Diktiergerät läuft womöglich mit falsch gestellter Uhr. Meine Feldnotizen wiederum habe ich oft erst nach dem
-Geschehen geschrieben. Feldspur versucht, eben jene Unterschiede ernst zu nehmen. Jede Lage auf der Zeitachse wird aus
+Geschehen geschrieben. Feldspur versucht, diese Unterschiede ernst zu nehmen. Jede Lage auf der Zeitachse wird aus
 einem sichtbaren Zeitbeleg berechnet. Tagebucheinträge haben neben ihrer Notierzeit einen Bezugszeitraum, der vor sie
 zurückreicht. Denn ein Eintrag, den ich um 14:23 Uhr notiere, meint oft schon, was um 14:16 Uhr geschah.
 
@@ -33,7 +33,10 @@ oder Videodatei verknüpfen; ein Klick auf eine Zeitmarke spielt die Aufnahme an
 Zu einem Transkript gehört dort aber eben *eine* Mediendatei. Eine gemeinsame Zeitachse über viele Geräte, auf der
 Tagebuchseiten, Fotos und mehrere Aufnahmen zugleich liegen, habe ich in diesen Programmen nicht gefunden.
 
-Der Austausch zwischen den Programmen ist ebenfalls noch recht jung: Erst nach einer Konferenz 2016 haben sich
+Feldspur setzt deshalb *vor* dem Codieren an: Es führt das Material eines Feldeinsatzes zusammen und gibt es als ein
+Dokument mit Zeitmarken aus, das MAXQDA einliest. Das Codieren selbst bleibt in der gewohnten Software.
+
+Der Austausch zwischen den Programmen ist noch recht jung: Erst nach einer Konferenz 2016 haben sich
 Entwickler\*innen auf ein gemeinsames Austauschformat verständigt [@evers2018, S. 61, 69], aus dem der
 REFI-QDA-Standard hervorging [@refiqda].
 <!-- Nachweis evers2018 (Volltext: https://core.ac.uk/download/215349759.pdf): S. 61 "The 2016 international KWALON
@@ -41,9 +44,6 @@ REFI-QDA-Standard hervorging [@refiqda].
      agreed to work towards the goal of a common exchange format" (Rotterdam Exchange Format Initiative).
      Nachweis refiqda (https://www.qdasoftware.org): "The REFI-QDA Standard enables interoperability between Qualitative
      Data Analysis Software (QDAS or CAQDAS) programmes." Geprüft am 15.11.2026. -->
-
-Feldspur setzt deshalb *vor* dem Codieren an: Es führt das Material eines Feldeinsatzes zusammen und gibt es als ein
-Dokument mit Zeitmarken aus, das MAXQDA einliest. Das Codieren selbst bleibt, wohlgemerkt, in der gewohnten Software.
 
 ## Annotation und Schnitt
 
@@ -60,8 +60,7 @@ vier Mediendateien gleichzeitig bearbeiten.
      PDF, and Survey Data"; Professional: "Import, transcribe, code and analyze up to 4 simultaneous media files."
      Geprüft am 15.11.2026. -->
 Beide sind also stark, wenn es um die genaue Analyse weniger, gleichzeitig laufender Aufnahmen geht. Viele Geräte mit
-abweichenden Uhren über nachvollziehbare Zeitbelege auf eine Achse zu bringen, ist aber (soweit ich sehe) nicht ihr
-Anliegen.
+abweichenden Uhren über nachvollziehbare Zeitbelege auf eine Achse zu bringen, ist aber nicht ihr Anliegen.
 
 Schnittprogramme wie DaVinci Resolve [@resolve] bringen Aufnahmen automatisch in Gleichlauf und unterstützen den
 Schnitt mit mehreren Kameras – ein Vorbild für Feldspurs Abgleich. Ein Dokument, das sich codieren lässt, liefern sie
@@ -74,8 +73,7 @@ aber nicht.
 Automatische Spracherkennung wie Whisper [@radford2023] erreicht bei englischer Sprache inzwischen nahezu
 menschliche Genauigkeit [@radford2023, Abschnitt 3.9]. Trotzdem baut Feldspur sie bewusst nicht ein. Transkribieren
 ist in der qualitativen Forschung schon Interpretation, und Forschungsdaten sollen den eigenen Rechner nicht verlassen.^[Wer das anders abwägt und schon ein automatisches
-Transkript hat, kann es trotzdem einlesen (@sec-mitschreiben). Die Entscheidung liegt dann eben bei den Forschenden,
-nicht im Werkzeug.]
+Transkript hat, kann es trotzdem einlesen (@sec-mitschreiben). Die Entscheidung liegt dann bei den Forschenden.]
 <!-- Nachweis radford2023 (Volltext: https://ar5iv.labs.arxiv.org/html/2212.04356; bibliografische Angaben:
      https://proceedings.mlr.press/v202/radford23a.html): "We call our approach Whisper" (Abschnitt 1); "These results
      indicate that Whisper's English ASR performance is not perfect but very close to human-level accuracy."
