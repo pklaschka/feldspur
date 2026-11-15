@@ -44,8 +44,11 @@ jobs:
         with:
           node-version: 22
           cache: true
-      # - name: Werkzeuge
-      #   run: …
+      # Werkzeuge: Quarto (setzt das PDF mit dem enthaltenen Typst, kein LaTeX nötig).
+      - uses: quarto-dev/quarto-actions/setup@v2
+        if: steps.vorhanden.outputs.ja == 'true'
+        with:
+          version: 1.9.13
       - name: Handbuch bauen
         if: steps.vorhanden.outputs.ja == 'true'
         run: vp run handbook
