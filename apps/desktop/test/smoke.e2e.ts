@@ -367,6 +367,37 @@ try {
   await page.getByTestId("search").waitFor({ state: "detached" });
   await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
 
+  // Mausrad zoomt an der Mausposition: die Zeit unter dem Zeiger bleibt stehen.
+  const tl = page.locator("canvas").first();
+  const tlBox = (await tl.boundingBox())!;
+  const tlScroll = () => tl.evaluate((c) => c.parentElement!.parentElement!.scrollLeft);
+  const atMouse = tlBox.x + tlBox.width * 0.4;
+  await page.mouse.move(atMouse, tlBox.y + 30 + 40 + 26);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(100);
+  const zoomed = await tlScroll();
+  if (zoomed <= 0) throw new Error("Mausrad hat nicht an der Mausposition gezoomt");
+  await shot("-zeitachse-zoom");
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, 120);
+  await page.waitForTimeout(100);
+  if ((await tlScroll()) !== 0) throw new Error("Herauszoomen kehrt nicht zur ganzen Achse zurück");
+
+  // Unsichere Lagen der Reihe nach prüfen.
+  const nextCheckBtn = page.getByTestId("next-check");
+  if (await nextCheckBtn.count()) {
+    console.log(`Prüfen: ${await nextCheckBtn.innerText()}`);
+    await nextCheckBtn.click();
+    const checkPanel = page.getByTestId("check-panel");
+    await checkPanel.waitFor();
+    await shot("-pruefen");
+    await checkPanel.getByRole("button", { name: /Lage passt/ }).click();
+    await page.getByTestId("inspector").getByText("Von Hand geprüft: Die Lage passt.").waitFor();
+    await page.getByTestId("inspector").getByRole("button", { name: "Zurücknehmen" }).click();
+    await checkPanel.waitFor();
+  } else {
+    console.log("Prüfen: keine unsicheren Lagen");
+  }
+
   // Seitenleiste breiter ziehen; die Breite bleibt nach dem Neuladen.
   const inspectorBox = async () => (await page.getByTestId("inspector").boundingBox())!;
   const before0 = await inspectorBox();

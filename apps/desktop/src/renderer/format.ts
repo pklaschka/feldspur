@@ -94,6 +94,7 @@ export const EVIDENCE_LABEL: Record<string, string> = {
   spoken: "angesagt",
   anchor: "Anker",
   manual: "von Hand",
+  checked: "geprüft",
 };
 
 /** Kurzes Kürzel als Symbol je Quellenart. */

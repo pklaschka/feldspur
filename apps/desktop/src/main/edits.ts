@@ -3,7 +3,15 @@
  * Uhrzeiten markieren, Belege abschalten, Anker setzen. Ohne Electron, damit
  * sich das direkt testen lässt.
  */
-import { combineUncertainty, effectiveLocal, localMs, type Id, type ProjectStore } from "@feldspur/core";
+import {
+  combineUncertainty,
+  effectiveLocal,
+  formatClock,
+  localMs,
+  resolveTimeline,
+  type Id,
+  type ProjectStore,
+} from "@feldspur/core";
 import type { AnchorInput, TimeInput } from "../shared/api.ts";
 
 /** ± je Genauigkeitsstufe. */
@@ -67,6 +75,8 @@ export function addTimeEvidence(s: ProjectStore, input: TimeInput): Id {
   const where = at ? ` bei ${input.atMedia.trim()}` : "";
   const uncertaintyMs = PRECISION_MS[input.precision];
   if (input.syncDevice && input.kind === "manual") syncDeviceClock(s, src.id, at, local, uncertaintyMs);
+  // Eine neue Zeit ersetzt eine frühere Bestätigung: Bestätigt war die alte Lage.
+  if (input.kind === "manual") dropChecks(s, src.sessionId, src.id);
   s.addEvidence({
     sourceId: src.id,
     kind: input.kind,
@@ -80,10 +90,44 @@ export function addTimeEvidence(s: ProjectStore, input: TimeInput): Id {
   return session.id;
 }
 
+function dropChecks(s: ProjectStore, sessionId: Id, sourceId: Id): void {
+  for (const e of s.listEvidence(sessionId))
+    if (e.sourceId === sourceId && e.kind === "checked") s.deleteEvidence(e.id);
+}
+
+/**
+ * Eine unsichere Lage („prüfen“) so bestätigen, wie sie gerade auf der Zeitachse steht.
+ * Die Lage wird als eigener Beleg festgehalten; ihn zu löschen nimmt die Bestätigung zurück.
+ * `startMs` ist die Lage, die die Forscherin gesehen hat. Hat sie sich inzwischen verschoben,
+ * wird nichts bestätigt.
+ */
+export function confirmPlacement(s: ProjectStore, sourceId: Id, startMs: number): Id {
+  const src = s.getSource(sourceId);
+  if (src.kind === "diary") throw new Error("Tagebuchseiten bekommen ihre Zeit über die Randnotiz");
+  if (src.partOf) throw new Error("Die Zeit kommt von der Hauptseite");
+  const session = s.getSession(src.sessionId);
+  const current = resolveTimeline(s.loadResolveInput(session.id)).placements.get(src.id);
+  if (!current) throw new Error("Die Quelle liegt noch nicht auf der Zeitachse");
+  if (current.startMs !== startMs) throw new Error("Die Lage hat sich inzwischen geändert. Bitte noch einmal ansehen.");
+  dropChecks(s, session.id, src.id);
+  s.addEvidence({
+    sourceId: src.id,
+    kind: "checked",
+    clock: "true",
+    atMediaMs: 0,
+    localMs: startMs,
+    uncertaintyMs: current.uncertaintyMs,
+    detail: `Geprüft: Lage passt (vorher ${current.basis.detail || current.basis.kind})`,
+    raw: formatClock(startMs),
+  });
+  return session.id;
+}
+
 /** Nur selbst eingetragene Belege dürfen gelöscht werden; gelesene lassen sich nur abschalten. */
 export function removeEvidence(s: ProjectStore, evidenceId: Id): Id {
   const ev = s.getEvidence(evidenceId);
-  if (ev.kind !== "manual" && ev.kind !== "spoken") throw new Error("Gelesene Zeitbelege lassen sich nur abschalten");
+  if (ev.kind !== "manual" && ev.kind !== "spoken" && ev.kind !== "checked")
+    throw new Error("Gelesene Zeitbelege lassen sich nur abschalten");
   s.deleteEvidence(evidenceId);
   return s.getSource(ev.sourceId).sessionId;
 }
