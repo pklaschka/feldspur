@@ -178,6 +178,22 @@ export const transcriptLines = sqliteTable(
   (t) => [index("transcript_source").on(t.sourceId, t.atMs)],
 );
 
+export const sourceNotes = sqliteTable(
+  "source_notes",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    fromMs: integer("from_ms"),
+    toMs: integer("to_ms"),
+    text: text("text").notNull().default(""),
+    done: integer("done", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("source_notes_source").on(t.sourceId)],
+);
+
 export const audioAnalysis = sqliteTable("audio_analysis", {
   sourceId: text("source_id")
     .primaryKey()

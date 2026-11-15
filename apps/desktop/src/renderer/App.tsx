@@ -452,6 +452,7 @@ function SessionPane({
             },
             openDiary: setDiaryPage,
             transcribe: setTranscribeId,
+            apply: (fn) => update(guard(fn)),
             importTranscript: async (id, mode) => {
               const r = await guard(() => api.importTranscript(id, { mode }));
               if (!r) return null;

@@ -180,6 +180,23 @@ export interface TranscriptRow {
   text: string;
 }
 
+/** Arbeitsnotiz zu einer Datei; fromMs/toMs = Stelle in der Aufnahme, null = ganze Datei. */
+export interface SourceNoteRow {
+  id: string;
+  sourceId: string;
+  fromMs: number | null;
+  toMs: number | null;
+  text: string;
+  done: boolean;
+}
+
+export interface SourceNoteInput {
+  fromMs?: number | null;
+  toMs?: number | null;
+  text?: string;
+  done?: boolean;
+}
+
 export interface TranscriptPatch {
   atMs?: number;
   speaker?: string;
@@ -275,6 +292,8 @@ export interface SessionView {
   diary: DiaryEntryRow[];
   /** Mitschrift aller Ton- und Videoquellen, je Quelle nach Stelle sortiert. */
   transcript: TranscriptRow[];
+  /** Arbeitsnotizen zu den Dateien des Einsatzes. */
+  notes: SourceNoteRow[];
   /** Standard-Bezugszeitraum des Einsatzes in Minuten. */
   diaryLookbackMin: number;
   /** null = Episoden aus (session.episodes) oder Tonspuren noch nicht analysiert */
@@ -415,6 +434,9 @@ export interface FeldspurApi {
    * Waveform-Spitzen eines Ausschnitts einer Ton- oder Videoquelle (ms ab Dateianfang).
    * Dekodiert nur das Fenster; bis ca. 2 min und 4000 Fächer geht das zügig.
    */
+  addSourceNote(sourceId: string, note: SourceNoteInput): Promise<SessionView>;
+  updateSourceNote(noteId: string, patch: SourceNoteInput): Promise<SessionView>;
+  deleteSourceNote(noteId: string): Promise<SessionView>;
   waveformPeaks(sourceId: string, fromMs: number, toMs: number, buckets: number): Promise<Peaks>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
   /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
@@ -470,6 +492,9 @@ export const IPC = {
   updateTranscriptLine: "transcript:update",
   deleteTranscriptLine: "transcript:delete",
   waveformPeaks: "waveform:peaks",
+  addSourceNote: "note:add",
+  updateSourceNote: "note:update",
+  deleteSourceNote: "note:delete",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",

@@ -235,6 +235,25 @@ export const TranscriptLine = z.object({
 });
 export type TranscriptLine = z.infer<typeof TranscriptLine>;
 
+/**
+ * Arbeitsnotiz zu einer Datei, z. B. „ab 12:30 noch abtippen, zwei Stimmen durcheinander“.
+ * Mit Strecke (fromMs/toMs, Stelle in der Aufnahme) oder ohne (gilt für die ganze Datei).
+ * Notizen sind Arbeitsstand, kein Forschungsmaterial: sie gehen nicht ins Zeitgerüst.
+ */
+export const SourceNote = z.object({
+  id: Id,
+  sourceId: Id,
+  /** Beginn der Strecke in ms ab Dateibeginn; null = ganze Datei. */
+  fromMs: z.number().int().nonnegative().nullable().default(null),
+  /** Ende der Strecke; null = nur ein Zeitpunkt (oder ganze Datei, wenn fromMs null ist). */
+  toMs: z.number().int().nonnegative().nullable().default(null),
+  text: z.string().default(""),
+  /** Abgehakt, z. B. wenn der Abschnitt inzwischen abgetippt ist. */
+  done: z.boolean().default(false),
+  createdAt: z.iso.datetime(),
+});
+export type SourceNote = z.infer<typeof SourceNote>;
+
 export const Interval = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 export type Interval = z.infer<typeof Interval>;
 

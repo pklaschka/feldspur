@@ -132,7 +132,20 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE sessions ADD COLUMN episodes INTEGER NOT NULL DEFAULT 0;
   `,
-  // 8: Lautstärke angleichen
+  // 8: Notizen zu Dateien (mit oder ohne Strecke in der Aufnahme)
+  `
+  CREATE TABLE source_notes (
+    id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    from_ms INTEGER,
+    to_ms INTEGER,
+    text TEXT NOT NULL DEFAULT '',
+    done INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX source_notes_source ON source_notes(source_id);
+  `,
+  // 9: Lautstärke angleichen
   `
   ALTER TABLE sources ADD COLUMN level_mode TEXT NOT NULL DEFAULT 'auto';
   ALTER TABLE sources ADD COLUMN level_gain_db REAL NOT NULL DEFAULT 0;

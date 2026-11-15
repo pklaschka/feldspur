@@ -12,6 +12,7 @@ import {
   type TimeInput,
 } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
+import { NotesPanel, type ApplyView } from "./Notes.tsx";
 import { PdfPageCanvas } from "./pdf.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { SourceMenu, useActions } from "./SourceMenu.tsx";
@@ -49,6 +50,8 @@ export interface InspectorActions {
   setLevel: (sourceId: string, input: LevelInput) => void;
   /** Ganze Datei dekodieren und den Sprachpegel messen. */
   measureLevel: (sourceId: string) => Promise<void>;
+  /** Änderung ausführen und die neue Ansicht übernehmen (Fehler zeigt die App an). */
+  apply: ApplyView;
 }
 
 export function Inspector({
@@ -205,6 +208,7 @@ function SourceDetails({
   if (row.followedBy) items.push(["Fortgesetzt in", byId(row.followedBy)?.label ?? "?", "font-mono"]);
   const pageIds = new Set([main?.id ?? row.id, ...(main ? main.parts : row.parts)]);
   const sa = useActions();
+  const { position, seek } = usePlayback();
 
   return (
     <>
@@ -263,6 +267,17 @@ function SourceDetails({
       )}
       <KV items={items} />
       <CheckPanel row={row} view={view} actions={actions} />
+
+      <div className="mt-3">
+        <NotesPanel
+          row={row}
+          notes={view.notes.filter((n) => n.sourceId === row.id)}
+          pos={position?.sourceId === row.id ? position.atMs : row.kind === "audio" || row.kind === "video" ? 0 : null}
+          apply={actions.apply}
+          onSeek={(ms) => seek(row.id, ms)}
+          compact
+        />
+      </div>
 
       {row.kind === "diary" && (
         <DiaryPage
