@@ -298,7 +298,7 @@ export function Picker({
                 {o.groupStart !== undefined && (
                   <>
                     <Select.Separator className="my-1 h-px bg-line" />
-                    <div className="px-2 pt-0.5 pb-1 text-[0.72rem] text-muted">{o.groupStart}</div>
+                    <div className="px-2 pt-0.5 pb-1 text-[0.78rem] text-muted">{o.groupStart}</div>
                   </>
                 )}
                 <Select.Item

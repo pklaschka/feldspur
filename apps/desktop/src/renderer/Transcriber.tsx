@@ -573,7 +573,7 @@ function Body({
             </div>
             <div className="mt-1.5">
               <label
-                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.85rem]"
                 title="Zeilen, die in gleichzeitig laufenden Aufnahmen schon mitgeschrieben sind (nur lesen)"
               >
                 <Toggle checked={showOthers} onChange={setShowOthers} label="Andere Spuren zeigen" />
@@ -603,15 +603,11 @@ function Body({
               (auch in bestehenden Zeilen)
             </dd>
           </dl>
-<<<<<<< HEAD
-          <p className="text-[0.85rem] text-muted">
-=======
-          <p className="-mt-1 text-[0.8rem] text-muted">
+          <p className="-mt-1 text-[0.85rem] text-muted">
             Die Tasten gelten überall im Dialog. Tippst du, während nichts ausgewählt ist, geht es in der neuen Zeile
             weiter.
           </p>
-          <p className="text-[0.8rem] text-muted">
->>>>>>> origin/main
+          <p className="text-[0.85rem] text-muted">
             Jede Zeile speichert die Stelle in {row.label}. Die Uhrzeit folgt dem Abgleich, auch wenn du ihn später
             änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Grau hinterlegte Zeilen mit
             Kurzzeichen stammen aus der Mitschrift einer anderen Spur, die zur selben Zeit lief: Was dort schon steht,
@@ -647,14 +643,14 @@ function OtherLineItem({
       title={`Aus der Mitschrift von ${line.label}, nur lesen`}
     >
       <button
-        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.8rem] hover:text-accent"
+        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
         onClick={() => onSeek(atMs)}
         title="Hierhin springen"
       >
         <At ms={atMs} startMs={startMs} />
       </button>
       <button
-        className="w-14 flex-none cursor-pointer truncate pt-1 text-left font-mono text-[0.8rem] font-medium hover:text-accent"
+        className="w-14 flex-none cursor-pointer truncate pt-1 text-left font-mono text-[0.85rem] font-medium hover:text-accent"
         onClick={() => onOpen(line)}
         title={`In ${line.label} mitschreiben (an dieser Stelle)`}
       >
