@@ -9,7 +9,7 @@ export default defineConfig({
     ignorePatterns: ["dist/**", "out/**"],
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts"],
+    include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts", "scripts/**/*.test.ts"],
     testTimeout: 30_000,
     // Fixtures werden mit FFmpeg erzeugt und analysiert; auf Windows-Runnern dauert das länger als 10 s.
     hookTimeout: 60_000,

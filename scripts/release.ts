@@ -82,12 +82,15 @@ export function tidyGeneratedNotes(raw: string): string {
   const out: string[] = [];
   for (let line of lines) {
     if (/^##\s+What's Changed\s*$/.test(line)) continue;
-    if (/^\*\*Full Changelog\*\*/.test(line)) {
+    if (line.startsWith("**Full Changelog**")) {
       line = line.replace("**Full Changelog**", "**Alle Änderungen**");
     }
     line = line.replace(/^##\s+New Contributors\s*$/, "### Neu dabei");
     line = line.replace(/^\*\s+/, "- ");
-    line = line.replace(/ by (@[\w-]+(?:\[bot\])?) in (https:\/\/github\.com\/[^\s]+\/pull\/(\d+))$/, " ([#$3]($2), $1)");
+    line = line.replace(
+      / by (@[\w-]+(?:\[bot\])?) in (https:\/\/github\.com\/[^\s]+\/pull\/(\d+))$/,
+      " ([#$3]($2), $1)",
+    );
     line = line.replace(/ made their first contribution in /, " hat zum ersten Mal beigetragen: ");
     out.push(line);
   }

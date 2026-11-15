@@ -1,0 +1,59 @@
+name: Handbuch
+
+# Schnittstelle für das PDF-Handbuch, das jeder Release beiliegt (aufgerufen von release.yml).
+#
+# Vertrag:
+#   - Gibt es in der Wurzel-package.json ein Skript „handbook“, ruft dieser Workflow `vp run handbook` auf.
+#     FELDSPUR_VERSION enthält die Version, die ins Handbuch gehört (leer = aus package.json).
+#   - Das Skript legt die fertigen PDFs unter dist/handbuch/ ab, Dateiname am besten
+#     Feldspur-Handbuch-<version>.pdf. Alles dort landet als Artefakt „handbuch“ in der Release.
+#   - Fehlt das Skript, bleibt es bei einem Hinweis; die Release erscheint dann ohne Handbuch.
+#
+# Werkzeuge, die das Handbuch braucht (z. B. Quarto, Typst, Schriften), hier im Schritt „Werkzeuge“ einrichten.
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ""
+      version:
+        type: string
+        default: ""
+
+jobs:
+  handbuch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - id: vorhanden
+        name: Handbuch-Skript vorhanden?
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.handbook ? 0 : 1)"; then
+            echo "ja=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ja=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Noch kein Handbuch
+        if: steps.vorhanden.outputs.ja != 'true'
+        run: echo "::notice::Noch kein Skript „handbook“ in package.json, die Release erscheint ohne Handbuch."
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        if: steps.vorhanden.outputs.ja == 'true'
+        with:
+          node-version: 22
+          cache: true
+      # - name: Werkzeuge
+      #   run: …
+      - name: Handbuch bauen
+        if: steps.vorhanden.outputs.ja == 'true'
+        run: vp run handbook
+        env:
+          FELDSPUR_VERSION: ${{ inputs.version }}
+      - uses: actions/upload-artifact@v4
+        if: steps.vorhanden.outputs.ja == 'true'
+        with:
+          name: handbuch
+          path: dist/handbuch/*.pdf
+          if-no-files-found: error
