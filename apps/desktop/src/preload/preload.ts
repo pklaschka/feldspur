@@ -25,6 +25,7 @@ const api: FeldspurApi = {
   addTranscriptLine: (id, line) => ipcRenderer.invoke(IPC.addTranscriptLine, id, line),
   updateTranscriptLine: (id, patch) => ipcRenderer.invoke(IPC.updateTranscriptLine, id, patch),
   deleteTranscriptLine: (id) => ipcRenderer.invoke(IPC.deleteTranscriptLine, id),
+  waveformPeaks: (id, fromMs, toMs, buckets) => ipcRenderer.invoke(IPC.waveformPeaks, id, fromMs, toMs, buckets),
   setDeviceOffset: (id, ms) => ipcRenderer.invoke(IPC.setDeviceOffset, id, ms),
   setDiaryNote: (id, clock) => ipcRenderer.invoke(IPC.setDiaryNote, id, clock),
   analyze: (id) => ipcRenderer.invoke(IPC.analyze, id),
