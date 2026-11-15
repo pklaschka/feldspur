@@ -30,7 +30,7 @@ Dokument mit Zeitmarken aus, das MAXQDA einliest. Das Codieren selbst bleibt, wo
 
 ## Annotation und Schnitt
 
-Werkzeuge für multimodale Annotation wie ELAN [@wittenburg2006] oder Transana [@transana] synchronisieren
+Werkzeuge für multimodale Annotation wie ELAN [@wittenburg2006; @elan] oder Transana [@transana] synchronisieren
 Audio- und Videoaufnahmen und erlauben fein gegliederte Annotationsspuren. Sie sind allerdings auf zeitbasierte Medien
 ausgelegt. Tagebuchscans und Fotos, deren Zeit sich erst aus Metadaten oder Randnotizen ergibt, haben dort keinen
 eigenen Platz.
