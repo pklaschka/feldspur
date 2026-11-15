@@ -140,6 +140,8 @@ function Timeline({
       live.current = { ...live.current, pendingScroll: live.current.scrollX };
       setWidth(el.clientWidth);
       setScrollX(live.current.scrollX);
+      // Ausgeblendet wird nicht gezeichnet; beim Wiedereinblenden einmal neu zeichnen.
+      setThemeTick((n) => n + 1);
     };
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -156,7 +158,7 @@ function Timeline({
 
   useEffect(() => {
     const c = canvas.current;
-    if (!c) return;
+    if (!c || !scroller.current?.clientWidth) return;
     const dpr = window.devicePixelRatio || 1;
     c.width = Math.round(width * dpr);
     c.height = Math.round(height * dpr);
@@ -330,7 +332,8 @@ function Timeline({
           </span>
         }
       >
-        <Button variant="primary" onClick={onNext}>
+        {/* Wie in Abgleichen: „Weiter“ wird erst zum Hauptknopf, wenn nichts mehr zu prüfen ist. */}
+        <Button variant={toCheck.length || unplaced.length ? "default" : "primary"} onClick={onNext}>
           Weiter: Ausgeben →
         </Button>
       </StepHeader>

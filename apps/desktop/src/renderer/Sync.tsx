@@ -169,7 +169,7 @@ export function Sync({
                 {view.proposals.length} Vorschläge, davon {sure.length} eindeutig. Unsichere bleiben zum Anhören stehen.
               </span>
               <Button variant="primary" size="sm" disabled={accepting} onClick={() => void acceptSure()}>
-                Alle eindeutigen übernehmen ({sure.length})
+                {accepting ? "Übernehme…" : `Alle eindeutigen übernehmen (${sure.length})`}
               </Button>
             </div>
           )}
@@ -189,6 +189,7 @@ export function Sync({
                 proposals={view.proposals.filter((p) => p.deviceId === d.id)}
                 onReference={() => onReference(d.id)}
                 onOffset={(ms) => onOffset(d.id, ms)}
+                bulk={sure.length > 1}
                 onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
                 onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
                 onFine={(p) =>
@@ -223,6 +224,7 @@ function ClockRow({
   device,
   span,
   proposals,
+  bulk,
   onReference,
   onOffset,
   onConfirm,
@@ -232,6 +234,8 @@ function ClockRow({
   device: DeviceRow;
   span: number;
   proposals: ProposalRow[];
+  /** Sammelaktion sichtbar: dann ist sie der Hauptknopf, nicht jedes einzelne „Übernehmen“. */
+  bulk: boolean;
   onReference: () => void;
   onOffset: (ms: number | null) => void;
   onConfirm: (anchorId: string) => void;
@@ -298,6 +302,7 @@ function ClockRow({
         <Proposal
           key={p.anchorId}
           p={p}
+          bulk={bulk}
           onConfirm={() => onConfirm(p.anchorId)}
           onReject={() => onReject(p.anchorId)}
           onFine={() => onFine(p)}
@@ -337,11 +342,13 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
 
 function Proposal({
   p,
+  bulk,
   onConfirm,
   onReject,
   onFine,
 }: {
   p: ProposalRow;
+  bulk: boolean;
   onConfirm: () => void;
   onReject: () => void;
   onFine: () => void;
@@ -363,7 +370,7 @@ function Proposal({
           <span className={sure ? "text-good" : "text-warn"}>{sure ? "eindeutig" : "unsicher, bitte anhören"}</span>
         </div>
       </div>
-      <Button variant="primary" size="sm" onClick={onConfirm}>
+      <Button variant={bulk ? "default" : "primary"} size="sm" onClick={onConfirm}>
         Übernehmen
       </Button>
       <Button size="sm" onClick={onFine} title="Waveforms übereinander ansehen und genau ausrichten">

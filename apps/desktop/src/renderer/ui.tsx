@@ -199,33 +199,33 @@ export function CloseButton({
     const t = setTimeout(() => setAsking(false), 4000);
     return () => clearTimeout(t);
   }, [asking]);
-  if (asking) {
-    return (
-      <button
-        type="button"
-        autoFocus
-        onBlur={() => setAsking(false)}
-        onClick={() => {
-          setAsking(false);
-          onClick();
-        }}
-        className="h-7 flex-none cursor-pointer rounded-full bg-bad/10 px-2.5 text-[0.85rem] font-semibold whitespace-nowrap text-bad"
-      >
-        Wirklich löschen?
-      </button>
-    );
-  }
+  // Ein einziger Knopf, damit der Fokus beim Nachfragen und danach erhalten bleibt.
   return (
     <button
       type="button"
-      aria-label={label}
+      aria-label={asking ? "Wirklich löschen?" : label}
+      aria-live={confirm ? "polite" : undefined}
       title={label}
-      onClick={confirm ? () => setAsking(true) : onClick}
-      className="grid size-7 flex-none cursor-pointer place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink"
+      onBlur={() => setAsking(false)}
+      onClick={() => {
+        if (confirm && !asking) return setAsking(true);
+        setAsking(false);
+        onClick();
+      }}
+      className={cx(
+        "h-7 flex-none cursor-pointer rounded-full",
+        asking
+          ? "bg-bad/10 px-2.5 text-[0.85rem] font-semibold whitespace-nowrap text-bad"
+          : "grid size-7 place-items-center text-muted hover:bg-sunken hover:text-ink",
+      )}
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <path d="m4 4 8 8M12 4l-8 8" />
-      </svg>
+      {asking ? (
+        "Wirklich löschen?"
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <path d="m4 4 8 8M12 4l-8 8" />
+        </svg>
+      )}
     </button>
   );
 }

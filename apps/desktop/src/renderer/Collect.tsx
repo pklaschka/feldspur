@@ -213,20 +213,24 @@ function DeviceCard({
             Abtippen…
           </Button>
         )}
+        <DeviceMenu device={device} view={view} />
+      </header>
+      <div className="flex flex-wrap items-baseline gap-x-2 pr-3 pb-2 pl-[3.1rem] text-[0.85rem] text-muted">
+        <span>
+          {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
+          {device.personName && ` · ${device.personName}`}
+        </span>
+        {/* In der Unterzeile, damit der Gerätename im Kopf Platz behält. */}
         {firstOpen && (
           <Button
-            size="sm"
+            variant="link"
+            className="text-[0.85rem]"
             onClick={() => onTranscribe(firstOpen.id)}
             title={`${firstOpen.label} abhören und mitschreiben`}
           >
             Mitschreiben…
           </Button>
         )}
-        <DeviceMenu device={device} view={view} />
-      </header>
-      <div className="pr-3 pb-2 pl-[3.1rem] text-[0.85rem] text-muted">
-        {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
-        {device.personName && ` · ${device.personName}`}
       </div>
       <SourceList view={view} rows={rows} selected={selected} onSelect={onSelect} />
     </section>

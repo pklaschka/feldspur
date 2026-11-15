@@ -78,7 +78,7 @@ export function Inspector({
         {row ? (
           <SourceDetails key={row.id} row={row} view={view} step={step} onClose={onClose} actions={actions} />
         ) : (
-          <Summary view={view} onGo={onGo} />
+          <Summary view={view} onGo={onGo} compact={step === "export"} />
         )}
       </div>
     </aside>
@@ -165,7 +165,8 @@ export function TodoList({ items, onGo }: { items: Todo[]; onGo: (t: Todo) => vo
   );
 }
 
-function Summary({ view, onGo }: { view: SessionView; onGo: (t: Todo) => void }) {
+/** compact: nur der Stand (in Ausgeben stehen die offenen Punkte schon vor dem Knopf). */
+function Summary({ view, onGo, compact }: { view: SessionView; onGo: (t: Todo) => void; compact?: boolean }) {
   const count = (s: SourceRow["status"]) => view.rows.filter((r) => r.status === s).length;
   const todo = todos(view);
   const total = view.rows.length;
@@ -190,8 +191,8 @@ function Summary({ view, onGo }: { view: SessionView; onGo: (t: Todo) => void })
               </span>
             ))}
       </p>
-      <Eyebrow>Als Nächstes</Eyebrow>
-      {todo.length ? (
+      {!compact && <Eyebrow>Als Nächstes</Eyebrow>}
+      {compact ? null : todo.length ? (
         <TodoList items={todo} onGo={onGo} />
       ) : (
         <p className="text-[0.9rem]">
@@ -201,9 +202,11 @@ function Summary({ view, onGo }: { view: SessionView; onGo: (t: Todo) => void })
           </Button>
         </p>
       )}
-      <p className="mt-6 text-[0.85rem] text-muted">
-        Wähle eine Quelle aus, um Vorschau, Zeitbelege und Dateiangaben zu sehen.
-      </p>
+      {!compact && (
+        <p className="mt-6 text-[0.85rem] text-muted">
+          Wähle eine Quelle aus, um Vorschau, Zeitbelege und Dateiangaben zu sehen.
+        </p>
+      )}
     </>
   );
 }
@@ -509,12 +512,7 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
           </Button>
         )}
         {device && !hasRef && (
-          <Button
-            size="sm"
-            variant="primary"
-            className="!whitespace-normal text-left"
-            onClick={() => actions.setReference(device.id)}
-          >
+          <Button size="sm" className="!whitespace-normal text-left" onClick={() => actions.setReference(device.id)}>
             {device.label} als Referenzuhr
           </Button>
         )}
