@@ -61,7 +61,8 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("ordnet Tafel, Episoden, Mitschrift und Fotos nach Uhrzeit", () => {
-    const sc = buildScaffold(store, sessionId);
+    const sc = buildScaffold(store, sessionId, { mode: "episodes" });
+    expect(sc.episodes).toBe(true);
     const lines = sc.entries.map(entryText);
     // Tagebuch vor der ersten Aufnahme: eigene Tafel ganz vorne.
     expect(lines[0]).toMatch(/^#00:00:00-0# Uhrzeit .*Zwischentafel/);
@@ -77,6 +78,25 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const photo = sc.entries.find((e) => e.kind === "photo")!;
     expect(photo.montageMs).toBe(episode.montageStartMs + 90_000);
     expect(sc.entries.at(-1)!.montageMs).toBe(sc.plan.durationMs);
+  });
+
+  it("läuft ohne Wunsch in Echtzeit und nennt keine Episoden", () => {
+    const sc = buildScaffold(store, sessionId);
+    expect(sc.plan.mode).toBe("realtime");
+    expect(sc.episodes).toBe(false);
+    expect(sc.header.modeLabel).toBe("Echtzeit");
+    const lines = sc.entries.map(entryText);
+    expect(lines.some((l) => /Episode|Zwischentafel|Zwischenzeit/.test(l))).toBe(false);
+    // Videozeit = Uhrzeit ab dem ersten Ereignis (Tagebuch 10:12, notiert).
+    const line = sc.entries.find((e) => e.kind === "line")!;
+    const first = sc.plan.segments[0]!.fromMs;
+    expect(entryText(line)).toContain("Uhrzeit 10:15:10 · B1: Wie lange schon?");
+    expect(sc.plan.toMontage(first + 60_000)).toBe(60_000);
+    // Mit benannten Episoden bleibt die Echtzeit-Montage gleich lang, nur mit Episodenzeilen.
+    const named = buildScaffold(store, sessionId, { episodes: true });
+    expect(named.plan.durationMs).toBe(sc.plan.durationMs);
+    expect(named.entries.some((e) => e.kind === "episode")).toBe(true);
+    expect(named.header.montageId).not.toBe(sc.header.montageId);
   });
 
   it("schreibt Video, Zeitgerüst und Begleitprotokoll", { timeout: 180_000 }, async () => {
@@ -106,7 +126,8 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     );
     // Bild und Ton bleiben auf einer Linie.
     expect(Math.abs(v! - a!)).toBeLessThan(80);
-    expect(probe.chapters.length).toBeGreaterThanOrEqual(2);
+    // Echtzeit ohne Episoden: keine Kapitel.
+    expect(probe.chapters.length).toBe(0);
     const docx = readFileSync(join(out, r.files[1]!));
     expect(docx.subarray(0, 2).toString()).toBe("PK");
     const csv = readFileSync(join(out, r.files[2]!), "utf8");
@@ -139,7 +160,8 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
 
   it("schreibt eine Schnittliste für DaVinci Resolve", async () => {
     const out = join(dir, "resolve");
-    const r = await exportSession(store, sessionId, out, { video: false, resolve: true });
+    const r = await exportSession(store, sessionId, out, { video: false, resolve: true, mode: "episodes" });
+    expect(r.files).toContain("Feldtag_2026-09-14_Testmarkt_Episoden.docx");
     const name = r.files.find((f) => f.endsWith(".fcpxml"))!;
     const xml = readFileSync(join(out, name), "utf8");
     if (process.env.FELDSPUR_FCPXML_KEEP) writeFileSync(process.env.FELDSPUR_FCPXML_KEEP, xml);

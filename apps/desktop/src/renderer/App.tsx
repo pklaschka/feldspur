@@ -415,7 +415,13 @@ function SessionPane({
             </Tabs.Content>
             <Tabs.Content value="review" className={tabContent}>
               {step === "review" && (
-                <Review view={view} selected={selected} onSelect={setSelected} onNext={() => setStep("export")} />
+                <Review
+                  view={view}
+                  selected={selected}
+                  onSelect={setSelected}
+                  onNext={() => setStep("export")}
+                  onEpisodes={(on) => void saveDetails({ episodes: on })}
+                />
               )}
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>

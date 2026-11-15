@@ -20,7 +20,7 @@ import {
   type Track,
 } from "./timeline.ts";
 import { usePlayback } from "./playback.tsx";
-import { Button, cx, Glyph, StepHeader } from "./ui.tsx";
+import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
 
 const LABEL_W = 180;
 const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
@@ -31,11 +31,14 @@ export function Review({
   selected,
   onSelect,
   onNext,
+  onEpisodes,
 }: {
   view: SessionView;
   selected: string | null;
   onSelect: (id: string) => void;
   onNext: () => void;
+  /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
+  onEpisodes: (on: boolean) => void;
 }) {
   // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
   const rows = view.rows.filter((r) => !r.partOf);
@@ -54,7 +57,15 @@ export function Review({
     );
   }
   return (
-    <Timeline view={view} placed={placed} unplaced={unplaced} selected={selected} onSelect={onSelect} onNext={onNext} />
+    <Timeline
+      view={view}
+      placed={placed}
+      unplaced={unplaced}
+      selected={selected}
+      onSelect={onSelect}
+      onNext={onNext}
+      onEpisodes={onEpisodes}
+    />
   );
 }
 
@@ -65,6 +76,7 @@ function Timeline({
   selected,
   onSelect,
   onNext,
+  onEpisodes,
 }: {
   view: SessionView;
   placed: SourceRow[];
@@ -72,6 +84,7 @@ function Timeline({
   selected: string | null;
   onSelect: (id: string) => void;
   onNext: () => void;
+  onEpisodes: (on: boolean) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -346,9 +359,17 @@ function Timeline({
       <div className="flex overflow-hidden rounded-[10px] border border-line bg-panel shadow-xs">
         <div className="flex-none border-r border-line" style={{ width: LABEL_W }}>
           <div className="border-b border-line bg-panel-2" style={{ height: RULER_H }} />
-          <div className="grid content-center border-b border-line px-3 leading-tight" style={{ height: EPISODE_H }}>
-            <b className="font-semibold">Episoden</b>
-            <span className="text-[0.8rem] text-muted">{view.episodes ? "aus Tonspuren" : "nach Abgleich"}</span>
+          <div
+            className="flex items-center gap-2 border-b border-line px-3 leading-tight"
+            style={{ height: EPISODE_H }}
+          >
+            <span className="grid min-w-0 flex-1">
+              <b className="font-semibold">Episoden</b>
+              <span className="truncate text-[0.8rem] text-muted">
+                {!view.session.episodes ? "aus" : view.episodes ? "aus Tonspuren" : "nach Abgleich"}
+              </span>
+            </span>
+            <Toggle checked={view.session.episodes} onChange={onEpisodes} label="Episoden bilden" />
           </div>
           {tracks.map((t) => (
             <div

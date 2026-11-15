@@ -86,7 +86,7 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
       const id = asset(main.source.originalPath, main.source.fileName, "av", main.source.durationMs);
       const own = more.length ? [`          ${transform(tiles[0]!)}`] : [];
       spine.push(
-        `        <asset-clip ref="${id}" offset="${t(p.f0)}" start="${t(base)}" duration="${t(len)}" name="${esc(`${p.title} · ${main.label}`)}" srcEnable="video">\n${[...own, ...children].join("\n")}\n        </asset-clip>`,
+        `        <asset-clip ref="${id}" offset="${t(p.f0)}" start="${t(base)}" duration="${t(len)}" name="${esc(p.title ? `${p.title} · ${main.label}` : main.label)}" srcEnable="video">\n${[...own, ...children].join("\n")}\n        </asset-clip>`,
       );
     } else {
       spine.push(

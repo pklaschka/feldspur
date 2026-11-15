@@ -128,4 +128,8 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE devices ADD COLUMN time_zone TEXT;
   `,
+  // 7: Episoden nur auf Wunsch (vorher immer gebildet). Auch bestehende Einsätze starten ohne.
+  `
+  ALTER TABLE sessions ADD COLUMN episodes INTEGER NOT NULL DEFAULT 0;
+  `,
 ];

@@ -82,7 +82,12 @@ function Summary({ view }: { view: SessionView }) {
     todo.push(
       `${checks} ${checks === 1 ? "Lage" : "Lagen"} prüfen: auf der Zeitachse „Nächste prüfen“ wählen und rechts bestätigen, wenn sie passt.`,
     );
-  if (view.avCount && !view.analyzedCount) todo.push("Tonspuren abgleichen, damit Episoden und Stille erkannt werden.");
+  if (view.avCount && !view.analyzedCount)
+    todo.push(
+      view.session.episodes
+        ? "Tonspuren abgleichen, damit Episoden und Stille erkannt werden."
+        : "Tonspuren abgleichen, damit Klatscher und Stille erkannt werden.",
+    );
   const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote).length;
   if (diaryOpen) todo.push(`${diaryOpen} Tagebuchseiten ohne Randnotiz.`);
   const stat = (s: SourceRow["status"]) => (

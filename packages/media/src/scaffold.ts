@@ -60,6 +60,8 @@ export interface ScaffoldHeader {
 export interface Scaffold {
   header: ScaffoldHeader;
   plan: MontagePlan;
+  /** Episoden benannt (Zeilen „Episode n“, Zwischenzeiten)? Sonst nur Uhrzeit, Quellen und Leerlauf. */
+  episodes: boolean;
   entries: ScaffoldEntry[];
   /** Grundlage für die Montage (Lagen, Quellen). */
   input: ResolveInput;
@@ -89,8 +91,13 @@ export function timestamp(ms: number): string {
 }
 
 export interface ScaffoldOptions {
-  /** Episoden mit kurzen Tafeln dazwischen (Standard) oder alles in Echtzeit. */
+  /** Alles in Echtzeit (Standard) oder Episoden mit kurzen Tafeln dazwischen. */
   mode?: MontageMode;
+  /**
+   * Episoden im Zeitgerüst und Video benennen. Nur auf Wunsch; bei mode "episodes" immer.
+   * Ohne sie bleibt die Echtzeit-Montage gleich lang, nur ohne Episoden- und Zwischenzeit-Zeilen.
+   */
+  episodes?: boolean;
 }
 
 export function buildScaffold(store: ProjectStore, sessionId: Id, opts: ScaffoldOptions = {}): Scaffold {
@@ -108,6 +115,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
       kind === "source" ? (photos.has(id) ? res.placements.get(id)?.startMs : undefined) : res.diary.get(id)?.notedAtMs,
     { mode: opts.mode },
   );
+  const named = plan.mode === "episodes" || opts.episodes === true;
 
   const src = new Map(input.sources.map((s) => [s.id, s]));
   const devices = new Map(input.devices.map((d) => [d.id, d]));
@@ -126,6 +134,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
   // Tafeln und Episoden.
   for (const seg of plan.segments) {
     if (seg.kind === "episode") {
+      if (!named) continue;
       const names = seg.episode.sourceIds.map(label).sort();
       push({
         montageMs: seg.montageStartMs,
@@ -145,8 +154,10 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
       const start = res.placements.get(s.id)!.startMs;
       return (loud.get(s.id) ?? []).map((l) => start + l.atMs).filter((t) => t >= seg.fromMs && t <= seg.toMs);
     });
+    // Ohne Episoden zählt eine Zwischenzeit nur, wenn dort eine Aufnahme im Leerlauf weiterlief.
+    if (!named && !idleSources.length) continue;
     const parts = [
-      span > 0 ? `${formatDuration(span)} ohne Episode` : "",
+      named && span > 0 ? `${formatDuration(span)} ohne Episode` : "",
       idleSources.length ? `${idleSources.map((s) => s.label).join(", ")} lief weiter (Leerlauf)` : "",
       loudHere.length
         ? `Prüfhinweis: laut um ${loudHere
@@ -159,7 +170,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
       montageMs: seg.montageStartMs,
       kind: "card",
       clock: span > 0 ? `${formatClock(seg.fromMs)}–${formatClock(seg.toMs)}` : formatClock(seg.fromMs),
-      head: plan.mode === "realtime" ? "Zwischenzeit" : "Zwischentafel",
+      head: !named ? "Leerlauf" : plan.mode === "realtime" ? "Zwischenzeit" : "Zwischentafel",
       body: parts.join(". "),
     });
   }
@@ -273,10 +284,11 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
       reference: ref ? ref.label : null,
       sources: input.sources.filter((s) => res.placements.has(s.id) && !s.partOf).map((s) => s.label),
       extra: input.session.extra,
-      montageId: montageId(sessionId, plan, input.sources, res),
+      montageId: montageId(sessionId, plan, named, input.sources, res),
       modeLabel: plan.mode === "realtime" ? "Echtzeit" : "Episoden",
     },
     plan,
+    episodes: named,
     entries,
     input,
     resolved: res,
@@ -291,11 +303,13 @@ export function entryText(e: ScaffoldEntry): string {
 }
 
 /** Kurze, gut lesbare Kennung aus Einsatz, Art der Montage und Lage der Quellen. */
-function montageId(sessionId: Id, plan: MontagePlan, sources: Source[], res: ResolveResult): string {
+function montageId(sessionId: Id, plan: MontagePlan, named: boolean, sources: Source[], res: ResolveResult): string {
   const h = createHash("sha1").update(
     JSON.stringify({
       sessionId,
       mode: plan.mode,
+      // Echtzeit mit benannten Episoden wie bisher; ohne Episoden ist es eine andere Montage.
+      ...(plan.mode === "realtime" && !named ? { episodes: false } : {}),
       durationMs: Math.round(plan.durationMs),
       sources: sources
         .filter((s) => res.placements.has(s.id))
