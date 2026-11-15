@@ -1,4 +1,4 @@
-# Tagebuch abtippen {#sec-tagebuch}
+## Tagebuch abtippen {#sec-tagebuch}
 
 Feldnotizen entstehen selten genau dann, wenn etwas passiert. Ein Eintrag, der um 14:23 notiert wurde, betrifft oft
 schon, was um 14:16 geschah. Feldspur trennt deshalb die **Seite** (der Scan) vom **Eintrag** (ein Rahmen auf der
@@ -6,12 +6,12 @@ Seite mit eigener Zeit).
 
 ![Abtipp-Ansicht mit zwei Einträgen auf einer erfundenen Seite](bilder/tagebuch.png){#fig-tagebuch}
 
-## Randnotiz der Seite
+### Randnotiz der Seite
 
 Steht am Rand einer Seite eine Uhrzeit, trägst du sie in der Detailleiste als **Randnotiz** ein. Daraus ergibt sich,
 auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
 
-## Einträge
+### Einträge
 
 Öffne die Seite mit **Tagebuch abtippen** und zieh einen Rahmen um einen Eintrag. Dann trägst du ein:
 

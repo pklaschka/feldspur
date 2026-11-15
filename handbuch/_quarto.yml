@@ -1,48 +1,18 @@
 project:
-  type: book
+  type: manuscript
   output-dir: _site
 
+manuscript:
+  article: index.qmd
+  code-links: false
+
 lang: de
-
-book:
-  title: "Feldspur"
-  subtitle: "Handbuch und Begleittext"
-  author:
-    - name: Zuri Nimca Klaschka
-      orcid: 0009-0005-9995-5687
-  date: last-modified
-  date-format: "D. MMMM YYYY"
-  repo-url: https://github.com/pklaschka/feldspur
-  repo-subdir: handbuch
-  search: true
-  chapters:
-    - index.qmd
-    - part: "Begleittext"
-      chapters:
-        - motivation.qmd
-        - ki.qmd
-    - part: "Handbuch"
-      chapters:
-        - erste-schritte.qmd
-        - einsammeln.qmd
-        - abgleichen.qmd
-        - durchsehen.qmd
-        - tagebuch.qmd
-        - mitschreiben.qmd
-        - ausgeben.qmd
-    - zitieren.qmd
-  appendices:
-    - begriffe.qmd
-
-# Zitierangaben: Quarto setzt daraus Meta-Angaben für Literaturverwaltungen
-# und einen Abschnitt „Zitieren“ unter jede Seite.
-citation:
-  type: book
-  title: "Feldspur: Handbuch und Begleittext"
-  url: https://pklaschka.github.io/feldspur/
-  publisher: GitHub
-
-license: "CC BY 4.0"
+number-sections: true
+fig-cap-location: bottom
+crossref:
+  fig-title: Abbildung
+  fig-prefix: Abbildung
+  sec-prefix: Abschnitt
 
 format:
   html:
@@ -54,14 +24,29 @@ format:
     respect-user-color-scheme: true
     html-math-method: plain
     lightbox: false
-    link-external-newwindow: false
-    toc-title: "Auf dieser Seite"
+    toc: true
+    toc-depth: 3
+    toc-title: "Inhalt"
+    include-after-body: fusszeile.html
+    format-links:
+      - format: typst
+        text: PDF
     other-links:
-      - text: Handbuch als PDF
-        icon: file-earmark-pdf
-        href: Feldspur-Handbuch.pdf
-
-fig-cap-location: bottom
-crossref:
-  fig-title: Abbildung
-  fig-prefix: Abbildung
+      - text: Quelltext auf GitHub
+        icon: github
+        href: https://github.com/pklaschka/feldspur
+      - text: Impressum
+        href: https://zuriklaschka.de/de/impressum/
+  typst:
+    papersize: a4
+    toc: true
+    toc-depth: 2
+    toc-title: "Inhalt"
+    section-numbering: "1.1"
+    output-file: Feldspur-Handbuch.pdf
+    # Literatur wie in der Webseite über citeproc (Autor-Jahr), an der Stelle von #refs.
+    citeproc: true
+    # Hinweiskästen ohne Symbolpaket aus dem Netz setzen, siehe kaesten.lua.
+    filters:
+      - at: pre-ast
+        path: kaesten.lua

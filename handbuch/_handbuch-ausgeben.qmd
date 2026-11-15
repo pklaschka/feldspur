@@ -1,16 +1,16 @@
-# Ausgeben {#sec-ausgeben}
+## Ausgeben {#sec-ausgeben}
 
 Im letzten Schritt schreibt Feldspur einen **Ordner pro Einsatz** mit drei Teilen.
 
 ![Ausgabe mit Vorschau des Zeitgerüsts](bilder/ausgeben.png){#fig-ausgeben}
 
-## Zeitgerüst (.docx)
+### Zeitgerüst (.docx)
 
 Das **Zeitgerüst** ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format `#hh:mm:ss-z#`, die
 auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. Dazu kommen Mitschrift, Fotos und
 Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdaten und die **Montage-ID**.
 
-## Montagevideo (.mp4)
+### Montagevideo (.mp4)
 
 Das **Montagevideo** dient nur zum **Zuordnen**: Es zeigt die Uhrzeit, die gerade laufenden Videos (bis zu vier
 nebeneinander) mit Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und die Montage-ID. Fotos und
@@ -22,19 +22,19 @@ Optionen:
 - **Nach Episoden schneiden** (nur wenn unter „Durchsehen“ Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
 - **Ton aller Geräte mischen**: sonst nur die Haupttonquelle.
-- **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
+- **Schnittliste für DaVinci Resolve** [@resolve] (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
   willst.
 
 Mit **Montage ansehen** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
-## Begleitprotokoll (.csv)
+### Begleitprotokoll (.csv)
 
 Das **Begleitprotokoll** hält für jede Datei Herkunft und Zeitnachweis fest: Kurzzeichen, Originaldatei,
 Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. So bleibt nachvollziehbar, worauf jede Lage im Zeitgerüst
 beruht, und das Material lässt sich sauber archivieren.
 
-## In MAXQDA
+### In MAXQDA
 
-Lies das Zeitgerüst in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
+Lies das Zeitgerüst in MAXQDA [@maxqda; @kuckartz2019] als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
 Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA.
 Ein Einsatz ergibt genau ein MAXQDA-Dokument.

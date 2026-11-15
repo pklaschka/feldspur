@@ -1,0 +1,22 @@
+## Wer was macht
+
+Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests, der Skripte und
+der Dokumentation, auch dieses Texts, wurde von Claude (Anthropic) über Claude Code geschrieben, im Dialog mit mir.
+Von mir stammen die Fragestellung, das Konzept, die Anforderungen aus der Feldforschung und die Entscheidungen. Ich gebe
+die Richtung vor, sehe Ergebnisse durch und probiere sie aus. Ich lese aber nicht jede Zeile Code selbst gegen.
+Commits, an denen die KI beteiligt war, tragen im Repository eine `Co-Authored-By`-Zeile.
+
+Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat). Auch das kann sich nicht jede\*r leisten. Ich
+erwähne es deshalb zur Transparenz, und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu
+stellen.
+
+## Was das für die Nutzung heißt
+
+- Der Code kann Fehler enthalten, die weder Tests noch ich bemerkt haben. Ergebnisse, die in eine Analyse oder
+  Veröffentlichung eingehen, bitte an den Originalaufnahmen prüfen.
+- Feldspur ist deshalb bewusst auf Nachvollziehbarkeit gebaut: Originale werden nie verändert und über Prüfsummen
+  belegt. Jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet. Automatische Vorschläge, etwa
+  Sync-Anker, zählen erst, wenn sie von Hand bestätigt wurden.
+- Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: keine automatische Transkription, keine Cloud-Dienste.
+  Alles läuft lokal.
+

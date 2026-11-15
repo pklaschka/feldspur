@@ -1,36 +1,72 @@
-# Über dieses Buch {.unnumbered}
+---
+title: "Feldspur"
+subtitle: "Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
+author:
+  - name:
+      given: Zuri Nimca
+      family: Klaschka
+    orcid: 0009-0005-9995-5687
+date: last-modified
+date-format: "D. MMMM YYYY"
+lang: de
+abstract: |
+  Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen von vielen Geräten, deren
+  Uhren selten übereinstimmen. Feldspur ist ein Open-Source-Werkzeug, das dieses Material nach Uhrzeit auf eine
+  gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus ein Dokument mit
+  Zeitmarken für die Analyse in MAXQDA erzeugt. Der Begleittext beschreibt den Anlass, ordnet Feldspur in bestehende
+  Werkzeuge ein und legt offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch führt durch die Arbeit
+  mit dem Programm.
+keywords: [Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science]
+bibliography: literatur.bib
+citation:
+  type: article
+  title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
+  url: https://pklaschka.github.io/feldspur/
+license: "CC BY 4.0"
+---
 
-Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen)
-auf **eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zum Beispiel für MAXQDA.
+{{< include _hinweise.qmd >}}
 
-Dieses Buch hat zwei Teile:
+Diesen Text gibt es als Webseite und als PDF; das PDF liegt außerdem jedem Release bei. Er hat zwei Teile: Der
+Begleittext erzählt, warum es Feldspur gibt (@sec-motivation), wie es sich zu bestehenden Werkzeugen verhält
+(@sec-einordnung) und wie es mithilfe generativer KI entstanden ist (@sec-ki). Das Handbuch (@sec-handbuch) führt
+Schritt für Schritt durch die Arbeit mit Feldspur.
 
-- Der **Begleittext** erzählt, warum es Feldspur gibt (@sec-motivation) und wie es mithilfe generativer KI entstanden ist
-  (@sec-ki).
-- Das **Handbuch** führt Schritt für Schritt durch die Arbeit mit Feldspur, vom Einsammeln der Dateien bis zum
-  Zeitgerüst für MAXQDA (@sec-erste-schritte bis @sec-ausgeben).
+{{< include _einleitung.qmd >}}
 
-::: {.callout-important}
-## Mit generativer KI entwickelt
+{{< include _einordnung.qmd >}}
 
-Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests und auch dieses
-Handbuchs wurde von Claude (Anthropic) geschrieben, im Dialog mit mir. Fragestellung, Konzept, Anforderungen und
-Entscheidungen stammen von mir. Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: Es transkribiert nicht
-automatisch, nutzt keine Cloud-Dienste und arbeitet vollständig auf dem eigenen Rechner. Mehr dazu, auch zu meiner
-Haltung zur Nutzung sogenannter KI, in @sec-ki.
+{{< include _ki.qmd >}}
+
+# Handbuch {#sec-handbuch}
+
+::: {.callout-note}
+## Bildschirmfotos veraltet
+
+Die Bildschirmfotos in diesem Handbuch zeigen einen älteren Stand der Oberfläche. Vor dem nächsten Release steht ein
+Redesign an; danach werden sie erneuert. Sie zeigen erfundene Beispieldaten („Testmarkt“), keine echten
+Forschungsdaten.
 :::
 
-::: {.callout-warning}
-## Forschungswerkzeug, (noch) kein Produkt
+{{< include _handbuch-erste-schritte.qmd >}}
 
-Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
-und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
-ändern. Wer es ausprobieren möchte, ist herzlich eingeladen, sollte aber mit Ecken und Kanten rechnen. Ergebnisse, die in eine
-Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
+{{< include _handbuch-einsammeln.qmd >}}
+
+{{< include _handbuch-abgleichen.qmd >}}
+
+{{< include _handbuch-durchsehen.qmd >}}
+
+{{< include _handbuch-tagebuch.qmd >}}
+
+{{< include _handbuch-mitschreiben.qmd >}}
+
+{{< include _handbuch-ausgeben.qmd >}}
+
+{{< include _zitieren.qmd >}}
+
+# Literatur {.unnumbered}
+
+::: {#refs}
 :::
 
-Das Handbuch gibt es auf der Webseite und als PDF; das PDF liegt außerdem jedem Release bei. Die Bildschirmfotos
-zeigen erfundene Beispieldaten („Testmarkt“), keine echten Forschungsdaten.
-
-Die Webseite lädt nichts von fremden Servern und setzt keine Cookies. Nur wenn du zwischen hellem und dunklem
-Erscheinungsbild umschaltest, merkt sich dein Browser diese Wahl lokal.
+{{< include _begriffe.qmd >}}

@@ -1,6 +1,7 @@
 name: Handbuch-Webseite
 
-# Baut Handbuch und Begleittext (handbuch/) als Webseite mit PDF und veröffentlicht sie auf GitHub Pages.
+# Baut Begleittext und Handbuch (handbuch/) als Webseite mit PDF und veröffentlicht sie auf GitHub Pages.
+# Prüft außerdem, dass README.md zu README.qmd und den Textbausteinen in handbuch/ passt.
 # Einmalig nötig: Settings → Pages → Source „GitHub Actions“.
 # In Pull Requests wird nur gebaut und geprüft, nicht veröffentlicht.
 on:
@@ -9,12 +10,16 @@ on:
     branches: [main]
     paths:
       - "handbuch/**"
+      - "README.qmd"
+      - "README.md"
       - "scripts/handbook.mjs"
       - ".github/actions/quarto/**"
       - ".github/workflows/handbuch-seite.yml"
   pull_request:
     paths:
       - "handbuch/**"
+      - "README.qmd"
+      - "README.md"
       - "scripts/handbook.mjs"
       - ".github/actions/quarto/**"
       - ".github/workflows/handbuch-seite.yml"
@@ -31,12 +36,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Vite+ für `vp fmt` (README) und Node.
+      - uses: voidzero-dev/setup-vp@v1.21.2
         with:
           node-version: 22
+          cache: true
       - uses: ./.github/actions/quarto
-      # Baut das PDF und die Webseite und prüft, dass die Seite nichts von fremden Servern lädt.
-      - run: node scripts/handbook.mjs --site
+      - name: README aktuell?
+        run: node scripts/handbook.mjs --readme --check
+      # Baut Webseite und PDF und prüft, dass die Seite nichts von fremden Servern lädt.
+      - run: node scripts/handbook.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: handbuch/_site

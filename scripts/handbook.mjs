@@ -1,17 +1,16 @@
 /**
- * Baut Handbuch und Begleittext aus handbuch/ mit Quarto.
+ * Baut Begleittext und Handbuch (Quarto-Manuskript in handbuch/) und die README.
  *
- *   node scripts/handbook.mjs            PDF nach dist/handbuch/Feldspur-Handbuch-<version>.pdf
- *   node scripts/handbook.mjs --site     zusätzlich die Webseite nach handbuch/_site/ (mit dem PDF darin)
+ *   node scripts/handbook.mjs            Webseite nach handbuch/_site/ (mit PDF) und
+ *                                        PDF nach dist/handbuch/Feldspur-Handbuch-<version>.pdf
+ *   node scripts/handbook.mjs --readme   nur README.md aus README.qmd neu erzeugen
+ *   node scripts/handbook.mjs --readme --check   README.md nur prüfen (Fehler, wenn sie nicht zu den Quellen passt)
  *
- * FELDSPUR_VERSION setzt die Version (leer = aus package.json), QUARTO den Pfad zu quarto.
- *
- * Quarto-Bücher kennen kein Typst. Für das PDF fügt das Skript die Kapitel deshalb in eine einzige
- * Datei zusammen und setzt sie mit dem in Quarto enthaltenen Typst. So braucht es kein LaTeX.
+ * FELDSPUR_VERSION setzt die Version im Dateinamen (leer = aus package.json), QUARTO den Pfad zu quarto.
+ * Das PDF setzt das in Quarto enthaltene Typst; LaTeX ist nicht nötig.
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,106 +20,55 @@ const quarto = process.env.QUARTO || "quarto";
 const version =
   process.env.FELDSPUR_VERSION?.replace(/^v/, "") ||
   JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
-const site = process.argv.includes("--site");
+const args = process.argv.slice(2);
 
-/** Kapitelfolge aus _quarto.yml: Teile („part“) und .qmd-Dateien in der Reihenfolge des Buchs. */
-function outline() {
-  const yml = readFileSync(join(src, "_quarto.yml"), "utf8");
-  const items = [];
-  for (const line of yml.split("\n")) {
-    const part = line.match(/^\s*- part:\s*"?([^"]+)"?\s*$/);
-    const file = line.match(/^\s*-\s+([\w-]+\.qmd)\s*$/);
-    if (part) items.push({ part: part[1] });
-    else if (file) items.push({ file: file[1] });
-  }
-  return items;
+function run(cmd, argv, cwd) {
+  execFileSync(cmd, argv, { cwd, stdio: "inherit", shell: process.platform === "win32" });
 }
 
-const BOX_OPEN =
-  "```{=typst}\n#block(fill: luma(244), stroke: (left: 3pt + luma(150)), inset: 10pt, width: 100%, breakable: true)[\n```";
-const BOX_CLOSE = "```{=typst}\n]\n```";
-
-/**
- * Hinweiskästen (Callouts) als schlichte Kästen setzen. Quartos eigene Typst-Kästen laden ein
- * Symbolpaket aus dem Netz nach; so bleibt der PDF-Satz ohne Netz und ohne Fremdpakete.
- */
-function boxCallouts(path) {
-  const text = readFileSync(path, "utf8").replace(
-    /^::: \{\.callout-\w+\}\n(?:## (.+)\n)?([\s\S]*?)^:::$/gm,
-    (_, title, body) => `${BOX_OPEN}\n\n${title ? `**${title}**\n\n` : ""}${body.trim()}\n\n${BOX_CLOSE}`,
-  );
-  writeFileSync(path, text);
-}
-
-function buildPdf() {
-  const work = mkdtempSync(join(tmpdir(), "feldspur-handbuch-"));
-  try {
-    cpSync(src, work, {
-      recursive: true,
-      filter: (p) => !/[/\\](_site|\.quarto)$/.test(p) && !p.endsWith("_quarto.yml"),
-    });
-    for (const x of outline()) if (x.file) boxCallouts(join(work, x.file));
-    const body = outline().map((x) =>
-      x.part
-        ? `\`\`\`{=typst}\n#pagebreak(weak: true)\n#align(center + horizon, text(size: 22pt, weight: "bold")[${x.part}])\n#pagebreak()\n\`\`\``
-        : `{{< include ${x.file} >}}`,
+/** README.md aus README.qmd; danach wie alle Markdown-Dateien mit vp fmt formatieren. */
+function buildReadme() {
+  const before = readFileSync(join(root, "README.md"), "utf8");
+  run(quarto, ["render", "README.qmd"], root);
+  run("vp", ["fmt", "README.md"], root);
+  const after = readFileSync(join(root, "README.md"), "utf8");
+  if (args.includes("--check") && after !== before) {
+    console.error(
+      "README.md passt nicht zu README.qmd und handbuch/. Bitte `node scripts/handbook.mjs --readme` ausführen.",
     );
-    const front = [
-      "---",
-      'title: "Feldspur"',
-      `subtitle: "Handbuch und Begleittext · Version ${version}"`,
-      // Ohne „orcid“-Feld: das zöge im Typst-Satz ein Symbolpaket aus dem Netz nach.
-      'author: "Zuri Nimca Klaschka (ORCID 0009-0005-9995-5687)"',
-      `date: "${new Date().toISOString().slice(0, 10)}"`,
-      'date-format: "D. MMMM YYYY"',
-      "lang: de",
-      "format:",
-      "  typst:",
-      "    papersize: a4",
-      "    toc: true",
-      "    toc-depth: 2",
-      '    toc-title: "Inhalt"',
-      '    section-numbering: "1.1"',
-      "    output-file: Feldspur-Handbuch.pdf",
-      "crossref:",
-      "  fig-title: Abbildung",
-      "  fig-prefix: Abbildung",
-      "---",
-      "",
-    ].join("\n");
-    writeFileSync(join(work, "Feldspur-Handbuch.qmd"), front + body.join("\n\n") + "\n");
-    execFileSync(quarto, ["render", "Feldspur-Handbuch.qmd"], { cwd: work, stdio: "inherit" });
-
-    const out = join(root, "dist", "handbuch");
-    mkdirSync(out, { recursive: true });
-    const pdf = join(out, `Feldspur-Handbuch-${version}.pdf`);
-    cpSync(join(work, "Feldspur-Handbuch.pdf"), pdf);
-    console.log(`PDF: ${pdf}`);
-    return pdf;
-  } finally {
-    rmSync(work, { recursive: true, force: true });
+    process.exit(1);
   }
+  console.log("README.md erzeugt.");
 }
 
 /** Die Webseite darf nichts von fremden Servern laden (keine CDNs, keine Webfonts). */
 function checkNoExternal(dir) {
-  const bad = execFileSync(
-    "grep",
-    ["-rlE", String.raw`(src|href)=["']https?://[^"']+\.(js|css|woff2?|ttf)|@import url\(["']?https?:`, dir],
-    { encoding: "utf8" },
-  ).trim();
-  if (bad) throw new Error(`Externe Ressourcen in der Webseite:\n${bad}`);
+  const pattern =
+    /(src|href)=["']https?:\/\/[^"']+\.(js|css|woff2?|ttf|otf)["']|<script[^>]+src=["']https?:|@import url\(["']?https?:/;
+  const bad = [];
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(html|css|js)$/.test(e.name) && pattern.test(readFileSync(p, "utf8"))) bad.push(p);
+    }
+  };
+  walk(dir);
+  if (bad.length) throw new Error(`Externe Ressourcen in der Webseite:\n${bad.join("\n")}`);
 }
 
-const pdf = buildPdf();
-if (site) {
-  execFileSync(quarto, ["render"], { cwd: src, stdio: "inherit", env: { ...process.env, FELDSPUR_VERSION: version } });
-  cpSync(pdf, join(src, "_site", "Feldspur-Handbuch.pdf"));
-  try {
-    checkNoExternal(join(src, "_site"));
-  } catch (e) {
-    // grep endet mit 1, wenn nichts gefunden wurde: das ist der gute Fall.
-    if (e.status !== 1) throw e;
-  }
+/** Webseite und PDF in einem Durchlauf; das PDF landet zusätzlich versioniert in dist/handbuch/. */
+function buildManuscript() {
+  rmSync(join(src, "_site"), { recursive: true, force: true });
+  run(quarto, ["render"], src);
+  const out = join(root, "dist", "handbuch");
+  mkdirSync(out, { recursive: true });
+  const pdf = join(out, `Feldspur-Handbuch-${version}.pdf`);
+  cpSync(join(src, "_site", "Feldspur-Handbuch.pdf"), pdf);
+  console.log(`PDF: ${pdf}`);
+  checkNoExternal(join(src, "_site"));
   console.log(`Webseite: ${join(src, "_site")}`);
 }
+
+if (args.includes("--readme")) buildReadme();
+else buildManuscript();

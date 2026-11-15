@@ -1,17 +1,17 @@
-# Erste Schritte {#sec-erste-schritte}
+## Erste Schritte {#sec-erste-schritte}
 
-## Installieren
+### Installieren
 
 Feldspur gibt es für Windows, macOS und Linux. Die Installationsdateien liegen bei jedem
 [Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch dieses Handbuch als PDF.
-FFmpeg (in der LGPL-Fassung) ist bereits enthalten, du musst nichts weiter installieren.
+FFmpeg [@ffmpeg] (in der LGPL-Fassung) ist bereits enthalten, du musst nichts weiter installieren.
 
 ::: {.callout-note}
 Die Pakete sind noch nicht signiert. Windows und macOS warnen deshalb beim ersten Start. Unter macOS öffnest du die
 App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über „Weitere Informationen“ › „Trotzdem ausführen“.
 :::
 
-## Projekt und Einsatz
+### Projekt und Einsatz
 
 Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt…** oder
 **Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter.
@@ -20,12 +20,12 @@ Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldt
 genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.
 
 ::: {.callout-tip}
-## Deine Originale bleiben, wo sie sind
+### Deine Originale bleiben, wo sie sind
 Feldspur kopiert und verändert keine Originaldateien. Die Projektdatei merkt sich nur, wo sie liegen, und hält ihre
 Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsammeln möglichst nicht mehr.
 :::
 
-## Einsatzdaten
+### Einsatzdaten
 
 Über **Einsatzdaten bearbeiten** neben dem Titel trägst du ein, was zum Quellennachweis gehört:
 
@@ -38,7 +38,7 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 
 ![Einsatzdaten mit weiteren Angaben für den Quellennachweis](bilder/einsatzdaten.png){#fig-einsatzdaten}
 
-## Die vier Schritte
+### Die vier Schritte
 
 Oben im Fenster stehen die vier Arbeitsschritte eines Einsatzes. Kleine Hinweise an den Reitern zeigen, wo noch etwas
 offen ist, etwa „2 zu prüfen“ oder „3 ohne Zeit“.

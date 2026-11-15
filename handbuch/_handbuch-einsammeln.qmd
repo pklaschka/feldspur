@@ -1,4 +1,4 @@
-# Einsammeln {#sec-einsammeln}
+## Einsammeln {#sec-einsammeln}
 
 Zieh alle Aufzeichnungen des Einsatzes in das Fenster: einzelne Dateien oder ganze Ordner. Feldspur liest dabei für
 jede Datei
@@ -14,7 +14,7 @@ werden nicht doppelt übernommen.
 
 ![Eingesammelte Quellen, nach Geräten gruppiert](bilder/einsammeln.png){#fig-einsammeln}
 
-## Geräte
+### Geräte
 
 Feldspur gruppiert die Quellen nach **Geräten**, weil jedes Gerät seine eigene Uhr hat. Es erkennt das Gerät am
 Kameramodell in den Metadaten oder an der Art, wie die Dateien benannt sind. Jede Quelle bekommt ein Kurzzeichen wie

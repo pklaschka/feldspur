@@ -40,3 +40,4 @@ release. Add a tool name to select part of the graph. For example, run
 - Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
   setzen: `neu`, `verbessert`, `behoben`, `doku`, `intern` oder `kein-changelog` (siehe `.github/release.yml`).
 - Versionen nie von Hand ändern: das macht der Release-Workflow (`.github/workflows/release.yml`, `scripts/release.ts`).
+- README.md wird aus `README.qmd` und Bausteinen in `handbuch/` erzeugt (`node scripts/handbook.mjs --readme`); nie direkt bearbeiten. Neue Funktionen auch im Handbuch (`handbuch/_handbuch-*.qmd`) nachtragen.

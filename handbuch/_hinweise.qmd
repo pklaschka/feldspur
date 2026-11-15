@@ -1,0 +1,18 @@
+::: {.callout-important}
+## Mit generativer KI entwickelt
+
+Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests und auch der
+Dokumentation wurde von Claude (Anthropic) geschrieben, im Dialog mit mir. Fragestellung, Konzept, Anforderungen und
+Entscheidungen stammen von mir. Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: Es transkribiert nicht
+automatisch, nutzt keine Cloud-Dienste und arbeitet vollständig auf dem eigenen Rechner. Mehr dazu, auch zu meiner
+Haltung zur Nutzung sogenannter KI, im Abschnitt „Entstehung mit generativer KI“.
+:::
+
+::: {.callout-warning}
+## Forschungswerkzeug, (noch) kein Produkt
+
+Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
+und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
+ändern. Wer es ausprobieren möchte, ist herzlich eingeladen, sollte aber mit Ecken und Kanten rechnen. Ergebnisse, die in eine
+Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
+:::

@@ -14,7 +14,7 @@ Insgesamt also **708 „Artefakte“**, die es zeitlich zu synchronisieren galt.
 bestehenden Mitteln kaum so zusammenführbar, dass es sich gut auswerten lässt.
 
 Und das war noch eine vergleichsweise kleine Forschung: eine etwas über das Ziel hinausschießende Seminararbeit im
-Bereich Multi-Species-Ethnografie unter dem Titel „Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
+Bereich Multi-Species-Ethnografie [@kirksey2010; @haraway2008] unter dem Titel „Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
 Kontext Zoo“ im September 2026. Nicht vergleichbar mit größeren Forschungsprojekten.
 
 ## Eine eigene Lösung
@@ -23,14 +23,12 @@ Das Projekt untersuchte neben der Hauptforschungsfrage auch die anwendbare Metho
 transkribierenden Feld, nämlich nicht-menschlichen Kommunikationsmustern. Deshalb war ich grundsätzlich sehr offen
 gegenüber experimentellen Ansätzen. Daher kam dann auch, nach der Verzweiflung ob der vorhandenen Technologien, die
 Idee, eine eigene Lösung zu finden: in einer Zeit, in der man mit Claude und Co. recht schnell individuelle Lösungen
-bauen kann, deren Entwicklung sich früher nicht gelohnt hätte. Ich habe mehr als zehn Jahre Berufserfahrung als
-Softwareentwicklerin.
+bauen kann, deren Entwicklung sich früher nicht gelohnt hätte. Dass ich mir das zugetraut habe, liegt auch an
+meinem Hintergrund: Ich habe mehr als zehn Jahre als Softwareentwicklerin gearbeitet. Ich kann deshalb einschätzen,
+was ein solches Werkzeug braucht, und die Arbeit der KI anleiten und prüfen, statt mich blind auf sie zu verlassen
+(@sec-ki).
 
-Was es bisher gibt, deckt immer nur einen Teil ab. QDA-Programme wie MAXQDA, ATLAS.ti oder NVivo codieren
-hervorragend, kennen aber keine gemeinsame Zeitachse über viele Geräte. Annotationswerkzeuge wie ELAN oder Transana
-synchronisieren Audio und Video, aber keine Tagebuchseiten und Fotos. Schnittprogramme gleichen Aufnahmen über die
-Tonspur ab, liefern aber nichts, was sich codieren lässt. Feldspur schließt diese Lücke: Es sortiert alles nach
-Uhrzeit und gibt ein Dokument aus, das MAXQDA mit Zeitmarken einliest.
+Wie sich Feldspur zu bestehenden Werkzeugen und zur Literatur verhält, ordnet @sec-einordnung ein.
 
 ## Offen und zitierbar
 
@@ -40,7 +38,7 @@ zitierbar archiviert, zur Förderung der Wissenschaft (@sec-zitieren).
 Daher kommt auch eine zweite Motivation: meine Forschungsartefakte nicht nur in einer, für mich gerade so
 nachvollziehbaren, Zettelwirtschaft zu haben, sondern sauber archivierbar sortiert. Denn wo immer möglich ist es in
 meinen Augen im Sinne der Wissenschaft, auch qualitatives Forschungsmaterial zitierfähig zur Verfügung zu stellen.
-Schließlich ist es die empirische Grundlage unserer Ergebnisse. Mir ist bewusst, dass das wegen
+Schließlich ist es die empirische Grundlage unserer Ergebnisse [vgl. @dubois2018; @wilkinson2016]. Mir ist bewusst, dass das wegen
 Anonymisierungspflichten und Ähnlichem oft leichter gesagt als getan ist. Feldspur hilft dabei, indem es jede
 Originaldatei mit Prüfsumme, Herkunft und Zeitnachweis in einem Begleitprotokoll festhält.
 

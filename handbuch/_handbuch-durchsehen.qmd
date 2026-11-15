@@ -1,10 +1,10 @@
-# Durchsehen {#sec-durchsehen}
+## Durchsehen {#sec-durchsehen}
 
 Im Schritt **Durchsehen** liegt alles auf einer Zeitachse: eine Spur pro Gerät, darin die Quellen an ihrer Uhrzeit.
 
 ![Die Zeitachse eines Einsatzes](bilder/durchsehen.png){#fig-durchsehen}
 
-## Auf der Zeitachse arbeiten
+### Auf der Zeitachse arbeiten
 
 - Ein **Klick** in eine Audio- oder Videospur spult dorthin; die laufenden Aufnahmen erscheinen in der Wiedergabe.
   Beim Abspielen läuft die Zeitachse mit.
@@ -21,21 +21,21 @@ Die Legende unter der Zeitachse erklärt die Zeichen:
 - **Tagebuch**: der Verlauf zeigt den Bezugszeitraum, die Kante die Notierzeit.
 - **Lage prüfen** (gestrichelt): Die Lage dieser Quelle ist unsicher.
 
-## Lagen prüfen
+### Lagen prüfen
 
 Ist die Lage einer Quelle unsicher, zeigt die Zeitachse oben einen Knopf wie **3 zu prüfen · Nächste →**. Er springt
 der Reihe nach zu diesen Quellen. Passt die Lage, bestätigst du das rechts in der Detailleiste: **Von Hand geprüft:
 Die Lage passt.** Die Bestätigung ist ein eigener Zeitbeleg und lässt sich wieder löschen. Ist die Uhr des ganzen
 Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt.
 
-## Ohne Uhrzeit
+### Ohne Uhrzeit
 
 Quellen, für die Feldspur noch keine Uhrzeit kennt, liegen unten im Bereich **Ohne Uhrzeit**. Wähle sie aus und gib
 ihnen eine Zeit (@sec-abgleichen).
 
 ![Wiedergabe mehrerer gleichzeitig laufender Aufnahmen](bilder/wiedergabe.png){#fig-wiedergabe}
 
-## Lautstärke angleichen
+### Lautstärke angleichen
 
 Verschiedene Geräte nehmen oft sehr unterschiedlich laut auf. In der Detailleiste einer Audio- oder Videoquelle
 stellst du unter **Lautstärke** ein, ob sie automatisch auf einen gleichen Sprachpegel gebracht wird, um einen festen
@@ -43,7 +43,7 @@ Wert in dB verstärkt wird oder unverändert bleibt. **Leise Stellen anheben** s
 ein. Das gilt beim Abhören, beim Mitschreiben und im Montagevideo; die Originaldatei bleibt unverändert, und das
 Begleitprotokoll vermerkt die Verstärkung.
 
-## Episoden (auf Wunsch)
+### Episoden (auf Wunsch)
 
 Mit dem Schalter **Episoden bilden** teilt Feldspur den Einsatz in **Episoden**: Zeiträume, in denen eine Aufnahme
 läuft und nicht nur Stille ist. Lücken unter 5 Minuten werden verbunden. Dazwischen liegen **Zwischenzeiten**, in

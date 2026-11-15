@@ -11,3 +11,12 @@ $body-color: #22201c;
 .callout-important .callout-title-container {
   font-weight: 600;
 }
+
+.fs-fusszeile {
+  margin: 3rem auto 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(127, 127, 127, 0.3);
+  font-size: 0.85rem;
+  text-align: center;
+  opacity: 0.8;
+}

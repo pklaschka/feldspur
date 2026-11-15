@@ -1,4 +1,4 @@
-# Begriffe {#sec-begriffe}
+# Begriffe {#sec-begriffe .appendix}
 
 Anker
 : „Dieser Moment in Aufnahme A ist derselbe wie dieser Moment in Aufnahme B“, durch Klatschen, Tonspur-Vergleich oder
