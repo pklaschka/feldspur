@@ -22,7 +22,7 @@ Optionen:
 - **Nach Episoden schneiden** (nur wenn unter „Durchsehen“ Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
 - **Ton aller Geräte mischen**: sonst nur die Haupttonquelle.
-- **Schnittliste für DaVinci Resolve** [@resolve] (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
+- **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
   willst.
 
 Mit **Montage ansehen** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
@@ -35,6 +35,6 @@ beruht, und das Material lässt sich sauber archivieren.
 
 ### In MAXQDA
 
-Lies das Zeitgerüst in MAXQDA [@maxqda; @kuckartz2019] als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
+Lies das Zeitgerüst in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
 Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA.
 Ein Einsatz ergibt genau ein MAXQDA-Dokument.

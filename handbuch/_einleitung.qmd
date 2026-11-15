@@ -14,7 +14,7 @@ Insgesamt also **708 „Artefakte“**, die es zeitlich zu synchronisieren galt.
 bestehenden Mitteln kaum so zusammenführbar, dass es sich gut auswerten lässt.
 
 Und das war noch eine vergleichsweise kleine Forschung: eine etwas über das Ziel hinausschießende Seminararbeit im
-Bereich Multi-Species-Ethnografie [@kirksey2010; @haraway2008] unter dem Titel „Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
+Bereich Multi-Species-Ethnografie unter dem Titel „Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
 Kontext Zoo“ im September 2026. Also nicht vergleichbar mit größeren Forschungsprojekten.
 
 ## Eine eigene Lösung
@@ -41,7 +41,7 @@ zitierbar archiviert (@sec-zitieren). Zur Förderung der Wissenschaft.
 Daher kommt auch eine zweite Motivation: meine Forschungsartefakte nicht nur in einer (für mich gerade so
 nachvollziehbaren) Zettelwirtschaft zu haben, sondern sauber archivierbar sortiert. Denn wo immer möglich ist es in
 meinen Augen im Sinne der Wissenschaft, auch qualitatives Forschungsmaterial zitierfähig zur Verfügung zu stellen.
-Schließlich ist es die empirische Grundlage unserer Ergebnisse [vgl. @dubois2018; @wilkinson2016]. Mir ist bewusst, dass das wegen
+Schließlich ist es die empirische Grundlage unserer Ergebnisse. Mir ist bewusst, dass das wegen
 Anonymisierungspflichten u. Ä. oft leichter gesagt als getan ist. Feldspur kann dabei zumindest helfen: Es hält jede
 Originaldatei mit Prüfsumme, Herkunft und Zeitnachweis in einem Begleitprotokoll fest.
 

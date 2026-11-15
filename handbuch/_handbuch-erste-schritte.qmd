@@ -4,7 +4,7 @@
 
 Feldspur gibt es für Windows, macOS und Linux. Die Installationsdateien liegen bei jedem
 [Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch dieses Handbuch als PDF.
-FFmpeg [@ffmpeg] (in der LGPL-Fassung) ist bereits enthalten, du musst nichts weiter installieren.
+FFmpeg (in der LGPL-Fassung) ist bereits enthalten, du musst nichts weiter installieren.
 
 ::: {.callout-note}
 Die Pakete sind noch nicht signiert. Windows und macOS warnen deshalb beim ersten Start. Unter macOS öffnest du die

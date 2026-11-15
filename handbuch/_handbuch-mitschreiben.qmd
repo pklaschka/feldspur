@@ -39,6 +39,6 @@ Uhr korrigierst, wandert die Mitschrift mit.
 
 ### Transkript importieren
 
-Hast du eine Aufnahme schon anderswo transkribiert, etwa mit Whisper [@radford2023] oder in MAXQDA, kannst du das Transkript über
+Hast du eine Aufnahme schon anderswo transkribiert, etwa mit Whisper oder in MAXQDA, kannst du das Transkript über
 **Transkript importieren…** in der Detailleiste einlesen. Feldspur versteht SRT, WebVTT, JSON (Whisper) und TSV.
 Wähle, ob es **zur Mitschrift hinzugefügt** wird oder sie **ersetzt**.
