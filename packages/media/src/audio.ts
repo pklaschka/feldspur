@@ -8,6 +8,14 @@
  * vollständig geladen.
  */
 import { spawn } from "node:child_process";
+import {
+  COMPRESSOR,
+  dbToGain,
+  effectiveGainDb,
+  levelActive,
+  LIMIT_DB,
+  type Source,
+} from "@feldspur/core";
 import { toolPaths } from "./tools.ts";
 
 /** Werte pro Sekunde in der Hüllkurve. */
@@ -403,4 +411,40 @@ export function detectTransients(
     out.push({ atMs: Math.round(i * frameMs), riseDb: Math.round(rise), peakDb: Math.round(peak) });
   }
   return out;
+}
+
+// ── Lautstärke angleichen ────────────────────────────────────────────────
+
+/** Was mit dem Ton einer Quelle geschieht (siehe @feldspur/core level.ts). */
+export interface AudioLevel {
+  gainDb: number;
+  compress: boolean;
+}
+
+/** Verstärkung und Kompressor einer Quelle für die Montage, null = unverändert. */
+export function audioLevelOf(
+  s: Pick<Source, "levelMode" | "levelGainDb" | "levelCompress">,
+  measuredDb: number | null,
+): AudioLevel | null {
+  const gainDb = effectiveGainDb(s, measuredDb);
+  return levelActive(s, gainDb) ? { gainDb, compress: s.levelCompress } : null;
+}
+
+/**
+ * FFmpeg-Filterkette dazu, mit denselben Werten wie beim Abhören in der App (Web Audio):
+ * Verstärkung, Kompressor mit Aufholverstärkung, Begrenzer. Leer, wenn nichts zu tun ist.
+ */
+export function levelFilter(level: AudioLevel | null): string {
+  if (!level) return "";
+  const parts = [`volume=${level.gainDb.toFixed(1)}dB`];
+  if (level.compress) {
+    const c = COMPRESSOR;
+    parts.push(
+      `acompressor=threshold=${dbToGain(c.thresholdDb).toFixed(5)}:ratio=${c.ratio}:knee=${dbToGain(c.kneeDb / 2).toFixed(3)}` +
+        `:attack=${c.attackMs}:release=${c.releaseMs}:makeup=${dbToGain(c.makeupDb).toFixed(3)}`,
+    );
+  }
+  // level=disabled: sonst zieht alimiter den Pegel selbst nach oben.
+  parts.push(`alimiter=limit=${dbToGain(LIMIT_DB).toFixed(3)}:level=disabled`);
+  return parts.join(",");
 }

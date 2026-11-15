@@ -76,6 +76,11 @@ export const sources = sqliteTable(
     importedAt: text("imported_at").notNull(),
     partOf: text("part_of"),
     follows: text("follows"),
+    levelMode: text("level_mode", { enum: ["auto", "manual", "off"] })
+      .notNull()
+      .default("auto"),
+    levelGainDb: real("level_gain_db").notNull().default(0),
+    levelCompress: bool("level_compress").notNull().default(true),
   },
   (t) => [
     index("sources_session").on(t.sessionId),
@@ -185,6 +190,7 @@ export const audioAnalysis = sqliteTable("audio_analysis", {
   loudInIdle: json<{ atMs: number; aboveFloorDb: number }[]>("loud_in_idle")
     .notNull()
     .default(sql`'[]'`),
+  speechLevelDb: real("speech_level_db"),
   version: integer("version").notNull(),
   analyzedAt: text("analyzed_at").notNull(),
 });

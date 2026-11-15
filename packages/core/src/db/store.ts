@@ -269,7 +269,12 @@ export class ProjectStore {
 
   updateSource(
     id: Id,
-    patch: Partial<Pick<Source, "deviceId" | "kind" | "title" | "label" | "partOf" | "follows">>,
+    patch: Partial<
+      Pick<
+        Source,
+        "deviceId" | "kind" | "title" | "label" | "partOf" | "follows" | "levelMode" | "levelGainDb" | "levelCompress"
+      >
+    >,
   ): Source {
     const r = this.db.select().from(schema.sources).where(eq(schema.sources.id, id)).get();
     if (!r) throw new Error(`Quelle nicht gefunden: ${id}`);

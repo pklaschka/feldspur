@@ -6,3 +6,4 @@ export { ProjectStore, FILE_FORMAT, SCHEMA_VERSION, type OpenOptions } from "./d
 export * from "./episodes.ts";
 export * from "./montage.ts";
 export * from "./waveform.ts";
+export * from "./level.ts";
