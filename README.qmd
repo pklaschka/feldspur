@@ -82,6 +82,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   nötig; Pandoc oder LibreOffice wären schwerer mitzuliefern.
 - **pdf.js** (`pdfjs-dist`, fest auf 5.4.624) für PDF-Scans in Vorschau und Abtipp-Ansicht. Neuere 5.x-Fassungen nutzen
   `Map.getOrInsertComputed`, das Electron 39 noch nicht kennt.
+- **Schriften Source Sans 3 und Source Serif 4** (`@fontsource-variable/…`, SIL OFL 1.1) liegen in der App, damit sie
+  auf jedem System gleich aussehen und ohne Netz laden.
 
 # Begriffe im Code
 
