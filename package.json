@@ -12,7 +12,8 @@
     "probe": "vpx scripts/probe-folder.ts",
     "desktop": "vp run @feldspur/desktop#build && vp run @feldspur/desktop#start",
     "e2e": "vp run @feldspur/desktop#e2e",
-    "handbook": "node scripts/handbook.mjs"
+    "handbook": "quarto render handbuch",
+    "readme": "quarto render README.qmd && vp fmt README.md"
   },
   "devDependencies": {
     "@feldspur/core": "workspace:*",

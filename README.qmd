@@ -10,7 +10,7 @@ format:
 ---
 
 ```{=markdown}
-<!-- Erzeugt aus README.qmd und handbuch/ (node scripts/handbook.mjs --readme). Bitte dort ändern, nicht hier. -->
+<!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
 ```
 
 Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
@@ -151,12 +151,12 @@ CC BY 4.0). **Diese README wird aus `README.qmd` und denselben Textbausteinen er
 Bauen mit Quarto 1.9 im PATH:
 
 ```sh
-vp run handbook                        # Webseite nach handbuch/_site/, PDF nach dist/handbuch/
-node scripts/handbook.mjs --readme     # README.md aus README.qmd neu erzeugen
+quarto render handbuch                 # Webseite und PDF nach handbuch/_site/ (auch: vp run handbook)
+vp run readme                          # README.md aus README.qmd neu erzeugen (quarto render + vp fmt)
 ```
 
 Das PDF setzt das in Quarto enthaltene Typst, LaTeX ist nicht nötig. Die Webseite lädt nichts von fremden Servern
-(keine CDNs, keine Webfonts) und setzt keine Cookies; das Skript prüft das beim Bauen. Der Workflow
+(keine CDNs, keine Webfonts) und setzt keine Cookies; `handbuch/extern-pruefen.ts` prüft das nach jedem Rendern. Der Workflow
 „Handbuch-Webseite“ prüft außerdem, dass README.md zu den Quellen passt, und veröffentlicht die Seite bei Änderungen
 auf main über GitHub Pages (einmalig unter Settings → Pages die Quelle „GitHub Actions“ wählen). Bildschirmfotos in
 `handbuch/bilder/` zeigen nur erfundene Daten.
@@ -195,9 +195,9 @@ Eine Release startet von Hand: **Actions → Release → Run workflow**, Version
 
 Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
 `package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, committet „Release vX“ auf `main`,
-taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und (sobald
-es eins gibt) dem PDF-Handbuch an. Das Handbuch hängt über [`handbook.yml`](.github/workflows/handbook.yml) ein: ein
-Skript `handbook` in der Wurzel-`package.json`, das PDFs nach `dist/handbuch/` legt.
+taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und dem
+PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
+und hängt es als `Feldspur-Handbuch-<version>.pdf` an.
 
 Das Changelog entsteht aus den **Titeln der zusammengeführten Pull Requests**, deshalb sollten die Titel für
 Nutzer*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `neu`, `verbessert`, `behoben`, `doku`, `intern`;

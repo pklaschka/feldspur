@@ -12,7 +12,6 @@ on:
       - "handbuch/**"
       - "README.qmd"
       - "README.md"
-      - "scripts/handbook.mjs"
       - ".github/actions/quarto/**"
       - ".github/workflows/handbuch-seite.yml"
   pull_request:
@@ -20,7 +19,6 @@ on:
       - "handbuch/**"
       - "README.qmd"
       - "README.md"
-      - "scripts/handbook.mjs"
       - ".github/actions/quarto/**"
       - ".github/workflows/handbuch-seite.yml"
 
@@ -43,9 +41,14 @@ jobs:
           cache: true
       - uses: ./.github/actions/quarto
       - name: README aktuell?
-        run: node scripts/handbook.mjs --readme --check
-      # Baut Webseite und PDF und prüft, dass die Seite nichts von fremden Servern lädt.
-      - run: node scripts/handbook.mjs
+        run: |
+          vp run readme
+          git diff --exit-code README.md || {
+            echo "::error::README.md passt nicht zu README.qmd und handbuch/. Bitte \`vp run readme\` ausführen."
+            exit 1
+          }
+      # Quarto baut Webseite und PDF; extern-pruefen.ts bricht ab, wenn die Seite etwas von fremden Servern lädt.
+      - run: quarto render handbuch
       - uses: actions/upload-pages-artifact@v3
         with:
           path: handbuch/_site
