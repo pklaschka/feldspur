@@ -142,8 +142,11 @@ try {
     .click();
   await fotoClock.getByText("offen").waitFor();
 
-  // 3 Durchsehen: Zeitachse mit Episoden; Kamera liegt jetzt bei 10:16:00.
+  // 3 Durchsehen: Episoden gibt es nur auf Wunsch; eingeschaltet erscheinen sie auf der Zeitachse.
+  // Kamera liegt jetzt bei 10:16:00.
   await page.getByRole("tab", { name: /Durchsehen/ }).click();
+  if ((await page.getByTestId("episode").count()) > 0) throw new Error("Episoden ohne Wunsch");
+  await page.getByRole("switch", { name: "Episoden bilden" }).click();
   await page.getByTestId("episode").first().waitFor({ state: "attached" });
   console.log(`Episoden: ${(await page.getByTestId("episode").allTextContents()).join(", ")}`);
   await page
@@ -331,6 +334,37 @@ try {
   const firstLine = await tr.getByTestId("line").first().innerText();
   console.log(`Mitschrift: ${firstLine.replace(/\s+/g, " ")}`);
   if (!/10:1(5:59|6:0\d)/.test(firstLine)) throw new Error(`Erste Zeile nicht bei etwa 10:16:00: ${firstLine}`);
+  // Waveform: Spitzen für den Ausschnitt kommen an (die Testaufnahmen haben Ton).
+  await tr.getByTestId("waveform").waitFor();
+  const loudest = await page.evaluate(async (sid) => {
+    const v = await window.feldspur.getSession(sid);
+    const a = v.rows.find((r) => r.fileName === "ZOOM0001.m4a")!;
+    const p = await window.feldspur.waveformPeaks(a.id, 55_000, 65_000, 200);
+    return Math.max(...p.max);
+  }, sessionId);
+  if (!(loudest > 0)) throw new Error("Waveform ohne Ausschlag");
+  console.log(`Waveform: lauteste Spitze ${loudest.toFixed(3)}`);
+  // Lange Zeile an der Schreibmarke teilen (Strg+Enter).
+  const second = tr.getByTestId("line").nth(1).getByLabel("Text der Zeile");
+  await second.click();
+  await second.evaluate((el: HTMLTextAreaElement) => el.setSelectionRange(12, 12));
+  await second.press("Control+Enter");
+  await tr.getByTestId("line").nth(2).waitFor();
+  await page.waitForTimeout(300);
+  const firstPart = await tr.getByTestId("line").nth(1).getByLabel("Text der Zeile").inputValue();
+  if (firstPart !== "Zwölf Jahre,") throw new Error(`Erster Teil nach dem Teilen: ${firstPart}`);
+  console.log(`Geteilt: ${(await tr.getByTestId("line").nth(2).innerText()).replace(/\s+/g, " ")}`);
+  // Notiz mit Strecke: noch abzutippender Abschnitt.
+  const notes = tr.getByTestId("notes");
+  await notes.getByRole("button", { name: "Beginn hier" }).click();
+  await page.mouse.click(sb.x + sb.width * 0.3, sb.y + sb.height / 2);
+  await notes.getByRole("button", { name: "Ende hier" }).click();
+  await notes.getByLabel("Neue Notiz").fill("noch abtippen: zwei Stimmen durcheinander");
+  await notes.getByRole("button", { name: "Notiz anlegen" }).click();
+  await notes
+    .getByTestId("note")
+    .getByText(/^1:0\d\S* – (2:5|3:0)\d/)
+    .waitFor();
   // Esc schaltet die Wiedergabe um und schließt den Dialog nicht.
   await newLine.press("Escape");
   await newLine.press("Escape");
@@ -338,7 +372,8 @@ try {
   await shot("-mitschreiben");
   await tr.getByRole("button", { name: "Fertig" }).click();
   await tr.waitFor({ state: "detached" });
-  await page.getByTestId("transcript-summary").getByText("2 Zeilen").waitFor();
+  await page.getByTestId("transcript-summary").getByText("3 Zeilen").waitFor();
+  await page.getByTestId("inspector").getByTestId("note").getByText("noch abtippen", { exact: false }).waitFor();
 
   // Automatisches Transkript (erfundenes Whisper-VTT) dazuholen.
   const vtt = join(dir, "A-01.vtt");
@@ -352,7 +387,7 @@ try {
   await page.getByTestId("inspector").getByRole("button", { name: "Transkript importieren…" }).click();
   await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }).click();
   await page.getByTestId("inspector").getByRole("status").getByText("2 Zeilen übernommen").waitFor();
-  await page.getByTestId("transcript-summary").getByText("4 Zeilen").waitFor();
+  await page.getByTestId("transcript-summary").getByText("5 Zeilen").waitFor();
 
   // Schnellsuche (Strg+K) findet die importierte Zeile und springt hin.
   await page.keyboard.press("Control+k");
@@ -363,6 +398,37 @@ try {
   await searchBox.press("Enter");
   await page.getByTestId("search").waitFor({ state: "detached" });
   await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
+
+  // Mausrad zoomt an der Mausposition: die Zeit unter dem Zeiger bleibt stehen.
+  const tl = page.locator("canvas").first();
+  const tlBox = (await tl.boundingBox())!;
+  const tlScroll = () => tl.evaluate((c) => c.parentElement!.parentElement!.scrollLeft);
+  const atMouse = tlBox.x + tlBox.width * 0.4;
+  await page.mouse.move(atMouse, tlBox.y + 30 + 40 + 26);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(100);
+  const zoomed = await tlScroll();
+  if (zoomed <= 0) throw new Error("Mausrad hat nicht an der Mausposition gezoomt");
+  await shot("-zeitachse-zoom");
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, 120);
+  await page.waitForTimeout(100);
+  if ((await tlScroll()) !== 0) throw new Error("Herauszoomen kehrt nicht zur ganzen Achse zurück");
+
+  // Unsichere Lagen der Reihe nach prüfen.
+  const nextCheckBtn = page.getByTestId("next-check");
+  if (await nextCheckBtn.count()) {
+    console.log(`Prüfen: ${await nextCheckBtn.innerText()}`);
+    await nextCheckBtn.click();
+    const checkPanel = page.getByTestId("check-panel");
+    await checkPanel.waitFor();
+    await shot("-pruefen");
+    await checkPanel.getByRole("button", { name: /Lage passt/ }).click();
+    await page.getByTestId("inspector").getByText("Von Hand geprüft: Die Lage passt.").waitFor();
+    await page.getByTestId("inspector").getByRole("button", { name: "Zurücknehmen" }).click();
+    await checkPanel.waitFor();
+  } else {
+    console.log("Prüfen: keine unsicheren Lagen");
+  }
 
   // Seitenleiste breiter ziehen; die Breite bleibt nach dem Neuladen.
   const inspectorBox = async () => (await page.getByTestId("inspector").boundingBox())!;
@@ -445,7 +511,7 @@ try {
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
   const scaffold = page.getByTestId("scaffold-preview");
   await scaffold
-    .getByText(/#00:00:00-0# .*Zwischentafel|#00:00:00-0# .*Episode 1/)
+    .getByText(/#00:00:00-0# .*(Zwischenzeit|Episode 1)/)
     .first()
     .waitFor();
   console.log(`Zeitgerüst: ${await scaffold.locator("li").count()} Zeilen`);
@@ -478,18 +544,17 @@ try {
   await montage.getByRole("button", { name: "Pause" }).click();
   await montage.getByRole("button", { name: "Schließen" }).click();
   await montage.waitFor({ state: "detached" });
-  // In Echtzeit läuft auch die Zeit zwischen den Episoden: das Video wird länger.
+  // Standard ist Echtzeit; nach Episoden geschnitten wird das Video kürzer. Ausgegeben wird
+  // danach nach Episoden, damit der Rauchtest schnell bleibt.
   const lengthOf = () => page.getByText("Videolänge").locator("xpath=..").locator("b").innerText();
-  const byEpisodes = await lengthOf();
-  await page.getByRole("switch", { name: "In Echtzeit statt nach Episoden" }).click();
-  await page.getByText("Zwischenzeiten").waitFor();
+  const inRealtime = await lengthOf();
+  await page.getByRole("switch", { name: "Nach Episoden schneiden" }).click();
+  await page.getByText("Zwischentafeln").waitFor();
   await page.waitForFunction((l) => {
     const b = [...document.querySelectorAll("b")].find((e) => e.nextElementSibling?.textContent === "Videolänge");
     return !!b && b.textContent !== l;
-  }, byEpisodes);
-  console.log(`Videolänge: ${byEpisodes} nach Episoden, ${await lengthOf()} in Echtzeit`);
-  await page.getByRole("switch", { name: "In Echtzeit statt nach Episoden" }).click();
-  await page.getByText("Zwischentafeln").waitFor();
+  }, inRealtime);
+  console.log(`Videolänge: ${inRealtime} in Echtzeit, ${await lengthOf()} nach Episoden`);
   const t0 = Date.now();
   await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
   await page.getByRole("button", { name: "Ausgeben…" }).click();

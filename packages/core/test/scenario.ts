@@ -16,6 +16,7 @@ export function testmarkt() {
     timeZone: "Europe/Berlin",
     diaryLookbackMs: 15 * 60_000,
     extra: {},
+    episodes: false,
   };
   const dev = (id: string, label: string, extra: Partial<Device> = {}): Device => ({
     id,
@@ -62,6 +63,9 @@ export function testmarkt() {
     importedAt: "2026-11-12T00:00:00.000Z",
     partOf: null,
     follows: null,
+    levelMode: "auto",
+    levelGainDb: 0,
+    levelCompress: true,
   });
   const sources = [
     src("ZOOM0004.m4a", "A-01", "audio", "zoom", 1_590_000),

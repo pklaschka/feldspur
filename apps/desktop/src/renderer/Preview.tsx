@@ -9,6 +9,7 @@ import { KIND_LABEL } from "./format.ts";
 import { PdfPages } from "./pdf.tsx";
 import { usePlayback } from "./playback.tsx";
 import { Button, Choice, CloseButton, cx, Glyph } from "./ui.tsx";
+import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
 
 export function Preview({
   view,
@@ -141,6 +142,7 @@ function BigPlayer({ row }: { row: SourceRow }) {
   const { position, seek } = usePlayback();
   const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
   const start = position?.sourceId === row.id ? position.atMs : 0;
+  useLevel(ref, row.level);
   useEffect(() => {
     const el = ref.current;
     return () => {
@@ -151,6 +153,7 @@ function BigPlayer({ row }: { row: SourceRow }) {
   const props = {
     ref,
     src: mediaUrl(row.id),
+    ...LEVEL_MEDIA_PROPS,
     controls: true,
     autoPlay: false,
     onLoadedMetadata: () => {

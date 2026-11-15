@@ -7,20 +7,38 @@ import {
   type Id,
   type Interval,
   type ProjectStore,
+  type Source,
+  effectiveGainDb,
 } from "@feldspur/core";
+import { speechLevels } from "@feldspur/media";
 import type {
   AnchorRow,
   DeviceRow,
   DiaryEntryRow,
   EpisodeRow,
   GapRow,
+  LevelRow,
   ProposalRow,
   SessionView,
+  SourceNoteRow,
   SourceRow,
   TranscriptRow,
 } from "../shared/api.ts";
 
 const mmss = (ms: number) => formatDuration(ms);
+
+function levelRow(s: Source, levels: Map<Id, number | null>): LevelRow {
+  const measured = levels.has(s.id);
+  const measuredDb = levels.get(s.id) ?? null;
+  return {
+    mode: s.levelMode,
+    manualGainDb: s.levelGainDb,
+    compress: s.levelCompress,
+    measured,
+    measuredDb,
+    gainDb: effectiveGainDb(s, measuredDb),
+  };
+}
 
 /** Einsatz laden, Zeitbestimmung rechnen und als Tabellenzeilen aufbereiten. */
 export function buildSessionView(store: ProjectStore, sessionId: string): SessionView {
@@ -32,6 +50,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
 
   const analyses = store.listAudioAnalyses(sessionId);
   const analysisBySource = new Map(analyses.map((a) => [a.sourceId, a]));
+  const levels = speechLevels(store, sessionId, analyses);
   const evidenceBySource = new Map<Id, typeof input.evidence>();
   for (const e of [...input.evidence, ...res.derivedEvidence]) {
     evidenceBySource.set(e.sourceId, [...(evidenceBySource.get(e.sourceId) ?? []), e]);
@@ -59,7 +78,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         raw: e.raw,
         chosen: p?.basis.evidenceId === e.id,
         enabled: e.enabled,
-        own: e.kind === "manual" || e.kind === "spoken",
+        own: e.kind === "manual" || e.kind === "spoken" || e.kind === "checked",
         derived: e.id.startsWith("anchor:"),
         uncertaintyMs: e.uncertaintyMs,
       }))
@@ -95,6 +114,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       diaryNote: s.kind === "diary" && entry?.notedAtMs != null ? formatClock(entry.notedAtMs).slice(0, 5) : null,
       status: p?.status ?? "unplaced",
       notes: p?.notes ?? [],
+      level: s.kind === "audio" || s.kind === "video" ? levelRow(s, levels) : null,
     };
   });
   rows.sort((a, b) => (a.startMs ?? Infinity) - (b.startMs ?? Infinity) || a.label.localeCompare(b.label));
@@ -144,6 +164,8 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       const what = a.kind === "clap" ? "Klatschen" : "Gleicher Ton";
       return {
         anchorId: a.id,
+        a: { sourceId: a.a.sourceId, atMs: a.a.atMediaMs },
+        b: { sourceId: a.b.sourceId, atMs: a.b.atMediaMs },
         sourceLabel: clip?.label ?? "?",
         fileName: clip?.fileName ?? "",
         refLabel: ref?.label ?? "?",
@@ -157,11 +179,11 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       };
     });
 
-  // Episoden, sobald analysiert.
+  // Episoden nur auf Wunsch, sobald analysiert.
   const avCount = input.sources.filter((s) => s.kind === "audio" || s.kind === "video").length;
   let episodes: EpisodeRow[] | null = null;
   let gaps: GapRow[] = [];
-  if (analyses.length) {
+  if (input.session.episodes && analyses.length) {
     const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
     const ep = computeEpisodes(input.sources, res, idle);
     const label = (id: Id) => sourceById.get(id)?.label ?? "?";
@@ -199,6 +221,8 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         description: `${la} bei ${mmss(a.a.atMediaMs)} = ${lb} bei ${mmss(a.b.atMediaMs)}`,
         note: a.note,
         conflictMs: conflictBy.get(a.id) ?? null,
+        a: { sourceId: a.a.sourceId, atMs: a.a.atMediaMs },
+        b: { sourceId: a.b.sourceId, atMs: a.b.atMediaMs },
       };
     });
 
@@ -245,9 +269,19 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     };
   });
 
+  const notes: SourceNoteRow[] = store.listSourceNotes(sessionId).map((n) => ({
+    id: n.id,
+    sourceId: n.sourceId,
+    fromMs: n.fromMs,
+    toMs: n.toMs,
+    text: n.text,
+    done: n.done,
+  }));
+
   return {
     session: input.session,
     transcript,
+    notes,
     rows,
     anchors,
     diary,

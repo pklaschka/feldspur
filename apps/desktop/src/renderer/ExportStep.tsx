@@ -24,7 +24,10 @@ export function ExportStep({ view }: { view: SessionView }) {
   const [resolve, setResolve] = useState(false);
   const [watching, setWatching] = useState(false);
   const [mixAudio, setMixAudio] = useState(true);
-  const [realtime, setRealtime] = useState(false);
+  // Echtzeit ist der Standard; nach Episoden nur, wenn der Einsatz Episoden bildet.
+  const [byEpisodes, setByEpisodes] = useState(false);
+  const withEpisodes = view.session.episodes;
+  const realtime = !(withEpisodes && byEpisodes);
   const ex = useExport();
   const sessionId = view.session.id;
   const busy = ex.job?.sessionId === sessionId;
@@ -72,9 +75,10 @@ export function ExportStep({ view }: { view: SessionView }) {
               Kopf des Zeitgerüsts steht. Fotos und Tagebuch stehen im Zeitgerüst.
             </p>
             <p>
-              Episoden laufen in voller Länge, Zeit dazwischen wird zu einer kurzen Tafel. In Echtzeit läuft der ganze
-              Einsatz am Stück, auch die Zeit ohne Episode. Weitertippen kannst du in MAXQDA an jeder Stelle, weil jede
-              Zeile schon eine Zeitmarke hat.
+              Standard ist Echtzeit: Der ganze Einsatz läuft am Stück, Videozeit = Uhrzeit ab Beginn. Wer unter
+              „Durchsehen“ Episoden einschaltet, kann stattdessen nach Episoden schneiden: Episoden laufen in voller
+              Länge, Zeit dazwischen wird zu einer kurzen Tafel. Weitertippen kannst du in MAXQDA an jeder Stelle, weil
+              jede Zeile schon eine Zeitmarke hat.
             </p>
           </>
         }
@@ -83,20 +87,36 @@ export function ExportStep({ view }: { view: SessionView }) {
         <Panel>
           <div className="flex gap-8">
             {fact(preview ? formatDuration(preview.durationMs) : "–", "Videolänge")}
-            {fact(preview?.episodes ?? "–", "Episoden")}
-            {fact(preview?.cards ?? "–", realtime ? "Zwischenzeiten" : "Zwischentafeln")}
+            {withEpisodes && fact(preview?.episodes ?? "–", "Episoden")}
+            {withEpisodes && fact(preview?.cards ?? "–", realtime ? "Zwischenzeiten" : "Zwischentafeln")}
           </div>
-          <label className="mt-4 flex items-center gap-2.5 text-[0.9rem]">
-            <Toggle checked={realtime} onChange={setRealtime} label="In Echtzeit statt nach Episoden" />
-            In Echtzeit statt nach Episoden
-          </label>
-          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
-            Der ganze Einsatz am Stück, auch die Zeit zwischen den Episoden. Länger, aber Videozeit = Uhrzeit ab Beginn.
-          </p>
+          {withEpisodes ? (
+            <>
+              <label className="mt-4 flex items-center gap-2.5 text-[0.9rem]">
+                <Toggle checked={byEpisodes} onChange={setByEpisodes} label="Nach Episoden schneiden" />
+                Nach Episoden schneiden
+              </label>
+              <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+                Episoden in voller Länge, Zeit dazwischen als kurze Tafel. Kürzer, aber Videozeit ≠ Uhrzeit. Sonst läuft
+                der ganze Einsatz in Echtzeit.
+              </p>
+            </>
+          ) : (
+            <p className="mt-4 text-[0.8rem] text-muted">
+              In Echtzeit: der ganze Einsatz am Stück, Videozeit = Uhrzeit ab Beginn. Nach Episoden schneiden lässt
+              sich, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
+            </p>
+          )}
           <Button className="mt-4" disabled={empty} onClick={() => setWatching(true)}>
             Montage ansehen
           </Button>
-          <MontageView sessionId={sessionId} realtime={realtime} open={watching} onOpenChange={setWatching} />
+          <MontageView
+            sessionId={sessionId}
+            realtime={realtime}
+            open={watching}
+            onOpenChange={setWatching}
+            levels={new Map(view.rows.map((r) => [r.id, r.level]))}
+          />
           <label className="mt-5 flex items-center gap-2.5 text-[0.9rem]">
             <Toggle checked={video} onChange={setVideo} label="Montagevideo mit ausgeben" />
             Montagevideo mit ausgeben

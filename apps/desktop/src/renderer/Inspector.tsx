@@ -5,11 +5,14 @@ import {
   mediaUrl,
   type DiaryEntryRow,
   type Precision,
+  type LevelInput,
+  type LevelRow,
   type SessionView,
   type SourceRow,
   type TimeInput,
 } from "../shared/api.ts";
 import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
+import { NotesPanel, type ApplyView } from "./Notes.tsx";
 import { PdfPageCanvas } from "./pdf.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { SourceMenu, useActions } from "./SourceMenu.tsx";
@@ -26,16 +29,29 @@ import {
   STATUS_TEXT_CLASS,
   Toggle,
 } from "./ui.tsx";
+import { LEVEL_MANUAL_RANGE_DB } from "@feldspur/core/level";
+import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
 
 export interface InspectorActions {
   diaryNote: (sourceId: string, clock: string) => void;
   addTime: (input: TimeInput) => Promise<boolean>;
+  /** Unsichere Lage so bestätigen, wie sie gerade steht. */
+  confirm: (sourceId: string, startMs: number) => void;
+  /** Uhr eines Geräts als richtig gehend festlegen (Abweichung 0). */
+  trustDeviceClock: (deviceId: string) => void;
+  /** Gerät als Referenzuhr wählen. */
+  setReference: (deviceId: string) => void;
   toggleEvidence: (evidenceId: string, enabled: boolean) => void;
   removeEvidence: (evidenceId: string) => void;
   openDiary: (pageId: string) => void;
   transcribe: (sourceId: string) => void;
   /** Gibt die Zahl übernommener Zeilen zurück, null bei Abbruch oder Fehler. */
   importTranscript: (sourceId: string, mode: "append" | "replace") => Promise<number | null>;
+  setLevel: (sourceId: string, input: LevelInput) => void;
+  /** Ganze Datei dekodieren und den Sprachpegel messen. */
+  measureLevel: (sourceId: string) => Promise<void>;
+  /** Änderung ausführen und die neue Ansicht übernehmen (Fehler zeigt die App an). */
+  apply: ApplyView;
 }
 
 export function Inspector({
@@ -71,7 +87,17 @@ function Summary({ view }: { view: SessionView }) {
   if (view.devices.length && !hasRef) todo.push("Eine Referenzuhr wählen.");
   if (hasRef && open.length) todo.push(`Abweichung für ${open.map((d) => d.label).join(", ")} klären.`);
   if (view.proposals.length) todo.push(`${view.proposals.length} Vorschläge aus der Tonspur prüfen.`);
-  if (view.avCount && !view.analyzedCount) todo.push("Tonspuren abgleichen, damit Episoden und Stille erkannt werden.");
+  const checks = view.rows.filter((r) => r.status === "check" && !r.partOf).length;
+  if (checks)
+    todo.push(
+      `${checks} ${checks === 1 ? "Lage" : "Lagen"} prüfen: auf der Zeitachse „Nächste prüfen“ wählen und rechts bestätigen, wenn sie passt.`,
+    );
+  if (view.avCount && !view.analyzedCount)
+    todo.push(
+      view.session.episodes
+        ? "Tonspuren abgleichen, damit Episoden und Stille erkannt werden."
+        : "Tonspuren abgleichen, damit Klatscher und Stille erkannt werden.",
+    );
   const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote).length;
   if (diaryOpen) todo.push(`${diaryOpen} Tagebuchseiten ohne Randnotiz.`);
   const stat = (s: SourceRow["status"]) => (
@@ -182,6 +208,7 @@ function SourceDetails({
   if (row.followedBy) items.push(["Fortgesetzt in", byId(row.followedBy)?.label ?? "?", "font-mono"]);
   const pageIds = new Set([main?.id ?? row.id, ...(main ? main.parts : row.parts)]);
   const sa = useActions();
+  const { position, seek } = usePlayback();
 
   return (
     <>
@@ -212,6 +239,7 @@ function SourceDetails({
             </Button>
           </div>
           <TranscriptSummary view={view} row={row} />
+          {row.level && <LevelPanel row={row} level={row.level} actions={actions} />}
         </>
       )}
       {(row.previewable || row.isPdf) && (
@@ -238,6 +266,18 @@ function SourceDetails({
         </button>
       )}
       <KV items={items} />
+      <CheckPanel row={row} view={view} actions={actions} />
+
+      <div className="mt-3">
+        <NotesPanel
+          row={row}
+          notes={view.notes.filter((n) => n.sourceId === row.id)}
+          pos={position?.sourceId === row.id ? position.atMs : row.kind === "audio" || row.kind === "video" ? 0 : null}
+          apply={actions.apply}
+          onSeek={(ms) => seek(row.id, ms)}
+          compact
+        />
+      </div>
 
       {row.kind === "diary" && (
         <DiaryPage
@@ -298,6 +338,90 @@ function SourceDetails({
       />
     </>
   );
+}
+
+/**
+ * Lage mit Status „prüfen“: erklären, warum, und den Weg zu „geprüft“ anbieten.
+ * Bestätigte Lagen zeigen, dass sie von Hand geprüft wurden, und lassen sich zurücknehmen.
+ */
+function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView; actions: InspectorActions }) {
+  const checked = row.evidence.find((e) => e.kind === "checked" && e.chosen);
+  if (checked) {
+    return (
+      <div className="mt-3.5 flex items-center gap-2 rounded-lg border border-line bg-panel-2 px-3 py-2 text-[0.82rem]">
+        <span className="text-good" aria-hidden>
+          ✓
+        </span>
+        <span className="flex-1">Von Hand geprüft: Die Lage passt.</span>
+        <Button variant="link" className="text-[0.8rem]" onClick={() => actions.removeEvidence(checked.id)}>
+          Zurücknehmen
+        </Button>
+      </div>
+    );
+  }
+  if (row.status !== "check" || row.startMs === null) return null;
+  // Tagebuchseiten werden über ihre Einträge geprüft, weitere Bilder über die Hauptseite.
+  if (row.kind === "diary" || row.partOf) return null;
+  const device = view.devices.find((d) => d.id === row.deviceId);
+  const hasRef = view.devices.some((d) => d.isReference);
+  // Nur anbieten, wenn die Lage wirklich an der Geräteuhr hängt (nicht bei einer Handeingabe).
+  const unknownClock =
+    !!device && !device.isReference && device.offsetMs === null && row.notes.includes("Uhr weicht ab?");
+  const deviceFiles = device ? view.rows.filter((r) => r.deviceId === device.id && !r.partOf).length : 0;
+  const reasons = row.notes.map((n) => checkReason(n, device?.label));
+  return (
+    <section
+      className="mt-3.5 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2.5 text-[0.84rem]"
+      data-testid="check-panel"
+      aria-label="Lage prüfen"
+    >
+      <b className="block font-semibold text-warn">Lage prüfen</b>
+      {reasons.length > 0 && (
+        <ul className="mt-1 list-disc pl-4.5">
+          {reasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-1">
+        {row.kind === "audio" || row.kind === "video"
+          ? "Hör kurz hinein oder vergleiche mit den Nachbarspuren."
+          : "Vergleiche mit den Nachbarspuren."}{" "}
+        Passt die Lage, bestätige sie hier.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="primary" onClick={() => actions.confirm(row.id, row.startMs!)}>
+          ✓ Lage passt, als geprüft markieren
+        </Button>
+        {unknownClock && hasRef && (
+          <Button
+            size="sm"
+            className="whitespace-normal text-left"
+            onClick={() => actions.trustDeviceClock(device.id)}
+            title="Die Uhr des Geräts ging richtig (Abweichung 0). Alle Dateien des Geräts gelten dann als sicher."
+          >
+            Uhr von {device.label} stimmt ({deviceFiles} {deviceFiles === 1 ? "Datei" : "Dateien"})
+          </Button>
+        )}
+        {device && !hasRef && (
+          <Button size="sm" onClick={() => actions.setReference(device.id)}>
+            {device.label} als Referenzuhr
+          </Button>
+        )}
+      </div>
+      <p className="mt-1.5 text-[0.78rem] text-muted">Passt sie nicht: unten bei Zeitbelege eine Uhrzeit eintragen.</p>
+    </section>
+  );
+}
+
+/** Hinweis aus der Zeitbestimmung in einen verständlichen Satz übersetzen. */
+function checkReason(note: string, deviceLabel: string | undefined): string {
+  if (note === "Uhr weicht ab?") return `Die Uhr von ${deviceLabel ?? "diesem Gerät"} ist noch nicht abgeglichen.`;
+  if (note === "Keine Referenzuhr gewählt") return "Es ist noch keine Referenzuhr gewählt.";
+  if (note === "nur Minute") return "Die Uhrzeit ist nur minutengenau bekannt.";
+  if (note.startsWith("± ")) return `Die Uhrzeit ist nur ungefähr bekannt (${note}).`;
+  if (note.startsWith("Widerspruch ")) return `Zeitbelege widersprechen sich (${note.slice(12)}).`;
+  return note;
 }
 
 function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
@@ -520,12 +644,102 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
   );
 }
 
+const dbText = (db: number) => `${db > 0 ? "+" : db < 0 ? "−" : "±"}${Math.abs(db).toFixed(1).replace(".", ",")} dB`;
+
+/**
+ * Lautstärke angleichen: automatisch auf gleichen Sprachpegel, von Hand oder unverändert, dazu
+ * auf Wunsch ein Kompressor für leise Stellen. Gilt beim Abhören und im Montagevideo.
+ */
+function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; actions: InspectorActions }) {
+  const [measuring, setMeasuring] = useState(false);
+  const [manual, setManual] = useState(level.manualGainDb);
+  useEffect(() => setManual(level.manualGainDb), [level.manualGainDb]);
+  const set = (patch: Partial<LevelInput>) =>
+    actions.setLevel(row.id, { mode: level.mode, manualGainDb: manual, compress: level.compress, ...patch });
+  const [lo, hi] = LEVEL_MANUAL_RANGE_DB;
+  return (
+    <section className="mt-3.5 rounded-lg border border-line p-2.5" data-testid="level">
+      <div className="flex items-baseline justify-between gap-2">
+        <h4 className="text-[0.85rem] font-semibold">Lautstärke</h4>
+        <span className="font-mono text-[0.8rem] text-ink-2" data-testid="level-gain">
+          {level.mode === "off" ? "unverändert" : dbText(level.gainDb)}
+          {level.mode !== "off" && level.compress && " · Kompressor"}
+        </span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Choice
+          label="Lautstärke angleichen"
+          value={level.mode}
+          onChange={(mode) => set({ mode })}
+          options={[
+            { value: "auto", label: "automatisch", title: "Sprache auf gleichen Pegel wie die anderen Quellen" },
+            { value: "manual", label: "von Hand" },
+            { value: "off", label: "aus", title: "Ton genau wie in der Datei" },
+          ]}
+        />
+      </div>
+      {level.mode === "manual" && (
+        <label className="mt-2 flex items-center gap-2 text-[0.8rem]">
+          <input
+            type="range"
+            min={lo}
+            max={hi}
+            step={0.5}
+            value={manual}
+            aria-label="Verstärkung in dB"
+            className="flex-1"
+            onChange={(e) => setManual(Number(e.target.value))}
+            onPointerUp={() => set({ manualGainDb: manual })}
+            onKeyUp={() => set({ manualGainDb: manual })}
+          />
+          <span className="w-16 text-right font-mono">{dbText(manual)}</span>
+        </label>
+      )}
+      {level.mode !== "off" && (
+        <label className="mt-2 flex items-center gap-2 text-[0.8rem]">
+          <Toggle checked={level.compress} onChange={(compress) => set({ compress })} label="Leise Stellen anheben" />
+          Leise Stellen anheben (Kompressor)
+        </label>
+      )}
+      <p className="mt-2 text-[0.78rem] text-muted">
+        {level.measured ? (
+          level.measuredDb === null ? (
+            "Kein hörbarer Ton gefunden."
+          ) : (
+            <>
+              Sprachpegel gemessen: <span className="font-mono">{dbText(level.measuredDb).replace("+", "")}FS</span>
+              .{" "}
+            </>
+          )
+        ) : (
+          <>
+            Noch nicht gemessen{level.mode === "auto" ? ", deshalb noch ohne Verstärkung" : ""}.{" "}
+            <Button
+              variant="link"
+              className="text-[0.78rem]"
+              disabled={measuring}
+              onClick={() => {
+                setMeasuring(true);
+                void actions.measureLevel(row.id).finally(() => setMeasuring(false));
+              }}
+            >
+              {measuring ? "misst…" : "Jetzt messen"}
+            </Button>{" "}
+          </>
+        )}
+        Gilt beim Abhören und im Montagevideo, die Datei bleibt unverändert.
+      </p>
+    </section>
+  );
+}
+
 /** Audio/Video abspielen; meldet die Stelle an die Zeitachse und nimmt Spul-Wünsche an. */
 function Player({ row }: { row: SourceRow }) {
   const { report, seekRequest, position } = usePlayback();
   const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
   const [failed, setFailed] = useState(false);
   const raf = useRef(0);
+  useLevel(ref, row.level);
 
   const send = () => {
     const el = ref.current;
@@ -557,6 +771,7 @@ function Player({ row }: { row: SourceRow }) {
   const props = {
     ref,
     src: mediaUrl(row.id),
+    ...LEVEL_MEDIA_PROPS,
     controls: true,
     preload: "metadata",
     onLoadedMetadata: () => {

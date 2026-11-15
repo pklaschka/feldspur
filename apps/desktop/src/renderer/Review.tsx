@@ -1,22 +1,26 @@
 import { Slider, VisuallyHidden } from "radix-ui";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type WheelEvent } from "react";
-import type { SessionView, SourceRow } from "../shared/api.ts";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import type { SessionView, SourceRow, TranscriptRow } from "../shared/api.ts";
 import { clock, hm, lage, STATUS_TEXT } from "./format.ts";
 import {
   buildItems,
+  diaryPreview,
   draw,
   EPISODE_H,
+  groupTranscript,
   hitTest,
+  lineAt,
   MIN,
   readPalette,
   RULER_H,
   tOf,
   TRACK_H,
+  xOf,
   type Item,
   type Track,
 } from "./timeline.ts";
 import { usePlayback } from "./playback.tsx";
-import { Button, cx, Glyph, StepHeader } from "./ui.tsx";
+import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
 
 const LABEL_W = 180;
 const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
@@ -27,11 +31,14 @@ export function Review({
   selected,
   onSelect,
   onNext,
+  onEpisodes,
 }: {
   view: SessionView;
   selected: string | null;
   onSelect: (id: string) => void;
   onNext: () => void;
+  /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
+  onEpisodes: (on: boolean) => void;
 }) {
   // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
   const rows = view.rows.filter((r) => !r.partOf);
@@ -50,7 +57,15 @@ export function Review({
     );
   }
   return (
-    <Timeline view={view} placed={placed} unplaced={unplaced} selected={selected} onSelect={onSelect} onNext={onNext} />
+    <Timeline
+      view={view}
+      placed={placed}
+      unplaced={unplaced}
+      selected={selected}
+      onSelect={onSelect}
+      onNext={onNext}
+      onEpisodes={onEpisodes}
+    />
   );
 }
 
@@ -61,6 +76,7 @@ function Timeline({
   selected,
   onSelect,
   onNext,
+  onEpisodes,
 }: {
   view: SessionView;
   placed: SourceRow[];
@@ -68,6 +84,7 @@ function Timeline({
   selected: string | null;
   onSelect: (id: string) => void;
   onNext: () => void;
+  onEpisodes: (on: boolean) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -102,6 +119,7 @@ function Timeline({
     () => buildItems(tracks, view.episodes, view.gaps, view.diary),
     [tracks, view.episodes, view.gaps, view.diary],
   );
+  const transcripts = useMemo(() => groupTranscript(view.transcript), [view.transcript]);
   const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
   const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
 
@@ -138,17 +156,89 @@ function Timeline({
       selected,
       hover: hover?.item ?? null,
       playheadMs,
+      transcripts,
     });
-  }, [width, height, scale, tracks, items, selected, hover, themeTick, playheadMs]);
+  }, [width, height, scale, tracks, items, selected, hover, themeTick, playheadMs, transcripts]);
 
-  /** Zoomen und dabei die Zeit unter dem Zeiger festhalten. */
-  const zoomTo = (next: number, anchorX = width / 2) => {
+  // Aktueller Ausschnitt, auch zwischen zwei Renderdurchläufen (mehrere Mausrad-Ereignisse pro Bild).
+  const live = useRef<{ ppm: number; scrollX: number; pendingScroll?: number }>({ ppm, scrollX });
+  live.current = { ppm, scrollX: live.current.pendingScroll ?? scrollX, pendingScroll: live.current.pendingScroll };
+  const maxScroll = (p: number) => Math.max(0, ((t1 - t0) / MIN) * p - width);
+
+  /** Zoomen und dabei die Zeit `t` an der Bildschirmstelle `x` festhalten. */
+  const zoomTo = (next: number, anchor?: { t: number; x: number }) => {
     const clamped = Math.min(MAX_PPM, Math.max(fit, next));
-    const tAnchor = tOf(scale, anchorX);
-    const newScroll = ((tAnchor - t0) / MIN) * clamped - anchorX;
+    const a = anchor ?? defaultAnchor();
+    const newScroll = Math.min(maxScroll(clamped), Math.max(0, ((a.t - t0) / MIN) * clamped - a.x));
     setZoom(clamped <= fit * 1.001 ? null : clamped);
-    requestAnimationFrame(() => scroller.current?.scrollTo({ left: Math.max(0, newScroll) }));
+    live.current = { ppm: clamped, scrollX: newScroll, pendingScroll: newScroll };
+    setScrollX(newScroll);
   };
+  /** Ohne Mauszeiger wird um die Abspielposition gezoomt, sonst um die Mitte des Ausschnitts. */
+  const defaultAnchor = () => {
+    const { ppm: p, scrollX: sx } = live.current;
+    const sc = { start: t0 + (sx / p) * MIN, pxPerMin: p };
+    if (playheadMs !== null) {
+      const px = xOf(sc, playheadMs);
+      return { t: playheadMs, x: px >= 0 && px <= width ? px : width / 2 };
+    }
+    return { t: tOf(sc, width / 2), x: width / 2 };
+  };
+  /** Zeitpunkt in die Mitte holen, ohne den Zoom zu ändern. */
+  const centerOn = (t: number) => {
+    const { ppm: p } = live.current;
+    const target = Math.min(maxScroll(p), Math.max(0, ((t - t0) / MIN) * p - width / 2));
+    live.current = { ...live.current, scrollX: target, pendingScroll: target };
+    setScrollX(target);
+  };
+
+  // Neue Scrollposition anwenden, sobald die Breite zum neuen Zoom passt.
+  useLayoutEffect(() => {
+    const target = live.current.pendingScroll;
+    if (target === undefined || !scroller.current) return;
+    scroller.current.scrollLeft = target;
+    live.current = { ...live.current, pendingScroll: undefined };
+  });
+
+  // Mausrad zoomt auf die Mausposition; waagerecht (Touchpad, Umschalt + Rad) wird verschoben.
+  const wheel = useRef<(e: globalThis.WheelEvent) => void>(() => {});
+  wheel.current = (e) => {
+    if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? width : 1;
+    // Touchpad-Spreizen kommt als Strg + Rad mit kleinen Schritten.
+    const factor = Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.01 : 0.0015));
+    const r = canvas.current!.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const { ppm: p, scrollX: sx } = live.current;
+    zoomTo(p * factor, { t: t0 + ((sx + x) / p) * MIN, x });
+  };
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const on = (e: globalThis.WheelEvent) => wheel.current(e);
+    el.addEventListener("wheel", on, { passive: false });
+    return () => el.removeEventListener("wheel", on);
+  }, []);
+
+  // Beim Abspielen mitlaufen, solange die Abspielposition vorher zu sehen war.
+  const lastPlayX = useRef<number | null>(null);
+  useEffect(() => {
+    if (playheadMs === null) {
+      lastPlayX.current = null;
+      return;
+    }
+    const px = xOf(scale, playheadMs);
+    const before = lastPlayX.current;
+    lastPlayX.current = px;
+    if (zoom === null || before === null || before < 0 || before > width) return;
+    if (px > width - 24 || px < 0) {
+      const target = Math.min(maxScroll(ppm), Math.max(0, ((playheadMs - t0) / MIN) * ppm - width * 0.15));
+      live.current = { ...live.current, scrollX: target, pendingScroll: target };
+      setScrollX(target);
+      lastPlayX.current = width * 0.15;
+    }
+  }, [playheadMs]);
 
   const local = (e: MouseEvent) => {
     const r = canvas.current!.getBoundingClientRect();
@@ -170,10 +260,27 @@ function Timeline({
       seek(it.row.id, Math.round(at));
     }
   };
-  const onWheel = (e: WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    zoomTo(ppm * (e.deltaY < 0 ? 1.25 : 0.8), local(e).x);
+
+  // Unsichere Lagen der Reihe nach durchgehen.
+  const toCheck = useMemo(
+    () => placed.filter((r) => r.status === "check").sort((a, b) => rowStart(a) - rowStart(b)),
+    [placed],
+  );
+  const nextCheck = () => {
+    if (!toCheck.length) return;
+    const cur = placed.find((r) => r.id === selected);
+    const after = cur
+      ? toCheck.find((r) => rowStart(r) > rowStart(cur) || (rowStart(r) === rowStart(cur) && r.id > cur.id))
+      : undefined;
+    const next = after ?? toCheck[0]!;
+    onSelect(next.id);
+    const px = xOf(scale, rowStart(next));
+    if (px < 0 || px > width) centerOn(rowStart(next));
   };
+  const hoverLine =
+    hover?.item.type === "clip" && hover.item.row.startMs !== null
+      ? lineAt(transcripts.get(hover.item.row.id), tOf(scale, hover.x) - hover.item.row.startMs)
+      : null;
 
   const totalEp = view.episodes?.reduce((s, e) => s + e.endMs - e.startMs, 0) ?? 0;
   // Schieberegler logarithmisch zwischen „Einpassen“ und 240 px/min.
@@ -200,13 +307,30 @@ function Timeline({
       </StepHeader>
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <h3 className="font-semibold">Zeitachse</h3>
+        {toCheck.length > 0 && (
+          <Button
+            size="sm"
+            className="rounded-full bg-warn-soft text-warn hover:brightness-95"
+            onClick={nextCheck}
+            title="Springt zur nächsten Quelle mit unsicherer Lage. Rechts lässt sie sich als geprüft markieren."
+            data-testid="next-check"
+          >
+            {toCheck.length} zu prüfen · Nächste →
+          </Button>
+        )}
         <span className="flex-1" />
-        <Button size="sm" disabled={zoom === null} onClick={() => setZoom(null)}>
+        <Button size="sm" disabled={zoom === null} onClick={() => zoomTo(fit)}>
           Einpassen
         </Button>
-        <span className="flex items-center gap-2 text-muted" aria-hidden>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label="Verkleinern"
+          onClick={() => zoomTo(ppm / 1.5)}
+          disabled={zoom === null}
+        >
           <ZoomGlyph minus />
-        </span>
+        </Button>
         <Slider.Root
           className="relative flex h-5 w-40 touch-none items-center select-none"
           min={0}
@@ -221,17 +345,31 @@ function Timeline({
           </Slider.Track>
           <Slider.Thumb className="block size-4 rounded-full border-2 border-accent bg-panel shadow" />
         </Slider.Root>
-        <span className="text-muted" aria-hidden>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label="Vergrößern"
+          onClick={() => zoomTo(ppm * 1.5)}
+          disabled={ppm >= MAX_PPM}
+        >
           <ZoomGlyph />
-        </span>
+        </Button>
       </div>
 
       <div className="flex overflow-hidden rounded-[10px] border border-line bg-panel shadow-xs">
         <div className="flex-none border-r border-line" style={{ width: LABEL_W }}>
           <div className="border-b border-line bg-panel-2" style={{ height: RULER_H }} />
-          <div className="grid content-center border-b border-line px-3 leading-tight" style={{ height: EPISODE_H }}>
-            <b className="font-semibold">Episoden</b>
-            <span className="text-[0.8rem] text-muted">{view.episodes ? "aus Tonspuren" : "nach Abgleich"}</span>
+          <div
+            className="flex items-center gap-2 border-b border-line px-3 leading-tight"
+            style={{ height: EPISODE_H }}
+          >
+            <span className="grid min-w-0 flex-1">
+              <b className="font-semibold">Episoden</b>
+              <span className="truncate text-[0.8rem] text-muted">
+                {!view.session.episodes ? "aus" : view.episodes ? "aus Tonspuren" : "nach Abgleich"}
+              </span>
+            </span>
+            <Toggle checked={view.session.episodes} onChange={onEpisodes} label="Episoden bilden" />
           </div>
           {tracks.map((t) => (
             <div
@@ -267,11 +405,12 @@ function Timeline({
               onMouseMove={onMove}
               onMouseLeave={() => setHover(null)}
               onClick={onClick}
-              onWheel={onWheel}
               aria-hidden
             />
           </div>
-          {hover && <HoverCard item={hover.item} x={hover.x} y={hover.y} width={width} offset={scrollX} />}
+          {hover && (
+            <HoverCard item={hover.item} line={hoverLine} x={hover.x} y={hover.y} width={width} offset={scrollX} />
+          )}
         </div>
       </div>
 
@@ -306,13 +445,19 @@ function Timeline({
         <Legend swatch="h-2.5 w-4.5 border-r-[3px] border-k-diary bg-linear-to-r from-transparent to-k-diary/40">
           Tagebuch: Bezugszeitraum bis Notierzeit
         </Legend>
-        <Legend swatch="h-2.5 w-4.5 rounded-xs border-[1.5px] border-dashed border-warn">Lage prüfen</Legend>
-        <span className="ml-auto">Klick in Audio/Video spult dorthin · Strg + Mausrad zoomt</span>
+        <Legend swatch="h-2.5 w-4.5 rounded-xs border-[1.5px] border-dashed border-warn">
+          Lage prüfen (anklicken, rechts bestätigen)
+        </Legend>
+        <span className="ml-auto">
+          Klick in Audio/Video spult dorthin · Mausrad zoomt an der Maus · Umschalt + Mausrad verschiebt
+        </span>
       </div>
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
   );
 }
+
+const rowStart = (r: SourceRow) => r.startMs ?? r.diaryWindow?.toMs ?? 0;
 
 /** Untertitel einer Spur: Referenz, Person oder Anzahl, dazu was noch ohne Zeit ist. */
 function trackSub(t: Track, rows: SourceRow[]): string {
@@ -344,7 +489,22 @@ function Legend({ swatch, children }: { swatch: string; children: string }) {
   );
 }
 
-function HoverCard({ item, x, y, width, offset }: { item: Item; x: number; y: number; width: number; offset: number }) {
+function HoverCard({
+  item,
+  line,
+  x,
+  y,
+  width,
+  offset,
+}: {
+  item: Item;
+  /** Zeile der Mitschrift unter dem Zeiger. */
+  line: TranscriptRow | null;
+  x: number;
+  y: number;
+  width: number;
+  offset: number;
+}) {
   let title: string;
   let lines: string[];
   if (item.type === "episode") {
@@ -359,11 +519,17 @@ function HoverCard({ item, x, y, width, offset }: { item: Item; x: number; y: nu
     const e = item.entry;
     title = `Tagebuch ${item.row.label} · Eintrag ${e.number}`;
     lines = [`notiert ${e.notedAt ?? "?"}, bezieht sich auf ${hm(item.t0)}–${hm(item.t1)}`];
-    if (e.shortText) lines.push(e.shortText.length > 120 ? `${e.shortText.slice(0, 117)}…` : e.shortText);
+    const text = diaryPreview(e);
+    if (text) lines.push(text.length > 120 ? `${text.slice(0, 117)}…` : text);
   } else {
     const r = item.row;
     title = `${r.label} · ${r.fileName}`;
     lines = [lage(r.startMs, r.endMs), [STATUS_TEXT[r.status], ...r.notes].join(" · ")];
+    if (r.status === "check") lines.push("Anklicken und rechts prüfen");
+    if (line) {
+      const t = (line.speaker ? `${line.speaker}: ` : "") + line.text;
+      lines.push(`${line.clockMs !== null ? clock(line.clockMs) : ""} „${t.length > 140 ? `${t.slice(0, 137)}…` : t}“`);
+    }
   }
   const left = offset + Math.min(Math.max(8, x + 12), width - 240);
   return (

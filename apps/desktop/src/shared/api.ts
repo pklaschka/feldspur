@@ -2,7 +2,7 @@
  * Schnittstelle zwischen Oberfläche (Renderer) und Hauptprozess.
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
-import type { FieldSession, OffsetBasis, PlacementStatus, SourceKind } from "@feldspur/core";
+import type { FieldSession, LevelMode, OffsetBasis, Peaks, PlacementStatus, SourceKind } from "@feldspur/core";
 import type { MontagePreview } from "@feldspur/media";
 
 export interface RecentProject {
@@ -64,6 +64,26 @@ export interface SourceRow {
   isPdf: boolean;
   status: PlacementStatus;
   notes: string[];
+  /** Lautstärke-Angleichung (nur Audio/Video). */
+  level: LevelRow | null;
+}
+
+export interface LevelRow {
+  mode: LevelMode;
+  /** Einstellung „von Hand“. */
+  manualGainDb: number;
+  compress: boolean;
+  /** Gemessener Sprachpegel in dBFS; null = still; undefined = noch nicht gemessen. */
+  measuredDb: number | null;
+  measured: boolean;
+  /** Verstärkung, die gerade gilt (beim Abhören und im Montagevideo). */
+  gainDb: number;
+}
+
+export interface LevelInput {
+  mode: LevelMode;
+  manualGainDb: number;
+  compress: boolean;
 }
 
 export interface EvidenceRow {
@@ -89,6 +109,23 @@ export interface AnchorRow {
   note: string;
   /** Widerspricht anderen Belegen um so viel; null = passt. */
   conflictMs: number | null;
+  /** Die beiden Stellen, für den Feinabgleich. */
+  a: AnchorEnd;
+  b: AnchorEnd;
+}
+
+export interface AnchorEnd {
+  sourceId: string;
+  atMs: number;
+}
+
+/** Ergebnis von „Einrasten“: die beste Stelle in B zur Stelle in A, im Suchfenster um die bisherige. */
+export interface AlignResult {
+  bAtMs: number;
+  /** Korrelation 0 … 1 */
+  score: number;
+  /** Abstand zur nächstbesten Lage (ab ca. 1,5 eindeutig). */
+  distinctness: number;
 }
 
 export type Precision = "exact" | "approx" | "rough";
@@ -110,6 +147,8 @@ export interface TimeInput {
 }
 
 export interface AnchorInput {
+  /** Genauigkeit in ms statt der Stufe (Feinabgleich: wenige ms). */
+  uncertaintyMs?: number;
   aSourceId: string;
   aAt: string;
   bSourceId: string;
@@ -139,6 +178,23 @@ export interface TranscriptRow {
   clockMs: number | null;
   speaker: string;
   text: string;
+}
+
+/** Arbeitsnotiz zu einer Datei; fromMs/toMs = Stelle in der Aufnahme, null = ganze Datei. */
+export interface SourceNoteRow {
+  id: string;
+  sourceId: string;
+  fromMs: number | null;
+  toMs: number | null;
+  text: string;
+  done: boolean;
+}
+
+export interface SourceNoteInput {
+  fromMs?: number | null;
+  toMs?: number | null;
+  text?: string;
+  done?: boolean;
 }
 
 export interface TranscriptPatch {
@@ -204,6 +260,8 @@ export interface ProposalRow {
   impliedOffsetMs: number | null;
   deviceId: string | null;
   deviceLabel: string;
+  a: AnchorEnd;
+  b: AnchorEnd;
 }
 
 export interface EpisodeRow {
@@ -234,9 +292,11 @@ export interface SessionView {
   diary: DiaryEntryRow[];
   /** Mitschrift aller Ton- und Videoquellen, je Quelle nach Stelle sortiert. */
   transcript: TranscriptRow[];
+  /** Arbeitsnotizen zu den Dateien des Einsatzes. */
+  notes: SourceNoteRow[];
   /** Standard-Bezugszeitraum des Einsatzes in Minuten. */
   diaryLookbackMin: number;
-  /** null = Tonspuren noch nicht analysiert */
+  /** null = Episoden aus (session.episodes) oder Tonspuren noch nicht analysiert */
   episodes: EpisodeRow[] | null;
   gaps: GapRow[];
   analyzedCount: number;
@@ -287,6 +347,8 @@ export interface SessionPatch {
   place?: string;
   timeZone?: string;
   diaryLookbackMin?: number;
+  /** Episoden bilden (nur auf Wunsch). */
+  episodes?: boolean;
   /** Zusatzfelder für den Quellennachweis, z. B. { DOI: "10.…" }. Ersetzt alle bisherigen. */
   extra?: Record<string, string>;
 }
@@ -328,9 +390,25 @@ export interface FeldspurApi {
   /** Vorschlag verwerfen oder Anker löschen. */
   rejectAnchor(anchorId: string): Promise<SessionView>;
   addTime(input: TimeInput): Promise<SessionView>;
+  /** Unsichere Lage so bestätigen, wie sie zu sehen war (startMs = gesehene Lage). */
+  confirmPlacement(sourceId: string, startMs: number): Promise<SessionView>;
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
+  /** Anker oder Vorschlag durch einen fein justierten Anker ersetzen. */
+  replaceAnchor(anchorId: string, input: AnchorInput): Promise<SessionView>;
+  /** Stelle in B suchen, die am besten zur Stelle in A passt (± searchMs um bAtMs). */
+  alignRefine(input: {
+    aSourceId: string;
+    aAtMs: number;
+    bSourceId: string;
+    bAtMs: number;
+    searchMs: number;
+  }): Promise<AlignResult | null>;
+  /** Lautstärke-Angleichung einer Quelle einstellen. */
+  setLevel(sourceId: string, input: LevelInput): Promise<SessionView>;
+  /** Sprachpegel einer Quelle messen (dekodiert die ganze Datei). */
+  measureLevel(sourceId: string): Promise<SessionView>;
   /** Neuer Tagebucheintrag mit Rahmen; gibt die Id des Eintrags mit zurück. */
   createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
   addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
@@ -352,8 +430,16 @@ export interface FeldspurApi {
   ): Promise<{ view: SessionView; lineId: string }>;
   updateTranscriptLine(lineId: string, patch: TranscriptPatch): Promise<SessionView>;
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
+  /**
+   * Waveform-Spitzen eines Ausschnitts einer Ton- oder Videoquelle (ms ab Dateianfang).
+   * Dekodiert nur das Fenster; bis ca. 2 min und 4000 Fächer geht das zügig.
+   */
+  addSourceNote(sourceId: string, note: SourceNoteInput): Promise<SessionView>;
+  updateSourceNote(noteId: string, patch: SourceNoteInput): Promise<SessionView>;
+  deleteSourceNote(noteId: string): Promise<SessionView>;
+  waveformPeaks(sourceId: string, fromMs: number, toMs: number, buckets: number): Promise<Peaks>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
-  /** realtime: alles in Echtzeit statt Episoden mit kurzen Tafeln. */
+  /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
   previewExport(sessionId: string, realtime?: boolean): Promise<ScaffoldPreview>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
@@ -405,15 +491,24 @@ export const IPC = {
   importTranscript: "transcript:import",
   updateTranscriptLine: "transcript:update",
   deleteTranscriptLine: "transcript:delete",
+  waveformPeaks: "waveform:peaks",
+  addSourceNote: "note:add",
+  updateSourceNote: "note:update",
+  deleteSourceNote: "note:delete",
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",
   confirmAnchor: "anchor:confirm",
   rejectAnchor: "anchor:reject",
   addTime: "evidence:add",
+  confirmPlacement: "evidence:confirm",
   setEvidenceEnabled: "evidence:enable",
   removeEvidence: "evidence:remove",
   addAnchor: "anchor:add",
+  replaceAnchor: "anchor:replace",
+  alignRefine: "anchor:refine",
+  setLevel: "level:set",
+  measureLevel: "level:measure",
   createDiaryEntry: "diary:create",
   addDiaryRegion: "diary:add-region",
   removeDiaryRegion: "diary:remove-region",

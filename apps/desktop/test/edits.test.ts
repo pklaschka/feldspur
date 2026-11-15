@@ -3,7 +3,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { addManualAnchor, addTimeEvidence, parseMediaPos, removeEvidence, toggleEvidence } from "../src/main/edits.ts";
+import {
+  addManualAnchor,
+  addTimeEvidence,
+  confirmPlacement,
+  parseMediaPos,
+  removeEvidence,
+  replaceAnchor,
+  setLevel,
+  toggleEvidence,
+} from "../src/main/edits.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
 let dir: string;
@@ -76,6 +85,43 @@ function seed() {
 }
 
 const row = (sessionId: string, id: string) => buildSessionView(store, sessionId).rows.find((r) => r.id === id)!;
+
+describe("Lage prüfen", () => {
+  it("unsichere Lage bestätigen, zurücknehmen und durch Handeingabe ersetzen", () => {
+    const { session, video } = seed();
+    const before = row(session.id, video.id);
+    expect(before.status).toBe("check"); // Kamera-Uhr unbekannt
+    confirmPlacement(store, video.id, before.startMs!);
+    const after = row(session.id, video.id);
+    expect(after.status).toBe("ok");
+    expect(after.startMs).toBe(before.startMs);
+    expect(after.notes[0]).toBe("geprüft");
+    const check = after.evidence[0]!;
+    expect(check).toMatchObject({ kind: "checked", chosen: true, own: true });
+
+    removeEvidence(store, check.id);
+    expect(row(session.id, video.id).status).toBe("check");
+
+    confirmPlacement(store, video.id, before.startMs!);
+    addTimeEvidence(store, {
+      sourceId: video.id,
+      kind: "manual",
+      clock: "10:30",
+      atMedia: "",
+      precision: "exact",
+      note: "",
+    });
+    const manual = row(session.id, video.id);
+    expect(manual.evidence.some((e) => e.kind === "checked")).toBe(false);
+    expect(formatClock(manual.startMs!)).toBe("10:30:00");
+  });
+
+  it("bestätigt nichts, wenn sich die Lage inzwischen verschoben hat", () => {
+    const { session, video } = seed();
+    const r = row(session.id, video.id);
+    expect(() => confirmPlacement(store, video.id, r.startMs! + 1000)).toThrow(/geändert/);
+  });
+});
 
 describe("Zeiten von Hand", () => {
   it("Stellen in Aufnahmen lesen", () => {
@@ -228,5 +274,107 @@ describe("Zeiten von Hand", () => {
         note: "",
       }),
     ).toThrow(/verschiedene/);
+  });
+});
+
+describe("Feinabgleich", () => {
+  it("ersetzt einen Anker durch einen fein justierten mit Millisekunden", () => {
+    const { session, cam, audio, video } = seed();
+    addManualAnchor(store, {
+      aSourceId: audio.id,
+      aAt: "1:20",
+      bSourceId: video.id,
+      bAt: "0:20",
+      precision: "exact",
+      note: "",
+    });
+    const old = buildSessionView(store, session.id).anchors[0]!;
+    expect(old.a).toEqual({ sourceId: audio.id, atMs: 80_000 });
+    replaceAnchor(store, old.id, {
+      aSourceId: audio.id,
+      aAt: "80.000",
+      bSourceId: video.id,
+      bAt: "20.347",
+      precision: "exact",
+      uncertaintyMs: 20,
+      note: "Feinabgleich",
+    });
+    const view = buildSessionView(store, session.id);
+    expect(view.anchors).toHaveLength(1);
+    expect(view.anchors[0]!.b.atMs).toBe(20_347);
+    expect(store.listAnchors(session.id)[0]!.uncertaintyMs).toBe(20);
+    expect(view.devices.find((d) => d.id === cam.id)!.offsetMs).toBe(167_000 + 347);
+  });
+
+  it("ein justierter Vorschlag erledigt die übrigen Vorschläge des Geräts", () => {
+    const { session, audio, video } = seed();
+    store.replaceProposedAnchors(session.id, [
+      {
+        sessionId: session.id,
+        kind: "clap",
+        a: { sourceId: audio.id, atMediaMs: 80_000 },
+        b: { sourceId: video.id, atMediaMs: 20_000 },
+        uncertaintyMs: 20,
+        note: "",
+      },
+      {
+        sessionId: session.id,
+        kind: "clap",
+        a: { sourceId: audio.id, atMediaMs: 90_000 },
+        b: { sourceId: video.id, atMediaMs: 30_100 },
+        uncertaintyMs: 20,
+        note: "",
+      },
+    ]);
+    const [p] = buildSessionView(store, session.id).proposals;
+    replaceAnchor(store, p!.anchorId, {
+      aSourceId: audio.id,
+      aAt: "80",
+      bSourceId: video.id,
+      bAt: "20.010",
+      precision: "exact",
+      uncertaintyMs: 20,
+      note: "",
+    });
+    const view = buildSessionView(store, session.id);
+    expect(view.proposals).toHaveLength(0);
+    expect(view.anchors).toHaveLength(1);
+  });
+});
+
+describe("Lautstärke", () => {
+  it("speichert die Einstellung und zeigt die geltende Verstärkung", () => {
+    const { session, audio, photo } = seed();
+    expect(row(session.id, audio.id).level).toMatchObject({ mode: "auto", gainDb: 0, measured: false, compress: true });
+    expect(row(session.id, photo.id).level).toBeNull();
+    setLevel(store, audio.id, { mode: "manual", manualGainDb: 55, compress: false });
+    expect(row(session.id, audio.id).level).toMatchObject({
+      mode: "manual",
+      manualGainDb: 40,
+      gainDb: 40,
+      compress: false,
+    });
+    expect(() => setLevel(store, photo.id, { mode: "auto", manualGainDb: 0, compress: true })).toThrow(/keinen Ton/);
+  });
+
+  it("automatisch: nach dem gemessenen Sprachpegel, alte Analysen werden nachgerechnet", () => {
+    const { session, audio } = seed();
+    // Analyse aus einer älteren Version: ohne Pegel, Hüllkurve −38 dBFS (1 Byte je Wert).
+    const byte = Math.round(((-38 + 100) / 100) * 250);
+    store.saveAudioAnalysis({
+      sourceId: audio.id,
+      envelope: new Uint8Array(500).fill(byte),
+      envelopeRate: 100,
+      noiseFloorDb: -60,
+      idle: [],
+      loudInIdle: [],
+      version: 1,
+      analyzedAt: new Date().toISOString(),
+    });
+    const level = row(session.id, audio.id).level!;
+    expect(level.measured).toBe(true);
+    expect(level.measuredDb).toBeCloseTo(-38, 0);
+    expect(level.gainDb).toBeCloseTo(18, 0);
+    expect(store.listAudioAnalyses(session.id)[0]!.speechLevelDb).toBeCloseTo(-38, 0);
   });
 });

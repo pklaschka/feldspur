@@ -5,6 +5,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
+import { levelText, sessionLevels } from "./analyze.ts";
+import type { AudioLevel } from "./audio.ts";
 import { scaffoldDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
@@ -21,8 +23,10 @@ export interface ExportOptions {
   resolve?: boolean;
   /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
   cacheDir?: string;
-  /** Episoden mit kurzen Tafeln dazwischen (Standard) oder alles in Echtzeit. */
+  /** Alles in Echtzeit (Standard) oder Episoden mit kurzen Tafeln dazwischen. */
   mode?: MontageMode;
+  /** Episoden auch in Echtzeit benennen (siehe ScaffoldOptions.episodes). */
+  episodes?: boolean;
   /** Ton aller laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
   /**
@@ -53,7 +57,7 @@ export function safeName(s: string): string {
 
 export function baseName(sc: Scaffold): string {
   const base = `Feldtag_${sc.header.date}_${safeName(sc.header.title)}`;
-  return sc.plan.mode === "realtime" ? `${base}_Echtzeit` : base;
+  return sc.plan.mode === "episodes" ? `${base}_Episoden` : base;
 }
 
 const csvCell = (v: string | number | null | undefined) => {
@@ -62,7 +66,7 @@ const csvCell = (v: string | number | null | undefined) => {
 };
 
 /** Begleitprotokoll: Nachweis je Quelle (Semikolon, UTF-8 mit BOM für Excel). */
-export function protocolCsv(store: ProjectStore, sc: Scaffold): string {
+export function protocolCsv(store: ProjectStore, sc: Scaffold, levels: Map<Id, AudioLevel | null> = new Map()): string {
   const { input, resolved } = sc;
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const persons = new Map(store.listPersons().map((p) => [p.id, p.name]));
@@ -82,6 +86,7 @@ export function protocolCsv(store: ProjectStore, sc: Scaffold): string {
     "Im Montagevideo ab",
     "Teil von",
     "setzt fort",
+    "Lautstärke im Montagevideo",
   ];
   const label = (id: Id | null) => (id ? (input.sources.find((s) => s.id === id)?.label ?? "") : "");
   const rows = input.sources.map((s) => {
@@ -104,6 +109,7 @@ export function protocolCsv(store: ProjectStore, sc: Scaffold): string {
       at === null ? "" : formatDuration(at),
       label(s.partOf),
       label(s.follows),
+      s.kind === "audio" || s.kind === "video" ? levelText(levels.get(s.id)) : "",
     ];
   });
   return `﻿${[head, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n`;
@@ -130,7 +136,7 @@ export async function exportSession(
   outDir: string,
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
-  const sc = buildScaffold(store, sessionId, { mode: opts.mode });
+  const sc = buildScaffold(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
   if (sc.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
   const base = baseName(sc);
   await mkdir(outDir, { recursive: true });
@@ -152,12 +158,17 @@ export async function exportSession(
 
     const files: string[] = [];
     const media = `${base}.mp4`;
+    const levels = await sessionLevels(store, sessionId, {
+      measureMissing: opts.video !== false,
+      onProgress: (done, total) => opts.onProgress?.("Lautstärke messen", done, total),
+    });
     if (opts.video !== false) {
       await renderMontage(sc, join(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
         audioMix: opts.audioMix,
+        levels,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
       });
       files.push(media);
@@ -173,7 +184,7 @@ export async function exportSession(
     const docx = await scaffoldDocx(sc, { mediaFileName: media, stills });
     await writeFile(join(outDir, `${base}.docx`), docx);
     files.push(`${base}.docx`);
-    await writeFile(join(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc), "utf8");
+    await writeFile(join(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc, levels), "utf8");
     files.push(`${base}_Begleitprotokoll.csv`);
     opts.onProgress?.("Fertig", 1, 1);
     return { dir: outDir, files, durationMs: sc.plan.durationMs };

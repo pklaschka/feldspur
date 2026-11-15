@@ -87,7 +87,8 @@
   body {
     @apply bg-bg font-sans text-[13.5px] leading-[1.45] text-ink antialiased;
   }
-  input {
+  input,
+  textarea {
     @apply rounded-md border border-line-2 bg-panel px-2 py-1;
   }
   :focus-visible {

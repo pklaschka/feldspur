@@ -2,7 +2,7 @@
  * Zeichnen der Zeitachse auf Canvas. Reine Funktionen ohne React:
  * Layout (Zeilen, Elemente mit Pixelrechtecken), Treffersuche und Zeichnen.
  */
-import type { DeviceRow, DiaryEntryRow, EpisodeRow, GapRow, SourceRow } from "../shared/api.ts";
+import type { DeviceRow, DiaryEntryRow, EpisodeRow, GapRow, SourceRow, TranscriptRow } from "../shared/api.ts";
 import { hm } from "./format.ts";
 
 export const MIN = 60_000;
@@ -175,6 +175,52 @@ export interface DrawState {
   hover: Item | null;
   /** Abspielposition (Ortszeit) oder null. */
   playheadMs: number | null;
+  /** Mitschrift je Quelle, nach Stelle sortiert; wird in den Clips als Textvorschau gezeigt. */
+  transcripts: Map<string, TranscriptRow[]>;
+}
+
+/** Mitschrift je Quelle, sortiert, nur Zeilen mit Text. */
+export function groupTranscript(lines: TranscriptRow[]): Map<string, TranscriptRow[]> {
+  const map = new Map<string, TranscriptRow[]>();
+  for (const l of lines) {
+    if (!l.text.trim()) continue;
+    const list = map.get(l.sourceId) ?? [];
+    list.push(l);
+    map.set(l.sourceId, list);
+  }
+  for (const list of map.values()) list.sort((a, b) => a.atMs - b.atMs);
+  return map;
+}
+
+/** Text eines Tagebucheintrags für die Vorschau: Kurzfassung, sonst erste Zeile des Volltexts. */
+export function diaryPreview(e: DiaryEntryRow): string {
+  const t = e.shortText.trim() || e.fullText.trim();
+  return t.split(/\r?\n/)[0]!.trim();
+}
+
+/** Letzte Zeile der Mitschrift, die an oder vor dieser Stelle beginnt. */
+export function lineAt(lines: TranscriptRow[] | undefined, atMs: number): TranscriptRow | null {
+  if (!lines?.length) return null;
+  let found: TranscriptRow | null = null;
+  for (const l of lines) {
+    if (l.atMs > atMs) break;
+    found = l;
+  }
+  return found;
+}
+
+/** Text auf eine Breite kürzen, mit „…“. */
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
+  if (maxW <= 0) return "";
+  if (ctx.measureText(text).width <= maxW) return text;
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (ctx.measureText(`${text.slice(0, mid)}…`).width <= maxW) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo > 0 ? `${text.slice(0, lo).trimEnd()}…` : "";
 }
 
 export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): void {
@@ -299,8 +345,11 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
         ctx.fillRect(x0, y, 3, BAR_H);
         ctx.fillStyle = p.warn;
         for (const t of r.loudAtMs) ctx.fillRect(x(t) - 1, y + 3, 2, BAR_H - 6);
+        const lines = r.startMs !== null ? st.transcripts.get(r.id) : undefined;
+        const withText = !!lines?.length && w >= 40;
+        if (withText) transcriptPreview(ctx, p, lines!, r.startMs!, x, x0, w, y, k, W);
         ctx.restore();
-        clipLabel(ctx, p, r.label, r.fileName, x0, w, y, nextStart.get(it) ?? W);
+        clipLabel(ctx, p, r.label, r.fileName, x0, w, y, nextStart.get(it) ?? W, withText);
         outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, BAR_H, 4));
       } else if (it.type === "diary") {
         const y = top + BAR_Y;
@@ -312,12 +361,6 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
         ctx.fill();
         ctx.fillStyle = k;
         ctx.fillRect(x0 + w - 3, y, 3, BAR_H);
-        if (w > 44) {
-          ctx.font = `600 11px ${p.sans}`;
-          ctx.textAlign = "right";
-          ctx.textBaseline = "middle";
-          ctx.fillText(`${r.label} · ${it.entry.number}`, x0 + w - 9, y + BAR_H / 2);
-        }
         outline(ctx, p, r.status, on, () => roundRect(ctx, x0, y, w, BAR_H, [4, 0, 0, 4]));
       } else {
         const cy = top + TRACK_H / 2;
@@ -337,6 +380,8 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
     }
     ctx.restore();
   }
+
+  diaryTexts(ctx, p, st, x);
 
   if (st.playheadMs !== null) {
     const px = Math.round(x(st.playheadMs)) + 0.5;
@@ -360,6 +405,91 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
   }
 }
 
+/**
+ * Beschriftung der Tagebuchbalken, nach allen Balken gezeichnet, damit überlappende Bezugszeiträume
+ * den Text nicht verdecken. Jeder Eintrag bekommt den Platz seit der Notierzeit des vorigen Eintrags
+ * derselben Spur: Nummer rechts an der Notierzeit, davor so viel Text, wie hineinpasst.
+ */
+function diaryTexts(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState, x: (t: number) => number) {
+  const diary = st.items.filter((it): it is Extract<Item, { type: "diary" }> => it.type === "diary");
+  const byTrack = new Map<number, typeof diary>();
+  for (const it of diary) byTrack.set(it.track, [...(byTrack.get(it.track) ?? []), it]);
+  ctx.save();
+  ctx.textBaseline = "middle";
+  for (const list of byTrack.values()) {
+    list.sort((a, b) => a.t1 - b.t1);
+    list.forEach((it, i) => {
+      const x0 = x(it.t0);
+      const x1 = Math.max(x0 + 2, x(it.t1));
+      if (x1 < -20 || x0 > st.width + 20) return;
+      const left = Math.max(x0, i > 0 ? x(list[i - 1]!.t1) : -Infinity) + 8;
+      const right = x1 - 9;
+      const cy = trackTop(it.track) + BAR_Y + BAR_H / 2;
+      const label = `${it.row.label} · ${it.entry.number}`;
+      ctx.font = `600 11px ${p.sans}`;
+      const lw = ctx.measureText(label).width;
+      if (right - left < lw) return;
+      ctx.fillStyle = p.ink;
+      ctx.textAlign = "right";
+      ctx.fillText(label, right, cy);
+      const text = diaryPreview(it.entry);
+      if (!text) return;
+      ctx.font = `11px ${p.sans}`;
+      // Bei breiten Balken (gezoomt) steht der Text links am Platz, sonst direkt vor der Nummer.
+      const fitted = fitText(ctx, text, right - lw - 10 - left);
+      if (fitted.length < 4) return;
+      ctx.fillStyle = p.ink;
+      ctx.globalAlpha = 0.85;
+      ctx.textAlign = "left";
+      ctx.fillText(fitted, left, cy);
+      ctx.globalAlpha = 1;
+    });
+  }
+  ctx.restore();
+}
+
+/**
+ * Mitschrift im Clip: kleine Striche an jeder Zeile, und wo Platz bis zur nächsten Zeile ist,
+ * der Anfang des Texts. Der Clip ist schon als Zeichenbereich gesetzt.
+ */
+function transcriptPreview(
+  ctx: CanvasRenderingContext2D,
+  p: Palette,
+  lines: TranscriptRow[],
+  startMs: number,
+  x: (t: number) => number,
+  x0: number,
+  w: number,
+  y: number,
+  color: string,
+  W: number,
+) {
+  const ty = y + BAR_H - 9;
+  ctx.font = `10.5px ${p.sans}`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const end = Math.min(x0 + w, W + 20);
+  for (let i = 0; i < lines.length; i++) {
+    const lx = x(startMs + lines[i]!.atMs);
+    if (lx > end) break;
+    const nx = i + 1 < lines.length ? Math.min(end, x(startMs + lines[i + 1]!.atMs)) : end;
+    if (nx < -20) continue;
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(lx), y + BAR_H - 15, 1.5, 12);
+    // Ist der Zeilenanfang links aus dem Bild gerollt, bleibt der Text am Rand lesbar.
+    const tx = Math.max(lx + 5, 4);
+    const room = nx - tx - 5;
+    if (room < 28) continue;
+    const l = lines[i]!;
+    const fitted = fitText(ctx, l.speaker ? `${l.speaker}: ${l.text}` : l.text, room);
+    if (fitted.length < 3) continue;
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.8;
+    ctx.fillText(fitted, tx, ty);
+    ctx.globalAlpha = 1;
+  }
+}
+
 function hovEp(st: DrawState, it: Item): boolean {
   return st.hover?.type === "episode" && it.type === "episode" && st.hover.ep.index === it.ep.index;
 }
@@ -377,6 +507,8 @@ function clipLabel(
   w: number,
   y: number,
   limit: number,
+  /** Unten im Clip steht Mitschrift: Beschriftung nach oben rücken. */
+  top = false,
 ) {
   ctx.save();
   ctx.textAlign = "left";
@@ -385,7 +517,7 @@ function clipLabel(
   const lw = ctx.measureText(label).width;
   ctx.font = `11px ${p.sans}`;
   const fw = ctx.measureText(fileName).width;
-  const cy = y + BAR_H / 2;
+  const cy = top ? y + 9 : y + BAR_H / 2;
   if (w >= lw + 16) {
     roundRect(ctx, x0, y, w, BAR_H, 4);
     ctx.clip();

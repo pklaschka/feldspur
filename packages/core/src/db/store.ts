@@ -17,6 +17,7 @@ import {
   FieldSession,
   Person,
   Source,
+  SourceNote,
   SyncAnchor,
   TimeEvidence,
   TranscriptLine,
@@ -269,7 +270,12 @@ export class ProjectStore {
 
   updateSource(
     id: Id,
-    patch: Partial<Pick<Source, "deviceId" | "kind" | "title" | "label" | "partOf" | "follows">>,
+    patch: Partial<
+      Pick<
+        Source,
+        "deviceId" | "kind" | "title" | "label" | "partOf" | "follows" | "levelMode" | "levelGainDb" | "levelCompress"
+      >
+    >,
   ): Source {
     const r = this.db.select().from(schema.sources).where(eq(schema.sources.id, id)).get();
     if (!r) throw new Error(`Quelle nicht gefunden: ${id}`);
@@ -506,6 +512,46 @@ export class ProjectStore {
 
   deleteTranscriptLine(id: Id): void {
     this.db.delete(schema.transcriptLines).where(eq(schema.transcriptLines.id, id)).run();
+  }
+
+  // ── Notizen zu Dateien ──────────────────────────────────────────────────
+
+  addSourceNote(input: WithOptionalId<Omit<In<typeof SourceNote>, "createdAt">> & { createdAt?: string }): SourceNote {
+    const n = SourceNote.parse({
+      ...input,
+      id: input.id ?? randomUUID(),
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    });
+    this.db.insert(schema.sourceNotes).values(n).run();
+    return n;
+  }
+
+  /** Notizen aller Quellen eines Einsatzes: je Quelle erst die ohne Strecke, dann nach Stelle. */
+  listSourceNotes(sessionId: Id): SourceNote[] {
+    return this.db
+      .select({ n: schema.sourceNotes })
+      .from(schema.sourceNotes)
+      .innerJoin(schema.sources, eq(schema.sources.id, schema.sourceNotes.sourceId))
+      .where(eq(schema.sources.sessionId, sessionId))
+      .orderBy(asc(schema.sourceNotes.sourceId), asc(schema.sourceNotes.fromMs), asc(schema.sourceNotes.createdAt))
+      .all()
+      .map(({ n }) => SourceNote.parse(n));
+  }
+
+  getSourceNote(id: Id): SourceNote {
+    const r = this.db.select().from(schema.sourceNotes).where(eq(schema.sourceNotes.id, id)).get();
+    if (!r) throw new Error(`Notiz nicht gefunden: ${id}`);
+    return SourceNote.parse(r);
+  }
+
+  updateSourceNote(id: Id, patch: Partial<Omit<SourceNote, "id" | "sourceId" | "createdAt">>): SourceNote {
+    const next = SourceNote.parse({ ...this.getSourceNote(id), ...patch });
+    this.db.update(schema.sourceNotes).set(next).where(eq(schema.sourceNotes.id, id)).run();
+    return next;
+  }
+
+  deleteSourceNote(id: Id): void {
+    this.db.delete(schema.sourceNotes).where(eq(schema.sourceNotes.id, id)).run();
   }
 
   // ── Alles für die Zeitbestimmung ────────────────────────────────────────

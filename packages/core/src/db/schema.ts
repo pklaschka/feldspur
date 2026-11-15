@@ -23,6 +23,7 @@ export const sessions = sqliteTable("sessions", {
   extra: json<Record<string, string>>("extra")
     .notNull()
     .default(sql`'{}'`),
+  episodes: bool("episodes").notNull().default(false),
 });
 
 export const persons = sqliteTable("persons", {
@@ -76,6 +77,11 @@ export const sources = sqliteTable(
     importedAt: text("imported_at").notNull(),
     partOf: text("part_of"),
     follows: text("follows"),
+    levelMode: text("level_mode", { enum: ["auto", "manual", "off"] })
+      .notNull()
+      .default("auto"),
+    levelGainDb: real("level_gain_db").notNull().default(0),
+    levelCompress: bool("level_compress").notNull().default(true),
   },
   (t) => [
     index("sources_session").on(t.sessionId),
@@ -91,7 +97,7 @@ export const evidence = sqliteTable(
     sourceId: text("source_id")
       .notNull()
       .references(() => sources.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: ["metadata", "filename", "spoken", "anchor", "manual"] }).notNull(),
+    kind: text("kind", { enum: ["metadata", "filename", "spoken", "anchor", "manual", "checked"] }).notNull(),
     clock: text("clock", { enum: ["device", "true"] }).notNull(),
     atMediaMs: integer("at_media_ms").notNull().default(0),
     localMs: integer("local_ms").notNull(),
@@ -172,6 +178,22 @@ export const transcriptLines = sqliteTable(
   (t) => [index("transcript_source").on(t.sourceId, t.atMs)],
 );
 
+export const sourceNotes = sqliteTable(
+  "source_notes",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    fromMs: integer("from_ms"),
+    toMs: integer("to_ms"),
+    text: text("text").notNull().default(""),
+    done: integer("done", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("source_notes_source").on(t.sourceId)],
+);
+
 export const audioAnalysis = sqliteTable("audio_analysis", {
   sourceId: text("source_id")
     .primaryKey()
@@ -185,6 +207,7 @@ export const audioAnalysis = sqliteTable("audio_analysis", {
   loudInIdle: json<{ atMs: number; aboveFloorDb: number }[]>("loud_in_idle")
     .notNull()
     .default(sql`'[]'`),
+  speechLevelDb: real("speech_level_db"),
   version: integer("version").notNull(),
   analyzedAt: text("analyzed_at").notNull(),
 });
