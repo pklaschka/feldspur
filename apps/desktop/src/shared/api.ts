@@ -328,6 +328,8 @@ export interface FeldspurApi {
   /** Vorschlag verwerfen oder Anker löschen. */
   rejectAnchor(anchorId: string): Promise<SessionView>;
   addTime(input: TimeInput): Promise<SessionView>;
+  /** Unsichere Lage so bestätigen, wie sie zu sehen war (startMs = gesehene Lage). */
+  confirmPlacement(sourceId: string, startMs: number): Promise<SessionView>;
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
@@ -411,6 +413,7 @@ export const IPC = {
   confirmAnchor: "anchor:confirm",
   rejectAnchor: "anchor:reject",
   addTime: "evidence:add",
+  confirmPlacement: "evidence:confirm",
   setEvidenceEnabled: "evidence:enable",
   removeEvidence: "evidence:remove",
   addAnchor: "anchor:add",

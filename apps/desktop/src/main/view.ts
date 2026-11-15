@@ -59,7 +59,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         raw: e.raw,
         chosen: p?.basis.evidenceId === e.id,
         enabled: e.enabled,
-        own: e.kind === "manual" || e.kind === "spoken",
+        own: e.kind === "manual" || e.kind === "spoken" || e.kind === "checked",
         derived: e.id.startsWith("anchor:"),
         uncertaintyMs: e.uncertaintyMs,
       }))

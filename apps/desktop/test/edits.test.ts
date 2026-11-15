@@ -3,7 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { addManualAnchor, addTimeEvidence, parseMediaPos, removeEvidence, toggleEvidence } from "../src/main/edits.ts";
+import {
+  addManualAnchor,
+  addTimeEvidence,
+  confirmPlacement,
+  parseMediaPos,
+  removeEvidence,
+  toggleEvidence,
+} from "../src/main/edits.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
 let dir: string;
@@ -76,6 +83,43 @@ function seed() {
 }
 
 const row = (sessionId: string, id: string) => buildSessionView(store, sessionId).rows.find((r) => r.id === id)!;
+
+describe("Lage prüfen", () => {
+  it("unsichere Lage bestätigen, zurücknehmen und durch Handeingabe ersetzen", () => {
+    const { session, video } = seed();
+    const before = row(session.id, video.id);
+    expect(before.status).toBe("check"); // Kamera-Uhr unbekannt
+    confirmPlacement(store, video.id, before.startMs!);
+    const after = row(session.id, video.id);
+    expect(after.status).toBe("ok");
+    expect(after.startMs).toBe(before.startMs);
+    expect(after.notes[0]).toBe("geprüft");
+    const check = after.evidence[0]!;
+    expect(check).toMatchObject({ kind: "checked", chosen: true, own: true });
+
+    removeEvidence(store, check.id);
+    expect(row(session.id, video.id).status).toBe("check");
+
+    confirmPlacement(store, video.id, before.startMs!);
+    addTimeEvidence(store, {
+      sourceId: video.id,
+      kind: "manual",
+      clock: "10:30",
+      atMedia: "",
+      precision: "exact",
+      note: "",
+    });
+    const manual = row(session.id, video.id);
+    expect(manual.evidence.some((e) => e.kind === "checked")).toBe(false);
+    expect(formatClock(manual.startMs!)).toBe("10:30:00");
+  });
+
+  it("bestätigt nichts, wenn sich die Lage inzwischen verschoben hat", () => {
+    const { session, video } = seed();
+    const r = row(session.id, video.id);
+    expect(() => confirmPlacement(store, video.id, r.startMs! + 1000)).toThrow(/geändert/);
+  });
+});
 
 describe("Zeiten von Hand", () => {
   it("Stellen in Aufnahmen lesen", () => {

@@ -49,7 +49,7 @@ export function updateSessionDetails(s: ProjectStore, sessionId: string, patch: 
     s.updateSession(sessionId, next);
     if (!shift) return;
     for (const e of s.listEvidence(sessionId)) {
-      if (e.kind !== "manual" && e.kind !== "spoken") continue;
+      if (e.kind !== "manual" && e.kind !== "spoken" && e.kind !== "checked") continue;
       s.updateEvidenceTime(e.id, e.localMs + shift);
     }
     for (const d of s.listDiaryEntries(sessionId)) {

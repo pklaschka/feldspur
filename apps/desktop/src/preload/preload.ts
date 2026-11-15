@@ -31,6 +31,7 @@ const api: FeldspurApi = {
   confirmAnchor: (id) => ipcRenderer.invoke(IPC.confirmAnchor, id),
   rejectAnchor: (id) => ipcRenderer.invoke(IPC.rejectAnchor, id),
   addTime: (input) => ipcRenderer.invoke(IPC.addTime, input),
+  confirmPlacement: (id, startMs) => ipcRenderer.invoke(IPC.confirmPlacement, id, startMs),
   setEvidenceEnabled: (id, enabled) => ipcRenderer.invoke(IPC.setEvidenceEnabled, id, enabled),
   removeEvidence: (id) => ipcRenderer.invoke(IPC.removeEvidence, id),
   addAnchor: (input) => ipcRenderer.invoke(IPC.addAnchor, input),

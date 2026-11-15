@@ -434,6 +434,9 @@ function SessionPane({
               if (v) setView(v);
               return !!v;
             },
+            confirm: (id, startMs) => update(guard(() => api.confirmPlacement(id, startMs))),
+            trustDeviceClock: (id) => update(guard(() => api.setDeviceOffset(id, 0))),
+            setReference: (id) => update(guard(() => api.setReference(id))),
             toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
             removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
             openDiary: setDiaryPage,

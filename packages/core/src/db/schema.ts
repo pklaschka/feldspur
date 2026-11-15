@@ -91,7 +91,7 @@ export const evidence = sqliteTable(
     sourceId: text("source_id")
       .notNull()
       .references(() => sources.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: ["metadata", "filename", "spoken", "anchor", "manual"] }).notNull(),
+    kind: text("kind", { enum: ["metadata", "filename", "spoken", "anchor", "manual", "checked"] }).notNull(),
     clock: text("clock", { enum: ["device", "true"] }).notNull(),
     atMediaMs: integer("at_media_ms").notNull().default(0),
     localMs: integer("local_ms").notNull(),
