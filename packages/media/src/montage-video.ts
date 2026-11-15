@@ -212,7 +212,7 @@ export function planPieces(sc: Scaffold): Piece[] {
         f1,
         kind: seg.kind === "episode" ? "episode" : "gap",
         clock0: a,
-        title: seg.kind === "episode" ? `Episode ${seg.episode.index}` : "Zwischenzeit",
+        title: !sc.episodes ? "" : seg.kind === "episode" ? `Episode ${seg.episode.index}` : "Zwischenzeit",
         body: "",
         videos: videos.map(ref),
         audios: audios.map(ref),
@@ -568,7 +568,7 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** Kapitel je Episode und Tafel, dazu Titel und Herkunft als Metadaten. */
+/** Kapitel je Episode und Tafel (nur mit Episoden), dazu Titel und Herkunft als Metadaten. */
 function chapterFile(sc: Scaffold): string {
   const esc = (s: string) => s.replace(/[=;#\\\n]/g, (c) => `\\${c}`);
   const h = sc.header;
@@ -578,7 +578,7 @@ function chapterFile(sc: Scaffold): string {
     `comment=${esc(`Feldspur-Montage. Quellen: ${h.sources.join(", ")}. Zeitmarken im Zeitgerüst beziehen sich auf dieses Video.`)}`,
     `date=${esc(h.date)}`,
   ];
-  for (const s of sc.plan.segments) {
+  for (const s of sc.episodes ? sc.plan.segments : []) {
     const title =
       s.kind === "episode"
         ? `Episode ${s.episode.index} · ${formatClock(s.fromMs)}–${formatClock(s.toMs)}`

@@ -16,6 +16,7 @@ export function testmarkt() {
     timeZone: "Europe/Berlin",
     diaryLookbackMs: 15 * 60_000,
     extra: {},
+    episodes: false,
   };
   const dev = (id: string, label: string, extra: Partial<Device> = {}): Device => ({
     id,

@@ -23,8 +23,10 @@ export interface ExportOptions {
   resolve?: boolean;
   /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
   cacheDir?: string;
-  /** Episoden mit kurzen Tafeln dazwischen (Standard) oder alles in Echtzeit. */
+  /** Alles in Echtzeit (Standard) oder Episoden mit kurzen Tafeln dazwischen. */
   mode?: MontageMode;
+  /** Episoden auch in Echtzeit benennen (siehe ScaffoldOptions.episodes). */
+  episodes?: boolean;
   /** Ton aller laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
   /**
@@ -55,7 +57,7 @@ export function safeName(s: string): string {
 
 export function baseName(sc: Scaffold): string {
   const base = `Feldtag_${sc.header.date}_${safeName(sc.header.title)}`;
-  return sc.plan.mode === "realtime" ? `${base}_Echtzeit` : base;
+  return sc.plan.mode === "episodes" ? `${base}_Episoden` : base;
 }
 
 const csvCell = (v: string | number | null | undefined) => {
@@ -134,7 +136,7 @@ export async function exportSession(
   outDir: string,
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
-  const sc = buildScaffold(store, sessionId, { mode: opts.mode });
+  const sc = buildScaffold(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
   if (sc.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
   const base = baseName(sc);
   await mkdir(outDir, { recursive: true });

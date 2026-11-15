@@ -37,6 +37,11 @@ export const FieldSession = z.object({
     .default(15 * 60_000),
   /** Optionale Felder für den Quellennachweis (DOI, Projektnummer, …). */
   extra: z.record(z.string(), z.string()).default({}),
+  /**
+   * Episoden bilden (Zeiträume mit hörbarer Aufnahme, dazwischen Zwischenzeiten). Nur auf Wunsch:
+   * ohne sie zeigt die Zeitachse keine Episoden und die Ausgabe läuft in Echtzeit ohne Episodenzeilen.
+   */
+  episodes: z.boolean().default(false),
 });
 export type FieldSession = z.infer<typeof FieldSession>;
 
@@ -130,8 +135,9 @@ export type Source = z.infer<typeof Source>;
  * - spoken: angesagte Uhrzeit („es ist jetzt halb elf“), beim Anhören markiert
  * - anchor: abgeleitet aus einem Sync-Anker zu einer bereits eingeordneten Quelle
  * - manual: von Hand auf der Zeitachse platziert; gewinnt immer
+ * - checked: eine unsichere Lage wurde geprüft und so bestätigt, wie sie war; gilt dann als sicher
  */
-export const EvidenceKind = z.enum(["metadata", "filename", "spoken", "anchor", "manual"]);
+export const EvidenceKind = z.enum(["metadata", "filename", "spoken", "anchor", "manual", "checked"]);
 export type EvidenceKind = z.infer<typeof EvidenceKind>;
 
 export const TimeEvidence = z.object({

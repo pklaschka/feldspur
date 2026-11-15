@@ -415,7 +415,13 @@ function SessionPane({
             </Tabs.Content>
             <Tabs.Content value="review" className={tabContent}>
               {step === "review" && (
-                <Review view={view} selected={selected} onSelect={setSelected} onNext={() => setStep("export")} />
+                <Review
+                  view={view}
+                  selected={selected}
+                  onSelect={setSelected}
+                  onNext={() => setStep("export")}
+                  onEpisodes={(on) => void saveDetails({ episodes: on })}
+                />
               )}
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
@@ -434,6 +440,9 @@ function SessionPane({
               if (v) setView(v);
               return !!v;
             },
+            confirm: (id, startMs) => update(guard(() => api.confirmPlacement(id, startMs))),
+            trustDeviceClock: (id) => update(guard(() => api.setDeviceOffset(id, 0))),
+            setReference: (id) => update(guard(() => api.setReference(id))),
             toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
             removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
             setLevel: (id, input) => update(guard(() => api.setLevel(id, input))),

@@ -128,7 +128,11 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE devices ADD COLUMN time_zone TEXT;
   `,
-  // 7: Lautstärke angleichen
+  // 7: Episoden nur auf Wunsch (vorher immer gebildet). Auch bestehende Einsätze starten ohne.
+  `
+  ALTER TABLE sessions ADD COLUMN episodes INTEGER NOT NULL DEFAULT 0;
+  `,
+  // 8: Lautstärke angleichen
   `
   ALTER TABLE sources ADD COLUMN level_mode TEXT NOT NULL DEFAULT 'auto';
   ALTER TABLE sources ADD COLUMN level_gain_db REAL NOT NULL DEFAULT 0;

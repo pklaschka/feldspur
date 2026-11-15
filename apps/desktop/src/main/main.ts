@@ -29,7 +29,15 @@ import {
   type ProjectInfo,
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
-import { addManualAnchor, addTimeEvidence, removeEvidence, replaceAnchor, setLevel, toggleEvidence } from "./edits.ts";
+import {
+  addManualAnchor,
+  addTimeEvidence,
+  confirmPlacement,
+  removeEvidence,
+  replaceAnchor,
+  setLevel,
+  toggleEvidence,
+} from "./edits.ts";
 import { exportRunning, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
@@ -294,6 +302,10 @@ function registerIpc(): void {
     return buildSessionView(s, a.sessionId);
   });
 
+  ipcMain.handle(IPC.confirmPlacement, (_e, sourceId: string, startMs: number) => {
+    const s = requireStore();
+    return buildSessionView(s, confirmPlacement(s, sourceId, startMs));
+  });
   ipcMain.handle(IPC.addTime, (_e, input: TimeInput) => {
     const s = requireStore();
     return buildSessionView(s, addTimeEvidence(s, input));
