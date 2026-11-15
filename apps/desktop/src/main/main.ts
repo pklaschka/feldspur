@@ -7,6 +7,7 @@ import {
   analyzeSession,
   applyImport,
   parseTranscript,
+  readPeaks,
   scanPaths,
   setToolPaths,
   TRANSCRIPT_EXTENSIONS,
@@ -179,6 +180,12 @@ function registerIpc(): void {
   ipcMain.handle(IPC.deleteTranscriptLine, (_e, lineId: string) => {
     const s = requireStore();
     return buildSessionView(s, deleteLine(s, lineId));
+  });
+
+  ipcMain.handle(IPC.waveformPeaks, (_e, sourceId: string, fromMs: number, toMs: number, buckets: number) => {
+    const src = requireStore().getSource(sourceId);
+    if (src.kind !== "audio" && src.kind !== "video") throw new Error(`${src.label} hat keine Tonspur`);
+    return readPeaks(src.originalPath, fromMs, toMs, buckets);
   });
 
   registerOverlayBridge();

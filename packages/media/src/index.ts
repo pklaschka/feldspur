@@ -16,3 +16,4 @@ export * from "./transcript-import.ts";
 export * from "./fcpxml.ts";
 export * from "./montage-preview.ts";
 export * from "./layout.ts";
+export * from "./waveform.ts";
