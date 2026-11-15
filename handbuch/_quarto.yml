@@ -1,0 +1,61 @@
+project:
+  type: manuscript
+  output-dir: _site
+  # Bricht ab, wenn die Webseite etwas von fremden Servern lädt.
+  post-render: extern-pruefen.ts
+
+manuscript:
+  article: index.qmd
+  code-links: false
+
+lang: de
+# Gerade Anführungszeichen im Quelltext, deutsch gesetzt (siehe anfuehrungszeichen.lua).
+filters:
+  - anfuehrungszeichen.lua
+number-sections: true
+fig-cap-location: bottom
+crossref:
+  fig-title: Abbildung
+  fig-prefix: Abbildung
+  sec-prefix: Abschnitt
+
+format:
+  html:
+    # Bootstrap-Grundthema ohne Webfonts: alles liegt mit auf der Seite,
+    # nichts wird von fremden Servern (CDNs) geladen, keine Cookies.
+    theme:
+      light: [default, stil.scss]
+      dark: [default, stil.scss, stil-dunkel.scss]
+    respect-user-color-scheme: true
+    html-math-method: plain
+    lightbox: false
+    toc: true
+    toc-depth: 3
+    toc-title: "Inhalt"
+    include-after-body: fusszeile.html
+    # Quartos eigener Formatlink hieße „Typst“; das PDF steht stattdessen unter „Weitere Links“.
+    format-links: false
+    other-links:
+      - text: PDF
+        icon: file-pdf
+        href: Feldspur-Handbuch.pdf
+      - text: Quelltext auf GitHub
+        icon: github
+        href: https://github.com/pklaschka/feldspur
+      - text: Impressum
+        href: https://zuriklaschka.de/de/impressum/
+  typst:
+    papersize: a4
+    toc: true
+    toc-depth: 2
+    toc-title: "Inhalt"
+    section-numbering: "1.1"
+    output-file: Feldspur-Handbuch.pdf
+    # Literatur wie in der Webseite über citeproc (Autor-Jahr), an der Stelle von #refs.
+    citeproc: true
+    # Farben aus dem App-Symbol, siehe kopf.typ.
+    include-in-header: kopf.typ
+    # Hinweiskästen ohne Symbolpaket aus dem Netz setzen, siehe kaesten.lua.
+    filters:
+      - at: pre-ast
+        path: kaesten.lua

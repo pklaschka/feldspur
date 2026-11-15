@@ -1,0 +1,44 @@
+## Mitschreiben {#sec-mitschreiben}
+
+Feldspur transkribiert **nicht automatisch**. Stattdessen tippst du mit, während die Aufnahme läuft, und Feldspur
+setzt die Zeitmarken für dich.
+
+![Mitschreiben zu einer Tonquelle](bilder/mitschreiben.png){#fig-mitschreiben}
+
+### So geht's
+
+Öffne in der Detailleiste einer Audio- oder Videoquelle das Mitschreiben und wähle die **Tonquelle**. Dann:
+
+- Tippe los. **Enter** legt die Zeile an und beginnt die nächste. Die Zeitmarke ist die Stelle, an der du angefangen
+  hast zu tippen.
+- Beginnt eine Zeile mit einem Kürzel wie `B1:`, wechselt der **Sprecher**.
+- Eine Zeitmarke lässt sich nachträglich auf die aktuelle Stelle setzen; **Hierhin springen** spielt eine Zeile ab.
+- Über der Liste läuft eine **Waveform** mit (Ausschnitt 10 s, 30 s oder 2 min, logarithmisch oder linear). Sie zeigt,
+  wo gesprochen wird, dazu die Zeilen und Notizen; ein Klick spult dorthin.
+- **Liste läuft mit** hält beim Abspielen die aktuelle Zeile im Blick, auch bei langen Mitschriften.
+
+Tastenkürzel:
+
+| Taste         | Wirkung                                                                        |
+| ------------- | ------------------------------------------------------------------------------ |
+| Esc           | Abspielen / anhalten (beim Fortsetzen springt die Wiedergabe 1 s zurück)       |
+| F8 / F9       | 5 Sekunden zurück / vor                                                        |
+| F7            | langsamer (mit Umschalt schneller)                                             |
+| Enter         | Zeile anlegen, nächste beginnen                                                |
+| Strg/⌘+Enter  | Zeile an der Schreibmarke teilen                                               |
+| `B1: …`       | Sprecher wechseln, wenn die Zeile so beginnt                                   |
+
+### Notizen zu einer Datei
+
+Zu jeder Datei kannst du **Notizen** anlegen, mit oder ohne Zeitspanne, etwa "ab 12:30 noch abtippen, Gespräch am
+Gehege". Sie stehen in der Detailleiste und beim Mitschreiben und lassen sich abhaken. Notizen sind dein
+Arbeitsstand und gehen nicht ins Zeitgerüst.
+
+Feldspur speichert zu jeder Zeile die Stelle in der Aufnahme. Die Uhrzeit folgt aus dem Abgleich; wenn du später eine
+Uhr korrigierst, wandert die Mitschrift mit.
+
+### Transkript importieren
+
+Hast du eine Aufnahme schon anderswo transkribiert, etwa mit Whisper oder in MAXQDA, kannst du das Transkript über
+**Transkript importieren…** in der Detailleiste einlesen. Feldspur versteht SRT, WebVTT, JSON (Whisper) und TSV.
+Wähle, ob es **zur Mitschrift hinzugefügt** wird oder sie **ersetzt**.

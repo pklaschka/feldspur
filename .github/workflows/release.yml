@@ -5,7 +5,7 @@ name: Release
 #   1. vorbereiten   prüfen, testen, Changelog aus den Pull Requests erzeugen, Versionen setzen,
 #                    Commit „Release vX“ auf main und Tag vX pushen
 #   2. pakete        Installer für Windows, macOS (Apple-Chip, Intel) und Linux (package.yml)
-#      handbuch      PDF-Handbuch, sobald es ein Skript dafür gibt (handbook.yml)
+#      handbuch      PDF-Handbuch, von Quarto gerendert (handbook.yml)
 #   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt
 #
 # Nur die App wird versioniert; packages/* bekommen keine eigenen Tags, Releases oder Changelogs.
@@ -153,7 +153,7 @@ jobs:
           merge-multiple: true
           path: assets
       - uses: actions/download-artifact@v4
-        # Fehlt, solange es noch kein Handbuch gibt.
+        # Lässt die Release nicht scheitern, falls das Handbuch einmal fehlt.
         continue-on-error: true
         with:
           pattern: handbuch

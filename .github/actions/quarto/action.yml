@@ -1,0 +1,10 @@
+name: Quarto einrichten
+description: >-
+  Quarto in fester Fassung für Handbuch und Begleittext (handbuch/). Das PDF setzt das in Quarto
+  enthaltene Typst, LaTeX ist nicht nötig.
+runs:
+  using: composite
+  steps:
+    - uses: quarto-dev/quarto-actions/setup@v2
+      with:
+        version: 1.9.13
