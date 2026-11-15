@@ -5,7 +5,7 @@ Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil
 Dokumentation wurde von Claude (Anthropic) geschrieben, im Dialog mit mir. Fragestellung, Konzept, Anforderungen und
 Entscheidungen stammen von mir. Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: Es transkribiert nicht
 automatisch, nutzt keine Cloud-Dienste und arbeitet vollständig auf dem eigenen Rechner. Mehr dazu, auch zu meiner
-Haltung zur Nutzung sogenannter KI, im Abschnitt „Entstehung mit generativer KI“.
+Haltung zur Nutzung sogenannter KI, im Abschnitt "Entstehung mit generativer KI".
 :::
 
 ::: {.callout-warning}

@@ -1,7 +1,7 @@
 # Begriffe {#sec-begriffe .appendix}
 
 Anker
-: „Dieser Moment in Aufnahme A ist derselbe wie dieser Moment in Aufnahme B“, durch Klatschen, Tonspur-Vergleich oder
+: "Dieser Moment in Aufnahme A ist derselbe wie dieser Moment in Aufnahme B", durch Klatschen, Tonspur-Vergleich oder
   von Hand. Daraus ergibt sich die Abweichung eines Geräts.
 
 Abweichung

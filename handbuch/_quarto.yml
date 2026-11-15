@@ -9,6 +9,9 @@ manuscript:
   code-links: false
 
 lang: de
+# Gerade Anführungszeichen im Quelltext, deutsch gesetzt (siehe anfuehrungszeichen.lua).
+filters:
+  - anfuehrungszeichen.lua
 number-sections: true
 fig-cap-location: bottom
 crossref:
@@ -50,6 +53,8 @@ format:
     output-file: Feldspur-Handbuch.pdf
     # Literatur wie in der Webseite über citeproc (Autor-Jahr), an der Stelle von #refs.
     citeproc: true
+    # Farben aus dem App-Symbol, siehe kopf.typ.
+    include-in-header: kopf.typ
     # Hinweiskästen ohne Symbolpaket aus dem Netz setzen, siehe kaesten.lua.
     filters:
       - at: pre-ast

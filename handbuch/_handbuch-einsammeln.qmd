@@ -22,7 +22,7 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
 
 Über das Menü an jeder Quelle kannst du nachhelfen:
 
-- **Umbenennen** eines Geräts, z. B. „Kamera Stativ“ oder „Handy Testperson A“.
+- **Umbenennen** eines Geräts, z. B. "Kamera Stativ" oder "Handy Testperson A".
 - **In anderes Gerät verschieben** oder Geräte **zusammenlegen**, wenn Feldspur zwei Geräte vermutet, wo nur eins war.
 - **Setzt Aufnahme fort …**: Viele Geräte teilen lange Aufnahmen in mehrere Dateien. Solche Folgeaufnahmen erkennt
   Feldspur meist selbst (gleiches Gerät, Beginn direkt am Ende der vorigen Datei, oder GoPro-Kapitel). Eine

@@ -10,12 +10,12 @@ Nach vier Forschungstagen in einem Projekt zum Thema Otter im Zoo hatte ich:
 - 30 Audionotizen und Diktiergerätaufnahmen, teilweise länger als 30 Minuten,
 - 479 Videos, teilweise auch mit interessanten, zu transkribierenden Audioaufnahmen im Video selbst.
 
-Insgesamt also **708 „Artefakte“**, die es zeitlich zu synchronisieren galt. Alles mit Zeitstempeln. Aber mit
+Insgesamt also **708 "Artefakte"**, die es zeitlich zu synchronisieren galt. Alles mit Zeitstempeln. Aber mit
 bestehenden Mitteln kaum so zusammenführbar, dass es sich gut auswerten lässt.
 
 Und das war noch eine vergleichsweise kleine Forschung: eine etwas über das Ziel hinausschießende Seminararbeit im
-Bereich Multi-Species-Ethnografie unter dem Titel „Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
-Kontext Zoo“ im September 2026. Also nicht vergleichbar mit größeren Forschungsprojekten.
+Bereich Multi-Species-Ethnografie unter dem Titel "Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
+Kontext Zoo" im September 2026. Also nicht vergleichbar mit größeren Forschungsprojekten.
 
 ## Eine eigene Lösung
 
@@ -26,7 +26,7 @@ eine eigene Lösung zu finden. Und zwar in einer Zeit, in der man mit Claude und
 Lösungen bauen kann, deren Entwicklung sich früher nicht gelohnt hätte.
 
 Dass ich mir das zugetraut habe, liegt auch an meinem Hintergrund: Ich habe mehr als zehn Jahre als
-Softwareentwicklerin gearbeitet.^[Unter anderem bei Adobe, außerdem mit eigenen Softwareprodukten. „Good enough“ für
+Softwareentwicklerin gearbeitet.^[Unter anderem bei Adobe, außerdem mit eigenen Softwareprodukten. "Good enough" für
 die eigene Forschung ist deshalb nicht der Punkt, an dem ich bei so etwas aufhöre. Ich will es richtig machen, damit
 es im Zweifel auch anderen helfen kann.] Ich kann also einschätzen, was ein solches Werkzeug braucht, und die Arbeit
 der KI anleiten und prüfen, statt mich blind auf sie zu verlassen (@sec-ki).

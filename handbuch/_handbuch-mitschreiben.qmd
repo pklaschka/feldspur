@@ -30,8 +30,8 @@ Tastenkürzel:
 
 ### Notizen zu einer Datei
 
-Zu jeder Datei kannst du **Notizen** anlegen, mit oder ohne Zeitspanne, etwa „ab 12:30 noch abtippen, Gespräch am
-Gehege“. Sie stehen in der Detailleiste und beim Mitschreiben und lassen sich abhaken. Notizen sind dein
+Zu jeder Datei kannst du **Notizen** anlegen, mit oder ohne Zeitspanne, etwa "ab 12:30 noch abtippen, Gespräch am
+Gehege". Sie stehen in der Detailleiste und beim Mitschreiben und lassen sich abhaken. Notizen sind dein
 Arbeitsstand und gehen nicht ins Zeitgerüst.
 
 Feldspur speichert zu jeder Zeile die Stelle in der Aufnahme. Die Uhrzeit folgt aus dem Abgleich; wenn du später eine

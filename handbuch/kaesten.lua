@@ -1,14 +1,16 @@
 -- Hinweiskästen (Callouts) im PDF als schlichte Kästen setzen. Quartos eigene Typst-Kästen laden ein
 -- Symbolpaket (@preview/fontawesome) aus dem Netz nach; so bleibt der Satz ohne Netz und ohne Fremdpakete.
 function Div(el)
-  local callout = false
+  local art
   for _, c in ipairs(el.classes) do
-    if c:match("^callout") then callout = true end
+    art = art or c:match("^callout%-(%a+)")
   end
-  if not callout then return nil end
+  if not art then return nil end
+  -- Farben aus kopf.typ: Hinweis Ocker, Wichtig Terrakotta, Warnung Rost, Tipp Moos.
+  local farbe = ({ important = "terrakotta", warning = "rost", caution = "rost", tip = "moos" })[art] or "ocker"
   local blocks = pandoc.List()
-  blocks:insert(pandoc.RawBlock("typst",
-    "#block(fill: luma(244), stroke: (left: 3pt + luma(150)), inset: 10pt, width: 100%, breakable: true)["))
+  blocks:insert(pandoc.RawBlock("typst", "#block(fill: papier, stroke: (left: 3pt + " .. farbe ..
+    "), inset: 10pt, radius: (right: 3pt), width: 100%, breakable: true)["))
   for i, b in ipairs(el.content) do
     if i == 1 and b.t == "Header" then
       blocks:insert(pandoc.Para({ pandoc.Strong(b.content) }))

@@ -5,15 +5,15 @@ für mich: in Teilen ja, als Ganzes (soweit ich sehe) nein. Die etwas längere A
 
 ## Multimodales Feldmaterial
 
-<!-- Ohne Literaturbeleg: Die Beispiele stammen aus meinem eigenen Feldmaterial (vgl. Abschnitt „Warum Feldspur?“). -->
+<!-- Ohne Literaturbeleg: Die Beispiele stammen aus meinem eigenen Feldmaterial (vgl. Abschnitt "Warum Feldspur?"). -->
 In meinem eigenen Projekt war das Material längst nicht nur Text. Neben den Feldnotizen entstanden Fotos, Audio- und
 Videoaufnahmen – auf mehreren Geräten. In der Multi-Species-Ethnografie ist das wenig überraschend: Kirksey und
 Helmreich beschreiben sie als Ansatz, der mit ungewohnten Sinneswelten ringt [@kirksey2010, S. 565] und mitunter auf
 einen hybriden methodischen Werkzeugkasten zurückgreift [@kirksey2010, S. 564].
 <!-- Nachweis kirksey2010 (Volltext: https://www.humanities.uci.edu/critical/pdf/kirksey.pdf):
-     S. 565 „A multisensory approach—grappling with unfamiliar sensoriums, with different kinds of touch, smell, taste,
-     and vision“; S. 564 Fuentes „deploys a hybrid methodological tool kit, using the observational techniques of
-     primatology“. Geprüft am 15.11.2026. -->
+     S. 565 "A multisensory approach—grappling with unfamiliar sensoriums, with different kinds of touch, smell, taste,
+     and vision"; S. 564 Fuentes "deploys a hybrid methodological tool kit, using the observational techniques of
+     primatology". Geprüft am 15.11.2026. -->
 
 Und die Quellen stehen in sehr unterschiedlichem Verhältnis zur Zeit: Eine Kamera stempelt jede Datei, ein
 Diktiergerät läuft womöglich mit falsch gestellter Uhr. Meine Feldnotizen wiederum habe ich oft erst nach dem
@@ -26,9 +26,9 @@ zurückreicht. Denn ein Eintrag, den ich um 14:23 Uhr notiere, meint oft schon, 
 Codiert wird in Programmen für die qualitative Datenanalyse wie MAXQDA [@maxqda], ATLAS.ti [@atlasti] oder
 NVivo [@nvivo]. In MAXQDA, mit dem ich arbeite, lassen sich Transkripte mit Zeitmarken einlesen und mit einer Audio-
 oder Videodatei verknüpfen; ein Klick auf eine Zeitmarke spielt die Aufnahme an dieser Stelle ab [@maxqdazeitmarken].
-<!-- Nachweis maxqdazeitmarken (https://www.maxqda.com/help-mx22/import/transcripts-with-timestamps): „The associated
-     audio or video file is copied into the folder for external files and assigned to the transcript.“ und „Clicking
-     in the area of the timestamps plays the media file at the corresponding position.“ Erkanntes Format u. a.
+<!-- Nachweis maxqdazeitmarken (https://www.maxqda.com/help-mx22/import/transcripts-with-timestamps): "The associated
+     audio or video file is copied into the folder for external files and assigned to the transcript." und "Clicking
+     in the area of the timestamps plays the media file at the corresponding position." Erkanntes Format u. a.
      #hh:mm:ss-x#. Geprüft am 15.11.2026. -->
 Zu einem Transkript gehört dort aber eben *eine* Mediendatei. Eine gemeinsame Zeitachse über viele Geräte, auf der
 Tagebuchseiten, Fotos und mehrere Aufnahmen zugleich liegen, habe ich in diesen Programmen nicht gefunden.
@@ -36,28 +36,28 @@ Tagebuchseiten, Fotos und mehrere Aufnahmen zugleich liegen, habe ich in diesen 
 Der Austausch zwischen den Programmen ist ebenfalls noch recht jung: Erst nach einer Konferenz 2016 haben sich
 Entwickler\*innen auf ein gemeinsames Austauschformat verständigt [@evers2018, S. 61, 69], aus dem der
 REFI-QDA-Standard hervorging [@refiqda].
-<!-- Nachweis evers2018 (Volltext: https://core.ac.uk/download/215349759.pdf): S. 61 „The 2016 international KWALON
-     conference: Reflecting on the future of QDA software“; S. 69 „As a result of the conference, the developers present
-     agreed to work towards the goal of a common exchange format“ (Rotterdam Exchange Format Initiative).
-     Nachweis refiqda (https://www.qdasoftware.org): „The REFI-QDA Standard enables interoperability between Qualitative
-     Data Analysis Software (QDAS or CAQDAS) programmes.“ Geprüft am 15.11.2026. -->
+<!-- Nachweis evers2018 (Volltext: https://core.ac.uk/download/215349759.pdf): S. 61 "The 2016 international KWALON
+     conference: Reflecting on the future of QDA software"; S. 69 "As a result of the conference, the developers present
+     agreed to work towards the goal of a common exchange format" (Rotterdam Exchange Format Initiative).
+     Nachweis refiqda (https://www.qdasoftware.org): "The REFI-QDA Standard enables interoperability between Qualitative
+     Data Analysis Software (QDAS or CAQDAS) programmes." Geprüft am 15.11.2026. -->
 
 Feldspur setzt deshalb *vor* dem Codieren an: Es führt das Material eines Feldeinsatzes zusammen und gibt es als ein
 Dokument mit Zeitmarken aus, das MAXQDA einliest. Das Codieren selbst bleibt, wohlgemerkt, in der gewohnten Software.
 
 ## Annotation und Schnitt
 
-Annotationswerkzeuge wie ELAN [@wittenburg2006; @elan] verknüpfen Annotationen auf mehreren Ebenen („tiers“) mit
+Annotationswerkzeuge wie ELAN [@wittenburg2006; @elan] verknüpfen Annotationen auf mehreren Ebenen ("tiers") mit
 Audio- und Videoaufnahmen, auch mit mehreren Videos, deren Versatz sich je Datei festhalten lässt [@wittenburg2006].
 Transana [@transana] analysiert neben Video und Audio auch Bilder und Texte und kann in der Professional-Fassung bis zu
 vier Mediendateien gleichzeitig bearbeiten.
 <!-- Nachweis wittenburg2006 (Volltext: https://pure.mpg.de/pubman/item/item_60436_2/component/file_60437/LREC%202006_Elan_Wittenburg.pdf):
-     „Annotations are grouped on layers, in ELAN referred to as 'tiers'“; Zahl der Videos „first was increased from
-     1 to 2 and later from 2 to 4“; „A relative or absolute offset can be determined and stored per media file.“
-     Nachweis elan (https://archive.mpi.nl/tla/elan): „With ELAN a user can add an unlimited number of textual
-     annotations to audio and/or video recordings.“
-     Nachweis transana (https://www.transana.com): „Sophisticated Tools for the Analysis of Video, Audio, Image, Text,
-     PDF, and Survey Data“; Professional: „Import, transcribe, code and analyze up to 4 simultaneous media files.“
+     "Annotations are grouped on layers, in ELAN referred to as 'tiers'"; Zahl der Videos "first was increased from
+     1 to 2 and later from 2 to 4"; "A relative or absolute offset can be determined and stored per media file."
+     Nachweis elan (https://archive.mpi.nl/tla/elan): "With ELAN a user can add an unlimited number of textual
+     annotations to audio and/or video recordings."
+     Nachweis transana (https://www.transana.com): "Sophisticated Tools for the Analysis of Video, Audio, Image, Text,
+     PDF, and Survey Data"; Professional: "Import, transcribe, code and analyze up to 4 simultaneous media files."
      Geprüft am 15.11.2026. -->
 Beide sind also stark, wenn es um die genaue Analyse weniger, gleichzeitig laufender Aufnahmen geht. Viele Geräte mit
 abweichenden Uhren über nachvollziehbare Zeitbelege auf eine Achse zu bringen, ist aber (soweit ich sehe) nicht ihr
@@ -66,8 +66,8 @@ Anliegen.
 Schnittprogramme wie DaVinci Resolve [@resolve] bringen Aufnahmen automatisch in Gleichlauf und unterstützen den
 Schnitt mit mehreren Kameras – ein Vorbild für Feldspurs Abgleich. Ein Dokument, das sich codieren lässt, liefern sie
 aber nicht.
-<!-- Nachweis resolve (https://www.blackmagicdesign.com/products/davinciresolve): „Automatic A/V Syncing“; „The sync
-     bin and source overwrite tools let you quickly edit multicam programs.“ Geprüft am 15.11.2026. -->
+<!-- Nachweis resolve (https://www.blackmagicdesign.com/products/davinciresolve): "Automatic A/V Syncing"; "The sync
+     bin and source overwrite tools let you quickly edit multicam programs." Geprüft am 15.11.2026. -->
 
 ## Was Feldspur bewusst nicht tut
 
@@ -77,8 +77,8 @@ ist in der qualitativen Forschung schon Interpretation, und Forschungsdaten soll
 Transkript hat, kann es trotzdem einlesen (@sec-mitschreiben). Die Entscheidung liegt dann eben bei den Forschenden,
 nicht im Werkzeug.]
 <!-- Nachweis radford2023 (Volltext: https://ar5iv.labs.arxiv.org/html/2212.04356; bibliografische Angaben:
-     https://proceedings.mlr.press/v202/radford23a.html): „We call our approach Whisper“ (Abschnitt 1); „These results
-     indicate that Whisper's English ASR performance is not perfect but very close to human-level accuracy.“
+     https://proceedings.mlr.press/v202/radford23a.html): "We call our approach Whisper" (Abschnitt 1); "These results
+     indicate that Whisper's English ASR performance is not perfect but very close to human-level accuracy."
      (Abschnitt 3.9). Geprüft am 15.11.2026. -->
 
 ## Die Lücke

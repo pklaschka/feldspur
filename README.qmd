@@ -1,6 +1,9 @@
 ---
 title: Feldspur
-# Ohne fancy_lists, sonst wird ein Zeilenanfang wie „z. B.“ zur Aufzählung.
+lang: de
+filters:
+  - handbuch/anfuehrungszeichen.lua
+# Ohne fancy_lists, sonst wird ein Zeilenanfang wie "z. B." zur Aufzählung.
 from: markdown-fancy_lists
 format:
   gfm:
@@ -93,7 +96,7 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
 - **Zeitbeleg** (`TimeEvidence`): eine Angabe, wann eine Stelle der Quelle war: Metadaten, Dateiname, angesagte Uhrzeit,
   Anker oder von Hand. Die Lage auf der Achse wird nie gespeichert, sondern immer aus den Belegen berechnet
   (`resolveTimeline`), damit nachvollziehbar bleibt, worauf sie sich stützt.
-- **Sync-Anker** (`SyncAnchor`): „dieser Moment in A = dieser Moment in B“ (Klatschen, Tonspur-Vergleich, von Hand).
+- **Sync-Anker** (`SyncAnchor`): "dieser Moment in A = dieser Moment in B" (Klatschen, Tonspur-Vergleich, von Hand).
   Daraus ergibt sich die Abweichung eines Geräts, oder eine Quelle ohne eigene Zeit erbt ihre Lage.
 - **Tonspur-Analyse**: Hüllkurve (100 Werte/s), Leerlauf (Stille ab 5 Min.) und laute Stellen darin (Wachhund) werden
   je Quelle in der Projektdatei zwischengespeichert. Daraus schlägt Feldspur Anker vor: per Kreuzkorrelation bei
@@ -101,8 +104,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   abstimmen. Vorschläge zählen erst nach Bestätigung.
 - **Episode**: Zeitraum, in dem eine Aufnahme läuft und nicht Leerlauf ist (Lücken unter 5 Min. werden verbunden).
   Dazwischen liegen Zwischenzeiten mit Fotos und Tagebucheinträgen.
-- **Geräteuhr**: Abweichung zur Referenzuhr (auch Stunden oder Tage, z. B. „+1 Tag 2:00:00“), dazu optional die
-  Zeitzone, auf die die Uhr gestellt war. Als UTC markierte Stempel („…Z“) gelten als UTC. Eine von Hand gesetzte
+- **Geräteuhr**: Abweichung zur Referenzuhr (auch Stunden oder Tage, z. B. "+1 Tag 2:00:00"), dazu optional die
+  Zeitzone, auf die die Uhr gestellt war. Als UTC markierte Stempel ("…Z") gelten als UTC. Eine von Hand gesetzte
   Zeit in einem Clip kann die Uhr des ganzen Geräts richten; die übrigen Clips rücken dann mit.
 - **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
@@ -112,14 +115,14 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und eine **Montage-ID**, die auch im Kopf des
   Zeitgerüsts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
   nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
-  weil die LGPL-Fassung von FFmpeg keine Schrift setzt; „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den
+  weil die LGPL-Fassung von FFmpeg keine Schrift setzt; "Montage ansehen" spielt dieselbe Montage ohne Rechnen aus den
   Originalen ab. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft und Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Zeitgerüst, Montage, Mitschrift
   und Suche führen den Eintrag an der Notierzeit; der Bezugszeitraum steht als Hinweis dabei.
 
 Alle Uhrzeiten sind Ortszeit des Einsatzes, intern als `LocalMs` (Wanduhrzeit in ms, gelesen als UTC). Unsicherheiten
-werden als Wurzel der Quadratsumme kombiniert; „sicher“ heißt ± 2 s oder besser bei bekannter Geräteuhr.
+werden als Wurzel der Quadratsumme kombiniert; "sicher" heißt ± 2 s oder besser bei bekannter Geräteuhr.
 
 # Entwickeln
 
@@ -157,13 +160,13 @@ vp run readme                          # README.md aus README.qmd neu erzeugen (
 
 Das PDF setzt das in Quarto enthaltene Typst, LaTeX ist nicht nötig. Die Webseite lädt nichts von fremden Servern
 (keine CDNs, keine Webfonts) und setzt keine Cookies; `handbuch/extern-pruefen.ts` prüft das nach jedem Rendern. Der Workflow
-„Handbuch-Webseite“ prüft außerdem, dass README.md zu den Quellen passt, und veröffentlicht die Seite bei Änderungen
-auf main über GitHub Pages (einmalig unter Settings → Pages die Quelle „GitHub Actions“ wählen). Bildschirmfotos in
+"Handbuch-Webseite" prüft außerdem, dass README.md zu den Quellen passt, und veröffentlicht die Seite bei Änderungen
+auf main über GitHub Pages (einmalig unter Settings → Pages die Quelle "GitHub Actions" wählen). Bildschirmfotos in
 `handbuch/bilder/` zeigen nur erfundene Daten.
 
 # Installationspaket
 
-Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Installationspaket“ in GitHub Actions,
+Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow "Installationspaket" in GitHub Actions,
 von Hand, bei Änderungen an der Paketierung und als Teil jeder Release; die Dateien liegen danach als Artefakte am
 Lauf. Das App-Symbol liegt als [`packaging/icon.svg`](packaging/icon.svg) (Quelle) und `packaging/icon.png` (1024 px,
 daraus erzeugt electron-builder `.icns` und `.ico`). Lokal für die eigene Plattform:
@@ -188,13 +191,13 @@ Versioniert wird nur die App (Tags `v0.2.0`, `v0.2.0-rc.1`); `packages/*` laufen
 Eine Release startet von Hand: **Actions → Release → Run workflow**, Version eintragen.
 
 - **Version:** `0.2.0` für ein Release, `0.2.0-rc.1` (oder `-alpha.N`, `-beta.N`) für eine Vorabversion.
-- **Sichtbarkeit:** Standard ist „Vorabversionen als Entwurf“. Entwürfe sehen nur Personen mit Schreibrechten, und
+- **Sichtbarkeit:** Standard ist "Vorabversionen als Entwurf". Entwürfe sehen nur Personen mit Schreibrechten, und
   Zenodo archiviert sie nicht. So bekommen Release Candidates keine eigene DOI. Ein Entwurf lässt sich später unter
   Releases von Hand veröffentlichen; dann archiviert Zenodo ihn doch.
 - **Probelauf:** baut alles und zeigt Changelog und Release-Text in der Zusammenfassung, pusht aber nichts.
 
 Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
-`package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, committet „Release vX“ auf `main`,
+`package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, committet "Release vX" auf `main`,
 taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und dem
 PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an.

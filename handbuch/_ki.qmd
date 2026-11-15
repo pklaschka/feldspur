@@ -23,7 +23,7 @@ Aber:
 - Die Software steht allen Forschenden offen zur Verfügung. Falls es, das sei mal dahingestellt, einen wirklich
   ethisch einwandfreien Zweck für die Nutzung dieser Systeme gibt, dann doch die gemeinnützige Förderung zugänglicher
   Forschung.
-- Ich fürchte, wir können es uns in Zeiten von „publish or perish“ nicht leisten, ohne aus der Wissenschaft verdrängt
+- Ich fürchte, wir können es uns in Zeiten von "publish or perish" nicht leisten, ohne aus der Wissenschaft verdrängt
   zu werden, auf dem hohen Ross des Schwarz-Weiß-Denkens zu sitzen und sogenannte KI-Systeme pauschal zu verurteilen.
   Umso mehr möchte ich sie dort einsetzen, wo sie uns als Forschende unterstützen, statt uns zu ersetzen: um unsere
   Forschung zu vereinfachen und teilweise vielleicht erst zu ermöglichen. Für so einen Einsatz halte ich dieses

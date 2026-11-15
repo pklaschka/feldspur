@@ -8,7 +8,7 @@ FFmpeg [@ffmpeg] (in der LGPL-Fassung) ist bereits enthalten, du musst nichts we
 
 ::: {.callout-note}
 Die Pakete sind noch nicht signiert. Windows und macOS warnen deshalb beim ersten Start. Unter macOS öffnest du die
-App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über „Weitere Informationen“ › „Trotzdem ausführen“.
+App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über "Weitere Informationen" › "Trotzdem ausführen".
 :::
 
 ### Projekt und Einsatz
@@ -29,7 +29,7 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 
 Über **Einsatzdaten bearbeiten** neben dem Titel trägst du ein, was zum Quellennachweis gehört:
 
-- **Ort**, z. B. „Marktplatz“.
+- **Ort**, z. B. "Marktplatz".
 - **Zeitzone** des Einsatzes. Manche Geräte schreiben ihre Zeitstempel in UTC; Feldspur rechnet sie damit in die
   Ortszeit um. Alle Uhrzeiten in Feldspur sind Ortszeit des Einsatzes.
 - **Bezugszeitraum fürs Tagebuch**: wie weit ein Tagebucheintrag vor die Notierzeit zurückreicht (Standard
@@ -41,7 +41,7 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 ### Die vier Schritte
 
 Oben im Fenster stehen die vier Arbeitsschritte eines Einsatzes. Kleine Hinweise an den Reitern zeigen, wo noch etwas
-offen ist, etwa „2 zu prüfen“ oder „3 ohne Zeit“.
+offen ist, etwa "2 zu prüfen" oder "3 ohne Zeit".
 
 1. **Einsammeln** (@sec-einsammeln): alle Dateien hineinziehen, Feldspur ordnet sie Geräten zu.
 2. **Abgleichen** (@sec-abgleichen): die Uhren der Geräte aufeinander abstimmen.

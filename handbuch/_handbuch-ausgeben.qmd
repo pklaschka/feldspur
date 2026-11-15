@@ -19,7 +19,7 @@ Tagebuch stehen schon im Zeitgerüst und fehlen deshalb im Video.
 Optionen:
 
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
-- **Nach Episoden schneiden** (nur wenn unter „Durchsehen“ Episoden eingeschaltet sind): Episoden in voller Länge,
+- **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
 - **Ton aller Geräte mischen**: sonst nur die Haupttonquelle.
 - **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
