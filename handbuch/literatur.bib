@@ -1,23 +1,14 @@
-@book{emerson2011,
-  author    = {Emerson, Robert M. and Fretz, Rachel I. and Shaw, Linda L.},
-  title     = {Writing Ethnographic Fieldnotes},
-  edition   = {2},
-  publisher = {University of Chicago Press},
-  address   = {Chicago},
-  year      = {2011}
-}
+% Literatur für Begleittext und Handbuch.
+%
+% Regel (Zuri, 15.11.2026): Nur zitieren, wo eine Aussage wirklich einen Beleg braucht. Jede Angabe ist im Volltext
+% bzw. auf der Herstellerseite geprüft. Über jedem Eintrag steht, wo und mit welchem Wortlaut. Was sich nicht im
+% Volltext prüfen ließ, wurde gestrichen (Pink 2013, Emerson et al. 2011, Silver & Lewins 2014,
+% Kuckartz & Rädiker 2019). Die zitierenden Stellen stehen zusätzlich als HTML-Kommentar in _einordnung.qmd.
 
-
-@book{pink2013,
-  author    = {Pink, Sarah},
-  title     = {Doing Visual Ethnography},
-  edition   = {3},
-  publisher = {SAGE},
-  address   = {London},
-  year      = {2013}
-}
-
-
+% Geprüft am 15.11.2026, Volltext https://www.humanities.uci.edu/critical/pdf/kirksey.pdf
+% S. 565: "A multisensory approach—grappling with unfamiliar sensoriums, with different kinds of touch, smell,
+% taste, and vision"; S. 564: Fuentes "deploys a hybrid methodological tool kit". Bibliografische Angaben laut
+% Kopf des Artikels (Cultural Anthropology 25(4), 545–576).
 @article{kirksey2010,
   author  = {Kirksey, S. Eben and Helmreich, Stefan},
   title   = {The Emergence of Multispecies Ethnography},
@@ -29,27 +20,10 @@
   doi     = {10.1111/j.1548-1360.2010.01069.x}
 }
 
-
-@book{silver2014,
-  author    = {Silver, Christina and Lewins, Ann},
-  title     = {Using Software in Qualitative Research: A Step-by-Step Guide},
-  edition   = {2},
-  publisher = {SAGE},
-  address   = {London},
-  year      = {2014}
-}
-
-
-@book{kuckartz2019,
-  author    = {Kuckartz, Udo and Rädiker, Stefan},
-  title     = {Analyzing Qualitative Data with {MAXQDA}: Text, Audio, and Video},
-  publisher = {Springer},
-  address   = {Cham},
-  year      = {2019},
-  doi       = {10.1007/978-3-030-15671-8}
-}
-
-
+% Geprüft am 15.11.2026, Volltext https://core.ac.uk/download/215349759.pdf
+% S. 61: "The 2016 international KWALON conference: Reflecting on the future of QDA software";
+% S. 69: "As a result of the conference, the developers present agreed to work towards the goal of a common
+% exchange format" (Rotterdam Exchange Format Initiative).
 @article{evers2018,
   author  = {Evers, Jeanine C.},
   title   = {Current Issues in Qualitative Data Analysis Software ({QDAS}): A User and Developer Perspective},
@@ -57,21 +31,28 @@
   volume  = {23},
   number  = {13},
   pages   = {61--73},
-  year    = {2018}
+  year    = {2018},
+  doi     = {10.46743/2160-3715/2018.3205}
 }
 
-
+% Geprüft am 15.11.2026, Volltext
+% https://pure.mpg.de/pubman/item/item_60436_2/component/file_60437/LREC%202006_Elan_Wittenburg.pdf
+% "Annotations are grouped on layers, in ELAN referred to as 'tiers'"; Zahl der Videos "first was increased from
+% 1 to 2 and later from 2 to 4"; "A relative or absolute offset can be determined and stored per media file."
+% Angaben laut https://aclanthology.org/L06-1082/ (dort keine Seitenzahlen, daher weggelassen).
 @inproceedings{wittenburg2006,
   author    = {Wittenburg, Peter and Brugman, Hennie and Russel, Albert and Klassmann, Alex and Sloetjes, Han},
   title     = {{ELAN}: A Professional Framework for Multimodality Research},
-  booktitle = {Proceedings of the Fifth International Conference on Language Resources and Evaluation ({LREC} 2006)},
-  pages     = {1556--1559},
+  booktitle = {Proceedings of the Fifth International Conference on Language Resources and Evaluation ({LREC}'06)},
   address   = {Genoa},
   publisher = {European Language Resources Association},
-  year      = {2006}
+  year      = {2006},
+  url       = {https://aclanthology.org/L06-1082/}
 }
 
-
+% Geprüft am 15.11.2026, Volltext https://ar5iv.labs.arxiv.org/html/2212.04356, Angaben laut
+% https://proceedings.mlr.press/v202/radford23a.html. Abschnitt 1: "We call our approach Whisper";
+% Abschnitt 3.9: "Whisper's English ASR performance is not perfect but very close to human-level accuracy."
 @inproceedings{radford2023,
   author    = {Radford, Alec and Kim, Jong Wook and Xu, Tao and Brockman, Greg and McLeavey, Christine and Sutskever, Ilya},
   title     = {Robust Speech Recognition via Large-Scale Weak Supervision},
@@ -79,74 +60,95 @@
   series    = {Proceedings of Machine Learning Research},
   volume    = {202},
   pages     = {28492--28518},
-  year      = {2023}
+  year      = {2023},
+  url       = {https://proceedings.mlr.press/v202/radford23a.html}
 }
 
+% Geprüft am 15.11.2026, https://www.maxqda.com/help-mx22/import/transcripts-with-timestamps
+% "The associated audio or video file is copied into the folder for external files and assigned to the
+% transcript." und "Clicking in the area of the timestamps plays the media file at the corresponding position."
+% Erkanntes Zeitmarkenformat u. a. #hh:mm:ss-x#.
+@manual{maxqdazeitmarken,
+  author       = {{VERBI GmbH}},
+  title        = {{MAXQDA} 2022 Online-Handbuch: Transkripte mit Zeitmarken importieren},
+  organization = {VERBI GmbH},
+  url          = {https://www.maxqda.com/help-mx22/import/transcripts-with-timestamps},
+  urldate      = {2026-11-15}
+}
 
+% Software: Herstellerseite am 15.11.2026 aufgerufen.
 @software{maxqda,
-  author       = {{VERBI Software}},
+  author       = {{VERBI GmbH}},
   title        = {{MAXQDA}},
-  organization = {VERBI Software},
-  address      = {Berlin},
-  url          = {https://www.maxqda.com}
+  url          = {https://www.maxqda.com},
+  urldate      = {2026-11-15}
 }
-
 
 @software{atlasti,
-  author       = {{ATLAS.ti Scientific Software Development GmbH}},
-  title        = {{ATLAS.ti}},
-  address      = {Berlin},
-  url          = {https://atlasti.com}
+  author  = {{ATLAS.ti Scientific Software Development GmbH}},
+  title   = {{ATLAS.ti}},
+  url     = {https://atlasti.com},
+  urldate = {2026-11-15}
 }
-
 
 @software{nvivo,
-  author = {{Lumivero}},
-  title  = {{NVivo}},
-  url    = {https://lumivero.com/products/nvivo/}
+  author  = {{Lumivero}},
+  title   = {{NVivo}},
+  url     = {https://lumivero.com/products/nvivo/},
+  urldate = {2026-11-15}
 }
 
-
+% Geprüft am 15.11.2026, https://www.transana.com: "Sophisticated Tools for the Analysis of Video, Audio, Image,
+% Text, PDF, and Survey Data"; Professional: "Import, transcribe, code and analyze up to 4 simultaneous media
+% files." (Personen als Urheber*innen dort nicht eindeutig genannt, daher Transana als Körperschaft.)
 @software{transana,
-  author = {Woods, David K. and Fassnacht, Chris},
-  title  = {Transana},
-  organization = {Spurgeon Woods LLC},
+  author  = {{Transana}},
+  title   = {Transana},
   address = {Madison, WI},
-  url    = {https://www.transana.com}
+  url     = {https://www.transana.com},
+  urldate = {2026-11-15}
 }
 
-
+% Geprüft am 15.11.2026, https://www.blackmagicdesign.com/products/davinciresolve: "Automatic A/V Syncing";
+% "The sync bin and source overwrite tools let you quickly edit multicam programs."
 @software{resolve,
-  author = {{Blackmagic Design}},
-  title  = {{DaVinci Resolve}},
-  url    = {https://www.blackmagicdesign.com/products/davinciresolve}
+  author  = {{Blackmagic Design}},
+  title   = {{DaVinci Resolve}},
+  url     = {https://www.blackmagicdesign.com/products/davinciresolve},
+  urldate = {2026-11-15}
 }
 
-
+% Geprüft am 15.11.2026, https://www.qdasoftware.org: "The REFI-QDA Standard enables interoperability between
+% Qualitative Data Analysis Software (QDAS or CAQDAS) programmes."
 @online{refiqda,
-  author = {{REFI -- Rotterdam Exchange Format Initiative}},
-  title  = {{REFI-QDA} Standard},
-  url    = {https://www.qdasoftware.org}
+  author  = {{REFI -- Rotterdam Exchange Format Initiative}},
+  title   = {{REFI-QDA} Standard},
+  url     = {https://www.qdasoftware.org},
+  urldate = {2026-11-15}
 }
 
-
+% Herstellerseite am 15.11.2026 aufgerufen (www.anthropic.com/claude-code leitet hierher weiter).
 @software{claudecode,
-  author = {{Anthropic}},
-  title  = {Claude Code},
-  url    = {https://www.anthropic.com/claude-code}
+  author  = {{Anthropic}},
+  title   = {Claude Code},
+  url     = {https://claude.com/product/claude-code},
+  urldate = {2026-11-15}
 }
 
+% Geprüft am 15.11.2026, https://archive.mpi.nl/tla/elan: "With ELAN a user can add an unlimited number of
+% textual annotations to audio and/or video recordings."
 @software{elan,
-  author = {{The Language Archive, Max Planck Institute for Psycholinguistics}},
-  title  = {{ELAN}},
+  author  = {{The Language Archive, Max Planck Institute for Psycholinguistics}},
+  title   = {{ELAN}},
   address = {Nijmegen},
-  url    = {https://archive.mpi.nl/tla/elan}
+  url     = {https://archive.mpi.nl/tla/elan},
+  urldate = {2026-11-15}
 }
 
-
+% Projektseite am 15.11.2026 aufgerufen.
 @software{ffmpeg,
-  author = {{FFmpeg Developers}},
-  title  = {{FFmpeg}},
-  url    = {https://ffmpeg.org}
+  author  = {{FFmpeg Developers}},
+  title   = {{FFmpeg}},
+  url     = {https://ffmpeg.org},
+  urldate = {2026-11-15}
 }
-
