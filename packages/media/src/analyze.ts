@@ -13,7 +13,16 @@ import {
   type ProjectStore,
   speechLevelDb,
 } from "@feldspur/core";
-import { computeEnvelope, detectIdle, packEnvelope, unpackEnvelope, type Envelope, type IdleOptions } from "./audio.ts";
+import {
+  audioLevelOf,
+  computeEnvelope,
+  detectIdle,
+  packEnvelope,
+  unpackEnvelope,
+  type AudioLevel,
+  type Envelope,
+  type IdleOptions,
+} from "./audio.ts";
 import { proposeAnchors, type AnchorProposal } from "./sync.ts";
 
 /** Erhöhen, wenn sich Hüllkurve oder Leerlauf-Erkennung ändern. */
@@ -143,4 +152,35 @@ export async function measureSource(store: ProjectStore, sourceId: Id): Promise<
     analyzedAt: new Date().toISOString(),
   });
   return level;
+}
+
+/**
+ * Lautstärke-Angleichung aller Ton- und Videoquellen eines Einsatzes, so wie sie im Montagevideo
+ * gilt. Mit measureMissing werden Quellen auf „automatisch“, die noch keinen Pegel haben, zuerst
+ * gemessen (dekodiert die ganze Datei).
+ */
+export async function sessionLevels(
+  store: ProjectStore,
+  sessionId: Id,
+  opts: { measureMissing?: boolean; onProgress?: (done: number, total: number) => void } = {},
+): Promise<Map<Id, AudioLevel | null>> {
+  const sources = store.listSources(sessionId).filter((s) => s.kind === "audio" || s.kind === "video");
+  const measured = speechLevels(store, sessionId);
+  if (opts.measureMissing) {
+    const missing = sources.filter((s) => s.levelMode === "auto" && !measured.has(s.id));
+    for (const [i, s] of missing.entries()) {
+      opts.onProgress?.(i, missing.length);
+      // Nicht lesbare Dateien bleiben unverändert; das Montagevideo scheitert daran nicht.
+      measured.set(s.id, await measureSource(store, s.id).catch(() => null));
+    }
+    if (missing.length) opts.onProgress?.(missing.length, missing.length);
+  }
+  return new Map(sources.map((s) => [s.id, audioLevelOf(s, measured.get(s.id) ?? null)]));
+}
+
+/** „+12,0 dB, Kompressor“ für Begleitprotokoll und Oberfläche. */
+export function levelText(level: AudioLevel | null | undefined): string {
+  if (!level) return "unverändert";
+  const db = `${level.gainDb >= 0 ? "+" : "−"}${Math.abs(level.gainDb).toFixed(1).replace(".", ",")} dB`;
+  return level.compress ? `${db}, Kompressor` : db;
 }

@@ -8,14 +8,7 @@
  * vollständig geladen.
  */
 import { spawn } from "node:child_process";
-import {
-  COMPRESSOR,
-  dbToGain,
-  effectiveGainDb,
-  levelActive,
-  LIMIT_DB,
-  type Source,
-} from "@feldspur/core";
+import { COMPRESSOR, dbToGain, effectiveGainDb, levelActive, LIMIT_DB, type Source } from "@feldspur/core";
 import { toolPaths } from "./tools.ts";
 
 /** Werte pro Sekunde in der Hüllkurve. */
@@ -440,7 +433,7 @@ export function levelFilter(level: AudioLevel | null): string {
   if (level.compress) {
     const c = COMPRESSOR;
     parts.push(
-      `acompressor=threshold=${dbToGain(c.thresholdDb).toFixed(5)}:ratio=${c.ratio}:knee=${dbToGain(c.kneeDb / 2).toFixed(3)}` +
+      `acompressor=threshold=${dbToGain(c.thresholdDb).toFixed(5)}:ratio=${c.ratio}:knee=${dbToGain(c.kneeDb).toFixed(3)}` +
         `:attack=${c.attackMs}:release=${c.releaseMs}:makeup=${dbToGain(c.makeupDb).toFixed(3)}`,
     );
   }

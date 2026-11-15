@@ -436,6 +436,11 @@ function SessionPane({
             },
             toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
             removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
+            setLevel: (id, input) => update(guard(() => api.setLevel(id, input))),
+            measureLevel: async (id) => {
+              const v = await guard(() => api.measureLevel(id));
+              if (v) setView(v);
+            },
             openDiary: setDiaryPage,
             transcribe: setTranscribeId,
             importTranscript: async (id, mode) => {

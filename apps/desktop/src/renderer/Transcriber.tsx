@@ -10,6 +10,7 @@ import type { Guard } from "./App.tsx";
 import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
 import { Button, Choice, CloseButton, cx, Glyph, Picker } from "./ui.tsx";
+import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
 
 const api = window.feldspur;
 
@@ -91,6 +92,7 @@ function Body({
 }) {
   const { position, seek } = usePlayback();
   const media = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  useLevel(media, row.level);
   const input = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState(position?.sourceId === row.id ? position.atMs : 0);
   const [playing, setPlaying] = useState(false);
@@ -307,6 +309,7 @@ function Body({
             <video
               ref={media}
               src={mediaUrl(row.id)}
+              {...LEVEL_MEDIA_PROPS}
               preload="auto"
               className="block max-h-[45vh] w-full rounded-lg bg-black"
               onLoadedMetadata={() => seekTo(pos)}
@@ -319,6 +322,7 @@ function Body({
             <audio
               ref={media}
               src={mediaUrl(row.id)}
+              {...LEVEL_MEDIA_PROPS}
               preload="auto"
               onLoadedMetadata={() => seekTo(pos)}
               onPlay={() => setPlaying(true)}

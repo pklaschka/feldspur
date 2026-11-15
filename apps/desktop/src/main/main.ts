@@ -6,6 +6,8 @@ import { localMs, ProjectStore } from "@feldspur/core";
 import {
   analyzeSession,
   applyImport,
+  measureSource,
+  refineAlignment,
   parseTranscript,
   readPeaks,
   scanPaths,
@@ -16,6 +18,7 @@ import {
   IPC,
   MEDIA_SCHEME,
   type AnchorInput,
+  type LevelInput,
   type DiaryPatch,
   type Region,
   type ImportOutcome,
@@ -26,7 +29,7 @@ import {
   type ProjectInfo,
 } from "../shared/api.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "./diary.ts";
-import { addManualAnchor, addTimeEvidence, removeEvidence, toggleEvidence } from "./edits.ts";
+import { addManualAnchor, addTimeEvidence, removeEvidence, replaceAnchor, setLevel, toggleEvidence } from "./edits.ts";
 import { exportRunning, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
@@ -309,6 +312,32 @@ function registerIpc(): void {
   ipcMain.handle(IPC.addAnchor, (_e, input: AnchorInput) => {
     const s = requireStore();
     return buildSessionView(s, addManualAnchor(s, input));
+  });
+  ipcMain.handle(IPC.replaceAnchor, (_e, anchorId: string, input: AnchorInput) => {
+    const s = requireStore();
+    return buildSessionView(s, replaceAnchor(s, anchorId, input));
+  });
+  ipcMain.handle(
+    IPC.alignRefine,
+    (_e, i: { aSourceId: string; aAtMs: number; bSourceId: string; bAtMs: number; searchMs: number }) => {
+      const s = requireStore();
+      return refineAlignment({
+        aPath: s.getSource(i.aSourceId).originalPath,
+        aAtMs: i.aAtMs,
+        bPath: s.getSource(i.bSourceId).originalPath,
+        bAtMs: i.bAtMs,
+        searchMs: i.searchMs,
+      });
+    },
+  );
+  ipcMain.handle(IPC.setLevel, (_e, sourceId: string, input: LevelInput) => {
+    const s = requireStore();
+    return buildSessionView(s, setLevel(s, sourceId, input));
+  });
+  ipcMain.handle(IPC.measureLevel, async (_e, sourceId: string) => {
+    const s = requireStore();
+    await measureSource(s, sourceId);
+    return buildSessionView(s, s.getSource(sourceId).sessionId);
   });
 
   ipcMain.handle(IPC.createDiaryEntry, (_e, sourceId: string, region: Region) => {

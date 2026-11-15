@@ -4,6 +4,7 @@ import type { Guard } from "./App.tsx";
 import { offsetText, parseOffset } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
 import { Button, Choice, cx, Glyph, Notice, Panel, Picker, Pill, PRECISION_OPTIONS, StepHeader, Tip } from "./ui.tsx";
+import { FineAlign, guessB, type FineAlignStart } from "./FineAlign.tsx";
 
 const api = window.feldspur;
 
@@ -50,6 +51,7 @@ export function Sync({
 }) {
   const [progress, setProgress] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [fine, setFine] = useState<FineAlignStart | null>(null);
   const hasReference = view.devices.some((d) => d.isReference);
 
   if (!view.devices.length) {
@@ -132,12 +134,22 @@ export function Sync({
                 onOffset={(ms) => onOffset(d.id, ms)}
                 onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
                 onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
+                onFine={(p) =>
+                  setFine({
+                    aSourceId: p.a.sourceId,
+                    aAtMs: p.a.atMs,
+                    bSourceId: p.b.sourceId,
+                    bAtMs: p.b.atMs,
+                    replaceAnchorId: p.anchorId,
+                  })
+                }
               />
             ))}
           </div>
         </Panel>
-        <ManualAnchors view={view} guard={guard} onView={onView} onSelect={onSelect} />
+        <ManualAnchors view={view} guard={guard} onView={onView} onSelect={onSelect} onFine={setFine} />
       </div>
+      <FineAlign view={view} start={fine} guard={guard} onView={onView} onClose={() => setFine(null)} />
     </div>
   );
 }
@@ -158,6 +170,7 @@ function ClockRow({
   onOffset,
   onConfirm,
   onReject,
+  onFine,
 }: {
   device: DeviceRow;
   span: number;
@@ -166,6 +179,7 @@ function ClockRow({
   onOffset: (ms: number | null) => void;
   onConfirm: (anchorId: string) => void;
   onReject: (anchorId: string) => void;
+  onFine: (p: ProposalRow) => void;
 }) {
   const pos = (ms: number) => `${50 + scale(ms, span) * 50}%`;
   const dot = "absolute top-1/2 -mt-[7px] -ml-[7px] size-3.5 rounded-full";
@@ -226,6 +240,7 @@ function ClockRow({
           p={p}
           onConfirm={() => onConfirm(p.anchorId)}
           onReject={() => onReject(p.anchorId)}
+          onFine={() => onFine(p)}
         />
       ))}
     </div>
@@ -259,7 +274,17 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
   );
 }
 
-function Proposal({ p, onConfirm, onReject }: { p: ProposalRow; onConfirm: () => void; onReject: () => void }) {
+function Proposal({
+  p,
+  onConfirm,
+  onReject,
+  onFine,
+}: {
+  p: ProposalRow;
+  onConfirm: () => void;
+  onReject: () => void;
+  onFine: () => void;
+}) {
   const sure = (p.confidence ?? 0) >= 0.5;
   return (
     <div
@@ -280,11 +305,22 @@ function Proposal({ p, onConfirm, onReject }: { p: ProposalRow; onConfirm: () =>
       <Button variant="primary" size="sm" onClick={onConfirm}>
         Übernehmen
       </Button>
+      <Button size="sm" onClick={onFine} title="Waveforms übereinander ansehen und genau ausrichten">
+        Fein justieren…
+      </Button>
       <Button size="sm" onClick={onReject}>
         Verwerfen
       </Button>
     </div>
   );
+}
+
+/** "1:20.5" → ms; leer oder unlesbar → null. */
+function safePos(text: string): number | null {
+  const m = /^(?:(\d+):)?(?:(\d+):)?(\d+(?:[.,]\d+)?)$/.exec(text.trim());
+  if (!m) return null;
+  const parts = [m[1], m[2], m[3]].filter((x) => x !== undefined).map((x) => Number(x!.replace(",", ".")));
+  return Math.round(parts.reduce((acc, p) => acc * 60 + p, 0) * 1000);
 }
 
 const ANCHOR_KIND = { clap: "Klatschen", "audio-correlation": "Tonspur", manual: "von Hand" } as const;
@@ -295,11 +331,13 @@ function ManualAnchors({
   guard,
   onView,
   onSelect,
+  onFine,
 }: {
   view: SessionView;
   guard: Guard;
   onView: (v: SessionView) => void;
   onSelect: (id: string) => void;
+  onFine: (start: FineAlignStart) => void;
 }) {
   const { position } = usePlayback();
   const sources = view.rows
@@ -311,6 +349,9 @@ function ManualAnchors({
   const [bAt, setBAt] = useState("");
   const [precision, setPrecision] = useState<Precision>("exact");
   const [note, setNote] = useState("");
+
+  const rowOf = (id: string) => view.rows.find((r) => r.id === id);
+  const isAv = (id: string) => ["audio", "video"].includes(rowOf(id)?.kind ?? "");
 
   const submit = async () => {
     const v = await guard(() => api.addAnchor({ aSourceId: a, aAt, bSourceId: b, bAt, precision, note }));
@@ -380,6 +421,22 @@ function ManualAnchors({
               <Button
                 variant="link"
                 className="text-[0.8rem]"
+                onClick={() =>
+                  onFine({
+                    aSourceId: x.a.sourceId,
+                    aAtMs: x.a.atMs,
+                    bSourceId: x.b.sourceId,
+                    bAtMs: x.b.atMs,
+                    replaceAnchorId: x.id,
+                    note: x.note,
+                  })
+                }
+              >
+                fein justieren
+              </Button>
+              <Button
+                variant="link"
+                className="text-[0.8rem]"
                 onClick={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
               >
                 löschen
@@ -417,6 +474,21 @@ function ManualAnchors({
             onChange={(e) => setNote(e.target.value)}
             aria-label="Notiz zum Anker"
           />
+          <Button
+            size="sm"
+            type="button"
+            disabled={!a || !b || a === b || !isAv(a) || !isAv(b)}
+            title="Waveforms beider Aufnahmen übereinander legen und genau ausrichten"
+            onClick={() => {
+              const ra = rowOf(a);
+              const aMs = safePos(aAt) ?? (position?.sourceId === a ? position.atMs : 0);
+              const bMs = safePos(bAt) ?? guessB(ra, rowOf(b), aMs);
+              onFine({ aSourceId: a, aAtMs: aMs, bSourceId: b, bAtMs: bMs, note });
+            }}
+            data-testid="fine-open"
+          >
+            Fein abgleichen…
+          </Button>
           <Button variant="primary" size="sm" type="submit" disabled={!a || !b || a === b}>
             Anker setzen
           </Button>

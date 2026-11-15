@@ -18,7 +18,10 @@ export const LEVEL_MANUAL_RANGE_DB = [-30, 40] as const;
 /**
  * Kompressor „leise Stellen anheben“. Werte für Web Audio (DynamicsCompressorNode) und FFmpeg
  * (acompressor) gleich gewählt. Über der Schwelle wird der Pegel im Verhältnis 1:ratio gedämpft, die
- * Aufholverstärkung bringt Sprache wieder auf den Zielpegel: leise Sprecher*innen rücken näher heran.
+ * Aufholverstärkung hebt danach alles wieder an: leise Sprecher*innen rücken näher an laute heran.
+ *
+ * Die Aufholverstärkung folgt der Formel, die Web Audio fest eingebaut hat (Spezifikation:
+ * (1 / Verstärkung bei 0 dBFS)^0,6). FFmpeg bekommt sie ausdrücklich, damit beides gleich klingt.
  */
 export const COMPRESSOR = {
   thresholdDb: -32,
@@ -26,8 +29,8 @@ export const COMPRESSOR = {
   kneeDb: 8,
   attackMs: 5,
   releaseMs: 250,
-  /** (Ziel − Schwelle) · (1 − 1/ratio): gleicht die Dämpfung am Zielpegel aus. */
-  makeupDb: Math.round((LEVEL_TARGET_DB - -32) * (1 - 1 / 4) * 10) / 10,
+  /** 0,6 · |Schwelle| · (1 − 1/ratio), wie Web Audio sie selbst anwendet. */
+  makeupDb: Math.round(0.6 * 32 * (1 - 1 / 4) * 10) / 10,
 } as const;
 /** Begrenzer am Ende, damit verstärkte Spitzen nicht übersteuern. */
 export const LIMIT_DB = -1;

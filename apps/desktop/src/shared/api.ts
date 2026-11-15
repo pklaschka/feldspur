@@ -2,7 +2,7 @@
  * Schnittstelle zwischen Oberfläche (Renderer) und Hauptprozess.
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
-import type { FieldSession, OffsetBasis, Peaks, PlacementStatus, SourceKind } from "@feldspur/core";
+import type { FieldSession, LevelMode, OffsetBasis, Peaks, PlacementStatus, SourceKind } from "@feldspur/core";
 import type { MontagePreview } from "@feldspur/media";
 
 export interface RecentProject {
@@ -64,6 +64,26 @@ export interface SourceRow {
   isPdf: boolean;
   status: PlacementStatus;
   notes: string[];
+  /** Lautstärke-Angleichung (nur Audio/Video). */
+  level: LevelRow | null;
+}
+
+export interface LevelRow {
+  mode: LevelMode;
+  /** Einstellung „von Hand“. */
+  manualGainDb: number;
+  compress: boolean;
+  /** Gemessener Sprachpegel in dBFS; null = still; undefined = noch nicht gemessen. */
+  measuredDb: number | null;
+  measured: boolean;
+  /** Verstärkung, die gerade gilt (beim Abhören und im Montagevideo). */
+  gainDb: number;
+}
+
+export interface LevelInput {
+  mode: LevelMode;
+  manualGainDb: number;
+  compress: boolean;
 }
 
 export interface EvidenceRow {
@@ -89,6 +109,23 @@ export interface AnchorRow {
   note: string;
   /** Widerspricht anderen Belegen um so viel; null = passt. */
   conflictMs: number | null;
+  /** Die beiden Stellen, für den Feinabgleich. */
+  a: AnchorEnd;
+  b: AnchorEnd;
+}
+
+export interface AnchorEnd {
+  sourceId: string;
+  atMs: number;
+}
+
+/** Ergebnis von „Einrasten“: die beste Stelle in B zur Stelle in A, im Suchfenster um die bisherige. */
+export interface AlignResult {
+  bAtMs: number;
+  /** Korrelation 0 … 1 */
+  score: number;
+  /** Abstand zur nächstbesten Lage (ab ca. 1,5 eindeutig). */
+  distinctness: number;
 }
 
 export type Precision = "exact" | "approx" | "rough";
@@ -110,6 +147,8 @@ export interface TimeInput {
 }
 
 export interface AnchorInput {
+  /** Genauigkeit in ms statt der Stufe (Feinabgleich: wenige ms). */
+  uncertaintyMs?: number;
   aSourceId: string;
   aAt: string;
   bSourceId: string;
@@ -204,6 +243,8 @@ export interface ProposalRow {
   impliedOffsetMs: number | null;
   deviceId: string | null;
   deviceLabel: string;
+  a: AnchorEnd;
+  b: AnchorEnd;
 }
 
 export interface EpisodeRow {
@@ -331,6 +372,20 @@ export interface FeldspurApi {
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
+  /** Anker oder Vorschlag durch einen fein justierten Anker ersetzen. */
+  replaceAnchor(anchorId: string, input: AnchorInput): Promise<SessionView>;
+  /** Stelle in B suchen, die am besten zur Stelle in A passt (± searchMs um bAtMs). */
+  alignRefine(input: {
+    aSourceId: string;
+    aAtMs: number;
+    bSourceId: string;
+    bAtMs: number;
+    searchMs: number;
+  }): Promise<AlignResult | null>;
+  /** Lautstärke-Angleichung einer Quelle einstellen. */
+  setLevel(sourceId: string, input: LevelInput): Promise<SessionView>;
+  /** Sprachpegel einer Quelle messen (dekodiert die ganze Datei). */
+  measureLevel(sourceId: string): Promise<SessionView>;
   /** Neuer Tagebucheintrag mit Rahmen; gibt die Id des Eintrags mit zurück. */
   createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
   addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
@@ -420,6 +475,10 @@ export const IPC = {
   setEvidenceEnabled: "evidence:enable",
   removeEvidence: "evidence:remove",
   addAnchor: "anchor:add",
+  replaceAnchor: "anchor:replace",
+  alignRefine: "anchor:refine",
+  setLevel: "level:set",
+  measureLevel: "level:measure",
   createDiaryEntry: "diary:create",
   addDiaryRegion: "diary:add-region",
   removeDiaryRegion: "diary:remove-region",
