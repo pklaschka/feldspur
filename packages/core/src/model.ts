@@ -112,6 +112,14 @@ export const Source = z.object({
    * Dauermitschnitt in mehrere Dateien). Beginn = Ende der Vorgängerdatei.
    */
   follows: Id.nullable().default(null),
+  /**
+   * Lautstärke beim Abhören und in der Montage (siehe level.ts): automatisch auf gleichen
+   * Sprachpegel, von Hand (levelGainDb) oder unverändert. Das Original bleibt, wie es ist.
+   */
+  levelMode: z.enum(["auto", "manual", "off"]).default("auto"),
+  levelGainDb: z.number().default(0),
+  /** Leise Stellen anheben (Kompressor). */
+  levelCompress: z.boolean().default(true),
 });
 export type Source = z.infer<typeof Source>;
 
@@ -236,6 +244,8 @@ export const AudioAnalysis = z.object({
   noiseFloorDb: z.number(),
   idle: z.array(Interval),
   loudInIdle: z.array(z.object({ atMs: z.number().int(), aboveFloorDb: z.number() })),
+  /** Sprachpegel in dBFS (level.ts speechLevelDb); null = nichts Hörbares oder noch nicht berechnet. */
+  speechLevelDb: z.number().nullable().default(null),
   /** Version des Analyseverfahrens; bei Änderung wird neu analysiert. */
   version: z.number().int(),
   analyzedAt: z.iso.datetime(),
