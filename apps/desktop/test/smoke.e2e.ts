@@ -331,6 +331,34 @@ try {
   const firstLine = await tr.getByTestId("line").first().innerText();
   console.log(`Mitschrift: ${firstLine.replace(/\s+/g, " ")}`);
   if (!/10:1(5:59|6:0\d)/.test(firstLine)) throw new Error(`Erste Zeile nicht bei etwa 10:16:00: ${firstLine}`);
+  // Waveform: Spitzen für den Ausschnitt kommen an (die Testaufnahmen haben Ton).
+  await tr.getByTestId("waveform").waitFor();
+  const loudest = await page.evaluate(async (sid) => {
+    const v = await window.feldspur.getSession(sid);
+    const a = v.rows.find((r) => r.fileName === "ZOOM0001.m4a")!;
+    const p = await window.feldspur.waveformPeaks(a.id, 55_000, 65_000, 200);
+    return Math.max(...p.max);
+  }, sessionId);
+  if (!(loudest > 0)) throw new Error("Waveform ohne Ausschlag");
+  console.log(`Waveform: lauteste Spitze ${loudest.toFixed(3)}`);
+  // Lange Zeile an der Schreibmarke teilen (Strg+Enter).
+  const second = tr.getByTestId("line").nth(1).getByLabel("Text der Zeile");
+  await second.click();
+  await second.evaluate((el: HTMLTextAreaElement) => el.setSelectionRange(12, 12));
+  await second.press("Control+Enter");
+  await tr.getByTestId("line").nth(2).waitFor();
+  console.log(`Geteilt: ${(await tr.getByTestId("line").nth(2).innerText()).replace(/\s+/g, " ")}`);
+  // Notiz mit Strecke: noch abzutippender Abschnitt.
+  const notes = tr.getByTestId("notes");
+  await notes.getByRole("button", { name: "Beginn hier" }).click();
+  await page.mouse.click(sb.x + sb.width * 0.3, sb.y + sb.height / 2);
+  await notes.getByRole("button", { name: "Ende hier" }).click();
+  await notes.getByLabel("Neue Notiz").fill("noch abtippen: zwei Stimmen durcheinander");
+  await notes.getByRole("button", { name: "Notiz anlegen" }).click();
+  await notes
+    .getByTestId("note")
+    .getByText(/^1:0\d\S* – (2:5|3:0)\d/)
+    .waitFor();
   // Esc schaltet die Wiedergabe um und schließt den Dialog nicht.
   await newLine.press("Escape");
   await newLine.press("Escape");
@@ -338,7 +366,8 @@ try {
   await shot("-mitschreiben");
   await tr.getByRole("button", { name: "Fertig" }).click();
   await tr.waitFor({ state: "detached" });
-  await page.getByTestId("transcript-summary").getByText("2 Zeilen").waitFor();
+  await page.getByTestId("transcript-summary").getByText("3 Zeilen").waitFor();
+  await page.getByTestId("inspector").getByTestId("note").getByText("noch abtippen", { exact: false }).waitFor();
 
   // Automatisches Transkript (erfundenes Whisper-VTT) dazuholen.
   const vtt = join(dir, "A-01.vtt");
@@ -352,7 +381,7 @@ try {
   await page.getByTestId("inspector").getByRole("button", { name: "Transkript importieren…" }).click();
   await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }).click();
   await page.getByTestId("inspector").getByRole("status").getByText("2 Zeilen übernommen").waitFor();
-  await page.getByTestId("transcript-summary").getByText("4 Zeilen").waitFor();
+  await page.getByTestId("transcript-summary").getByText("5 Zeilen").waitFor();
 
   // Schnellsuche (Strg+K) findet die importierte Zeile und springt hin.
   await page.keyboard.press("Control+k");

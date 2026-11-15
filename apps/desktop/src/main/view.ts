@@ -16,6 +16,7 @@ import type {
   GapRow,
   ProposalRow,
   SessionView,
+  SourceNoteRow,
   SourceRow,
   TranscriptRow,
 } from "../shared/api.ts";
@@ -245,9 +246,19 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     };
   });
 
+  const notes: SourceNoteRow[] = store.listSourceNotes(sessionId).map((n) => ({
+    id: n.id,
+    sourceId: n.sourceId,
+    fromMs: n.fromMs,
+    toMs: n.toMs,
+    text: n.text,
+    done: n.done,
+  }));
+
   return {
     session: input.session,
     transcript,
+    notes,
     rows,
     anchors,
     diary,
