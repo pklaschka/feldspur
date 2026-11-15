@@ -6,7 +6,8 @@ import { formatClock, formatDuration } from "@feldspur/core/time";
 import { H, LAYOUT, MAX_TILES, videoTiles, W } from "@feldspur/media/layout";
 import { Dialog } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
-import { mediaUrl, type MontagePreview, type PreviewPiece } from "../shared/api.ts";
+import { mediaUrl, type LevelRow, type MontagePreview, type PreviewPiece } from "../shared/api.ts";
+import { applyLevel, LEVEL_MEDIA_PROPS } from "./level.ts";
 
 import { pieceAt, previewFrame } from "./montage.ts";
 import { drawOverlay } from "./overlay.ts";
@@ -23,11 +24,14 @@ export function MontageView({
   realtime,
   open,
   onOpenChange,
+  levels,
 }: {
   sessionId: string;
   realtime: boolean;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  /** Lautstärke-Angleichung je Quelle, wie im Montagevideo. */
+  levels?: Map<string, LevelRow | null>;
 }) {
   const [plan, setPlan] = useState<MontagePreview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,14 +69,14 @@ export function MontageView({
           {error && <p className="p-6 text-bad">{error}</p>}
           {!error && !plan && <p className="p-6 text-muted">Lade…</p>}
           {plan && plan.durationMs <= 0 && <p className="p-6 text-muted">Noch keine Quelle mit Uhrzeit.</p>}
-          {plan && plan.durationMs > 0 && <Player plan={plan} />}
+          {plan && plan.durationMs > 0 && <Player plan={plan} levels={levels} />}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
 }
 
-function Player({ plan }: { plan: MontagePreview }) {
+function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, LevelRow | null> }) {
   const { pieces, durationMs, header } = plan;
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -141,6 +145,7 @@ function Player({ plan }: { plan: MontagePreview }) {
       }
       const src = mediaUrl(m.sourceId);
       if (el.getAttribute("src") !== src) el.setAttribute("src", src);
+      applyLevel(el, levels?.get(m.sourceId));
       el.muted = muted;
       if (Math.abs(el.currentTime - at(m)) > DRIFT_S) el.currentTime = at(m);
       if (playing && el.paused) void el.play().catch(() => undefined);
@@ -201,6 +206,7 @@ function Player({ plan }: { plan: MontagePreview }) {
                 style={{ left: b.x, top: b.y, width: b.w, height: b.h }}
                 playsInline
                 preload="auto"
+                {...LEVEL_MEDIA_PROPS}
               />
             );
           })}
@@ -211,6 +217,7 @@ function Player({ plan }: { plan: MontagePreview }) {
                 audioEls.current[k] = el;
               }}
               preload="auto"
+              {...LEVEL_MEDIA_PROPS}
             />
           ))}
           <canvas ref={overlay} width={W} height={H} className="pointer-events-none absolute inset-0" />

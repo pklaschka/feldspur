@@ -110,7 +110,13 @@ export function ExportStep({ view }: { view: SessionView }) {
           <Button className="mt-4" disabled={empty} onClick={() => setWatching(true)}>
             Montage ansehen
           </Button>
-          <MontageView sessionId={sessionId} realtime={realtime} open={watching} onOpenChange={setWatching} />
+          <MontageView
+            sessionId={sessionId}
+            realtime={realtime}
+            open={watching}
+            onOpenChange={setWatching}
+            levels={new Map(view.rows.map((r) => [r.id, r.level]))}
+          />
           <label className="mt-5 flex items-center gap-2.5 text-[0.9rem]">
             <Toggle checked={video} onChange={setVideo} label="Montagevideo mit ausgeben" />
             Montagevideo mit ausgeben

@@ -7,12 +7,13 @@ import {
   combineUncertainty,
   effectiveLocal,
   formatClock,
+  LEVEL_MANUAL_RANGE_DB,
   localMs,
   resolveTimeline,
   type Id,
   type ProjectStore,
 } from "@feldspur/core";
-import type { AnchorInput, TimeInput } from "../shared/api.ts";
+import type { AnchorInput, LevelInput, TimeInput } from "../shared/api.ts";
 
 /** ± je Genauigkeitsstufe. */
 export const PRECISION_MS = { exact: 1_000, approx: 60_000, rough: 15 * 60_000 } as const;
@@ -158,8 +159,41 @@ export function addManualAnchor(s: ProjectStore, input: AnchorInput): Id {
     kind: "manual",
     a: { sourceId: a.id, atMediaMs: parseMediaPos(input.aAt) },
     b: { sourceId: b.id, atMediaMs: parseMediaPos(input.bAt) },
-    uncertaintyMs: PRECISION_MS[input.precision],
+    uncertaintyMs:
+      input.uncertaintyMs !== undefined ? Math.max(1, Math.round(input.uncertaintyMs)) : PRECISION_MS[input.precision],
     note: input.note.trim(),
   });
   return a.sessionId;
+}
+
+/**
+ * Anker oder Vorschlag durch einen fein justierten ersetzen. War es ein Vorschlag, erledigen sich
+ * wie beim Übernehmen die übrigen Vorschläge für dasselbe Gerät.
+ */
+export function replaceAnchor(s: ProjectStore, anchorId: Id, input: AnchorInput): Id {
+  const old = s.getAnchor(anchorId);
+  return s.transaction(() => {
+    s.deleteAnchor(anchorId);
+    const sessionId = addManualAnchor(s, input);
+    if (old.proposed) {
+      const device = s.getSource(old.b.sourceId).deviceId;
+      for (const other of s.listAnchors(sessionId)) {
+        if (other.proposed && device && s.getSource(other.b.sourceId).deviceId === device) s.deleteAnchor(other.id);
+      }
+    }
+    return sessionId;
+  });
+}
+
+/** Lautstärke-Angleichung einer Ton- oder Videoquelle einstellen. */
+export function setLevel(s: ProjectStore, sourceId: Id, input: LevelInput): Id {
+  const src = s.getSource(sourceId);
+  if (src.kind !== "audio" && src.kind !== "video") throw new Error(`${src.label} hat keinen Ton`);
+  const [lo, hi] = LEVEL_MANUAL_RANGE_DB;
+  s.updateSource(sourceId, {
+    levelMode: input.mode,
+    levelGainDb: Math.round(Math.min(hi, Math.max(lo, input.manualGainDb)) * 10) / 10,
+    levelCompress: input.compress,
+  });
+  return src.sessionId;
 }

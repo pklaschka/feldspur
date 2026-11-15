@@ -22,6 +22,7 @@ import { promisify } from "node:util";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
 import type { Scaffold } from "./scaffold.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
+import { levelFilter, type AudioLevel } from "./audio.ts";
 import { probeMedia } from "./probe.ts";
 import { toolPaths } from "./tools.ts";
 
@@ -269,6 +270,8 @@ export interface MontageVideoOptions {
   audioMix?: "all" | "main";
   /** Wie viele Abschnitte gleichzeitig; Standard: halbe Kernzahl, höchstens 4. */
   parallel?: number;
+  /** Lautstärke-Angleichung je Quelle (audioLevelOf); fehlt eine Quelle, bleibt ihr Ton unverändert. */
+  levels?: Map<string, AudioLevel | null>;
 }
 
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
@@ -354,7 +357,13 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
           await Promise.all(
             pieces.map(async (p, i) => [
               p.f1 - p.f0,
-              await Promise.all(sounds[i]!.map(async (a) => [await fileId(a.source.originalPath), a.fromMs])),
+              await Promise.all(
+                sounds[i]!.map(async (a) => [
+                  await fileId(a.source.originalPath),
+                  a.fromMs,
+                  opts.levels?.get(a.source.id) ?? null,
+                ]),
+              ),
             ]),
           ),
         ),
@@ -388,7 +397,10 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
         const f: string[] = [];
         for (const [k, a] of src.entries()) {
           args.push("-ss", (a.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3), "-i", a.source.originalPath);
-          f.push(`[${k}:a]aresample=${RATE},aformat=sample_fmts=fltp:channel_layouts=stereo[a${k}]`);
+          const level = levelFilter(opts.levels?.get(a.source.id) ?? null);
+          f.push(
+            `[${k}:a]aresample=${RATE},aformat=sample_fmts=fltp:channel_layouts=stereo${level ? `,${level}` : ""}[a${k}]`,
+          );
         }
         const mix =
           src.length > 1

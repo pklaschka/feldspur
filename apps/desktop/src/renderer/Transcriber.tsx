@@ -16,6 +16,7 @@ import { positionText, usePlayback } from "./playback.tsx";
 import { oneParagraph, splitLine, waveWindow } from "./transcribe.ts";
 import { Button, Choice, CloseButton, cx, Glyph, Picker, Toggle } from "./ui.tsx";
 import { usePeakTiles, Waveform, type WaveBand, type WaveMarker } from "./Waveform.tsx";
+import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
 
 const api = window.feldspur;
 
@@ -104,6 +105,7 @@ function Body({
 }) {
   const { position, seek } = usePlayback();
   const media = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  useLevel(media, row.level);
   const input = useRef<HTMLTextAreaElement>(null);
   const [pos, setPos] = useState(position?.sourceId === row.id ? position.atMs : 0);
   const posRef = useRef(pos);
@@ -447,6 +449,7 @@ function Body({
             <video
               ref={media}
               src={mediaUrl(row.id)}
+              {...LEVEL_MEDIA_PROPS}
               preload="auto"
               className="block max-h-[38vh] w-full rounded-lg bg-black"
               onLoadedMetadata={() => seekTo(pos)}
@@ -459,6 +462,7 @@ function Body({
             <audio
               ref={media}
               src={mediaUrl(row.id)}
+              {...LEVEL_MEDIA_PROPS}
               preload="auto"
               onLoadedMetadata={() => seekTo(pos)}
               onPlay={() => setPlaying(true)}

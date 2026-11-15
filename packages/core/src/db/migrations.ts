@@ -145,4 +145,11 @@ export const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX source_notes_source ON source_notes(source_id);
   `,
+  // 9: Lautstärke angleichen
+  `
+  ALTER TABLE sources ADD COLUMN level_mode TEXT NOT NULL DEFAULT 'auto';
+  ALTER TABLE sources ADD COLUMN level_gain_db REAL NOT NULL DEFAULT 0;
+  ALTER TABLE sources ADD COLUMN level_compress INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE audio_analysis ADD COLUMN speech_level_db REAL;
+  `,
 ];
