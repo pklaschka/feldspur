@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { oneParagraph, splitLine, transcriberKey, waveWindow } from "../src/renderer/transcribe.ts";
+import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "../src/renderer/transcribe.ts";
 
 describe("Mitschreiben: Hilfen", () => {
   it("Waveform-Ausschnitt läuft mit und bleibt in der Datei", () => {
@@ -75,5 +75,13 @@ describe("Mitschreiben: Hilfen", () => {
       expect(transcriberKey(key("Enter", { ctrlKey: true }), on("textarea"), field)).toBeNull();
       expect(transcriberKey(key("a"), body, null)).toBeNull();
     });
+  });
+
+  it("erkennt ein Sprecherkürzel am Zeilenanfang schon beim Tippen", () => {
+    expect(leadingSpeaker("B1: ")).toEqual({ speaker: "B1", rest: "" });
+    expect(leadingSpeaker("H: Zwölf Jahre")).toEqual({ speaker: "H", rest: "Zwölf Jahre" });
+    expect(leadingSpeaker("B1:")).toBeNull(); // noch kein Leerzeichen
+    expect(leadingSpeaker("10: Uhr")).toBeNull(); // Zahl, kein Kürzel
+    expect(leadingSpeaker("Interviewerin: ja")).toBeNull(); // zu lang für ein Kürzel
   });
 });

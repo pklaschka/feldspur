@@ -1,0 +1,69 @@
+name: Handbuch-Webseite
+
+# Baut Begleittext und Handbuch (handbuch/) als Webseite mit PDF und veröffentlicht sie auf GitHub Pages.
+# Prüft außerdem, dass README.md zu README.qmd und den Textbausteinen in handbuch/ passt.
+# Einmalig nötig: Settings → Pages → Source „GitHub Actions“.
+# In Pull Requests wird nur gebaut und geprüft, nicht veröffentlicht.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "handbuch/**"
+      - "README.qmd"
+      - "README.md"
+      - ".github/actions/quarto/**"
+      - ".github/workflows/handbuch-seite.yml"
+  pull_request:
+    paths:
+      - "handbuch/**"
+      - "README.qmd"
+      - "README.md"
+      - ".github/actions/quarto/**"
+      - ".github/workflows/handbuch-seite.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: handbuch-seite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Vite+ für `vp fmt` (README) und Node.
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: 22
+          cache: true
+      - uses: ./.github/actions/quarto
+      - name: README aktuell?
+        run: |
+          vp run readme
+          git diff --exit-code README.md || {
+            echo "::error::README.md passt nicht zu README.qmd und handbuch/. Bitte \`vp run readme\` ausführen."
+            exit 1
+          }
+      # Quarto baut Webseite und PDF; extern-pruefen.ts bricht ab, wenn die Seite etwas von fremden Servern lädt.
+      - run: quarto render handbuch
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: handbuch/_site
+
+  veroeffentlichen:
+    name: veröffentlichen
+    if: github.event_name != 'pull_request'
+    needs: bauen
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

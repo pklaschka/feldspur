@@ -324,6 +324,15 @@ try {
     .waitFor();
   await tr.getByTestId("other-line").filter({ hasText: "Das hört man auch im Video." }).waitFor();
   console.log("Andere Spur: Zeile aus dem Video sichtbar");
+  // Tonquelle: erst dasselbe Gerät, dann mit Trennlinie die anderen.
+  await tr.getByRole("combobox", { name: "Tonquelle" }).click();
+  const opts = page.getByRole("listbox");
+  await opts.getByText("Andere Geräte").waitFor();
+  const optTexts = await opts.getByRole("option").allInnerTexts();
+  if (!/ZOOM0002/.test(optTexts[1] ?? "")) throw new Error(`Reihenfolge der Tonquellen: ${optTexts.join(" | ")}`);
+  await shot("-tonquelle");
+  await page.keyboard.press("Escape");
+  await opts.waitFor({ state: "detached" });
   const scrub = tr.getByRole("slider", { name: "Stelle in der Aufnahme" });
   const sb = (await scrub.boundingBox())!;
   // Stelle aus der Länge der Aufnahme, damit der Klick genau 1:00 trifft.

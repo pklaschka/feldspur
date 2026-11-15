@@ -1,17 +1,32 @@
 # Feldspur
 
+<!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
+
 Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
-**eine gemeinsame Uhrzeit-Achse** und macht daraus später ein codierbares Quelldokument, zuerst für MAXQDA.
+**eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zuerst für MAXQDA.
+
+**Begleittext und Handbuch:** [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/) (auch als PDF,
+das jeder Release beiliegt). Der Begleittext erzählt, warum es Feldspur gibt, ordnet es in bestehende Werkzeuge und
+Literatur ein und legt offen, wie es mit generativer KI entsteht.
 
 > [!IMPORTANT]
-> **Forschungswerkzeug, (noch) kein Produkt.** Feldspur entsteht als Werkzeug für meine eigene ethnografische
-> Forschung. Es richtet sich nach meinen Arbeitsabläufen, ist nicht für die allgemeine Nutzung gedacht und hat weder
-> stabile Formate noch Support, Installationshilfe oder Garantien. Projektdateien und Exporte können sich zwischen
-> Versionen ohne Übergang ändern. Wer es trotzdem ausprobieren möchte, ist willkommen, sollte aber mit Ecken und Kanten
-> rechnen.
+>
+> #### Mit generativer KI entwickelt
+>
+> Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests und auch der
+> Dokumentation wurde von Claude (Anthropic) geschrieben, im Dialog mit mir. Fragestellung, Konzept, Anforderungen und
+> Entscheidungen stammen von mir. Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: Es transkribiert nicht
+> automatisch, nutzt keine Cloud-Dienste und arbeitet vollständig auf dem eigenen Rechner. Mehr dazu, auch zu meiner
+> Haltung zur Nutzung sogenannter KI, im Abschnitt „Entstehung mit generativer KI“.
 
-Arbeitstitel, Stand: in Entwicklung (Einsammeln, Zeitbestimmung, Abgleich, Durchsehen, Mitschreiben, Tagebuch
-abtippen und Ausgeben funktionieren). Konzept und Tech-Stack sind außerhalb des Repositorys dokumentiert.
+> [!WARNING]
+>
+> #### Forschungswerkzeug, (noch) kein Produkt
+>
+> Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
+> und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
+> ändern. Wer es ausprobieren möchte, ist herzlich eingeladen. Mit Ecken und Kanten ist aber zu rechnen. Ergebnisse, die in eine
+> Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
@@ -20,35 +35,50 @@ Ein Eintrag kann auf einer anderen Seite weitergehen.
 
 ![Abtipp-Ansicht mit zwei Einträgen auf einer erfundenen Seite](docs/tagebuch.png)
 
-## Entstehung mit KI
+## Entstehung mit generativer KI
+
+### Wer was macht
 
 Feldspur wird **zu großen Teilen mit generativer KI entwickelt**. Der Großteil des Codes, der Tests, der Skripte und
-dieser Dokumentation wurde von Claude (Anthropic) über Claude Code geschrieben, im Dialog mit mir. Von mir stammen die
-Fragestellung, das Konzept, die Anforderungen aus der Feldforschung und die Entscheidungen; ich gebe die Richtung vor,
-sehe Ergebnisse durch und probiere sie aus. Ich lese aber nicht jede Zeile Code selbst gegen. Commits, an denen die KI
-beteiligt war, tragen eine `Co-Authored-By`-Zeile.
+der Dokumentation, auch dieses Texts, wurde von Claude (Anthropic) über Claude Code geschrieben, im Dialog mit mir.
+Von mir stammen die Fragestellung, das Konzept, die Anforderungen aus der Feldforschung und die Entscheidungen. Ich gebe
+die Richtung vor, sehe Ergebnisse durch und probiere sie aus. Jede Zeile Code lese ich allerdings nicht selbst gegen.
+Commits, an denen die KI beteiligt war, tragen im Repository eine `Co-Authored-By`-Zeile.
 
-Was das für die Nutzung heißt:
+Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat). Auch das kann sich nicht jede\*r leisten. Ich
+erwähne es deshalb zur Transparenz. Und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu
+stellen.
+
+### Was das für die Nutzung heißt
 
 - Der Code kann Fehler enthalten, die weder Tests noch ich bemerkt haben. Ergebnisse, die in eine Analyse oder
   Veröffentlichung eingehen, bitte an den Originalaufnahmen prüfen.
 - Feldspur ist deshalb bewusst auf Nachvollziehbarkeit gebaut: Originale werden nie verändert und über Prüfsummen
-  belegt, jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet, und automatische Vorschläge (z. B.
+  belegt. Jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet. Automatische Vorschläge (z. B.
   Sync-Anker) zählen erst, wenn sie von Hand bestätigt wurden.
 - Feldspur selbst setzt **keine KI** auf Forschungsdaten ein: keine automatische Transkription, keine Cloud-Dienste.
   Alles läuft lokal.
 
-## Zitieren
+Meine Haltung zur Nutzung sogenannter KI steht ausführlich im
+[Begleittext](https://pklaschka.github.io/feldspur/#sec-ki).
 
-Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, findet die Zitierangaben in
-[`CITATION.cff`](CITATION.cff); GitHub bietet daraus oben rechts „Cite this repository“ (APA und BibTeX) an. Kurzform:
+## Zitieren und archivieren
+
+Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bitte mit Version oder Commit. Denn
+das Werkzeug verändert sich (noch) stark:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
-> (Version 0.1.0) [Software]. https://github.com/pklaschka/feldspur
+> (Version 0.1.0) \[Software\]. <https://github.com/pklaschka/feldspur>
 
-Autor*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687).
+Autor\*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687).
 
-Bitte die tatsächlich verwendete Version oder den Commit angeben, da sich das Werkzeug noch stark verändert.
+Die vollständigen Angaben stehen in
+[`CITATION.cff`](https://github.com/pklaschka/feldspur/blob/main/CITATION.cff); GitHub bietet daraus „Cite this
+repository“ (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Dieser
+Text liegt jedem Release als PDF bei und wird so mit archiviert.
+
+Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/). Dieser Text steht unter
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de).
 
 Für die Spiegelung nach Zenodo ist das Repository dort einmalig zu aktivieren. Danach erzeugt jede veröffentlichte
 GitHub-Release automatisch einen Zenodo-Datensatz mit eigener DOI; die Metadaten stehen in [`.zenodo.json`](.zenodo.json),
@@ -98,7 +128,7 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   **Abweichung** (`clockOffsetMs`, Geräteuhr minus Referenz, positiv = geht vor).
 - **Quelle** (`Source`): eine Originaldatei mit Prüfsumme. Kurzzeichen wie im Begleitprotokoll: `V-01`, `A-01`,
   `F-001`, `T-01`. Originale werden nie verändert. Eine Quelle kann **weiteres Bild** einer Seite sein (`partOf`,
-  z. B. Rückseite oder zweiter Scan) und übernimmt dann deren Zeit, oder eine **Folgeaufnahme** (`follows`): ein Gerät,
+  z\. B. Rückseite oder zweiter Scan) und übernimmt dann deren Zeit, oder eine **Folgeaufnahme** (`follows`): ein Gerät,
   das in mehrere Dateien teilt, setzt die vorige Datei nahtlos fort. Folgeaufnahmen erkennt Feldspur beim Einsammeln
   (gleiches Gerät, Beginn = Ende der vorigen ± 3 s, oder GoPro-Kapitel); ohne eigene Zeit beginnt sie am Ende der vorigen.
 - **Zeitbeleg** (`TimeEvidence`): eine Angabe, wann eine Stelle der Quelle war: Metadaten, Dateiname, angesagte Uhrzeit,
@@ -155,6 +185,23 @@ vp run probe /pfad/1_Rohquellen --reference ZOOM0004.m4a \
 Abgleich mit dem Begleitprotokoll des Testpakets als Test:
 `FELDSPUR_TESTPAKET=/pfad/1_Rohquellen vp run test`.
 
+## Handbuch und README
+
+Begleittext und Handbuch liegen als [Quarto](https://quarto.org)-Manuskript in [`handbuch/`](handbuch) (Text unter
+CC BY 4.0). **Diese README wird aus `README.qmd` und denselben Textbausteinen erzeugt**; Änderungen bitte dort machen.
+Bauen mit Quarto 1.9 im PATH:
+
+```sh
+quarto render handbuch                 # Webseite und PDF nach handbuch/_site/ (auch: vp run handbook)
+vp run readme                          # README.md aus README.qmd neu erzeugen (quarto render + vp fmt)
+```
+
+Das PDF setzt das in Quarto enthaltene Typst, LaTeX ist nicht nötig. Die Webseite lädt nichts von fremden Servern
+(keine CDNs, keine Webfonts) und setzt keine Cookies; `handbuch/extern-pruefen.ts` prüft das nach jedem Rendern. Der Workflow
+„Handbuch-Webseite“ prüft außerdem, dass README.md zu den Quellen passt, und veröffentlicht die Seite bei Änderungen
+auf main über GitHub Pages (einmalig unter Settings → Pages die Quelle „GitHub Actions“ wählen). Bildschirmfotos in
+`handbuch/bilder/` zeigen nur erfundene Daten.
+
 ## Installationspaket
 
 Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Installationspaket“ in GitHub Actions,
@@ -189,12 +236,12 @@ Eine Release startet von Hand: **Actions → Release → Run workflow**, Version
 
 Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
 `package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, committet „Release vX“ auf `main`,
-taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und (sobald
-es eins gibt) dem PDF-Handbuch an. Das Handbuch hängt über [`handbook.yml`](.github/workflows/handbook.yml) ein: ein
-Skript `handbook` in der Wurzel-`package.json`, das PDFs nach `dist/handbuch/` legt.
+taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und dem
+PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
+und hängt es als `Feldspur-Handbuch-<version>.pdf` an.
 
 Das Changelog entsteht aus den **Titeln der zusammengeführten Pull Requests**, deshalb sollten die Titel für
-Nutzer*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `neu`, `verbessert`, `behoben`, `doku`, `intern`;
+Nutzer\*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `neu`, `verbessert`, `behoben`, `doku`, `intern`;
 `kein-changelog` lässt einen PR weg (siehe [`.github/release.yml`](.github/release.yml)). Direkt auf `main` gepushte
 Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zugehörigen Vorabversionen zusammen.
 

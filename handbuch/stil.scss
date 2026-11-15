@@ -1,0 +1,22 @@
+/*-- scss:defaults --*/
+// Nur Systemschriften: keine Webfonts, nichts von fremden Servern.
+$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$font-family-monospace: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+$web-font-path: false;
+$primary: #2f5bd3;
+$body-bg: #fbfaf7;
+$body-color: #22201c;
+
+/*-- scss:rules --*/
+.callout-important .callout-title-container {
+  font-weight: 600;
+}
+
+.fs-fusszeile {
+  margin: 3rem auto 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(127, 127, 127, 0.3);
+  font-size: 0.85rem;
+  text-align: center;
+  opacity: 0.8;
+}

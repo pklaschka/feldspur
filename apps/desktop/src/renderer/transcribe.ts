@@ -84,3 +84,13 @@ export function transcriberKey(e: KeyLike, target: TargetLike | null, newLine: u
   if (e.key === " " && target?.closest(PRESSABLE)) return null;
   return "type";
 }
+
+/**
+ * Sprecherkürzel am Zeilenanfang („B1: …“), schon während des Tippens: sobald nach dem Doppelpunkt
+ * ein Leerzeichen steht, wandert das Kürzel ins Sprecherfeld. Das Kürzel beginnt mit einem Buchstaben,
+ * damit Uhrzeiten wie „10: …“ Text bleiben.
+ */
+export function leadingSpeaker(text: string): { speaker: string; rest: string } | null {
+  const m = /^\s*(\p{L}[\p{L}\d]{0,5}):\s+(.*)$/su.exec(text);
+  return m ? { speaker: m[1]!, rest: m[2]! } : null;
+}

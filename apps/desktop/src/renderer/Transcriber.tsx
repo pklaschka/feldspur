@@ -13,7 +13,7 @@ import type { Guard } from "./App.tsx";
 import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
-import { oneParagraph, splitLine, transcriberKey, waveWindow } from "./transcribe.ts";
+import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "./transcribe.ts";
 import { Button, Choice, CloseButton, cx, Glyph, Picker, Toggle } from "./ui.tsx";
 import { usePeakTiles, Waveform, type WaveBand, type WaveMarker } from "./Waveform.tsx";
 import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
@@ -97,6 +97,21 @@ export function Transcriber({
 
 type Item = { kind: "line"; atMs: number; line: TranscriptRow } | { kind: "event"; atMs: number; event: Event };
 
+/** Tonquellen: erst die Dateien desselben Geräts (dieselbe Spur), dann mit Trennlinie die übrigen. */
+function sourceOptions(row: SourceRow, avRows: SourceRow[]) {
+  const byLabel = (a: SourceRow, b: SourceRow) => a.label.localeCompare(b.label, "de", { numeric: true });
+  const same = avRows.filter((r) => r.deviceId === row.deviceId).sort(byLabel);
+  const other = avRows.filter((r) => r.deviceId !== row.deviceId).sort(byLabel);
+  return [...same, ...other].map((r, i) => ({
+    value: r.id,
+    label: `${r.label} · ${r.fileName}`,
+    groupStart: i === same.length && same.length > 0 ? "Andere Geräte" : undefined,
+  }));
+}
+
+/** Bei gleicher Stelle: erst „… beginnt“ und Tagebuch, dann Zeilen anderer Spuren, dann die eigenen. */
+const itemRank = (it: Item) => (it.kind === "line" ? 2 : it.event.other ? 1 : 0);
+
 function Body({
   view,
   row,
@@ -148,7 +163,7 @@ function Body({
       [
         ...lines.map((l) => ({ kind: "line" as const, atMs: l.atMs, line: l })),
         ...events.map((e) => ({ kind: "event" as const, atMs: e.atMs, event: e })),
-      ].sort((a, b) => a.atMs - b.atMs || (a.kind === "event" ? -1 : 1)),
+      ].sort((a, b) => a.atMs - b.atMs || itemRank(a) - itemRank(b)),
     [lines, events],
   );
   const nextAt = useMemo(() => {
@@ -331,7 +346,7 @@ function Body({
           placeholder="Tonquelle wählen"
           value={row.id}
           onChange={onSource}
-          options={avRows.map((r) => ({ value: r.id, label: `${r.label} · ${r.fileName}` }))}
+          options={sourceOptions(row, avRows)}
           className="w-72"
         />
         <span className="text-[0.8rem] text-muted">
@@ -473,9 +488,17 @@ function Body({
                 }
               }}
               onChange={(e) => {
-                const v = oneParagraph(e.target.value);
-                if (mark === null && v) setMark(pos);
-                if (!v) setMark(null);
+                let v = oneParagraph(e.target.value);
+                // „B1: “ am Anfang wechselt sofort den Sprecher.
+                const lead = leadingSpeaker(v);
+                if (lead) {
+                  setSpeaker(lead.speaker);
+                  v = lead.rest;
+                  if (mark === null) setMark(pos);
+                } else {
+                  if (mark === null && v) setMark(pos);
+                  if (!v) setMark(null);
+                }
                 setDraft(v);
               }}
             />
@@ -575,7 +598,10 @@ function Body({
               dazwischen liegt.
             </dd>
             <dt className="font-mono font-medium">B1: …</dt>
-            <dd>Sprecher wechseln, wenn die Zeile so beginnt</dd>
+            <dd>
+              Sprecher wechseln: sobald nach dem Doppelpunkt ein Leerzeichen folgt, wandert das Kürzel ins Feld davor
+              (auch in bestehenden Zeilen)
+            </dd>
           </dl>
           <p className="-mt-1 text-[0.8rem] text-muted">
             Die Tasten gelten überall im Dialog. Tippst du, während nichts ausgewählt ist, geht es in der neuen Zeile
@@ -724,7 +750,15 @@ const Line = memo(function Line({
         onChange={(e) => setText(oneParagraph(e.target.value))}
         onBlur={() => {
           if (splitting.current) splitting.current = false;
-          else if (text !== line.text) actions.patch(line.id, { text });
+          else {
+            // „B1: …“ am Anfang einer bestehenden Zeile setzt deren Sprecher.
+            const lead = leadingSpeaker(text);
+            if (lead) {
+              setSpeaker(lead.speaker);
+              setText(lead.rest);
+              actions.patch(line.id, { speaker: lead.speaker, text: lead.rest });
+            } else if (text !== line.text) actions.patch(line.id, { text });
+          }
         }}
         onKeyDown={(e) => {
           if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
