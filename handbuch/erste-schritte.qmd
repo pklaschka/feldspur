@@ -1,0 +1,57 @@
+# Erste Schritte {#sec-erste-schritte}
+
+## Installieren
+
+Feldspur gibt es für Windows, macOS und Linux. Die Installationsdateien liegen bei jedem
+[Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch dieses Handbuch als PDF.
+FFmpeg (in der LGPL-Fassung) ist bereits enthalten, du musst nichts weiter installieren.
+
+::: {.callout-note}
+Die Pakete sind noch nicht signiert. Windows und macOS warnen deshalb beim ersten Start. Unter macOS öffnest du die
+App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über „Weitere Informationen“ › „Trotzdem ausführen“.
+:::
+
+## Projekt und Einsatz
+
+Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt…** oder
+**Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter.
+
+Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
+genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.
+
+::: {.callout-tip}
+## Deine Originale bleiben, wo sie sind
+Feldspur kopiert und verändert keine Originaldateien. Die Projektdatei merkt sich nur, wo sie liegen, und hält ihre
+Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsammeln möglichst nicht mehr.
+:::
+
+## Einsatzdaten
+
+Über **Einsatzdaten bearbeiten** neben dem Titel trägst du ein, was zum Quellennachweis gehört:
+
+- **Ort**, z. B. „Marktplatz“.
+- **Zeitzone** des Einsatzes. Manche Geräte schreiben ihre Zeitstempel in UTC; Feldspur rechnet sie damit in die
+  Ortszeit um. Alle Uhrzeiten in Feldspur sind Ortszeit des Einsatzes.
+- **Bezugszeitraum fürs Tagebuch**: wie weit ein Tagebucheintrag vor die Notierzeit zurückreicht (Standard
+  15 Minuten), siehe @sec-tagebuch.
+- **Weitere Angaben**, frei wählbare Felder für den Quellennachweis, z. B. DOI oder Projektnummer.
+
+![Einsatzdaten mit weiteren Angaben für den Quellennachweis](bilder/einsatzdaten.png){#fig-einsatzdaten}
+
+## Die vier Schritte
+
+Oben im Fenster stehen die vier Arbeitsschritte eines Einsatzes. Kleine Hinweise an den Reitern zeigen, wo noch etwas
+offen ist, etwa „2 zu prüfen“ oder „3 ohne Zeit“.
+
+1. **Einsammeln** (@sec-einsammeln): alle Dateien hineinziehen, Feldspur ordnet sie Geräten zu.
+2. **Abgleichen** (@sec-abgleichen): die Uhren der Geräte aufeinander abstimmen.
+3. **Durchsehen** (@sec-durchsehen): alles auf der Zeitachse prüfen, Tagebuch abtippen, mitschreiben.
+4. **Ausgeben** (@sec-ausgeben): Zeitgerüst für MAXQDA, Montagevideo und Begleitprotokoll schreiben.
+
+Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
+Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Tagebuch, Quellen
+und Uhrzeiten.
+
+Feldspur hat ein helles und ein dunkles Erscheinungsbild und folgt der Einstellung deines Systems.
+
+![Die Zeitachse im dunklen Erscheinungsbild](bilder/dunkel.png){#fig-dunkel}

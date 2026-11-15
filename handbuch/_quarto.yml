@@ -1,0 +1,74 @@
+project:
+  type: book
+  output-dir: _site
+
+lang: de
+
+book:
+  title: "Feldspur"
+  subtitle: "Handbuch und Begleittext"
+  author:
+    - name: Zuri Nimca Klaschka
+      orcid: 0009-0005-9995-5687
+  date: last-modified
+  date-format: "D. MMMM YYYY"
+  repo-url: https://github.com/pklaschka/feldspur
+  repo-subdir: handbuch
+  search: true
+  output-file: Feldspur-Handbuch
+  downloads: [pdf]
+  chapters:
+    - index.qmd
+    - part: "Begleittext"
+      chapters:
+        - motivation.qmd
+        - ki.qmd
+    - part: "Handbuch"
+      chapters:
+        - erste-schritte.qmd
+        - einsammeln.qmd
+        - abgleichen.qmd
+        - durchsehen.qmd
+        - tagebuch.qmd
+        - mitschreiben.qmd
+        - ausgeben.qmd
+    - zitieren.qmd
+  appendices:
+    - begriffe.qmd
+
+# Zitierangaben: Quarto setzt daraus Meta-Angaben für Literaturverwaltungen
+# und einen Abschnitt „Zitieren“ unter jede Seite.
+citation:
+  type: book
+  title: "Feldspur: Handbuch und Begleittext"
+  url: https://pklaschka.github.io/feldspur/
+  publisher: GitHub
+
+license: "CC BY 4.0"
+
+format:
+  html:
+    # Bootstrap-Grundthema ohne Webfonts: alles liegt mit auf der Seite,
+    # nichts wird von fremden Servern (CDNs) geladen, keine Cookies.
+    theme:
+      light: [default, stil.scss]
+      dark: [default, stil.scss, stil-dunkel.scss]
+    respect-user-color-scheme: true
+    html-math-method: plain
+    lightbox: false
+    link-external-newwindow: false
+    toc-title: "Auf dieser Seite"
+  pdf:
+    documentclass: scrreprt
+    papersize: a4
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    colorlinks: true
+    fig-pos: "H"
+    pdf-engine: lualatex
+
+fig-cap-location: bottom
+crossref:
+  fig-title: Abbildung
+  fig-prefix: Abbildung

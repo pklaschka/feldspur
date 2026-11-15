@@ -1,0 +1,41 @@
+# Begriffe {#sec-begriffe}
+
+Anker
+: „Dieser Moment in Aufnahme A ist derselbe wie dieser Moment in Aufnahme B“, durch Klatschen, Tonspur-Vergleich oder
+  von Hand. Daraus ergibt sich die Abweichung eines Geräts.
+
+Abweichung
+: Wie weit die Uhr eines Geräts von der Referenzuhr abweicht. Positiv heißt: geht vor.
+
+Begleitprotokoll
+: Tabelle (.csv) mit Herkunft, Prüfsumme und Zeitnachweis jeder Datei eines Einsatzes.
+
+Bezugszeitraum
+: Zeitraum vor der Notierzeit, auf den sich ein Tagebucheintrag bezieht.
+
+Einsatz
+: Ein Feldtag an einem Ort. Wird zu einem Dokument in MAXQDA.
+
+Episode
+: Zeitraum, in dem eine Aufnahme läuft und nicht nur Stille ist.
+
+Folgeaufnahme
+: Datei, die die vorige Datei desselben Geräts nahtlos fortsetzt.
+
+Gerät
+: Alles mit einer eigenen Uhr: Kamera, Rekorder, Handy, aber auch das Tagebuch.
+
+Montage-ID
+: Kennung wie `FS-XXXX-XXXX`, die Montagevideo und Zeitgerüst einander zuordnet.
+
+Quelle
+: Eine Originaldatei mit Prüfsumme und Kurzzeichen (`V-01`, `A-01`, `F-001`, `T-01`).
+
+Referenzuhr
+: Das Gerät, dessen Uhr als richtig gilt. Genau eins pro Einsatz.
+
+Zeitbeleg
+: Eine Angabe, wann eine Stelle einer Quelle war: Metadaten, Dateiname, angesagte Uhrzeit, Anker oder von Hand.
+
+Zeitgerüst
+: Das .docx-Dokument für MAXQDA mit Zeitmarken ins Montagevideo.

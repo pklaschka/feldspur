@@ -1,0 +1,49 @@
+# Warum Feldspur? {#sec-motivation}
+
+## 708 Artefakte aus vier Tagen
+
+Nach vier Forschungstagen in einem Projekt zum Thema Otter im Zoo hatte ich:
+
+- 45 Doppelseiten Feldnotizen, also insgesamt 90 Seiten, wobei jede zweite Seite der Reflexion diente, mit 123 mit
+  Zeitstempeln versehenen Einträgen,
+- 76 Fotos,
+- 30 Audionotizen und Diktiergerätaufnahmen, teilweise länger als 30 Minuten,
+- 479 Videos, teilweise auch mit interessanten, zu transkribierenden Audioaufnahmen im Video selbst.
+
+Insgesamt also **708 „Artefakte“**, die es zeitlich zu synchronisieren galt. Alles mit Zeitstempeln, aber mit
+bestehenden Mitteln kaum so zusammenführbar, dass es sich gut auswerten lässt.
+
+Und das war noch eine vergleichsweise kleine Forschung: eine etwas über das Ziel hinausschießende Seminararbeit im
+Bereich Multi-Species-Ethnografie unter dem Titel „Mehr-als-menschliche Kommunikation – von (und mit?) Ottern im
+Kontext Zoo“ im September 2026. Nicht vergleichbar mit größeren Forschungsprojekten.
+
+## Eine eigene Lösung
+
+Das Projekt untersuchte neben der Hauptforschungsfrage auch die anwendbare Methodik in einem schwierig zu
+transkribierenden Feld, nämlich nicht-menschlichen Kommunikationsmustern. Deshalb war ich grundsätzlich sehr offen
+gegenüber experimentellen Ansätzen. Daher kam dann auch, nach der Verzweiflung ob der vorhandenen Technologien, die
+Idee, eine eigene Lösung zu finden: in einer Zeit, in der man mit Claude und Co. recht schnell individuelle Lösungen
+bauen kann, deren Entwicklung sich früher nicht gelohnt hätte. Ich habe mehr als zehn Jahre Berufserfahrung als
+Softwareentwicklerin.
+
+Was es bisher gibt, deckt immer nur einen Teil ab. QDA-Programme wie MAXQDA, ATLAS.ti oder NVivo codieren
+hervorragend, kennen aber keine gemeinsame Zeitachse über viele Geräte. Annotationswerkzeuge wie ELAN oder Transana
+synchronisieren Audio und Video, aber keine Tagebuchseiten und Fotos. Schnittprogramme gleichen Aufnahmen über die
+Tonspur ab, liefern aber nichts, was sich codieren lässt. Feldspur schließt diese Lücke: Es sortiert alles nach
+Uhrzeit und gibt ein Dokument aus, das MAXQDA mit Zeitmarken einliest.
+
+## Offen und zitierbar
+
+Ich bin große Verfechterin von Open Source und Open Science. Deshalb entsteht Feldspur im Offenen und wird gut
+zitierbar archiviert, zur Förderung der Wissenschaft (siehe [Zitieren und archivieren](zitieren.qmd)).
+
+Daher kommt auch eine zweite Motivation: meine Forschungsartefakte nicht nur in einer, für mich gerade so
+nachvollziehbaren, Zettelwirtschaft zu haben, sondern sauber archivierbar sortiert. Denn wo immer möglich ist es in
+meinen Augen im Sinne der Wissenschaft, auch qualitatives Forschungsmaterial zitierfähig zur Verfügung zu stellen.
+Schließlich ist es die empirische Grundlage unserer Ergebnisse. Mir ist bewusst, dass das wegen
+Anonymisierungspflichten und Ähnlichem oft leichter gesagt als getan ist. Feldspur hilft dabei, indem es jede
+Originaldatei mit Prüfsumme, Herkunft und Zeitnachweis in einem Begleitprotokoll festhält.
+
+Vielleicht hilft Feldspur auch über die Wissenschaft hinaus: Chronologische Ereignisse aus verschiedenen Quellen
+zusammenzuführen und zu analysieren, kann auch in anderen Bereichen nützlich sein. Das ist aber nur ein Nebeneffekt,
+nicht mein Hauptfokus.
