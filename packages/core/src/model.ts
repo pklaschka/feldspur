@@ -37,6 +37,11 @@ export const FieldSession = z.object({
     .default(15 * 60_000),
   /** Optionale Felder für den Quellennachweis (DOI, Projektnummer, …). */
   extra: z.record(z.string(), z.string()).default({}),
+  /**
+   * Episoden bilden (Zeiträume mit hörbarer Aufnahme, dazwischen Zwischenzeiten). Nur auf Wunsch:
+   * ohne sie zeigt die Zeitachse keine Episoden und die Ausgabe läuft in Echtzeit ohne Episodenzeilen.
+   */
+  episodes: z.boolean().default(false),
 });
 export type FieldSession = z.infer<typeof FieldSession>;
 

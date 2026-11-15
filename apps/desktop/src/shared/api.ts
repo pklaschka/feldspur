@@ -255,7 +255,7 @@ export interface SessionView {
   notes: SourceNoteRow[];
   /** Standard-Bezugszeitraum des Einsatzes in Minuten. */
   diaryLookbackMin: number;
-  /** null = Tonspuren noch nicht analysiert */
+  /** null = Episoden aus (session.episodes) oder Tonspuren noch nicht analysiert */
   episodes: EpisodeRow[] | null;
   gaps: GapRow[];
   analyzedCount: number;
@@ -306,6 +306,8 @@ export interface SessionPatch {
   place?: string;
   timeZone?: string;
   diaryLookbackMin?: number;
+  /** Episoden bilden (nur auf Wunsch). */
+  episodes?: boolean;
   /** Zusatzfelder für den Quellennachweis, z. B. { DOI: "10.…" }. Ersetzt alle bisherigen. */
   extra?: Record<string, string>;
 }
@@ -380,7 +382,7 @@ export interface FeldspurApi {
   deleteSourceNote(noteId: string): Promise<SessionView>;
   waveformPeaks(sourceId: string, fromMs: number, toMs: number, buckets: number): Promise<Peaks>;
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
-  /** realtime: alles in Echtzeit statt Episoden mit kurzen Tafeln. */
+  /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
   previewExport(sessionId: string, realtime?: boolean): Promise<ScaffoldPreview>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;

@@ -23,6 +23,7 @@ export const sessions = sqliteTable("sessions", {
   extra: json<Record<string, string>>("extra")
     .notNull()
     .default(sql`'{}'`),
+  episodes: bool("episodes").notNull().default(false),
 });
 
 export const persons = sqliteTable("persons", {

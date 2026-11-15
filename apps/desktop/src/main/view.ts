@@ -158,11 +158,11 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       };
     });
 
-  // Episoden, sobald analysiert.
+  // Episoden nur auf Wunsch, sobald analysiert.
   const avCount = input.sources.filter((s) => s.kind === "audio" || s.kind === "video").length;
   let episodes: EpisodeRow[] | null = null;
   let gaps: GapRow[] = [];
-  if (analyses.length) {
+  if (input.session.episodes && analyses.length) {
     const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
     const ep = computeEpisodes(input.sources, res, idle);
     const label = (id: Id) => sourceById.get(id)?.label ?? "?";
