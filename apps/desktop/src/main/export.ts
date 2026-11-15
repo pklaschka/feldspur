@@ -70,19 +70,26 @@ function overlayVia(wc: WebContents): OverlayRenderer {
   };
 }
 
-const modeOf = (realtime?: boolean) => ({ mode: realtime ? ("realtime" as const) : ("episodes" as const) });
+/**
+ * Echtzeit ist der Standard. Nach Episoden geschnitten wird nur, wenn der Einsatz Episoden bildet
+ * und ausdrücklich realtime === false verlangt ist.
+ */
+function modeOf(s: ProjectStore, sessionId: string, realtime?: boolean) {
+  const episodes = s.getSession(sessionId).episodes;
+  return { mode: episodes && realtime === false ? ("episodes" as const) : ("realtime" as const), episodes };
+}
 
 export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
-  return montagePreview(buildScaffold(s, sessionId, modeOf(realtime)));
+  return montagePreview(buildScaffold(s, sessionId, modeOf(s, sessionId, realtime)));
 }
 
 export function previewExport(s: ProjectStore, sessionId: string, realtime?: boolean): ScaffoldPreview {
-  const sc = buildScaffold(s, sessionId, modeOf(realtime));
+  const sc = buildScaffold(s, sessionId, modeOf(s, sessionId, realtime));
   return {
     base: baseName(sc),
     durationMs: sc.plan.durationMs,
-    episodes: sc.plan.segments.filter((x) => x.kind === "episode").length,
-    cards: sc.plan.segments.filter((x) => x.kind === "card").length,
+    episodes: sc.episodes ? sc.plan.segments.filter((x) => x.kind === "episode").length : 0,
+    cards: sc.episodes ? sc.plan.segments.filter((x) => x.kind === "card").length : 0,
     lines: sc.entries.map(entryText),
   };
 }
@@ -98,14 +105,14 @@ export async function runExport(
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
   running = sessionId;
   try {
-    const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(opts.realtime))));
+    const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(s, sessionId, opts.realtime))));
     const r = await exportSession(s, sessionId, dir, {
       video: opts.video,
       resolve: opts.resolve,
       overlay: overlayVia(wc),
       renderImage: stillVia(wc),
       audioMix: opts.mixAudio === false ? "main" : "all",
-      ...modeOf(opts.realtime),
+      ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
     });
