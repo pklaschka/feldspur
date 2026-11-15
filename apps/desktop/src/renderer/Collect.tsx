@@ -3,7 +3,7 @@ import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
 import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
-import { Button, cx, Glyph, Notice, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
+import { Button, cx, FlagMark, Glyph, Notice, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -115,7 +115,7 @@ export function Collect({
               />
             ))}
             {unassigned.length > 0 && (
-              <section className="k-other overflow-hidden rounded-xl border border-t-[3px] border-line border-t-k bg-panel shadow-xs">
+              <section className="k-other overflow-hidden rounded-xl border border-line bg-panel shadow-xs">
                 <header className="flex items-center gap-2 px-3 pt-3 pb-2">
                   <Glyph kind="other" />
                   <span className="font-semibold">Ohne Gerät</span>
@@ -150,14 +150,19 @@ function DeviceCard({
   const kinds = [...new Set(rows.map((r) => r.kind))];
   return (
     <section
-      className={`k-${device.kind} overflow-hidden rounded-xl border border-t-[3px] border-line border-t-k bg-panel shadow-xs`}
+      className={`k-${device.kind} overflow-hidden rounded-xl border border-line bg-panel shadow-xs`}
       data-testid="device-card"
       data-device={device.label}
     >
       <header className="flex items-center gap-2 px-3 pt-3">
         <Glyph kind={device.kind} />
         <EditableName value={device.label} onCommit={onRename} />
-        {device.isReference && <Pill tone="accent">Referenzuhr</Pill>}
+        {device.isReference && (
+          <Pill tone="accent">
+            <FlagMark size={10} className="mr-1 inline align-[-1px]" />
+            Referenzuhr
+          </Pill>
+        )}
         {device.timeZone && <Pill>Uhr: {device.timeZone}</Pill>}
         <span className="flex-1" />
         {device.kind === "diary" && rows[0] && (

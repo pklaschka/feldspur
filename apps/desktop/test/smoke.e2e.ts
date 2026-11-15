@@ -546,14 +546,17 @@ try {
   await montage.waitFor({ state: "detached" });
   // Standard ist Echtzeit; nach Episoden geschnitten wird das Video kürzer. Ausgegeben wird
   // danach nach Episoden, damit der Rauchtest schnell bleibt.
-  const lengthOf = () => page.getByText("Videolänge").locator("xpath=..").locator("b").innerText();
+  const lengthOf = () => page.getByTestId("export-summary").locator("b").first().innerText();
   const inRealtime = await lengthOf();
   await page.getByRole("switch", { name: "Nach Episoden schneiden" }).click();
-  await page.getByText("Zwischentafeln").waitFor();
-  await page.waitForFunction((l) => {
-    const b = [...document.querySelectorAll("b")].find((e) => e.nextElementSibling?.textContent === "Videolänge");
-    return !!b && b.textContent !== l;
-  }, inRealtime);
+  await page
+    .getByTestId("export-summary")
+    .getByText(/Zwischentafeln/)
+    .waitFor();
+  await page.waitForFunction(
+    (l) => document.querySelector("[data-testid=export-summary] b")?.textContent !== l,
+    inRealtime,
+  );
   console.log(`Videolänge: ${inRealtime} in Echtzeit, ${await lengthOf()} nach Episoden`);
   const t0 = Date.now();
   await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();

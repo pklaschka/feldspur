@@ -100,20 +100,28 @@ function Summary({ view }: { view: SessionView }) {
     );
   const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote).length;
   if (diaryOpen) todo.push(`${diaryOpen} Tagebuchseiten ohne Randnotiz.`);
-  const stat = (s: SourceRow["status"]) => (
-    <div className={cx("rounded-lg border border-line p-2 text-[0.82rem]", STATUS_TEXT_CLASS[s])}>
-      <b className="block text-[1.3rem] font-semibold">{count(s)}</b>
-      {STATUS_TEXT[s]}
-    </div>
-  );
+  const total = view.rows.length;
+  const parts = (["ok", "check", "unplaced"] as const).filter((st) => count(st) > 0);
   return (
     <>
-      <Eyebrow className="mt-0">Überblick</Eyebrow>
-      <div className="grid grid-cols-3 gap-1.5">
-        {stat("ok")}
-        {stat("check")}
-        {stat("unplaced")}
-      </div>
+      <Eyebrow className="mt-0">Stand des Einsatzes</Eyebrow>
+      {total > 0 && (
+        <div className="flex h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
+          {parts.map((st) => (
+            <span key={st} className={STATUS_BAR[st]} style={{ width: `${(count(st) / total) * 100}%` }} />
+          ))}
+        </div>
+      )}
+      <p className="mt-2 text-[0.92rem]">
+        {total === 0
+          ? "Noch keine Quellen."
+          : (["ok", "check", "unplaced"] as const).map((st, i) => (
+              <span key={st} className={count(st) ? STATUS_TEXT_CLASS[st] : "text-muted"}>
+                {i > 0 && <span className="text-muted"> · </span>}
+                <b className="font-semibold">{count(st)}</b> {STATUS_TEXT[st]}
+              </span>
+            ))}
+      </p>
       <Eyebrow>Als Nächstes</Eyebrow>
       {todo.length ? (
         <ul className="grid list-disc gap-1 pl-4.5">
@@ -130,6 +138,8 @@ function Summary({ view }: { view: SessionView }) {
     </>
   );
 }
+
+const STATUS_BAR = { ok: "bg-good/70", check: "bg-warn", unplaced: "bg-bad" } as const;
 
 function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: boolean }) {
   return (
@@ -467,8 +477,8 @@ function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActi
         <li
           key={e.id}
           className={cx(
-            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-lg border border-l-[3px] px-2.5 py-1.5",
-            e.chosen ? "border-line border-l-accent bg-panel-2" : "border-line",
+            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-lg border px-2.5 py-1.5",
+            e.chosen ? "border-accent/40 bg-accent-soft/40" : "border-line",
           )}
         >
           <span className="text-[0.78rem] font-semibold text-muted">

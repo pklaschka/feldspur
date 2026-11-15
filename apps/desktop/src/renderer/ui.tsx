@@ -12,7 +12,7 @@ const VARIANT: Record<Variant, string> = {
   default:
     "rounded-lg border border-line-2 bg-panel shadow-xs hover:enabled:border-muted hover:enabled:bg-panel-2 data-[state=on]:border-accent data-[state=on]:bg-accent-soft",
   primary:
-    "rounded-lg border border-accent bg-accent font-semibold text-accent-ink shadow-xs hover:enabled:brightness-[1.08]",
+    "rounded-lg border border-accent bg-accent font-semibold text-accent-ink shadow-xs hover:enabled:brightness-[1.08] disabled:border-line-2 disabled:bg-sunken disabled:text-muted disabled:shadow-none",
   link: "text-accent hover:underline",
   ghost: "rounded-lg hover:bg-sunken",
 };
@@ -27,7 +27,7 @@ export function Button({
   return (
     <button
       className={cx(
-        "cursor-pointer whitespace-nowrap disabled:cursor-default disabled:opacity-50",
+        "cursor-pointer whitespace-nowrap disabled:cursor-default disabled:opacity-60",
         pad,
         VARIANT[variant],
         className,
@@ -134,6 +134,16 @@ export function StepHeader({
   );
 }
 
+/** Der Feldmarker aus dem App-Symbol: Mast mit Fahne. Markiert, wo man gerade steht. */
+export function FlagMark({ className, size = 14 }: { className?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" className={className} aria-hidden>
+      <path d="M1.5 1v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M1.5 1.2 12 4.2 1.5 7.2Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** Schließen-Knopf mit ausreichend großer Fläche. */
 export function CloseButton({ onClick, label = "Schließen" }: { onClick: () => void; label?: string }) {
   return (
@@ -166,8 +176,9 @@ export function StatusLegend() {
 }
 const STATUS_LEGEND = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
 
+/** Überschrift eines Abschnitts in Seitenleisten und Kästen. */
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("mt-5 mb-1.5 text-[0.88rem] font-semibold text-ink-2", className)}>{children}</div>;
+  return <h3 className={cx("mt-5 mb-1.5 text-[1rem] font-semibold text-ink", className)}>{children}</h3>;
 }
 
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {

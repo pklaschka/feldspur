@@ -390,14 +390,15 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
       ctx.strokeStyle = p.accent;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(px, RULER_H - 6);
+      ctx.moveTo(px, RULER_H - 13);
       ctx.lineTo(px, H);
       ctx.stroke();
+      // Der Abspielkopf als Feldmarker, wie im App-Symbol: Fahne an der Mastspitze.
       ctx.fillStyle = p.accent;
       ctx.beginPath();
-      ctx.moveTo(px - 5, RULER_H - 8);
-      ctx.lineTo(px + 5, RULER_H - 8);
-      ctx.lineTo(px, RULER_H - 2);
+      ctx.moveTo(px, RULER_H - 14);
+      ctx.lineTo(px + 9, RULER_H - 11);
+      ctx.lineTo(px, RULER_H - 7);
       ctx.closePath();
       ctx.fill();
       ctx.restore();

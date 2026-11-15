@@ -48,12 +48,6 @@ export function ExportStep({ view }: { view: SessionView }) {
   }, [view, sessionId, realtime]);
   const run = () => ex.start(sessionId, { video, resolve, mixAudio, realtime });
 
-  const fact = (n: number | string, label: string) => (
-    <div className="grid">
-      <b className="text-2xl font-semibold tabular-nums">{n}</b>
-      <span className="text-[0.85rem] text-muted">{label}</span>
-    </div>
-  );
   const empty = !preview || preview.durationMs <= 0;
   const pct = percent(progress);
 
@@ -85,11 +79,24 @@ export function ExportStep({ view }: { view: SessionView }) {
       />
       <div className="grid max-w-[1100px] gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <Panel>
-          <div className="flex gap-8">
-            {fact(preview ? formatDuration(preview.durationMs) : "–", "Videolänge")}
-            {withEpisodes && fact(preview?.episodes ?? "–", "Episoden")}
-            {withEpisodes && fact(preview?.cards ?? "–", realtime ? "Zwischenzeiten" : "Zwischentafeln")}
-          </div>
+          <p className="font-serif text-[1.1rem] leading-snug" data-testid="export-summary">
+            {!preview ? (
+              "Die Montage wird berechnet…"
+            ) : (
+              <>
+                Das Montagevideo wird <b className="font-semibold">{formatDuration(preview.durationMs)}</b> lang
+                {withEpisodes ? (
+                  <>
+                    , mit <b className="font-semibold">{preview.episodes}</b>{" "}
+                    {preview.episodes === 1 ? "Episode" : "Episoden"} und{" "}
+                    <b className="font-semibold">{preview.cards}</b> {realtime ? "Zwischenzeiten" : "Zwischentafeln"}.
+                  </>
+                ) : (
+                  realtime && ", der ganze Einsatz in Echtzeit."
+                )}
+              </>
+            )}
+          </p>
           {withEpisodes ? (
             <>
               <label className="mt-4 flex items-center gap-2.5 text-[0.9rem]">

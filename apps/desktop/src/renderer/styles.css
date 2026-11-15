@@ -6,51 +6,62 @@
 @import "@fontsource-variable/source-serif-4/opsz-italic.css";
 
 :root {
-  /* Papier, Tinte und Erde: die Farben kommen aus dem App-Symbol (Feldmarker auf Notizpapier). */
-  --bg: #f2ede4;
-  --panel: #fffcf6;
-  --panel-2: #f8f3ea;
-  --sunken: #ebe3d6;
-  --ink: #2a211b;
-  --ink-2: #4c4037;
-  --muted: #675a4f;
-  --line: #e2d8c9;
-  --line-2: #cdbfac;
+  /* Feldbuch: Arbeitsfläche in hellem Salbei (Moos aus dem App-Symbol), Blätter aus Papier,
+     die Leiste links in der Umbra des Feldmarkers. Akzent Terrakotta. */
+  --bg: #e7ebe3;
+  --panel: #fcfbf7;
+  --panel-2: #f4f5ef;
+  --sunken: #dfe4da;
+  --ink: #26241f;
+  --ink-2: #47443c;
+  --muted: #5b5d53;
+  --line: #d7dccf;
+  --line-2: #bcc2b3;
   --accent: #a4441f;
   --accent-ink: #fffaf2;
-  --accent-soft: #f5e2d4;
+  --accent-soft: #f3e1d3;
+  --rail: #3a281d;
+  --rail-ink: #f5ecdf;
+  --rail-muted: #c9b7a2;
+  --rail-hover: #4a3427;
+  --rail-active: #5c3d2b;
   --k-video: #3b5d85;
   --k-audio: #44692f;
   --k-photo: #7e4877;
   --k-diary: #8e5524;
-  --k-other: #6f6458;
+  --k-other: #66675d;
   --good: #44692f;
   --warn: #8f5a07;
   --bad: #a3302f;
   --warn-soft: #f6e7c9;
-  --shadow: 32 22 14;
+  --shadow: 30 32 24;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Abends unter der Lampe: warmes Dunkelbraun statt Blaugrau. */
-    --bg: #1a1613;
-    --panel: #221d19;
-    --panel-2: #28221d;
-    --sunken: #14110e;
-    --ink: #efe6da;
-    --ink-2: #d0c2b2;
-    --muted: #a69583;
-    --line: #372f28;
-    --line-2: #4a3f35;
+    /* Abends unter der Lampe: warmes Dunkel, die Leiste noch etwas tiefer. */
+    --bg: #1a1815;
+    --panel: #23201c;
+    --panel-2: #292520;
+    --sunken: #14120f;
+    --ink: #efe8dc;
+    --ink-2: #d0c6b6;
+    --muted: #a59a89;
+    --line: #37322b;
+    --line-2: #4a433a;
     --accent: #e48f63;
     --accent-ink: #26140a;
     --accent-soft: #452b1d;
+    --rail: #110e0b;
+    --rail-ink: #efe6da;
+    --rail-muted: #a59683;
+    --rail-hover: #221b16;
+    --rail-active: #3a2619;
     --k-video: #91b2da;
     --k-audio: #a0c584;
     --k-photo: #d5a0cb;
     --k-diary: #dcaa72;
-    --k-other: #a69583;
+    --k-other: #a59a89;
     --good: #a0c584;
     --warn: #e8b95e;
     --bad: #f08d87;
@@ -77,6 +88,11 @@
   --color-warn: var(--warn);
   --color-bad: var(--bad);
   --color-warn-soft: var(--warn-soft);
+  --color-rail: var(--rail);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-muted: var(--rail-muted);
+  --color-rail-hover: var(--rail-hover);
+  --color-rail-active: var(--rail-active);
   --color-k: var(--k);
   --color-k-video: var(--k-video);
   --color-k-audio: var(--k-audio);
@@ -99,7 +115,6 @@
   }
   body {
     @apply bg-bg font-sans text-[14.5px] leading-[1.5] text-ink antialiased;
-    font-feature-settings: "tnum" 0;
   }
   input,
   textarea {
@@ -110,8 +125,17 @@
   h3 {
     @apply font-serif tracking-[-0.005em];
   }
+  /* Was der Browser sonst selbst zeichnet, trägt auch die Farben der App. */
   ::selection {
     @apply bg-accent-soft;
+  }
+  html {
+    scrollbar-color: var(--line-2) transparent;
+    caret-color: var(--accent);
+  }
+  ::placeholder {
+    color: var(--muted);
+    opacity: 1;
   }
   :focus-visible {
     @apply outline-2 outline-offset-1 outline-accent;

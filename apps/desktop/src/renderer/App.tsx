@@ -19,7 +19,7 @@ import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Transcriber } from "./Transcriber.tsx";
 import { Sync } from "./Sync.tsx";
-import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
+import { Button, cx, FlagMark, Panel, TooltipProvider } from "./ui.tsx";
 
 import iconUrl from "../../../../packaging/icon.svg?url";
 
@@ -142,7 +142,7 @@ export function App() {
             label="Breite der Seitenleiste"
             left={`calc(100% - ${inspector.width}px)`}
           />
-          <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4.5">
+          <nav className="overflow-auto bg-rail px-2.5 py-4.5 text-rail-ink">
             <div className="px-2">
               <Logo small />
               <ProjectMenu
@@ -155,18 +155,18 @@ export function App() {
                 onNew={() => void guard(api.newProject).then(adopt)}
               />
             </div>
-            <div className="mx-2 mt-7 mb-1.5 text-[0.88rem] font-semibold text-ink-2">Einsätze</div>
+            <h2 className="mx-2 mt-7 mb-1.5 text-[1rem] font-semibold text-rail-ink">Einsätze</h2>
             {project.sessions.map((s) => (
               <button
                 key={s.id}
                 className={cx(
                   "flex w-full cursor-pointer gap-2 rounded-lg px-2 py-1.5 text-left",
-                  s.id === sessionId ? "bg-accent-soft font-medium text-accent" : "hover:bg-sunken",
+                  s.id === sessionId ? "bg-rail-active font-semibold" : "hover:bg-rail-hover",
                 )}
                 onClick={() => setSessionId(s.id)}
                 title={s.place || undefined}
               >
-                <span className={cx("pt-px font-mono text-[0.82rem]", s.id !== sessionId && "text-muted")}>
+                <span className={cx("pt-px font-mono text-[0.82rem]", s.id !== sessionId && "text-rail-muted")}>
                   {formatDay(s.date)}
                 </span>
                 <span>{s.title}</span>
@@ -199,7 +199,7 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
   if (!open) {
     return (
       <button
-        className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-muted hover:bg-sunken"
+        className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-rail-muted hover:bg-rail-hover hover:text-rail-ink"
         onClick={() => setOpen(true)}
       >
         + neuer Einsatz
@@ -214,7 +214,7 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
     setTitle("");
   };
   return (
-    <form className="grid gap-1.5 p-1.5" onSubmit={submit}>
+    <form className="grid gap-1.5 p-1.5 text-ink" onSubmit={submit}>
       <input
         autoFocus
         placeholder="Titel"
@@ -369,33 +369,39 @@ function SessionPane({
                   Suchen <kbd className="ml-1 font-mono text-[0.78rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
                 </Button>
               </div>
-              {/* Die vier Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur. */}
-              <Tabs.List
-                className="no-scrollbar mt-3 -mb-px flex items-center overflow-x-auto"
-                aria-label="Arbeitsschritte"
-              >
+              {/* Die vier Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur.
+                  Am aktiven Schritt steht der Feldmarker aus dem App-Symbol. */}
+              <Tabs.List className="mt-3 -mb-px flex items-center @container" aria-label="Arbeitsschritte">
                 {steps.map((s, i) => (
                   <Fragment key={s.id}>
                     {i > 0 && (
-                      <span aria-hidden className="mx-0.5 h-0 w-5 flex-none border-t-2 border-dotted border-line-2" />
+                      <span
+                        aria-hidden
+                        className="mx-1 h-0 max-w-14 min-w-3 flex-1 border-t-2 border-dashed border-line-2"
+                      />
                     )}
                     <Tabs.Trigger
                       value={s.id}
-                      className="group flex flex-none cursor-pointer items-center gap-2 border-b-[3px] border-transparent px-2.5 pt-1.5 pb-2.5 whitespace-nowrap text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-ink"
+                      title={s.badge ? `${s.title}: ${s.badge}` : s.title}
+                      className="group flex min-w-0 flex-none cursor-pointer items-center gap-2 border-b-[3px] border-transparent px-1.5 pt-1.5 pb-2.5 whitespace-nowrap text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-ink"
                     >
-                      <span className="grid size-[22px] place-items-center rounded-full border border-line-2 bg-panel font-serif text-[0.85rem] text-muted group-data-[state=active]:border-accent group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
+                      <span className="relative grid size-[22px] flex-none place-items-center rounded-full border border-line-2 bg-panel font-serif text-[0.85rem] text-muted group-data-[state=active]:border-accent group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
                         {s.n}
+                        <FlagMark className="absolute -top-2.5 left-[13px] hidden text-accent group-data-[state=active]:block" />
                       </span>
                       {s.title}
                       {s.badge && (
-                        <span
-                          className={cx(
-                            "rounded-full px-2 text-[0.8rem] font-normal",
-                            s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
-                          )}
-                        >
-                          {s.badge}
-                        </span>
+                        <>
+                          <span
+                            className={cx(
+                              "sr-only rounded-full px-2 text-[0.8rem] font-normal @min-[50rem]:not-sr-only",
+                              s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
+                            )}
+                          >
+                            {s.badge}
+                          </span>
+                          {s.warn && <span aria-hidden className="size-2 rounded-full bg-warn @min-[50rem]:hidden" />}
+                        </>
                       )}
                     </Tabs.Trigger>
                   </Fragment>

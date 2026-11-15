@@ -96,7 +96,7 @@ export function ProjectMenu({
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger
-        className="mt-1 flex w-full cursor-pointer items-center gap-1 rounded px-0 text-left text-[0.85rem] text-muted outline-none hover:text-ink focus-visible:text-ink"
+        className="mt-1 flex w-full cursor-pointer items-center gap-1 rounded px-0 text-left text-[0.85rem] text-rail-muted outline-none hover:text-rail-ink focus-visible:text-rail-ink"
         title={`${path}\nProjekt wechseln (${navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Strg+"}O)`}
       >
         <span className="truncate">{name}</span>

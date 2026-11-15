@@ -3,7 +3,20 @@ import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/a
 import type { Guard } from "./App.tsx";
 import { offsetText, parseOffset } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
-import { Button, Choice, cx, Glyph, Notice, Panel, Picker, Pill, PRECISION_OPTIONS, StepHeader, Tip } from "./ui.tsx";
+import {
+  Button,
+  Choice,
+  cx,
+  FlagMark,
+  Glyph,
+  Notice,
+  Panel,
+  Picker,
+  Pill,
+  PRECISION_OPTIONS,
+  StepHeader,
+  Tip,
+} from "./ui.tsx";
 import { FineAlign, guessB, type FineAlignStart } from "./FineAlign.tsx";
 
 const api = window.feldspur;
@@ -224,7 +237,10 @@ function ClockRow({
       </div>
       <div className={cx(CELL, "flex flex-wrap items-center gap-x-2.5 gap-y-1")} data-testid="clock-value">
         {device.isReference ? (
-          <Pill tone="accent">Referenzuhr</Pill>
+          <Pill tone="accent">
+            <FlagMark size={10} className="mr-1 inline align-[-1px]" />
+            Referenzuhr
+          </Pill>
         ) : (
           <>
             <OffsetInput device={device} onOffset={onOffset} />
@@ -364,7 +380,7 @@ function ManualAnchors({
     setNote("");
   };
   const side = (label: string, value: string, set: (v: string) => void, at: string, setAt: (v: string) => void) => (
-    <fieldset className="grid min-w-0 content-start gap-1.5 rounded-lg border border-line bg-panel-2 p-2.5">
+    <fieldset className="grid min-w-0 content-start gap-1.5">
       <legend className="sr-only">{label}</legend>
       <span className="text-[0.85rem] font-medium text-ink-2">{label}</span>
       <Picker
