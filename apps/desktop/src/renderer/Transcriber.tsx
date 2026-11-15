@@ -585,6 +585,8 @@ const Line = memo(function Line({
   const [text, setText] = useState(line.text);
   useEffect(() => setSpeaker(line.speaker), [line.speaker]);
   useEffect(() => setText(line.text), [line.text]);
+  /** Beim Teilen springt der Fokus in die neue Zeile; der alte Text darf dabei nicht zurückgeschrieben werden. */
+  const splitting = useRef(false);
   return (
     <li
       className={cx(
@@ -614,14 +616,22 @@ const Line = memo(function Line({
         aria-label="Text der Zeile"
         value={text}
         onChange={(e) => setText(oneParagraph(e.target.value))}
-        onBlur={() => text !== line.text && actions.patch(line.id, { text })}
+        onBlur={() => {
+          if (splitting.current) splitting.current = false;
+          else if (text !== line.text) actions.patch(line.id, { text });
+        }}
         onKeyDown={(e) => {
           if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
           e.preventDefault();
           const el = e.currentTarget;
           if (e.metaKey || e.ctrlKey) {
             // Erst die Änderungen dieser Zeile übernehmen, dann teilen.
-            void actions.split({ ...line, text }, el.selectionStart);
+            const cursor = el.selectionStart;
+            const first = text.slice(0, cursor).trim();
+            if (!first || !text.slice(cursor).trim()) return;
+            splitting.current = true;
+            setText(first);
+            void actions.split({ ...line, text }, cursor);
           } else el.blur();
         }}
       />

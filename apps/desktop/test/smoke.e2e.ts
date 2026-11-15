@@ -350,6 +350,9 @@ try {
   await second.evaluate((el: HTMLTextAreaElement) => el.setSelectionRange(12, 12));
   await second.press("Control+Enter");
   await tr.getByTestId("line").nth(2).waitFor();
+  await page.waitForTimeout(300);
+  const firstPart = await tr.getByTestId("line").nth(1).getByLabel("Text der Zeile").inputValue();
+  if (firstPart !== "Zwölf Jahre,") throw new Error(`Erster Teil nach dem Teilen: ${firstPart}`);
   console.log(`Geteilt: ${(await tr.getByTestId("line").nth(2).innerText()).replace(/\s+/g, " ")}`);
   // Notiz mit Strecke: noch abzutippender Abschnitt.
   const notes = tr.getByTestId("notes");
