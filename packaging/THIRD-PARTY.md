@@ -1,5 +1,8 @@
 # Mitgelieferte Software Dritter
 
+Feldspur selbst steht unter der EUPL-1.2 (`Feldspur-LICENSE.txt`, deutsche Sprachfassung `Feldspur-LIZENZ.txt`).
+Die folgenden Bestandteile behalten ihre eigenen Lizenzen.
+
 ## FFmpeg (LGPL 2.1 oder später)
 
 Feldspur liefert die Programme `ffmpeg` und `ffprobe` aus dem FFmpeg-Projekt (https://ffmpeg.org) mit.
@@ -18,14 +21,16 @@ FFmpeg ist eine Marke von Fabrice Bellard, Begründer des FFmpeg-Projekts.
 
 ## Weitere Bestandteile
 
-| Paket              | Lizenz                                                |
-| ------------------ | ----------------------------------------------------- |
-| Electron, Chromium | MIT bzw. siehe `LICENSES.chromium.html` im App-Ordner |
-| better-sqlite3     | MIT                                                   |
-| SQLite             | gemeinfrei                                            |
-| React, React DOM   | MIT                                                   |
-| Radix UI           | MIT                                                   |
-| Drizzle ORM        | Apache-2.0                                            |
-| Zod                | MIT                                                   |
-| exifr              | MIT                                                   |
-| Tailwind CSS       | MIT                                                   |
+| Paket               | Lizenz                                                |
+| ------------------- | ----------------------------------------------------- |
+| Electron, Chromium  | MIT bzw. siehe `LICENSES.chromium.html` im App-Ordner |
+| better-sqlite3      | MIT                                                   |
+| SQLite              | gemeinfrei                                            |
+| React, React DOM    | MIT                                                   |
+| Radix UI            | MIT                                                   |
+| Drizzle ORM         | Apache-2.0                                            |
+| Zod                 | MIT                                                   |
+| exifr               | MIT                                                   |
+| Tailwind CSS        | MIT                                                   |
+| PDF.js (pdfjs-dist) | Apache-2.0                                            |
+| docx                | MIT                                                   |

@@ -1,0 +1,188 @@
+name: Release
+
+# Neue Version der Feldspur-App veröffentlichen. Start von Hand: Actions → Release → „Run workflow“.
+#
+#   1. vorbereiten   prüfen, testen, Changelog aus den Pull Requests erzeugen, Versionen setzen,
+#                    Commit „Release vX“ auf main und Tag vX pushen
+#   2. pakete        Installer für Windows, macOS (Apple-Chip, Intel) und Linux (package.yml)
+#      handbuch      PDF-Handbuch, sobald es ein Skript dafür gibt (handbook.yml)
+#   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt
+#
+# Nur die App wird versioniert; packages/* bekommen keine eigenen Tags, Releases oder Changelogs.
+# Eine veröffentlichte (nicht als Entwurf angelegte) Release archiviert Zenodo automatisch mit eigener DOI.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, z. B. 0.2.0 oder als Vorabversion 0.2.0-rc.1 (auch -alpha.N, -beta.N)"
+        required: true
+        type: string
+      sichtbarkeit:
+        description: "Veröffentlichen oder als Entwurf anlegen? Entwürfe sieht nur, wer Schreibrechte hat; Zenodo archiviert sie nicht."
+        type: choice
+        default: Vorabversionen als Entwurf
+        options:
+          - Vorabversionen als Entwurf
+          - immer veröffentlichen
+          - immer als Entwurf
+      probelauf:
+        description: "Probelauf: alles bauen, aber nichts pushen und keine Release anlegen"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  vorbereiten:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      ref: ${{ steps.push.outputs.ref }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Nur von main
+        if: github.ref != 'refs/heads/main' && !inputs.probelauf
+        run: |
+          echo "::error::Releases entstehen nur von main aus (gestartet auf ${GITHUB_REF}). Für Versuche „Probelauf“ wählen."
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: 22
+          cache: true
+
+      - id: version
+        name: Version prüfen
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          v="${VERSION#v}"
+          node scripts/release.ts check "$v"
+          {
+            echo "version=$v"
+            if [[ "$v" == *-* ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi
+            echo "previous=$(node scripts/release.ts previous-tag "$v")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prüfen und testen
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          vp run check
+          vp run test
+
+      - name: Changelog und Versionen
+        env:
+          V: ${{ steps.version.outputs.version }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+        run: |
+          args=(-f tag_name="v$V" -f target_commitish="$GITHUB_SHA")
+          if [ -n "$PREVIOUS" ]; then args+=(-f previous_tag_name="$PREVIOUS"); fi
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body > "$RUNNER_TEMP/notes.md"
+          node scripts/release.ts prepare "$V" "$RUNNER_TEMP/notes.md"
+          vp fmt CHANGELOG.md package.json apps/desktop/package.json .zenodo.json
+          mkdir -p "$RUNNER_TEMP/text"
+          node scripts/release.ts body "$V" "$RUNNER_TEMP/text/release-body.md"
+          cp CHANGELOG.md "$RUNNER_TEMP/text/CHANGELOG.md"
+          git diff --stat
+          cat "$RUNNER_TEMP/text/release-body.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - id: push
+        name: Commit und Tag
+        env:
+          V: ${{ steps.version.outputs.version }}
+          PROBELAUF: ${{ inputs.probelauf }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md package.json apps/desktop/package.json CITATION.cff .zenodo.json
+          git commit -m "Release v$V"
+          git tag -a "v$V" -m "Feldspur $V"
+          if [ "$PROBELAUF" = "true" ]; then
+            echo "::notice::Probelauf: Commit und Tag v$V bleiben lokal. Gebaut wird $GITHUB_SHA mit Version $V."
+            echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          else
+            # Atomar: entweder landen Commit und Tag beide oder keins (z. B. wenn main inzwischen weiter ist).
+            git push --atomic origin "HEAD:refs/heads/main" "refs/tags/v$V"
+            echo "ref=v$V" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-text
+          path: ${{ runner.temp }}/text/
+
+  pakete:
+    needs: vorbereiten
+    uses: ./.github/workflows/package.yml
+    with:
+      ref: ${{ needs.vorbereiten.outputs.ref }}
+      version: ${{ needs.vorbereiten.outputs.version }}
+
+  # Haken für das PDF-Handbuch, siehe handbook.yml.
+  handbuch:
+    needs: vorbereiten
+    uses: ./.github/workflows/handbook.yml
+    with:
+      ref: ${{ needs.vorbereiten.outputs.ref }}
+      version: ${{ needs.vorbereiten.outputs.version }}
+
+  veroeffentlichen:
+    name: veröffentlichen
+    needs: [vorbereiten, pakete, handbuch]
+    if: ${{ !inputs.probelauf }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: feldspur-*
+          merge-multiple: true
+          path: assets
+      - uses: actions/download-artifact@v4
+        # Fehlt, solange es noch kein Handbuch gibt.
+        continue-on-error: true
+        with:
+          pattern: handbuch
+          merge-multiple: true
+          path: assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-text
+          path: text
+      - name: Prüfsummen
+        working-directory: assets
+        run: |
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Release anlegen
+        env:
+          V: ${{ needs.vorbereiten.outputs.version }}
+          PRERELEASE: ${{ needs.vorbereiten.outputs.prerelease }}
+          SICHTBARKEIT: ${{ inputs.sichtbarkeit }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease --latest=false); fi
+          if [ "$SICHTBARKEIT" = "immer als Entwurf" ] || { [ "$SICHTBARKEIT" = "Vorabversionen als Entwurf" ] && [ "$PRERELEASE" = "true" ]; }; then
+            flags+=(--draft)
+            echo "::notice::v$V ist als Entwurf angelegt. Veröffentlichen unter Releases; erst dann archiviert Zenodo sie."
+          fi
+          gh release create "v$V" assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Feldspur $V" \
+            --notes-file text/release-body.md \
+            "${flags[@]}"

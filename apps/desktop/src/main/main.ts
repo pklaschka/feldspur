@@ -61,6 +61,15 @@ function nativeBinding(): string | undefined {
   return candidates.find((p) => existsSync(p));
 }
 
+/** App-Symbol fürs Fenster (Linux/Windows) und „Über Feldspur“: im Paket unter resources/, beim Entwickeln aus packaging/. */
+function appIcon(): string | undefined {
+  const candidates = [
+    join(process.resourcesPath ?? "", "icon.png"),
+    join(app.getAppPath(), "..", "..", "packaging", "icon.png"),
+  ];
+  return candidates.find((p) => existsSync(p));
+}
+
 function projectInfo(): ProjectInfo | null {
   if (!store) return null;
   return { path: store.path, name: store.getMeta("name") ?? basename(store.path), sessions: store.listSessions() };
@@ -430,6 +439,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 560,
     title: "Feldspur",
+    icon: appIcon(),
     backgroundColor: "#f6f8f7",
     webPreferences: {
       preload: join(__dirname, "preload.cjs"),
@@ -487,6 +497,14 @@ function registerMediaProtocol(): void {
 
 // Tests: eigener Benutzerordner, damit z. B. „Zuletzt geöffnet“ nichts vom Rechner mitnimmt.
 if (process.env.FELDSPUR_USER_DATA) app.setPath("userData", process.env.FELDSPUR_USER_DATA);
+
+app.setAboutPanelOptions({
+  applicationName: "Feldspur",
+  applicationVersion: app.getVersion(),
+  copyright: "© 2026 Zuri Nimca Klaschka\nLizenziert unter der EUPL-1.2",
+  website: "https://github.com/pklaschka/feldspur",
+  iconPath: appIcon(),
+});
 
 void app.whenReady().then(() => {
   registerMediaProtocol();
