@@ -521,10 +521,19 @@ try {
   await editor.getByTestId("diary-fold").first().waitFor();
   await nav.getByText("T-01 · S. 1–2").waitFor();
   await editor.getByText("T-02 · S. 3–4").first().waitFor();
+  // Seitenzahl am Eintrag: von Hand, der nächste Eintrag bekommt sie vorgeschlagen.
+  await editor.getByLabel("Seite Eintrag 2").fill("15");
+  await editor.getByLabel("Seite Eintrag 2").press("Enter");
+  await editor.getByText("T-02 · S. 15").first().waitFor();
+  await editor.getByLabel("Seite Eintrag 3").click();
+  if ((await editor.getByLabel("Seite Eintrag 3").inputValue()) !== "15")
+    throw new Error(`Vorschlag für Eintrag 3: ${await editor.getByLabel("Seite Eintrag 3").inputValue()}`);
+  await editor.getByLabel("Seite Eintrag 3").press("Enter");
+  await editor.getByText("T-02 · S. 15").nth(1).waitFor();
   await shot("-tagebuch-doppelseite");
   await editor.getByRole("button", { name: "Fertig" }).click();
   await editor.waitFor({ state: "detached" });
-  console.log("Seitenzählung: Doppelseiten T-01 S. 1–2, T-02 S. 3–4");
+  console.log("Seitenzählung: Doppelseiten T-01 S. 1–2, T-02 S. 3–4, Eintrag von Hand S. 15");
 
   // Einsatzdaten bearbeiten.
   await page.getByRole("button", { name: "Einsatzdaten bearbeiten" }).click();

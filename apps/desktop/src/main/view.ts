@@ -1,6 +1,7 @@
 import {
   computeEpisodes,
   diaryPageLabel,
+  regionPageNo,
   effectiveLocal,
   sideOrder,
   formatDuration,
@@ -256,10 +257,15 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         mode: e.mode,
         shortText: e.shortText,
         fullText: e.fullText,
-        regions: e.regions.map((r) => ({
-          ...r,
-          pageLabel: pageLabel(r.sourceId, r),
-        })),
+        regions: e.regions.map((r) => {
+          const s = sourceById.get(r.sourceId);
+          return {
+            ...r,
+            pageLabel: pageLabel(r.sourceId, r),
+            pageNo: s ? regionPageNo(s, r) : (r.pageNo ?? null),
+            pageNoOwn: r.pageNo != null,
+          };
+        }),
       };
     });
 

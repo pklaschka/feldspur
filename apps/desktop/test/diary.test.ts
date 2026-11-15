@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion } from "../src/main/diary.ts";
+import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion, setRegionPage } from "../src/main/diary.ts";
 import { setPageNumbering } from "../src/main/edits.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
@@ -95,6 +95,20 @@ describe("Tagebuch abtippen", () => {
     setPageNumbering(store, [{ sourceId: p1.id, firstPage: null, spread: true }]);
     expect(buildSessionView(store, session.id).diary[1]!.regions[0]!.pageLabel).toBe("T-01 rechts");
     expect(() => setPageNumbering(store, [{ sourceId: p1.id, firstPage: -1, spread: false }])).toThrow();
+  });
+
+  it("Seitenzahl von Hand am Eintrag, auch über der Zählung des Scans", () => {
+    const { session, p1 } = seed();
+    const e = createEntry(store, p1.id, { x: 0.05, y: 0.1, w: 0.4, h: 0.3 }).entry;
+    setPageNumbering(store, [{ sourceId: p1.id, firstPage: 11, spread: true }]);
+    setRegionPage(store, e.id, 0, 23);
+    let r = buildSessionView(store, session.id).diary[0]!.regions[0]!;
+    expect(r).toMatchObject({ pageLabel: "T-01 · S. 23", pageNo: 23, pageNoOwn: true });
+    setRegionPage(store, e.id, 0, null);
+    r = buildSessionView(store, session.id).diary[0]!.regions[0]!;
+    expect(r).toMatchObject({ pageLabel: "T-01 · S. 11", pageNo: 11, pageNoOwn: false });
+    expect(store.getDiaryEntry(e.id).regions[0]).not.toHaveProperty("pageNo");
+    expect(() => setRegionPage(store, e.id, 3, 1)).toThrow();
   });
 
   it("Rahmen werden auf die Seite begrenzt, zu kleine abgelehnt", () => {

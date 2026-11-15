@@ -100,6 +100,7 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
           : row.pageSpread
             ? "Rahmen links gehören zur linken, rechts zur rechten Seite. Mit einer Seitenzahl heißen sie z. B. „S. 7“ und „S. 8“."
             : "Seitenzahl aus dem Notizbuch, falls sie nicht der Reihenfolge der Scans entspricht. Fotografierte Doppelseiten hier als Doppelseite markieren."}
+        Einzelne Einträge bekommen beim Abtippen eine eigene Seitenzahl, wenn die Zählung nicht passt.
       </p>
       {row.firstPage !== null && following.length > 0 && (
         <Button

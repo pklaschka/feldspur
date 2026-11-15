@@ -143,6 +143,7 @@ export interface DiaryRegionRow {
   y: number;
   w: number;
   h: number;
+  pageNo?: number | null;
 }
 
 export const diaryEntries = sqliteTable(

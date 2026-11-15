@@ -214,6 +214,8 @@ export const DiaryEntry = z.object({
         y: z.number().min(0).max(1).default(0),
         w: z.number().min(0).max(1).default(1),
         h: z.number().min(0).max(1).default(1),
+        /** Seitenzahl im Notizbuch, von Hand am Eintrag eingetragen; fehlt = aus der Zählung des Scans. */
+        pageNo: z.number().int().nonnegative().nullable().optional(),
       }),
     )
     .default([]),

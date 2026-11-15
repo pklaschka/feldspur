@@ -227,7 +227,8 @@ export interface DiaryEntryRow {
   mode: DiaryMode;
   shortText: string;
   fullText: string;
-  regions: (Region & { sourceId: string; pageLabel: string })[];
+  /** pageNo = Seitenzahl im Notizbuch (von Hand oder aus der Zählung des Scans), null = unbekannt. */
+  regions: (Region & { sourceId: string; pageLabel: string; pageNo: number | null; pageNoOwn: boolean })[];
 }
 
 export interface DiaryPatch {
@@ -426,6 +427,8 @@ export interface FeldspurApi {
   createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
   addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
   removeDiaryRegion(entryId: string, index: number): Promise<SessionView>;
+  /** Seitenzahl im Notizbuch an einem Rahmen; null = aus der Zählung des Scans. */
+  setDiaryRegionPage(entryId: string, index: number, pageNo: number | null): Promise<SessionView>;
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
   patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
   /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
@@ -526,6 +529,7 @@ export const IPC = {
   createDiaryEntry: "diary:create",
   addDiaryRegion: "diary:add-region",
   removeDiaryRegion: "diary:remove-region",
+  setDiaryRegionPage: "diary:region-page",
   deleteDiaryEntry: "diary:delete",
   patchDiaryEntry: "diary:patch",
   progress: "progress",

@@ -16,6 +16,8 @@ export interface PageRegion {
   page?: number;
   x: number;
   w: number;
+  /** Am Eintrag von Hand eingetragene Seitenzahl; geht der Zählung des Scans vor. */
+  pageNo?: number | null;
 }
 
 export type PageSide = "left" | "right" | "both";
@@ -56,6 +58,7 @@ export function pageRangeText(from: number, to: number): string {
  * „T-01“, „T-03 S. 2“ (PDF-Seite), „T-01 links“, „T-01 · S. 7“, „T-01 · S. 7–8“.
  */
 export function diaryPageLabel(src: PagedSource, region?: PageRegion): string {
+  if (region?.pageNo != null) return `${src.label} · S. ${region.pageNo}`;
   const pdfPage = region?.page ?? 0;
   const side = src.pageSpread && region ? pageSide(region) : "both";
   const pages = scanPages(src, pdfPage);
@@ -88,4 +91,37 @@ export function continuePages(
     next += Math.max(1, f.pdfPages) * per;
     return { id: f.id, firstPage };
   });
+}
+
+/** Seitenzahl eines Rahmens: von Hand eingetragen oder aus der Zählung des Scans; null = unbekannt. */
+export function regionPageNo(src: PagedSource, region: PageRegion): number | null {
+  if (region.pageNo != null) return region.pageNo;
+  const pages = scanPages(src, region.page ?? 0);
+  if (!pages) return null;
+  if (!src.pageSpread) return pages.from;
+  const side = pageSide(region);
+  return side === "right" ? pages.to : side === "left" ? pages.from : null;
+}
+
+export interface PlacedRegion {
+  sourceId: string;
+  page?: number;
+  x: number;
+  w: number;
+}
+
+/**
+ * Vorschlag für die Seitenzahl eines Rahmens aus dem vorigen Eintrag (Lesereihenfolge):
+ * gleiche Seite → gleiche Zahl, sonst die nächste. Auf Doppelseiten zählt die Hälfte mit.
+ */
+export function suggestPageNo(
+  prev: { region: PlacedRegion; pageNo: number; spread: boolean } | null,
+  cur: { region: PlacedRegion; spread: boolean },
+): number | null {
+  if (!prev) return null;
+  const sameScan = prev.region.sourceId === cur.region.sourceId && (prev.region.page ?? 0) === (cur.region.page ?? 0);
+  const prevSide = prev.spread ? pageSide(prev.region) : "both";
+  const curSide = cur.spread ? pageSide(cur.region) : "both";
+  if (sameScan && (prevSide === curSide || curSide === "both" || prevSide === "both")) return prev.pageNo;
+  return prev.pageNo + 1;
 }
