@@ -75,14 +75,14 @@ export function Collect({
       </StepHeader>
       <div
         className={cx(
-          "mb-5 flex items-center gap-4 rounded-[10px] border-[1.5px] border-dashed px-4 py-3",
+          "mb-5 flex items-center gap-4 rounded-xl border-[1.5px] border-dashed px-4 py-3",
           hover ? "border-accent bg-accent-soft" : "border-line-2 bg-panel-2",
           empty && "flex-col px-8 py-16 text-center",
         )}
       >
         <div className="flex-1">
           <b>{busy ? "Lese Dateien, Metadaten und Prüfsummen…" : "Dateien oder ganze Ordner hier ablegen"}</b>
-          <div className="text-[0.8rem] text-muted">
+          <div className="text-[0.85rem] text-muted">
             Video, Audio, Fotos, Tagebuchscans (JPG/PDF), Notizen (TXT/MD). Originale bleiben, wo sie sind.
           </div>
         </div>
@@ -95,7 +95,7 @@ export function Collect({
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="font-semibold">Geräte</h3>
-            <span className="text-[0.8rem] text-muted">
+            <span className="text-[0.85rem] text-muted">
               erkannt aus Kameramodell oder Dateinamen · Namen anklicken zum Ändern
             </span>
             <span className="flex-1" />
@@ -115,7 +115,7 @@ export function Collect({
               />
             ))}
             {unassigned.length > 0 && (
-              <section className="k-other overflow-hidden rounded-[10px] border border-t-[3px] border-line border-t-k bg-panel shadow-xs">
+              <section className="k-other overflow-hidden rounded-xl border border-t-[3px] border-line border-t-k bg-panel shadow-xs">
                 <header className="flex items-center gap-2 px-3 pt-3 pb-2">
                   <Glyph kind="other" />
                   <span className="font-semibold">Ohne Gerät</span>
@@ -150,7 +150,7 @@ function DeviceCard({
   const kinds = [...new Set(rows.map((r) => r.kind))];
   return (
     <section
-      className={`k-${device.kind} overflow-hidden rounded-[10px] border border-t-[3px] border-line border-t-k bg-panel shadow-xs`}
+      className={`k-${device.kind} overflow-hidden rounded-xl border border-t-[3px] border-line border-t-k bg-panel shadow-xs`}
       data-testid="device-card"
       data-device={device.label}
     >
@@ -167,7 +167,7 @@ function DeviceCard({
         )}
         <DeviceMenu device={device} view={view} />
       </header>
-      <div className="pr-3 pb-2 pl-[3.1rem] text-[0.8rem] text-muted">
+      <div className="pr-3 pb-2 pl-[3.1rem] text-[0.85rem] text-muted">
         {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
         {device.personName && ` · ${device.personName}`}
       </div>
@@ -216,7 +216,7 @@ function SourceList({
             )}
             onClick={() => onSelect(r.id)}
           >
-            <span className={`k-${r.kind} font-mono text-[0.78rem] font-medium text-k`}>
+            <span className={`k-${r.kind} font-mono text-[0.82rem] font-medium text-k`}>
               {nested && <span className="mr-1 text-muted">↳</span>}
               {r.label}
             </span>
@@ -224,10 +224,10 @@ function SourceList({
               <span className="block truncate" title={r.fileName}>
                 {r.fileName}
               </span>
-              {r.follows && <span className="block text-[0.75rem] text-muted">setzt {label(r.follows)} fort</span>}
-              {nested && <span className="block text-[0.75rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
+              {r.follows && <span className="block text-[0.8rem] text-muted">setzt {label(r.follows)} fort</span>}
+              {nested && <span className="block text-[0.8rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
             </span>
-            <span className="font-mono text-[0.78rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
+            <span className="font-mono text-[0.82rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
               {r.startMs === null
                 ? "–"
                 : r.endMs !== null && r.endMs !== r.startMs

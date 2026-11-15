@@ -356,7 +356,7 @@ function Timeline({
         </Button>
       </div>
 
-      <div className="flex overflow-hidden rounded-[10px] border border-line bg-panel shadow-xs">
+      <div className="flex overflow-hidden rounded-xl border border-line bg-panel shadow-xs">
         <div className="flex-none border-r border-line" style={{ width: LABEL_W }}>
           <div className="border-b border-line bg-panel-2" style={{ height: RULER_H }} />
           <div
@@ -365,7 +365,7 @@ function Timeline({
           >
             <span className="grid min-w-0 flex-1">
               <b className="font-semibold">Episoden</b>
-              <span className="truncate text-[0.8rem] text-muted">
+              <span className="truncate text-[0.85rem] text-muted">
                 {!view.session.episodes ? "aus" : view.episodes ? "aus Tonspuren" : "nach Abgleich"}
               </span>
             </span>
@@ -384,7 +384,7 @@ function Timeline({
                 <b className="truncate font-medium" title={t.device?.label}>
                   {t.device?.label ?? "Ohne Gerät"}
                 </b>
-                <span className="text-[0.8rem] text-muted">{trackSub(t, view.rows)}</span>
+                <span className="text-[0.85rem] text-muted">{trackSub(t, view.rows)}</span>
               </span>
             </div>
           ))}
@@ -439,7 +439,7 @@ function Timeline({
         </ul>
       </VisuallyHidden.Root>
 
-      <div className="mx-0.5 mt-2.5 flex flex-wrap gap-5 text-[0.8rem] text-muted">
+      <div className="mx-0.5 mt-2.5 flex flex-wrap gap-5 text-[0.85rem] text-muted">
         <Legend swatch="hatch h-2.5 w-4.5 rounded-xs border border-line-2">Stille (≥ 5 Min.)</Legend>
         <Legend swatch="h-2.5 w-[3px] bg-warn">laute Stelle in der Stille</Legend>
         <Legend swatch="h-2.5 w-4.5 border-r-[3px] border-k-diary bg-linear-to-r from-transparent to-k-diary/40">
@@ -534,7 +534,7 @@ function HoverCard({
   const left = offset + Math.min(Math.max(8, x + 12), width - 240);
   return (
     <div
-      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.82rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
       style={{ left, top: y + 14 }}
     >
       <b className="block font-semibold">{title}</b>
@@ -560,7 +560,7 @@ function Tray({
     <section className="mt-5">
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <h3 className="text-[0.9rem] font-semibold">Ohne Uhrzeit</h3>
-        <span className="text-[0.8rem] text-muted">
+        <span className="text-[0.85rem] text-muted">
           Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein.
         </span>
       </div>

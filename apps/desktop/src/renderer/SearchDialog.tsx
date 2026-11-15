@@ -76,9 +76,9 @@ export function SearchDialog({
             role="listbox"
             aria-label="Treffer"
           >
-            {query.trim() && !hits.length && <li className="px-3 py-3 text-[0.85rem] text-muted">Nichts gefunden.</li>}
+            {query.trim() && !hits.length && <li className="px-3 py-3 text-[0.9rem] text-muted">Nichts gefunden.</li>}
             {!query.trim() && (
-              <li className="px-3 py-3 text-[0.85rem] text-muted">
+              <li className="px-3 py-3 text-[0.9rem] text-muted">
                 {items.length} Einträge durchsuchbar. Mehrere Wörter: alle müssen vorkommen. ↑↓ wählen, Enter springt
                 hin.
               </li>
@@ -96,11 +96,11 @@ export function SearchDialog({
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(h)}
               >
-                <span className="pt-0.5 font-mono text-[0.78rem] text-muted">
+                <span className="pt-0.5 font-mono text-[0.82rem] text-muted">
                   {h.clockMs === null ? "–" : formatClock(h.clockMs)}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[0.78rem] text-muted">
+                  <span className="block truncate text-[0.82rem] text-muted">
                     {KIND_LABEL[h.kind]} · {h.title}
                   </span>
                   <span className="line-clamp-2 text-[0.88rem]">

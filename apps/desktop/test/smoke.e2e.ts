@@ -595,7 +595,7 @@ try {
   );
   await page.keyboard.press("Control+o");
   await page.getByRole("menuitem", { name: "Neues Projekt…" }).click();
-  await page.getByText("Lege links einen Einsatz an").waitFor();
+  await page.getByRole("heading", { name: "Noch kein Einsatz" }).waitFor();
   await page.keyboard.press("Control+o");
   await page.getByRole("menuitem", { name: /^Test/ }).click();
   await page.getByRole("heading", { name: "Testmarkt" }).waitFor();

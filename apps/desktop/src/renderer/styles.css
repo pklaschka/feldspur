@@ -1,53 +1,61 @@
 /* Feldspur – Tailwind v4. Farben als Variablen, damit Hell/Dunkel nur die Variablen tauscht. */
 @import "tailwindcss";
+@import "@fontsource-variable/source-sans-3";
+@import "@fontsource-variable/source-sans-3/wght-italic.css";
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/source-serif-4/opsz-italic.css";
 
 :root {
-  --bg: #f4f5f3;
-  --panel: #ffffff;
-  --panel-2: #f8f9f7;
-  --sunken: #eceee9;
-  --ink: #1c2328;
-  --ink-2: #44515a;
-  --muted: #5f6b73;
-  --line: #dde1dc;
-  --line-2: #c9cfc8;
-  --accent: #2f5bd3;
-  --accent-ink: #ffffff;
-  --accent-soft: #e6ecfb;
-  --k-video: #3a63d8;
-  --k-audio: #107a5f;
-  --k-photo: #8b4fc0;
-  --k-diary: #a8571f;
-  --k-other: #6c7880;
-  --good: #107a5f;
-  --warn: #9a5c00;
-  --bad: #b23a48;
-  --warn-soft: #fbf0dc;
+  /* Papier, Tinte und Erde: die Farben kommen aus dem App-Symbol (Feldmarker auf Notizpapier). */
+  --bg: #f2ede4;
+  --panel: #fffcf6;
+  --panel-2: #f8f3ea;
+  --sunken: #ebe3d6;
+  --ink: #2a211b;
+  --ink-2: #4c4037;
+  --muted: #675a4f;
+  --line: #e2d8c9;
+  --line-2: #cdbfac;
+  --accent: #a4441f;
+  --accent-ink: #fffaf2;
+  --accent-soft: #f5e2d4;
+  --k-video: #3b5d85;
+  --k-audio: #44692f;
+  --k-photo: #7e4877;
+  --k-diary: #8e5524;
+  --k-other: #6f6458;
+  --good: #44692f;
+  --warn: #8f5a07;
+  --bad: #a3302f;
+  --warn-soft: #f6e7c9;
+  --shadow: 32 22 14;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111518;
-    --panel: #181d21;
-    --panel-2: #1c2226;
-    --sunken: #0d1113;
-    --ink: #e6ebee;
-    --ink-2: #bcc6cc;
-    --muted: #8b979e;
-    --line: #2a3237;
-    --line-2: #364047;
-    --accent: #7c9cff;
-    --accent-ink: #0d1430;
-    --accent-soft: #1e2a4a;
-    --k-video: #7c9cff;
-    --k-audio: #43c49f;
-    --k-photo: #b88ae6;
-    --k-diary: #e59a62;
-    --k-other: #8b979e;
-    --good: #43c49f;
-    --warn: #e7a84a;
-    --bad: #ef7d8b;
-    --warn-soft: #33270f;
+    /* Abends unter der Lampe: warmes Dunkelbraun statt Blaugrau. */
+    --bg: #1a1613;
+    --panel: #221d19;
+    --panel-2: #28221d;
+    --sunken: #14110e;
+    --ink: #efe6da;
+    --ink-2: #d0c2b2;
+    --muted: #a69583;
+    --line: #372f28;
+    --line-2: #4a3f35;
+    --accent: #e48f63;
+    --accent-ink: #26140a;
+    --accent-soft: #452b1d;
+    --k-video: #91b2da;
+    --k-audio: #a0c584;
+    --k-photo: #d5a0cb;
+    --k-diary: #dcaa72;
+    --k-other: #a69583;
+    --good: #a0c584;
+    --warn: #e8b95e;
+    --bad: #f08d87;
+    --warn-soft: #3b2e15;
+    --shadow: 0 0 0;
     color-scheme: dark;
   }
 }
@@ -74,8 +82,13 @@
   --color-k-audio: var(--k-audio);
   --color-k-photo: var(--k-photo);
   --color-k-diary: var(--k-diary);
-  --font-sans: "IBM Plex Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-sans: "Source Sans 3 Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Source Serif 4 Variable", Charter, Georgia, serif;
+  /* Zeiten und Kürzel: dieselbe Schrift mit gleich breiten Ziffern statt einer technischen Festbreitenschrift. */
+  --font-mono: "Source Sans 3 Variable", system-ui, sans-serif;
+  --shadow-xs: 0 1px 2px rgb(var(--shadow) / 0.06);
+  --shadow-sm: 0 1px 3px rgb(var(--shadow) / 0.08), 0 1px 2px rgb(var(--shadow) / 0.05);
+  --shadow-lg: 0 10px 30px -8px rgb(var(--shadow) / 0.22), 0 4px 10px -4px rgb(var(--shadow) / 0.12);
 }
 
 @layer base {
@@ -85,11 +98,20 @@
     height: 100%;
   }
   body {
-    @apply bg-bg font-sans text-[13.5px] leading-[1.45] text-ink antialiased;
+    @apply bg-bg font-sans text-[14.5px] leading-[1.5] text-ink antialiased;
+    font-feature-settings: "tnum" 0;
   }
   input,
   textarea {
-    @apply rounded-md border border-line-2 bg-panel px-2 py-1;
+    @apply rounded-lg border border-line-2 bg-panel px-2 py-1;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-serif tracking-[-0.005em];
+  }
+  ::selection {
+    @apply bg-accent-soft;
   }
   :focus-visible {
     @apply outline-2 outline-offset-1 outline-accent;
@@ -114,6 +136,13 @@
   .k-gps,
   .k-other {
     --k: var(--k-other);
+  }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
   }
   /* Schraffur für Stille und Zwischenzeiten; Farbe über --hatch. */
   .hatch {

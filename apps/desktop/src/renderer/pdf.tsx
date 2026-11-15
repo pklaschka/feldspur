@@ -102,7 +102,7 @@ export function PdfPages({ sourceId, className }: { sourceId: string; className?
       {Array.from({ length: n }, (_, i) => (
         <figure key={i} className="rounded border border-line bg-white shadow-sm">
           <PdfPageCanvas sourceId={sourceId} page={i} className="block" />
-          <figcaption className="border-t border-line px-2 py-1 text-[0.75rem] text-muted">Seite {i + 1}</figcaption>
+          <figcaption className="border-t border-line px-2 py-1 text-[0.8rem] text-muted">Seite {i + 1}</figcaption>
         </figure>
       ))}
     </div>

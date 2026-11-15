@@ -35,13 +35,13 @@ export function RecentList({ onOpen }: { onOpen: (path: string) => void }) {
   if (!list.length) return null;
   return (
     <section className="mt-6" aria-label="Zuletzt geöffnet">
-      <div className="mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">Zuletzt geöffnet</div>
+      <div className="mb-1.5 text-[0.78rem] font-semibold text-muted">Zuletzt geöffnet</div>
       <ul className="-mx-2">
         {list.map((r) => (
           <li key={r.path} className="group flex items-center gap-1">
             <button
               className={cx(
-                "min-w-0 flex-1 cursor-pointer rounded-[7px] px-2 py-1.5 text-left hover:bg-sunken disabled:cursor-default disabled:hover:bg-transparent",
+                "min-w-0 flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-left hover:bg-sunken disabled:cursor-default disabled:hover:bg-transparent",
               )}
               disabled={r.missing}
               onClick={() => onOpen(r.path)}
@@ -50,7 +50,7 @@ export function RecentList({ onOpen }: { onOpen: (path: string) => void }) {
               <span className={cx("block truncate", r.missing ? "text-muted line-through" : "font-medium")}>
                 {r.name}
               </span>
-              <span className="block truncate text-[0.75rem] text-muted">
+              <span className="block truncate text-[0.8rem] text-muted">
                 {r.missing ? "Datei nicht gefunden · " : `${when(r.openedAt)} · `}
                 {r.path}
               </span>
@@ -71,7 +71,7 @@ export function RecentList({ onOpen }: { onOpen: (path: string) => void }) {
 }
 
 const ITEM =
-  "flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-[0.85rem] outline-none data-[disabled]:cursor-default data-[disabled]:text-muted data-[highlighted]:bg-accent-soft";
+  "flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-[0.9rem] outline-none data-[disabled]:cursor-default data-[disabled]:text-muted data-[highlighted]:bg-accent-soft";
 
 /** Projektname in der Seitenleiste als Menü: anderes Projekt öffnen, zuletzt geöffnete, neues. */
 export function ProjectMenu({
@@ -96,7 +96,7 @@ export function ProjectMenu({
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger
-        className="mt-1 flex w-full cursor-pointer items-center gap-1 rounded px-0 text-left text-[0.8rem] text-muted outline-none hover:text-ink focus-visible:text-ink"
+        className="mt-1 flex w-full cursor-pointer items-center gap-1 rounded px-0 text-left text-[0.85rem] text-muted outline-none hover:text-ink focus-visible:text-ink"
         title={`${path}\nProjekt wechseln (${navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Strg+"}O)`}
       >
         <span className="truncate">{name}</span>
@@ -108,12 +108,10 @@ export function ProjectMenu({
           sideOffset={4}
           className="z-50 max-w-[26rem] min-w-64 rounded-lg border border-line bg-panel p-1 shadow-lg"
         >
-          <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">
+          <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.78rem] font-semibold text-muted">
             Zuletzt geöffnet
           </DropdownMenu.Label>
-          {!others.length && (
-            <div className="px-2.5 py-1.5 text-[0.85rem] text-muted">Noch keine anderen Projekte.</div>
-          )}
+          {!others.length && <div className="px-2.5 py-1.5 text-[0.9rem] text-muted">Noch keine anderen Projekte.</div>}
           {others.map((r) => (
             <DropdownMenu.Item
               key={r.path}
@@ -124,7 +122,7 @@ export function ProjectMenu({
             >
               <span className="min-w-0 flex-1">
                 <span className={cx("block truncate", r.missing && "line-through")}>{r.name}</span>
-                <span className="block truncate text-[0.72rem] text-muted">
+                <span className="block truncate text-[0.78rem] text-muted">
                   {r.missing ? "Datei nicht gefunden" : when(r.openedAt)}
                 </span>
               </span>

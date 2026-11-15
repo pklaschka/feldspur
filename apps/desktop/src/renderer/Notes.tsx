@@ -52,10 +52,10 @@ export function NotesPanel({
 
   return (
     <section className="rounded-lg border border-line p-3" data-testid="notes" aria-label="Notizen zu dieser Datei">
-      <h3 className="mb-1.5 flex items-baseline gap-2 text-[0.85rem] font-semibold">
+      <h3 className="mb-1.5 flex items-baseline gap-2 text-[0.9rem] font-semibold">
         Notizen zu dieser Datei
         {notes.length > 0 && (
-          <span className="text-[0.78rem] font-normal text-muted">
+          <span className="text-[0.82rem] font-normal text-muted">
             {open} offen{notes.length > open ? `, ${notes.length - open} erledigt` : ""}
           </span>
         )}
@@ -81,7 +81,7 @@ export function NotesPanel({
           }
         }}
       />
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[0.8rem]">
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[0.85rem]">
         {av && (
           <>
             <Button size="sm" onClick={() => setFrom(pos)} title="Beginn der Strecke auf die aktuelle Stelle setzen">
@@ -146,18 +146,18 @@ function NoteItem({
         {note.fromMs !== null && onSeek ? (
           <button
             type="button"
-            className="cursor-pointer font-mono text-[0.75rem] text-warn hover:text-accent"
+            className="cursor-pointer font-mono text-[0.8rem] text-warn hover:text-accent"
             onClick={() => onSeek(note.fromMs!)}
             title="Hierhin springen"
           >
             {noteRange(note)}
           </button>
         ) : (
-          <span className="font-mono text-[0.75rem] text-muted">{noteRange(note)}</span>
+          <span className="font-mono text-[0.8rem] text-muted">{noteRange(note)}</span>
         )}
         <textarea
           className={cx(
-            "block w-full resize-none border-transparent bg-transparent px-0 py-0 text-[0.85rem] [field-sizing:content] hover:border-line focus:border-line-2",
+            "block w-full resize-none border-transparent bg-transparent px-0 py-0 text-[0.9rem] [field-sizing:content] hover:border-line focus:border-line-2",
             note.done && "line-through",
           )}
           rows={1}

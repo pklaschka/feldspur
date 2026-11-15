@@ -1,5 +1,5 @@
 import { Tabs } from "radix-ui";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
@@ -21,23 +21,19 @@ import { Transcriber } from "./Transcriber.tsx";
 import { Sync } from "./Sync.tsx";
 import { Button, cx, Panel, TooltipProvider } from "./ui.tsx";
 
+import iconUrl from "../../../../packaging/icon.svg?url";
+
 const api = window.feldspur;
 
 export type Guard = <T>(fn: () => Promise<T>) => Promise<T | undefined>;
 
+/** Das App-Symbol (Feldmarker auf Notizpapier) mit Namen. */
 function Logo({ small }: { small?: boolean }) {
-  const bar = (c: string, x: string, w: string, y: number) => (
-    <span className={cx("absolute h-[3px] rounded-full", c)} style={{ left: x, width: w, top: y }} />
-  );
   return (
     <div
-      className={cx("flex items-center gap-2.5 font-semibold tracking-tight", small ? "text-[1.05rem]" : "text-2xl")}
+      className={cx("flex items-center gap-2.5 font-serif font-semibold", small ? "text-[1.2rem]" : "text-[1.9rem]")}
     >
-      <span className="relative size-[18px] rounded-[5px] bg-sunken">
-        {bar("bg-k-video", "0", "70%", 3)}
-        {bar("bg-k-audio", "30%", "70%", 8)}
-        {bar("bg-k-diary", "10%", "55%", 13)}
-      </span>
+      <img src={iconUrl} alt="" className={small ? "size-7" : "size-12"} />
       Feldspur
     </div>
   );
@@ -111,9 +107,14 @@ export function App() {
   if (!project) {
     return (
       <main className="grid h-full place-items-center">
-        <Panel className="max-w-[440px] px-9 py-8">
+        <Panel className="max-w-[480px] px-10 py-9">
           <Logo />
-          <p className="my-3">Alle Aufzeichnungen eines Feldeinsatzes auf einer gemeinsamen Uhrzeit-Achse.</p>
+          <p className="mt-4 mb-1 font-serif text-[1.15rem] leading-snug text-ink-2 italic">
+            Was an einem Feldtag aufgezeichnet wurde, wieder in eine gemeinsame Zeit bringen.
+          </p>
+          <p className="mb-5 text-muted">
+            Video, Ton, Fotos, Tagebuch und Notizen liegen danach auf einer Achse, so wie der Tag war.
+          </p>
           <div className="flex gap-2">
             <Button variant="primary" onClick={() => void guard(api.newProject).then(adopt)}>
               Neues Projekt
@@ -141,7 +142,7 @@ export function App() {
             label="Breite der Seitenleiste"
             left={`calc(100% - ${inspector.width}px)`}
           />
-          <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4">
+          <nav className="overflow-auto border-r border-line bg-panel-2 px-2.5 py-4.5">
             <div className="px-2">
               <Logo small />
               <ProjectMenu
@@ -154,20 +155,18 @@ export function App() {
                 onNew={() => void guard(api.newProject).then(adopt)}
               />
             </div>
-            <div className="mx-2 mt-6 mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase">
-              Einsätze
-            </div>
+            <div className="mx-2 mt-7 mb-1.5 text-[0.88rem] font-semibold text-ink-2">Einsätze</div>
             {project.sessions.map((s) => (
               <button
                 key={s.id}
                 className={cx(
-                  "flex w-full cursor-pointer gap-2 rounded-[7px] px-2 py-1.5 text-left",
+                  "flex w-full cursor-pointer gap-2 rounded-lg px-2 py-1.5 text-left",
                   s.id === sessionId ? "bg-accent-soft font-medium text-accent" : "hover:bg-sunken",
                 )}
                 onClick={() => setSessionId(s.id)}
                 title={s.place || undefined}
               >
-                <span className={cx("pt-px font-mono text-[0.78rem]", s.id !== sessionId && "text-muted")}>
+                <span className={cx("pt-px font-mono text-[0.82rem]", s.id !== sessionId && "text-muted")}>
                   {formatDay(s.date)}
                 </span>
                 <span>{s.title}</span>
@@ -180,7 +179,11 @@ export function App() {
           ) : (
             <main className="col-span-2 p-8">
               {error && <p className="text-bad">{error}</p>}
-              <p className="text-muted">Lege links einen Einsatz an, zum Beispiel „Wochenmarkt Südstadt“.</p>
+              <h2 className="mb-1 text-[1.4rem] font-semibold">Noch kein Einsatz</h2>
+              <p className="max-w-[52ch] text-muted">
+                Ein Einsatz ist ein Tag im Feld, zum Beispiel „Wochenmarkt Südstadt“. Lege ihn links an und sammle dann
+                alles ein, was an diesem Tag aufgezeichnet wurde.
+              </p>
             </main>
           )}
         </div>
@@ -196,7 +199,7 @@ function NewSessionForm({ onCreate }: { onCreate: (i: { title: string; date: str
   if (!open) {
     return (
       <button
-        className="w-full cursor-pointer rounded-[7px] px-2 py-1.5 text-left text-muted hover:bg-sunken"
+        className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-muted hover:bg-sunken"
         onClick={() => setOpen(true)}
       >
         + neuer Einsatz
@@ -334,7 +337,7 @@ function SessionPane({
     },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;
-  const tabContent = "flex-1 overflow-auto px-5 pt-4.5 pb-6 data-[state=inactive]:hidden";
+  const tabContent = "flex-1 overflow-auto px-6 pt-5 pb-8 data-[state=inactive]:hidden";
 
   return (
     <PlaybackProvider>
@@ -346,11 +349,13 @@ function SessionPane({
           asChild
         >
           <main>
-            <header className="border-b border-line bg-panel px-5 pt-3.5">
-              <div className="flex items-baseline gap-2.5">
-                <span className="font-mono text-muted">{formatDay(view.session.date)}</span>
-                <h1 className="text-xl font-semibold">{view.session.title}</h1>
-                {view.session.place && <span className="text-muted">{view.session.place}</span>}
+            <header className="border-b border-line bg-panel px-6 pt-4">
+              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                <span className="font-serif text-[1.05rem] text-muted italic">{formatDay(view.session.date)}</span>
+                <h1 className="text-[1.6rem] leading-tight font-semibold">{view.session.title}</h1>
+                {view.session.place && (
+                  <span className="font-serif text-[1.05rem] text-muted italic">{view.session.place}</span>
+                )}
                 <Button variant="link" size="sm" onClick={() => setEditing(true)}>
                   Einsatzdaten bearbeiten
                 </Button>
@@ -361,35 +366,43 @@ function SessionPane({
                   onClick={() => setSearching(true)}
                   title="Mitschrift, Tagebuch, Quellen und Episoden durchsuchen (Strg/⌘+K)"
                 >
-                  Suchen <kbd className="ml-1 font-mono text-[0.72rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
+                  Suchen <kbd className="ml-1 font-mono text-[0.78rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
                 </Button>
               </div>
-              <Tabs.List className="mt-3 flex gap-1" aria-label="Arbeitsschritte">
-                {steps.map((s) => (
-                  <Tabs.Trigger
-                    key={s.id}
-                    value={s.id}
-                    className="group flex cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 pt-2 pb-2.5 text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-medium data-[state=active]:text-ink"
-                  >
-                    <span className="grid size-[19px] place-items-center rounded-full bg-sunken text-[0.72rem] text-muted group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
-                      {s.n}
-                    </span>
-                    {s.title}
-                    {s.badge && (
-                      <span
-                        className={cx(
-                          "rounded-full px-1.5 text-[0.7rem]",
-                          s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
-                        )}
-                      >
-                        {s.badge}
-                      </span>
+              {/* Die vier Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur. */}
+              <Tabs.List
+                className="no-scrollbar mt-3 -mb-px flex items-center overflow-x-auto"
+                aria-label="Arbeitsschritte"
+              >
+                {steps.map((s, i) => (
+                  <Fragment key={s.id}>
+                    {i > 0 && (
+                      <span aria-hidden className="mx-0.5 h-0 w-5 flex-none border-t-2 border-dotted border-line-2" />
                     )}
-                  </Tabs.Trigger>
+                    <Tabs.Trigger
+                      value={s.id}
+                      className="group flex flex-none cursor-pointer items-center gap-2 border-b-[3px] border-transparent px-2.5 pt-1.5 pb-2.5 whitespace-nowrap text-ink-2 hover:text-ink data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-ink"
+                    >
+                      <span className="grid size-[22px] place-items-center rounded-full border border-line-2 bg-panel font-serif text-[0.85rem] text-muted group-data-[state=active]:border-accent group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
+                        {s.n}
+                      </span>
+                      {s.title}
+                      {s.badge && (
+                        <span
+                          className={cx(
+                            "rounded-full px-2 text-[0.8rem] font-normal",
+                            s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
+                          )}
+                        >
+                          {s.badge}
+                        </span>
+                      )}
+                    </Tabs.Trigger>
+                  </Fragment>
                 ))}
               </Tabs.List>
             </header>
-            {error && <p className="mx-5 mt-2 text-bad">{error}</p>}
+            {error && <p className="mx-6 mt-2 text-bad">{error}</p>}
             <Tabs.Content value="collect" className={tabContent}>
               <Collect
                 view={view}

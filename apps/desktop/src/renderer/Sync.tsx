@@ -118,7 +118,7 @@ export function Sync({
           {notice && !progress && <Notice>{notice}</Notice>}
           <div className="grid grid-cols-[minmax(140px,190px)_minmax(160px,1fr)_180px] gap-x-5">
             <span />
-            <span className="flex justify-between pb-1 text-[0.8rem] whitespace-nowrap text-muted">
+            <span className="flex justify-between pb-1 text-[0.85rem] whitespace-nowrap text-muted">
               <span className="font-mono">−{mmss(span)}</span>
               <span>Referenz{span > 3_600_000 ? " · gestaucht" : ""}</span>
               <span className="font-mono">+{mmss(span)}</span>
@@ -189,7 +189,7 @@ function ClockRow({
         <Glyph kind={device.kind} />
         <div>
           <b className="font-semibold">{device.label}</b>
-          <div className="text-[0.8rem] text-muted">
+          <div className="text-[0.85rem] text-muted">
             {device.sourceCount} {device.sourceCount === 1 ? "Datei" : "Dateien"}
             {device.personName && ` · ${device.personName}`}
           </div>
@@ -217,7 +217,7 @@ function ClockRow({
           </Tip>
         )}
         {device.offsetMs === null && (
-          <span className="absolute top-1/2 left-1/2 -translate-1/2 rounded-full border border-dashed border-warn bg-panel px-2 text-[0.75rem] whitespace-nowrap text-warn">
+          <span className="absolute top-1/2 left-1/2 -translate-1/2 rounded-full border border-dashed border-warn bg-panel px-2 text-[0.8rem] whitespace-nowrap text-warn">
             Abweichung unbekannt
           </span>
         )}
@@ -228,7 +228,7 @@ function ClockRow({
         ) : (
           <>
             <OffsetInput device={device} onOffset={onOffset} />
-            <Button variant="link" className="basis-full text-left text-[0.8rem]" onClick={onReference}>
+            <Button variant="link" className="basis-full text-left text-[0.85rem]" onClick={onReference}>
               als Referenz
             </Button>
           </>
@@ -267,7 +267,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
         onBlur={commit}
         onKeyDown={(e) => e.key === "Enter" && commit()}
       />
-      <span className={cx("text-[0.8rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
+      <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
         {device.offsetMs === null ? "offen" : BASIS_TEXT[device.offsetBasis]}
       </span>
     </span>
@@ -291,13 +291,13 @@ function Proposal({
       data-testid="proposal"
       className="col-span-full mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warn/30 bg-warn-soft px-3 py-2"
     >
-      <span className="text-[0.7rem] font-semibold tracking-[0.05em] text-warn uppercase">Vorschlag</span>
+      <span className="text-[0.78rem] font-semibold text-warn">Vorschlag</span>
       <div className="flex-1">
         <div>
           Uhr geht <b className="font-mono">{p.impliedOffset ?? "?"}</b>, gefunden in <b>{p.sourceLabel}</b>{" "}
-          <span className="font-mono text-[0.8rem] text-muted">{p.fileName}</span>
+          <span className="font-mono text-[0.85rem] text-muted">{p.fileName}</span>
         </div>
-        <div className="text-[0.8rem] text-muted">
+        <div className="text-[0.85rem] text-muted">
           {p.description} · {p.note} ·{" "}
           <span className={sure ? "text-good" : "text-warn"}>{sure ? "eindeutig" : "unsicher, bitte anhören"}</span>
         </div>
@@ -366,7 +366,7 @@ function ManualAnchors({
   const side = (label: string, value: string, set: (v: string) => void, at: string, setAt: (v: string) => void) => (
     <fieldset className="grid min-w-0 content-start gap-1.5 rounded-lg border border-line bg-panel-2 p-2.5">
       <legend className="sr-only">{label}</legend>
-      <span className="text-[0.8rem] font-medium text-ink-2">{label}</span>
+      <span className="text-[0.85rem] font-medium text-ink-2">{label}</span>
       <Picker
         label={label}
         placeholder="Aufnahme wählen…"
@@ -379,7 +379,7 @@ function ManualAnchors({
         className="w-full"
       />
       <span className="flex flex-wrap items-center gap-2">
-        <span className="text-[0.8rem] text-muted">Stelle</span>
+        <span className="text-[0.85rem] text-muted">Stelle</span>
         <input
           className="w-24 font-mono"
           placeholder="m:ss"
@@ -391,7 +391,7 @@ function ManualAnchors({
           <Button
             variant="link"
             type="button"
-            className="text-[0.8rem]"
+            className="text-[0.85rem]"
             onClick={() => setAt(positionText(position.atMs))}
           >
             ↳ aus Wiedergabe ({positionText(position.atMs)})
@@ -404,7 +404,7 @@ function ManualAnchors({
   return (
     <Panel>
       <h3 className="font-semibold">Anker</h3>
-      <p className="mt-0.5 mb-3 max-w-[72ch] text-[0.85rem] text-muted">
+      <p className="mt-0.5 mb-3 max-w-[72ch] text-[0.9rem] text-muted">
         Derselbe Moment in zwei Aufnahmen, etwa eine knallende Tür. Liegt eine davon schon sicher, gleicht das die Uhr
         des anderen Geräts ab. Gewählte Aufnahmen spielen rechts ab; die gehörte Stelle übernimmst du mit „aus
         Wiedergabe“.
@@ -412,15 +412,15 @@ function ManualAnchors({
       {view.anchors.length > 0 && (
         <ul className="mb-4 grid gap-1.5" data-testid="anchor-list">
           {view.anchors.map((x) => (
-            <li key={x.id} className="flex items-center gap-3 rounded-[7px] border border-line px-3 py-1.5">
+            <li key={x.id} className="flex items-center gap-3 rounded-lg border border-line px-3 py-1.5">
               <Pill>{ANCHOR_KIND[x.kind]}</Pill>
-              <span className="font-mono text-[0.85rem]">{x.description}</span>
-              {x.note && <span className="text-[0.8rem] text-muted">{x.note}</span>}
+              <span className="font-mono text-[0.9rem]">{x.description}</span>
+              {x.note && <span className="text-[0.85rem] text-muted">{x.note}</span>}
               {x.conflictMs !== null && <Pill tone="warn">widerspricht um {offsetText(x.conflictMs)}</Pill>}
               <span className="flex-1" />
               <Button
                 variant="link"
-                className="text-[0.8rem]"
+                className="text-[0.85rem]"
                 onClick={() =>
                   onFine({
                     aSourceId: x.a.sourceId,
@@ -436,7 +436,7 @@ function ManualAnchors({
               </Button>
               <Button
                 variant="link"
-                className="text-[0.8rem]"
+                className="text-[0.85rem]"
                 onClick={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
               >
                 löschen

@@ -101,7 +101,7 @@ function Summary({ view }: { view: SessionView }) {
   const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote).length;
   if (diaryOpen) todo.push(`${diaryOpen} Tagebuchseiten ohne Randnotiz.`);
   const stat = (s: SourceRow["status"]) => (
-    <div className={cx("rounded-lg border border-line p-2 text-[0.78rem]", STATUS_TEXT_CLASS[s])}>
+    <div className={cx("rounded-lg border border-line p-2 text-[0.82rem]", STATUS_TEXT_CLASS[s])}>
       <b className="block text-[1.3rem] font-semibold">{count(s)}</b>
       {STATUS_TEXT[s]}
     </div>
@@ -122,9 +122,9 @@ function Summary({ view }: { view: SessionView }) {
           ))}
         </ul>
       ) : (
-        <p className="text-[0.8rem] text-good">Alles verortet. Bereit für die Ausgabe, sobald das Format steht.</p>
+        <p className="text-[0.85rem] text-good">Alles verortet. Bereit für die Ausgabe, sobald das Format steht.</p>
       )}
-      <p className="mt-6 text-[0.8rem] text-muted">
+      <p className="mt-6 text-[0.85rem] text-muted">
         Wähle eine Quelle aus, um Vorschau, Zeitbelege und Dateiangaben zu sehen.
       </p>
     </>
@@ -133,7 +133,7 @@ function Summary({ view }: { view: SessionView }) {
 
 function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: boolean }) {
   return (
-    <dl className={cx("mt-3.5 grid grid-cols-[6.5rem_1fr] gap-x-2.5 gap-y-1", small && "text-[0.8rem]")}>
+    <dl className={cx("mt-3.5 grid grid-cols-[6.5rem_1fr] gap-x-2.5 gap-y-1", small && "text-[0.85rem]")}>
       {items.map(([k, v, cls]) => (
         <div key={k} className="contents">
           <dt className="text-muted">{k}</dt>
@@ -161,7 +161,7 @@ function SourceDetails({
       <>
         <span className="whitespace-nowrap">{lage(row.startMs, row.endMs)}</span>
         {row.uncertaintyMs !== null && row.uncertaintyMs > 0 && (
-          <span className="block text-[0.8rem] text-muted">± {formatDuration(row.uncertaintyMs)}</span>
+          <span className="block text-[0.85rem] text-muted">± {formatDuration(row.uncertaintyMs)}</span>
         )}
       </>,
       "font-mono",
@@ -173,7 +173,7 @@ function SourceDetails({
           <StatusDot status={row.status} />
           {STATUS_TEXT[row.status]}
         </span>
-        {row.notes.length > 0 && <span className="block text-[0.8rem] text-muted">{row.notes.join(" · ")}</span>}
+        {row.notes.length > 0 && <span className="block text-[0.85rem] text-muted">{row.notes.join(" · ")}</span>}
       </>,
     ],
   ];
@@ -216,7 +216,7 @@ function SourceDetails({
         <Glyph kind={row.kind} />
         <div className="min-w-0">
           <b className="font-mono">{row.label}</b> <span className="text-muted">· {KIND_LABEL[row.kind]}</span>
-          <div className="truncate text-[0.82rem] text-ink-2" title={row.fileName}>
+          <div className="truncate text-[0.86rem] text-ink-2" title={row.fileName}>
             {row.fileName}
           </div>
         </div>
@@ -260,7 +260,7 @@ function SourceDetails({
               alt={`Vorschau ${row.fileName}`}
             />
           )}
-          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[0.72rem] text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[0.78rem] text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
             Groß ansehen
           </span>
         </button>
@@ -291,7 +291,7 @@ function SourceDetails({
       {row.idle.length > 0 && (
         <>
           <Eyebrow>Stille</Eyebrow>
-          <ul className="font-mono text-[0.8rem]">
+          <ul className="font-mono text-[0.85rem]">
             {row.idle.map((i) => (
               <li key={i.startMs}>
                 {clock(i.startMs)} – {clock(i.endMs)}
@@ -299,7 +299,7 @@ function SourceDetails({
             ))}
           </ul>
           {row.loudAtMs.length > 0 && (
-            <p className="mt-1 text-[0.8rem] text-warn">
+            <p className="mt-1 text-[0.85rem] text-warn">
               Laut in der Stille: {row.loudAtMs.slice(0, 5).map(clock).join(", ")}
               {row.loudAtMs.length > 5 ? " …" : ""}
             </p>
@@ -311,7 +311,7 @@ function SourceDetails({
       <EvidenceList row={row} actions={actions} />
       {row.kind !== "diary" && !row.partOf && <TimeForm row={row} onAdd={actions.addTime} />}
       {row.partOf && (
-        <p className="mt-1.5 text-[0.8rem] text-muted">Die Zeit kommt von {main?.label ?? "der Seite"}.</p>
+        <p className="mt-1.5 text-[0.85rem] text-muted">Die Zeit kommt von {main?.label ?? "der Seite"}.</p>
       )}
 
       <Eyebrow>Datei</Eyebrow>
@@ -332,7 +332,7 @@ function SourceDetails({
               {"\u200e"}
               {row.originalPath}
             </span>,
-            "text-[0.78rem] text-ink-2",
+            "text-[0.82rem] text-ink-2",
           ],
         ]}
       />
@@ -348,12 +348,12 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
   const checked = row.evidence.find((e) => e.kind === "checked" && e.chosen);
   if (checked) {
     return (
-      <div className="mt-3.5 flex items-center gap-2 rounded-lg border border-line bg-panel-2 px-3 py-2 text-[0.82rem]">
+      <div className="mt-3.5 flex items-center gap-2 rounded-lg border border-line bg-panel-2 px-3 py-2 text-[0.86rem]">
         <span className="text-good" aria-hidden>
           ✓
         </span>
         <span className="flex-1">Von Hand geprüft: Die Lage passt.</span>
-        <Button variant="link" className="text-[0.8rem]" onClick={() => actions.removeEvidence(checked.id)}>
+        <Button variant="link" className="text-[0.85rem]" onClick={() => actions.removeEvidence(checked.id)}>
           Zurücknehmen
         </Button>
       </div>
@@ -371,7 +371,7 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
   const reasons = row.notes.map((n) => checkReason(n, device?.label));
   return (
     <section
-      className="mt-3.5 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2.5 text-[0.84rem]"
+      className="mt-3.5 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2.5 text-[0.88rem]"
       data-testid="check-panel"
       aria-label="Lage prüfen"
     >
@@ -396,7 +396,7 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
         {unknownClock && hasRef && (
           <Button
             size="sm"
-            className="whitespace-normal text-left"
+            className="!whitespace-normal text-left"
             onClick={() => actions.trustDeviceClock(device.id)}
             title="Die Uhr des Geräts ging richtig (Abweichung 0). Alle Dateien des Geräts gelten dann als sicher."
           >
@@ -404,12 +404,12 @@ function CheckPanel({ row, view, actions }: { row: SourceRow; view: SessionView;
           </Button>
         )}
         {device && !hasRef && (
-          <Button size="sm" onClick={() => actions.setReference(device.id)}>
+          <Button size="sm" className="!whitespace-normal text-left" onClick={() => actions.setReference(device.id)}>
             {device.label} als Referenzuhr
           </Button>
         )}
       </div>
-      <p className="mt-1.5 text-[0.78rem] text-muted">Passt sie nicht: unten bei Zeitbelege eine Uhrzeit eintragen.</p>
+      <p className="mt-1.5 text-[0.82rem] text-muted">Passt sie nicht: unten bei Zeitbelege eine Uhrzeit eintragen.</p>
     </section>
   );
 }
@@ -431,7 +431,7 @@ function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string
   return (
     <div className="mt-3.5 rounded-lg bg-k-diary/10 p-3">
       <label className="flex items-center gap-3">
-        <span className="text-[0.7rem] font-semibold tracking-[0.06em] text-k-diary uppercase">Randnotiz</span>
+        <span className="text-[0.78rem] font-semibold text-k-diary">Randnotiz</span>
         <input
           className="w-[5.5rem] font-mono"
           value={text}
@@ -442,7 +442,7 @@ function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string
           onKeyDown={(e) => e.key === "Enter" && commit()}
         />
       </label>
-      <p className="mt-1.5 text-[0.8rem] text-muted">
+      <p className="mt-1.5 text-[0.85rem] text-muted">
         {row.diaryWindow
           ? `Bezieht sich auf ${clock(row.diaryWindow.fromMs).slice(0, 5)}–${clock(row.diaryWindow.toMs).slice(0, 5)}. Notiert wird meist etwas später; der Zeitraum reicht deshalb zurück.`
           : "Uhrzeit, die am Rand der Seite steht. Daraus ergibt sich, auf welchen Zeitraum sich die Seite bezieht."}
@@ -454,7 +454,7 @@ function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string
 function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActions }) {
   if (!row.evidence.length) {
     return (
-      <p className="text-[0.8rem] text-muted">
+      <p className="text-[0.85rem] text-muted">
         {row.kind === "diary" && row.diaryNote
           ? "Zeit aus der Randnotiz."
           : "Keine Zeit in Metadaten oder Dateiname gefunden."}
@@ -467,11 +467,11 @@ function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActi
         <li
           key={e.id}
           className={cx(
-            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-[7px] border border-l-[3px] px-2.5 py-1.5",
+            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-lg border border-l-[3px] px-2.5 py-1.5",
             e.chosen ? "border-line border-l-accent bg-panel-2" : "border-line",
           )}
         >
-          <span className="text-[0.72rem] font-semibold tracking-[0.04em] text-muted uppercase">
+          <span className="text-[0.78rem] font-semibold text-muted">
             {EVIDENCE_LABEL[e.kind] ?? e.kind}
             {e.chosen && (
               <span className="ml-1.5 normal-case">
@@ -481,7 +481,7 @@ function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActi
           </span>
           <span className="flex items-center gap-2">
             {e.own && (
-              <Button variant="link" className="text-[0.75rem]" onClick={() => actions.removeEvidence(e.id)}>
+              <Button variant="link" className="text-[0.8rem]" onClick={() => actions.removeEvidence(e.id)}>
                 löschen
               </Button>
             )}
@@ -497,7 +497,7 @@ function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActi
             {e.detail}
           </span>
           {e.raw && (
-            <span className="col-span-2 font-mono text-[0.8rem] [overflow-wrap:anywhere] text-muted">{e.raw}</span>
+            <span className="col-span-2 font-mono text-[0.85rem] [overflow-wrap:anywhere] text-muted">{e.raw}</span>
           )}
         </li>
       ))}
@@ -520,7 +520,7 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
   const canSync = kind === "manual" && !!row.deviceId && row.hasDeviceClock;
   if (!open) {
     return (
-      <Button variant="link" className="mt-2 text-[0.8rem]" onClick={() => setOpen(true)}>
+      <Button variant="link" className="mt-2 text-[0.85rem]" onClick={() => setOpen(true)}>
         + Uhrzeit eintragen{av ? " oder Ansage markieren" : ""}
       </Button>
     );
@@ -563,7 +563,7 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
           ]}
         />
       )}
-      <div className="grid gap-2 text-[0.85rem]">
+      <div className="grid gap-2 text-[0.9rem]">
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-0.5">
             <span className="text-muted">Uhrzeit</span>
@@ -592,7 +592,7 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
           <Button
             variant="link"
             type="button"
-            className="justify-self-start text-[0.75rem]"
+            className="justify-self-start text-[0.8rem]"
             onClick={() => setAt(positionText(here))}
           >
             ↳ Wiedergabestelle {positionText(here)} übernehmen
@@ -611,7 +611,7 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
         />
       </div>
       {canSync && (
-        <label className="flex items-start gap-2 text-[0.85rem]">
+        <label className="flex items-start gap-2 text-[0.9rem]">
           <input
             type="checkbox"
             className="mt-1"
@@ -621,13 +621,13 @@ function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) =>
           />
           <span>
             Uhr von „{row.deviceLabel}“ danach richten
-            <span className="block text-[0.75rem] text-muted">
+            <span className="block text-[0.8rem] text-muted">
               Aus dieser Angabe wird die Abweichung der Geräteuhr berechnet. Alle anderen Dateien des Geräts rücken mit.
             </span>
           </span>
         </label>
       )}
-      <p className="text-[0.75rem] text-muted">
+      <p className="text-[0.8rem] text-muted">
         {kind === "spoken"
           ? "Die angesagte Zeit gleicht die Uhr des ganzen Geräts ab, sofern die Aufnahme auch eine Zeit der Geräteuhr hat."
           : "Gilt nur für diese Quelle und hat Vorrang vor gelesenen Zeiten."}
@@ -660,8 +660,8 @@ function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; 
   return (
     <section className="mt-3.5 rounded-lg border border-line p-2.5" data-testid="level">
       <div className="flex items-baseline justify-between gap-2">
-        <h4 className="text-[0.85rem] font-semibold">Lautstärke</h4>
-        <span className="font-mono text-[0.8rem] text-ink-2" data-testid="level-gain">
+        <h4 className="text-[0.9rem] font-semibold">Lautstärke</h4>
+        <span className="font-mono text-[0.85rem] text-ink-2" data-testid="level-gain">
           {level.mode === "off" ? "unverändert" : dbText(level.gainDb)}
           {level.mode !== "off" && level.compress && " · Kompressor"}
         </span>
@@ -679,7 +679,7 @@ function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; 
         />
       </div>
       {level.mode === "manual" && (
-        <label className="mt-2 flex items-center gap-2 text-[0.8rem]">
+        <label className="mt-2 flex items-center gap-2 text-[0.85rem]">
           <input
             type="range"
             min={lo}
@@ -696,12 +696,12 @@ function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; 
         </label>
       )}
       {level.mode !== "off" && (
-        <label className="mt-2 flex items-center gap-2 text-[0.8rem]">
+        <label className="mt-2 flex items-center gap-2 text-[0.85rem]">
           <Toggle checked={level.compress} onChange={(compress) => set({ compress })} label="Leise Stellen anheben" />
           Leise Stellen anheben (Kompressor)
         </label>
       )}
-      <p className="mt-2 text-[0.78rem] text-muted">
+      <p className="mt-2 text-[0.82rem] text-muted">
         {level.measured ? (
           level.measuredDb === null ? (
             "Kein hörbarer Ton gefunden."
@@ -716,7 +716,7 @@ function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; 
             Noch nicht gemessen{level.mode === "auto" ? ", deshalb noch ohne Verstärkung" : ""}.{" "}
             <Button
               variant="link"
-              className="text-[0.78rem]"
+              className="text-[0.82rem]"
               disabled={measuring}
               onClick={() => {
                 setMeasuring(true);
@@ -789,7 +789,7 @@ function Player({ row }: { row: SourceRow }) {
   return (
     <div className="mt-3.5">
       {failed ? (
-        <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.8rem] text-warn">
+        <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.85rem] text-warn">
           Diese Datei lässt sich hier nicht abspielen (Format oder Codec). Für die Wiedergabe kommen später
           Vorschau-Kopien.
         </p>
@@ -799,7 +799,7 @@ function Player({ row }: { row: SourceRow }) {
         <audio {...props} className="block w-full" />
       )}
       {here !== null && (
-        <div className="mt-1 flex justify-between font-mono text-[0.78rem] text-ink-2" data-testid="player-position">
+        <div className="mt-1 flex justify-between font-mono text-[0.82rem] text-ink-2" data-testid="player-position">
           <span>{positionText(here)}</span>
           {row.startMs !== null && <span>{clock(row.startMs + here)}</span>}
         </div>
@@ -825,7 +825,7 @@ function DiaryPage({
       {entries.length <= 1 && <DiaryNote row={row} onCommit={onNote} />}
       <Eyebrow>Einträge auf dieser Seite</Eyebrow>
       {entries.length > 0 ? (
-        <ul className="grid gap-1 text-[0.85rem]">
+        <ul className="grid gap-1 text-[0.9rem]">
           {entries.map((e) => (
             <li key={e.id} className="flex gap-2">
               <b className="font-mono text-k-diary">{e.number}</b>
@@ -837,7 +837,7 @@ function DiaryPage({
           ))}
         </ul>
       ) : (
-        <p className="text-[0.8rem] text-muted">Noch nicht abgetippt.</p>
+        <p className="text-[0.85rem] text-muted">Noch nicht abgetippt.</p>
       )}
       <Button variant="primary" size="sm" className="mt-2" onClick={onOpen}>
         Abtippen…
@@ -867,7 +867,7 @@ function TranscriptImport({
   return (
     <>
       {done && (
-        <span className="self-center text-[0.75rem] text-good" role="status">
+        <span className="self-center text-[0.8rem] text-good" role="status">
           {done}
         </span>
       )}
@@ -890,7 +890,7 @@ function TranscriptImport({
               ).map(([mode, label]) => (
                 <DropdownMenu.Item
                   key={mode}
-                  className="cursor-pointer rounded px-2.5 py-1.5 text-[0.85rem] outline-none data-[highlighted]:bg-accent-soft"
+                  className="cursor-pointer rounded px-2.5 py-1.5 text-[0.9rem] outline-none data-[highlighted]:bg-accent-soft"
                   onSelect={() => void run(mode)}
                 >
                   {label}
@@ -913,7 +913,7 @@ function TranscriptSummary({ view, row }: { view: SessionView; row: SourceRow })
   if (!lines.length) return null;
   const last = lines.at(-1)!;
   return (
-    <p className="mt-1.5 text-[0.8rem] text-muted" data-testid="transcript-summary">
+    <p className="mt-1.5 text-[0.85rem] text-muted" data-testid="transcript-summary">
       Mitschrift: {lines.length} {lines.length === 1 ? "Zeile" : "Zeilen"}, bis {positionText(last.atMs)}
     </p>
   );

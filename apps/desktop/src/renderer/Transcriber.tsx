@@ -301,7 +301,7 @@ function Body({
           options={avRows.map((r) => ({ value: r.id, label: `${r.label} · ${r.fileName}` }))}
           className="w-72"
         />
-        <span className="text-[0.8rem] text-muted">
+        <span className="text-[0.85rem] text-muted">
           {lines.length} {lines.length === 1 ? "Zeile" : "Zeilen"}
         </span>
         <span className="flex-1" />
@@ -314,7 +314,7 @@ function Body({
         <section className="flex min-h-0 flex-col border-r border-line">
           {!failed && (
             <div className="border-b border-line px-4 pt-2.5 pb-2" data-testid="transcriber-wave">
-              <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[0.8rem]">
+              <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[0.85rem]">
                 <span className="font-medium">Waveform</span>
                 <Choice
                   label="Ausschnitt"
@@ -323,7 +323,7 @@ function Body({
                   options={SPANS.map((s) => ({ value: s, label: SPAN_LABEL[s] }))}
                 />
                 <label
-                  className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                  className="inline-flex cursor-pointer items-center gap-1.5 text-[0.85rem]"
                   title="Leise Stellen deutlicher zeigen (dB-Skala)"
                 >
                   <Toggle checked={logScale} onChange={setLogScale} label="logarithmisch" />
@@ -358,7 +358,7 @@ function Body({
             data-testid="lines"
           >
             {items.length === 0 && (
-              <li className="py-6 text-center text-[0.85rem] text-muted">
+              <li className="py-6 text-center text-[0.9rem] text-muted">
                 Noch nichts mitgeschrieben. Starte die Wiedergabe mit Esc und tippe unten mit. Enter legt die Zeile an.
               </li>
             )}
@@ -366,7 +366,7 @@ function Body({
               it.kind === "event" ? (
                 <li
                   key={it.event.key}
-                  className="my-1 flex items-baseline gap-3 rounded-md bg-panel-2 px-2 py-1 text-[0.8rem] text-ink-2"
+                  className="my-1 flex items-baseline gap-3 rounded-md bg-panel-2 px-2 py-1 text-[0.85rem] text-ink-2"
                   data-testid="event"
                 >
                   <button
@@ -396,7 +396,7 @@ function Body({
             }}
           >
             <span
-              className="w-24 flex-none pt-1.5 font-mono text-[0.78rem] text-muted"
+              className="w-24 flex-none pt-1.5 font-mono text-[0.82rem] text-muted"
               title="Zeitmarke der neuen Zeile"
             >
               {positionText(mark ?? pos)}
@@ -442,7 +442,7 @@ function Body({
 
         <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
           {failed ? (
-            <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.8rem] text-warn">
+            <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.85rem] text-warn">
               Diese Datei lässt sich hier nicht abspielen (Format oder Codec).
             </p>
           ) : row.kind === "video" ? (
@@ -496,7 +496,7 @@ function Body({
             </div>
             <div className="mt-2">
               <label
-                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.85rem]"
                 title="Beim Abspielen die aktuelle Zeile im Blick behalten"
               >
                 <Toggle checked={follow} onChange={setFollow} label="Liste läuft mit" />
@@ -505,7 +505,7 @@ function Body({
             </div>
           </div>
           <NotesPanel row={row} notes={notes} pos={pos} apply={apply} onSeek={seekTo} />
-          <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.8rem]">
+          <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.85rem]">
             <dt className="font-mono font-medium">Esc</dt>
             <dd>Abspielen / anhalten (springt beim Fortsetzen 1 s zurück)</dd>
             <dt className="font-mono font-medium">F8 / F9</dt>
@@ -522,13 +522,13 @@ function Body({
             <dt className="font-mono font-medium">B1: …</dt>
             <dd>Sprecher wechseln, wenn die Zeile so beginnt</dd>
           </dl>
-          <p className="text-[0.8rem] text-muted">
+          <p className="text-[0.85rem] text-muted">
             Jede Zeile speichert die Stelle in {row.label}. Die Uhrzeit folgt dem Abgleich, auch wenn du ihn später
             änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Notizen sind Arbeitsstand und gehen
             nicht ins Zeitgerüst.
           </p>
           {row.kind === "video" && (
-            <p className="text-[0.8rem] text-muted">{KIND_LABEL.video}: Ton und Bild aus der Datei.</p>
+            <p className="text-[0.85rem] text-muted">{KIND_LABEL.video}: Ton und Bild aus der Datei.</p>
           )}
         </aside>
       </div>
@@ -601,7 +601,7 @@ const Line = memo(function Line({
       data-line={line.id}
     >
       <button
-        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.8rem] hover:text-accent"
+        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
         onClick={() => actions.seek(line.atMs)}
         title="Hierhin springen"
       >

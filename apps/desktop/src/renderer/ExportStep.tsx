@@ -51,7 +51,7 @@ export function ExportStep({ view }: { view: SessionView }) {
   const fact = (n: number | string, label: string) => (
     <div className="grid">
       <b className="text-2xl font-semibold tabular-nums">{n}</b>
-      <span className="text-[0.8rem] text-muted">{label}</span>
+      <span className="text-[0.85rem] text-muted">{label}</span>
     </div>
   );
   const empty = !preview || preview.durationMs <= 0;
@@ -96,13 +96,13 @@ export function ExportStep({ view }: { view: SessionView }) {
                 <Toggle checked={byEpisodes} onChange={setByEpisodes} label="Nach Episoden schneiden" />
                 Nach Episoden schneiden
               </label>
-              <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+              <p className="mt-1 pl-[2.4rem] text-[0.85rem] text-muted">
                 Episoden in voller Länge, Zeit dazwischen als kurze Tafel. Kürzer, aber Videozeit ≠ Uhrzeit. Sonst läuft
                 der ganze Einsatz in Echtzeit.
               </p>
             </>
           ) : (
-            <p className="mt-4 text-[0.8rem] text-muted">
+            <p className="mt-4 text-[0.85rem] text-muted">
               In Echtzeit: der ganze Einsatz am Stück, Videozeit = Uhrzeit ab Beginn. Nach Episoden schneiden lässt
               sich, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
             </p>
@@ -121,7 +121,7 @@ export function ExportStep({ view }: { view: SessionView }) {
             <Toggle checked={video} onChange={setVideo} label="Montagevideo mit ausgeben" />
             Montagevideo mit ausgeben
           </label>
-          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+          <p className="mt-1 pl-[2.4rem] text-[0.85rem] text-muted">
             Dauert je nach Länge einige Minuten; bei der nächsten Ausgabe wird nur neu gerechnet, was sich geändert hat.
             Ohne Video entstehen nur Zeitgerüst und Protokoll.
           </p>
@@ -129,7 +129,7 @@ export function ExportStep({ view }: { view: SessionView }) {
             <Toggle checked={mixAudio} onChange={setMixAudio} label="Ton aller Geräte mischen" />
             Ton aller Geräte mischen
           </label>
-          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+          <p className="mt-1 pl-[2.4rem] text-[0.85rem] text-muted">
             Laufen mehrere Aufnahmen gleichzeitig, liegt ihr Ton übereinander. Aus: nur die Hauptquelle (Referenzgerät,
             sonst die längste). Bei ungenauem Abgleich klingt die Mischung hallig.
           </p>
@@ -137,7 +137,7 @@ export function ExportStep({ view }: { view: SessionView }) {
             <Toggle checked={resolve} onChange={setResolve} label="Schnittliste für DaVinci Resolve" />
             Schnittliste für DaVinci Resolve
           </label>
-          <p className="mt-1 pl-[2.4rem] text-[0.8rem] text-muted">
+          <p className="mt-1 pl-[2.4rem] text-[0.85rem] text-muted">
             Dieselbe Montage als FCPXML, mit Markern für Mitschrift und Ereignisse. Resolve rechnet dann selbst; die
             Einblendungen (Uhrzeit, Herkunft, Montage-ID) fehlen dort.
           </p>
@@ -145,13 +145,11 @@ export function ExportStep({ view }: { view: SessionView }) {
             <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>
               {busy ? "Gibt aus…" : "Ausgeben…"}
             </Button>
-            {empty && <span className="text-[0.85rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
-            {elsewhere && (
-              <span className="text-[0.85rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>
-            )}
+            {empty && <span className="text-[0.9rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
+            {elsewhere && <span className="text-[0.9rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>}
           </div>
           {busy && (
-            <p className="mt-2 text-[0.8rem] text-muted">
+            <p className="mt-2 text-[0.85rem] text-muted">
               Du kannst währenddessen weiterarbeiten oder den Reiter wechseln; die Ausgabe läuft weiter. Änderungen ab
               jetzt kommen erst in die nächste Ausgabe.
             </p>
@@ -163,7 +161,7 @@ export function ExportStep({ view }: { view: SessionView }) {
           )}
           {busy && (
             <div className="mt-4" data-testid="export-progress">
-              <div className="mb-1 flex justify-between text-[0.8rem] text-muted">
+              <div className="mb-1 flex justify-between text-[0.85rem] text-muted">
                 <span>{progress?.step ?? "Vorbereiten"}</span>
                 <span className="tabular-nums">
                   {progress?.step === "Montagevideo" && `${remainingText(remainingMs(ex.job))} · `}
@@ -182,9 +180,9 @@ export function ExportStep({ view }: { view: SessionView }) {
               </Notice>
               <ul className="mt-3 grid gap-2">
                 {result.files.map((f) => (
-                  <li key={f} className="text-[0.85rem]">
+                  <li key={f} className="text-[0.9rem]">
                     <span className="font-medium break-all">{fileName(f)}</span>
-                    <span className="block text-[0.8rem] text-muted">
+                    <span className="block text-[0.85rem] text-muted">
                       {FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}
                     </span>
                   </li>
@@ -199,7 +197,7 @@ export function ExportStep({ view }: { view: SessionView }) {
         <Panel className="min-w-0">
           <h3 className="mb-2 text-[0.9rem] font-semibold">Vorschau des Zeitgerüsts</h3>
           <ol
-            className="max-h-[60vh] overflow-y-auto font-mono text-[0.78rem] leading-relaxed text-ink-2"
+            className="max-h-[60vh] overflow-y-auto font-serif text-[0.88rem] leading-relaxed text-ink-2"
             data-testid="scaffold-preview"
           >
             {preview?.lines.map((l, i) => (
