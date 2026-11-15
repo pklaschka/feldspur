@@ -106,6 +106,18 @@ describe("Projektdatei", () => {
     again.close();
   });
 
+  it("bildet Episoden nur auf Wunsch und merkt sich die Wahl", () => {
+    const file = join(dir, "episoden.feldspur");
+    const store = ProjectStore.create(file, { name: "x" });
+    const s = store.addSession({ title: "Markt", date: "2026-09-14" });
+    expect(s.episodes).toBe(false);
+    store.updateSession(s.id, { episodes: true });
+    store.close();
+    const again = ProjectStore.open(file);
+    expect(again.getSession(s.id).episodes).toBe(true);
+    again.close();
+  });
+
   it("entfernt eine Quelle samt Belegen, Ankern, Rahmen und leerem Gerät", () => {
     const store = ProjectStore.create(join(dir, "del.feldspur"), { name: "x" });
     const { session, cam, video, page, audio } = seed(store);

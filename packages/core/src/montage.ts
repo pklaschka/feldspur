@@ -1,9 +1,9 @@
 /**
  * Montage: aus Episoden und Zwischenzeiten eine durchgehende Videozeit machen.
+ * - realtime (Standard): alles in Echtzeit vom ersten bis zum letzten Ereignis, auch Zeit ohne Aufnahme.
  * - episodes: Episoden laufen in voller Länge, jede Zwischenzeit wird zu einer kurzen Tafel.
  *   Fotos und Tagebucheinträge darin zeigen auf den Beginn der Tafel (die Bilder stehen im
  *   Zeitgerüst, nicht im Video).
- * - realtime: alles in Echtzeit vom ersten bis zum letzten Ereignis, auch Zeit ohne Aufnahme.
  * Überlappende Quellen verlängern nichts, alles folgt der Uhrzeit.
  */
 import type { Episode, EpisodeResult, Gap } from "./episodes.ts";
@@ -64,7 +64,7 @@ export function planMontage(
   timeOf: (kind: "source" | "diary", id: Id) => LocalMs | undefined,
   opts: MontageOptions = {},
 ): MontagePlan {
-  const mode = opts.mode ?? "episodes";
+  const mode = opts.mode ?? "realtime";
   const cardMs = opts.cardMs ?? 3_000;
   type Seg = MontageSegment extends infer S
     ? S extends MontageSegment

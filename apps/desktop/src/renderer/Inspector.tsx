@@ -71,7 +71,12 @@ function Summary({ view }: { view: SessionView }) {
   if (view.devices.length && !hasRef) todo.push("Eine Referenzuhr wählen.");
   if (hasRef && open.length) todo.push(`Abweichung für ${open.map((d) => d.label).join(", ")} klären.`);
   if (view.proposals.length) todo.push(`${view.proposals.length} Vorschläge aus der Tonspur prüfen.`);
-  if (view.avCount && !view.analyzedCount) todo.push("Tonspuren abgleichen, damit Episoden und Stille erkannt werden.");
+  if (view.avCount && !view.analyzedCount)
+    todo.push(
+      view.session.episodes
+        ? "Tonspuren abgleichen, damit Episoden und Stille erkannt werden."
+        : "Tonspuren abgleichen, damit Klatscher und Stille erkannt werden.",
+    );
   const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote).length;
   if (diaryOpen) todo.push(`${diaryOpen} Tagebuchseiten ohne Randnotiz.`);
   const stat = (s: SourceRow["status"]) => (
