@@ -53,7 +53,14 @@ format:
     output-file: Feldspur-Handbuch.pdf
     # Literatur wie in der Webseite über citeproc (Autor-Jahr), an der Stelle von #refs.
     citeproc: true
-    # Farben aus dem App-Symbol, siehe kopf.typ.
+    mainfont: "Source Serif 4"
+    # Führender Schrägstrich = relativ zum Projektordner (handbuch/), unabhängig vom Aufrufort.
+    font-paths: [/schriften]
+    fontsize: 10.5pt
+    # Titel in Terrakotta, sonst wie Quartos Vorlage (siehe typst-show.typ).
+    template-partials:
+      - typst-show.typ
+    # Farben und Schriften wie in der App, siehe kopf.typ.
     include-in-header: kopf.typ
     # Hinweiskästen ohne Symbolpaket aus dem Netz setzen, siehe kaesten.lua.
     filters:
