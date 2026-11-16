@@ -15,7 +15,9 @@ App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über "Weitere In
 
 Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt…** oder
 **Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter. Später wechselst du das Projekt links
-oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O).
+oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O). Nach der Installation öffnet auch ein Doppelklick auf
+eine Projektdatei Feldspur; die Dateien tragen dann ein eigenes Symbol. Unter Linux gilt das nur, wenn das AppImage
+ins System eingebunden ist (etwa mit AppImageLauncher).
 
 Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
 genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.

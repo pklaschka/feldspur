@@ -85,6 +85,8 @@ cpSync(join(root, "LIZENZ"), join(res, "licenses", "Feldspur-LIZENZ.txt"));
 const icon = join(root, "packaging", "icon.png");
 cpSync(icon, join(res, "icon.png"));
 
+const association = { ext: "feldspur", name: "Feldspur-Projekt", description: "Feldspur-Projekt", role: "Editor" };
+
 const targets = {
   darwin: Platform.MAC.createTarget(dirOnly ? "dir" : ["dmg", "zip"]),
   win32: Platform.WINDOWS.createTarget(dirOnly ? "dir" : ["nsis"]),
@@ -107,7 +109,8 @@ const files = await build({
     npmRebuild: false,
     nodeGypRebuild: false,
     extraResources: [{ from: res, to: ".", filter: ["**/*"] }],
-    fileAssociations: [{ ext: "feldspur", name: "Feldspur-Projekt", role: "Editor" }],
+    // Doppelklick auf eine Projektdatei öffnet Feldspur, mit eigenem Dateisymbol (packaging/datei-icon.svg).
+    // Das Symbol braucht je System ein eigenes Format, deshalb stehen die Zuordnungen bei mac, win und linux.
     artifactName: "Feldspur-${version}-${os}-${arch}.${ext}",
     // Aus dem 1024er PNG erzeugt electron-builder .icns (macOS) und .ico (Windows).
     icon,
@@ -115,10 +118,16 @@ const files = await build({
       category: "public.app-category.education",
       // Noch keine Signatur: macOS fragt beim ersten Start nach („Trotzdem öffnen“).
       identity: null,
+      fileAssociations: [{ ...association, icon: join(root, "packaging", "datei-icon.icns") }],
     },
-    win: {},
+    win: { fileAssociations: [{ ...association, icon: join(root, "packaging", "datei-icon.ico") }] },
     nsis: { oneClick: false, perMachine: false, allowToChangeInstallationDirectory: true },
-    linux: { category: "Science", maintainer: "Zuri Nimca Klaschka", icon },
+    linux: {
+      category: "Science",
+      maintainer: "Zuri Nimca Klaschka",
+      icon,
+      fileAssociations: [{ ...association, mimeType: "application/x-feldspur" }],
+    },
   },
 });
 console.log(files.map((f) => `→ ${f}`).join("\n"));
