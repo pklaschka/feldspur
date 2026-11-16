@@ -4,9 +4,9 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
-## 0.1.0-rc.1 – 2026-11-16 (Vorabversion)
+## 0.1.0 – 2026-11-16
 
-<!-- Release notes generated using configuration in .github/release.yml at 8b47c227da7b3ce6ed9ea64db71fdb4139113c5d -->
+<!-- Release notes generated using configuration in .github/release.yml at c2dc50091180240e9ecb272e8df982af3746e64f -->
 
 ### Neu
 
@@ -15,6 +15,7 @@ werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 - Episoden von Hand anpassen: Grenzen ziehen, Mini-Episoden, Wellenform in den Spuren ([#37](https://github.com/pklaschka/feldspur/pull/37), @pklaschka)
 - Dokumentvariablen für MAXQDA beim Ausgeben ([#38](https://github.com/pklaschka/feldspur/pull/38), @pklaschka)
 - Dauerhaftes Änderungsprotokoll in der Projektdatei ([#40](https://github.com/pklaschka/feldspur/pull/40), @pklaschka)
+- Projektdateien per Doppelklick öffnen, mit eigenem Dateisymbol ([#47](https://github.com/pklaschka/feldspur/pull/47), @pklaschka)
 
 ### Verbessert
 
@@ -66,9 +67,11 @@ werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 - Bildschirmfotos nach dem Redesign erneuern ([#31](https://github.com/pklaschka/feldspur/pull/31), @pklaschka)
 - Release zieht Version und Stand in Zitierbeispielen und README nach ([#43](https://github.com/pklaschka/feldspur/pull/43), @pklaschka)
 - Handbuch-PDF als Broschüre druckbar, mit Rückumschlag ([#44](https://github.com/pklaschka/feldspur/pull/44), @pklaschka)
+- Dependabot-Alerts beheben (esbuild, minimatch) ([#46](https://github.com/pklaschka/feldspur/pull/46), @pklaschka)
+- Handbuch-PDF: Überschriften nie allein am Seitenende ([#50](https://github.com/pklaschka/feldspur/pull/50), @pklaschka)
 
 ### Neu dabei
 
 - @pklaschka hat zum ersten Mal beigetragen: https://github.com/pklaschka/feldspur/pull/1
 
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/commits/v0.1.0-rc.1
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/commits/v0.1.0
