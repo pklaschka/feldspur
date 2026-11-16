@@ -86,17 +86,42 @@ describe("Changelog", () => {
 });
 
 describe("Versionsdateien", () => {
-  it("setzt die Version nur in App, CITATION.cff und .zenodo.json", () => {
+  it("setzt Version und Stand in App, Metadaten, Zitierbeispielen und README", () => {
     const root = mkdtempSync(join(tmpdir(), "feldspur-release-"));
     mkdirSync(join(root, "apps", "desktop"), { recursive: true });
     writeFileSync(join(root, "package.json"), '{\n  "name": "feldspur",\n  "version": "0.1.0"\n}\n');
     writeFileSync(join(root, "apps", "desktop", "package.json"), '{ "version": "0.1.0" }\n');
     writeFileSync(join(root, ".zenodo.json"), '{ "title": "x", "version": "0.1.0" }\n');
     writeFileSync(join(root, "CITATION.cff"), "cff-version: 1.2.0\nversion: 0.1.0\nlicense: EUPL-1.2\n");
-    const touched = bumpFiles(root, "0.2.0-rc.1", "2026-11-15");
-    expect(touched.sort()).toEqual([".zenodo.json", "CITATION.cff", "apps/desktop/package.json", "package.json"]);
+    mkdirSync(join(root, "handbuch"));
+    const zitieren =
+      "> Klaschka (2026). _Feldspur_\n> (Version 0.1.0) [Software].\n> _Begleittext_ (Stand: 16. November 2026). <https://x>\n";
+    writeFileSync(join(root, "handbuch", "_zitieren.qmd"), zitieren);
+    writeFileSync(join(root, "README.qmd"), "---\n# Fester „Stand“\ndate: 2026-11-16\nlang: de\n---\n");
+    writeFileSync(
+      join(root, "README.md"),
+      "**Zuri**<br>\nStand: 16. November 2026\n\n" + zitieren.replace("[Software]", "\\[Software\\]"),
+    );
+    const touched = bumpFiles(root, "0.2.0-rc.1", "2026-11-05");
+    expect(touched.sort()).toEqual([
+      ".zenodo.json",
+      "CITATION.cff",
+      "README.md",
+      "README.qmd",
+      "apps/desktop/package.json",
+      "handbuch/_zitieren.qmd",
+      "package.json",
+    ]);
+    expect(readFileSync(join(root, "handbuch", "_zitieren.qmd"), "utf8")).toBe(
+      "> Klaschka (2026). _Feldspur_\n> (Version 0.2.0-rc.1) [Software].\n> _Begleittext_ (Stand: 5. November 2026). <https://x>\n",
+    );
+    expect(readFileSync(join(root, "README.qmd"), "utf8")).toContain("\ndate: 2026-11-05\n");
+    const readme = readFileSync(join(root, "README.md"), "utf8");
+    expect(readme).toContain("\nStand: 5. November 2026\n");
+    expect(readme).toContain("(Version 0.2.0-rc.1) \\[Software\\]");
+    expect(readme).toContain("(Stand: 5. November 2026)");
     expect(readFileSync(join(root, "CITATION.cff"), "utf8")).toBe(
-      'cff-version: 1.2.0\nversion: 0.2.0-rc.1\ndate-released: "2026-11-15"\nlicense: EUPL-1.2\n',
+      'cff-version: 1.2.0\nversion: 0.2.0-rc.1\ndate-released: "2026-11-05"\nlicense: EUPL-1.2\n',
     );
     expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version).toBe("0.2.0-rc.1");
   });

@@ -268,8 +268,9 @@ Eine Release startet von Hand: **Actions → Release → Run workflow**, Version
 - **Probelauf:** baut alles und zeigt Changelog und Release-Text in der Zusammenfassung, pusht aber nichts.
 
 Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
-`package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, committet „Release vX“ auf `main`,
-taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und dem
+`package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, zieht Version und Stand in den
+Zitierbeispielen (`handbuch/_zitieren.qmd`) und im README-Kopf (`date` in `README.qmd`, `README.md` gleich mit)
+nach, committet „Release vX“ auf `main`, taggt, baut die Installer für alle Plattformen und legt die GitHub-Release mit Installern, `SHA256SUMS.txt` und dem
 PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an.
 
