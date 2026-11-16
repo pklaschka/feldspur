@@ -4,7 +4,7 @@
  */
 import { diaryPageLabel, suggestPageNo } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import {
   mediaUrl,
   type DiaryEntryRow,
@@ -161,7 +161,7 @@ export function DiaryEditor({
 
   // Zoom: 1 = Seite passt ganz in die Fläche (kleine Scans werden dafür auch vergrößert), darüber hineingezoomt.
   const area = useRef<HTMLDivElement>(null);
-  const areaSize = useElementSize(area);
+  const [areaSize, observeArea] = useElementSize();
   const [zoom, setZoomState] = useState(1);
   // Beim Zoomen bleibt die Stelle unter der Maus (oder die Mitte) stehen; die Scrollposition folgt nach dem Rendern.
   const pendingScroll = useRef<{ fx: number; fy: number; px: number; py: number } | null>(null);
@@ -206,6 +206,7 @@ export function DiaryEditor({
   };
   const areaRef = (el: HTMLDivElement | null) => {
     area.current = el;
+    observeArea(el);
     if (!el || el.dataset.wheel) return;
     el.dataset.wheel = "1";
     el.addEventListener("wheel", (e) => wheel.current(e), { passive: false });
@@ -468,7 +469,7 @@ function PageCanvas({
   // Ganz zeigen heißt: so groß wie möglich, ohne über Breite oder Höhe hinauszugehen. Kleine Scans werden dafür
   // vergrößert; PDF-Seiten höchstens 900 px breit, damit Text in der Breite lesbar bleibt.
   const fitScale = natural ? Math.min(fit.w / natural.w, fit.h / natural.h) : 0;
-  const cssW = natural ? Math.max(120, Math.round(natural.w * fitScale * zoom)) : null;
+  const cssW = natural && fitScale > 0 ? Math.max(120, Math.round(natural.w * fitScale * zoom)) : null;
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const rel = (e: PointerEvent) => {
     const b = box.current!.getBoundingClientRect();
@@ -787,17 +788,22 @@ const ZOOM_MAX = 6;
 
 /** Platz für eine Seite bei Zoom 1: Fläche ohne Innenabstand; mehrere Bilder einer Seite teilen sich nicht die Höhe. */
 function fitBox(area: { w: number; h: number }, several: boolean): { w: number; h: number } {
+  // Noch nicht gemessen: nichts zeigen statt einer winzigen Seite.
+  if (!area.w || !area.h) return { w: 0, h: 0 };
   const w = Math.max(200, area.w - 32);
   const h = Math.max(200, area.h - 32 - (several ? 24 : 0));
   return { w, h };
 }
 
-function useElementSize(ref: { current: HTMLElement | null }): { w: number; h: number } {
+/**
+ * Größe eines Elements, das erst später erscheint (im Dialog). Gemessen wird über die Ref-Funktion: Radix hängt den
+ * Dialoginhalt erst nach dem eigenen Rendern ein, ein Effekt im Editor käme dafür zu früh und bliebe bei 0 stehen
+ * (dann war die Seite beim Öffnen winzig).
+ */
+function useElementSize(): [{ w: number; h: number }, (el: HTMLElement | null) => void] {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const observed = useRef<{ el: HTMLElement; ro: ResizeObserver } | null>(null);
-  // Das Element erscheint erst, wenn der Dialog aufgeht: nach jedem Rendern prüfen, ob es neu ist.
-  useLayoutEffect(() => {
-    const el = ref.current;
+  const observe = useCallback((el: HTMLElement | null) => {
     if (observed.current?.el === el) return;
     observed.current?.ro.disconnect();
     observed.current = null;
@@ -810,17 +816,27 @@ function useElementSize(ref: { current: HTMLElement | null }): { w: number; h: n
     ro.observe(el);
     observed.current = { el, ro };
     measure();
-  });
+  }, []);
   useEffect(() => () => observed.current?.ro.disconnect(), []);
-  return size;
+  return [size, observe];
 }
 
 /** Natürliche Größe eines Scans (Bild in Pixeln, PDF-Seite in Punkten, beim PDF höchstens 900 px breit). */
+/** Schon bekannte Größen: Beim Blättern zurück steht die Seite sofort in der richtigen Größe da. */
+const naturalSizes = new Map<string, { w: number; h: number }>();
+
 function useNaturalSize(surface: Surface): { w: number; h: number } | null {
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const key = `${surface.sourceId}#${surface.page}`;
+  const [size, setSizeState] = useState<{ w: number; h: number } | null>(() => naturalSizes.get(key) ?? null);
+  const setSize = (s: { w: number; h: number }) => {
+    naturalSizes.set(key, s);
+    setSizeState(s);
+  };
   useEffect(() => {
     let alive = true;
-    setSize(null);
+    const known = naturalSizes.get(key);
+    setSizeState(known ?? null);
+    if (known) return;
     if (surface.isPdf) {
       loadPdf(surface.sourceId)
         .then((d) => d.getPage(surface.page + 1))
@@ -888,9 +904,17 @@ function ClockField({
         aria-invalid={!valid}
         title={valid ? "Uhrzeit, z. B. 1030 für 10:30. ↑/↓: eine Minute, mit Umschalt zehn." : "Keine gültige Uhrzeit"}
         onChange={(e) => {
-          const m = maskClockAt(e.target.value, e.target.selectionStart ?? e.target.value.length);
+          const el = e.target;
+          const m = maskClockAt(el.value, el.selectionStart ?? el.value.length);
           caret.current = m.caret;
           onChange(m.value);
+          // Uhrzeit vollständig am Ende getippt: gleich ins nächste Feld (das Verlassen speichert sie).
+          if (m.value.length === 5 && m.caret === 5 && normalizeClock(m.value) && m.value !== value) {
+            const fields = [...document.querySelectorAll<HTMLElement>("input, textarea, select")].filter(
+              (f) => !(f as HTMLInputElement).disabled && f.offsetParent !== null,
+            );
+            requestAnimationFrame(() => fields[fields.indexOf(el) + 1]?.focus());
+          }
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
