@@ -133,7 +133,7 @@ export interface Reveal {
 
 /**
  * Suchdialog samt Sprung zur Fundstelle (braucht den PlaybackProvider). Jede Trefferart hat ein festes Ziel:
- * - Mitschrift, Notiz: im offenen Mitschreiben dorthin spulen, sonst Durchsehen mit Quelle und Stelle.
+ * - Mitschrift, Notiz (Audio/Video): Mitschreiben öffnen (oder wechseln) und dorthin spulen.
  * - Quelle: Durchsehen, Quelle gewählt und auf der Zeitachse ins Bild geholt.
  * - Episode: Durchsehen, Zeitachse auf die Episode gezoomt.
  * - Tagebuch: Abtippen auf der Seite des Eintrags; ohne Seite die Stelle auf der Zeitachse.
@@ -142,7 +142,6 @@ export function QuickSearch({
   view,
   open,
   onOpenChange,
-  transcribing,
   onSource,
   onTranscribe,
   onDiary,
@@ -152,8 +151,6 @@ export function QuickSearch({
   view: SessionView;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  /** Mitschreiben ist gerade offen. */
-  transcribing: boolean;
   onSource: (id: string) => void;
   onTranscribe: (id: string | null) => void;
   onDiary: (pageId: string | null) => void;
@@ -164,7 +161,8 @@ export function QuickSearch({
   const pick = (h: Hit) => {
     const row = view.rows.find((r) => r.id === h.target);
     const av = row?.kind === "audio" || row?.kind === "video";
-    if ((h.kind === "line" || h.kind === "note") && transcribing && av) {
+    // Mitschrift-Treffer öffnen das Mitschreiben direkt an der Stelle, auch wenn es noch zu ist.
+    if ((h.kind === "line" || h.kind === "note") && av) {
       if (h.atMs !== undefined) seek(h.target, h.atMs);
       onTranscribe(h.target);
       return;
