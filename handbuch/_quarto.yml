@@ -35,7 +35,9 @@ format:
     html-math-method: plain
     lightbox: false
     include-in-header:
-      text: <link rel="icon" href="bilder/logo.svg" type="image/svg+xml">
+      - text: <link rel="icon" href="bilder/logo.svg" type="image/svg+xml">
+      # Stand für Zotero (citation_issue), erzeugt von stand.ts.
+      - file: _stand-kopf.html
     toc: true
     toc-depth: 3
     toc-title: "Inhalt"
