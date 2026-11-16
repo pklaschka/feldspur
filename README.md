@@ -103,11 +103,11 @@ samt PDF übernehmen können.
 
 Die vollständigen Angaben zum Programm stehen in
 [`CITATION.cff`](https://github.com/pklaschka/feldspur/blob/main/CITATION.cff); GitHub bietet daraus „Cite this
-repository“ (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Dieser
-Text liegt jedem Release als PDF bei und wird so mit archiviert. Diese DOIs sind die beste Angabe: die DOI der
-verwendeten Version (sie steht auf deren Zenodo-Seite) für das Programm und für den Text in genau diesem Stand, die
-übergreifende DOI [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (alle Versionen, führt immer zur neuesten) nur, wenn es um
-Feldspur im Allgemeinen geht.
+repository“ (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Für das
+Programm ist sie die beste Angabe: die DOI der verwendeten Version (sie steht auf deren Zenodo-Seite), die
+übergreifende DOI [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (alle Versionen, führt immer
+zur neuesten) nur, wenn es um Feldspur im Allgemeinen geht. Zenodo archiviert dabei den Quellcode, nicht das PDF
+dieses Texts. Den Text deshalb mit den Adressen oben und dem Stand zitieren.
 
 Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/). Dieser Text steht unter
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de).

@@ -79,7 +79,7 @@
     }
     #text(fill: gedaempft)[
       #if date != none [Stand: #date \ ]
-      #if doi != none [DOI #link("https://doi.org/" + doi)[#doi] \ ]
+      #if doi != none [Software-DOI #link("https://doi.org/" + doi)[#doi] \ ]
       Online: #link("https://purl.archive.org/feldspur")[purl.archive.org/feldspur] \
       PDF: #link("https://purl.archive.org/feldspur/pdf")[purl.archive.org/feldspur/pdf] \
       Programm: #link("https://purl.archive.org/feldspur/repo")[purl.archive.org/feldspur/repo] \
@@ -207,7 +207,7 @@
     if date != none { text(font: sans, size: 9.5pt, fill: tinte-2)[Stand: #date] }
     if doi != none {
       linebreak()
-      text(font: sans, size: 9.5pt, fill: tinte-2)[DOI #link("https://doi.org/" + doi)[#doi]]
+      text(font: sans, size: 9.5pt, fill: tinte-2)[Software-DOI #link("https://doi.org/" + doi)[#doi]]
     }
     v(14mm)
     if abstract != none {
@@ -242,9 +242,12 @@
     item("Zitieren", [
       Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse
       zusammenführen. Begleittext und Handbuch._
-      #if doi != none [#link("https://doi.org/" + doi)] else if url != none [#link(url)]
+      #if url != none [#link(url)]
     ])
-    item("DOI", if doi != none [#link("https://doi.org/" + doi)[#doi]] else [
+    item("Software-DOI", if doi != none [
+      #link("https://doi.org/" + doi)[#doi] (Feldspur, alle Versionen). Zenodo archiviert mit jedem Release
+      den Quellcode, also auch den dieses Texts, nicht aber das PDF selbst.
+    ] else [
       Jedes Release wird auf Zenodo archiviert und erhält dort eine DOI. Sie steht dann hier.
     ])
     item("Lizenz", [
