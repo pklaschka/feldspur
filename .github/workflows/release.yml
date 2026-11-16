@@ -54,9 +54,21 @@ jobs:
         run: |
           echo "::error::Releases entstehen nur von main aus (gestartet auf ${GITHUB_REF}). Für Versuche „Probelauf“ wählen."
           exit 1
+      - name: Deploy-Schlüssel vorhanden?
+        if: ${{ !inputs.probelauf }}
+        env:
+          KEY: ${{ secrets.RELEASE_DEPLOY_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret RELEASE_DEPLOY_KEY fehlt. Einrichtung: README, Abschnitt „Releases“."
+            exit 1
+          fi
+      # Gepusht wird mit einem Deploy-Schlüssel: Die Regel für main verlangt Statusprüfungen, und nur
+      # Deploy-Schlüssel (nicht GITHUB_TOKEN) lassen sich bei einem persönlichen Repository als Ausnahme eintragen.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
       - uses: voidzero-dev/setup-vp@v1.21.2
         with:
           node-version: 22

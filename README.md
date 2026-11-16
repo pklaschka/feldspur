@@ -274,6 +274,16 @@ nach, committet „Release vX“ auf `main`, taggt, baut die Installer für alle
 mit Installern, `SHA256SUMS.txt` und dem PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an.
 
+**Einmalig einrichten:** Der Workflow pusht den Commit „Release vX“ mit einem Deploy-Schlüssel auf `main`, weil die
+Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.
+
+1.  Schlüsselpaar erzeugen: `ssh-keygen -t ed25519 -N "" -C feldspur-release -f feldspur-release`
+2.  Öffentlichen Teil (`feldspur-release.pub`) unter Settings → Deploy keys → Add deploy key eintragen, Titel
+    „Release“, Haken bei **Allow write access**.
+3.  Privaten Teil (`feldspur-release`) unter Settings → Secrets and variables → Actions → New repository secret als
+    `RELEASE_DEPLOY_KEY` speichern. Danach beide Dateien löschen.
+4.  Settings → Rules → Regel für `main` → Bypass list → Add bypass → **Deploy keys** → Always allow.
+
 Das Changelog entsteht aus den **Titeln der zusammengeführten Pull Requests**, deshalb sollten die Titel für
 Nutzer\*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `neu`, `verbessert`, `behoben`, `doku`, `intern`;
 `kein-changelog` lässt einen PR weg (siehe [`.github/release.yml`](.github/release.yml)). Direkt auf `main` gepushte
