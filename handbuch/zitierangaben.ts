@@ -29,6 +29,11 @@ function ersetzen(muster: RegExp, ersatz: string, was: string) {
   html = html.replace(muster, ersatz);
 }
 
+// Läuft das Skript erneut über dieselbe Datei (etwa bei `quarto preview`), erst die eigenen Ergänzungen entfernen.
+html = html
+  .replace(/<meta name="citation_issue" content="[^"]*">\n/g, "")
+  .replace(/^  number = \{Stand: [^}]*\},\n/gm, "");
+
 // Zotero
 ersetzen(
   /(<meta name="citation_language")/,
