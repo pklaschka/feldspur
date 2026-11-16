@@ -138,47 +138,54 @@ export interface Reveal {
  * - Episode: Durchsehen, Zeitachse auf die Episode gezoomt.
  * - Tagebuch: Abtippen auf der Seite des Eintrags; ohne Seite die Stelle auf der Zeitachse.
  */
-export function QuickSearch({
-  view,
-  open,
-  onOpenChange,
-  onSource,
-  onTranscribe,
-  onDiary,
-  onReview,
-  onReveal,
-}: {
-  view: SessionView;
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
+export interface JumpTargets {
   onSource: (id: string) => void;
   onTranscribe: (id: string | null) => void;
   onDiary: (pageId: string | null) => void;
   onReview: () => void;
   onReveal: (r: Reveal) => void;
-}) {
+}
+
+/** Sprung zu einer Fundstelle, wie aus der Suche; auch „Zeigen“ nach Rückgängig nutzt ihn. */
+export function useJump(
+  view: SessionView,
+  t: JumpTargets,
+): (h: Pick<Hit, "kind" | "target" | "atMs" | "clockMs" | "endMs">) => void {
   const { seek } = usePlayback();
-  const pick = (h: Hit) => {
+  return (h) => {
     const row = view.rows.find((r) => r.id === h.target);
     const av = row?.kind === "audio" || row?.kind === "video";
     // Mitschrift-Treffer öffnen das Mitschreiben direkt an der Stelle, auch wenn es noch zu ist.
     if ((h.kind === "line" || h.kind === "note") && av) {
       if (h.atMs !== undefined) seek(h.target, h.atMs);
-      onTranscribe(h.target);
+      t.onTranscribe(h.target);
       return;
     }
     if (h.kind === "diary" && h.target) {
-      onTranscribe(null);
-      onDiary(h.target);
+      t.onTranscribe(null);
+      t.onDiary(h.target);
       return;
     }
     // Alles andere landet in Durchsehen; offene Fenster schließen, damit man sieht, wohin es geht.
-    onTranscribe(null);
-    onDiary(null);
-    onReview();
-    if (h.kind !== "episode" && h.kind !== "diary") onSource(h.target);
+    t.onTranscribe(null);
+    t.onDiary(null);
+    t.onReview();
+    if (h.kind !== "episode" && h.kind !== "diary") t.onSource(h.target);
     if (h.atMs !== undefined) seek(h.target, h.atMs);
-    if (h.clockMs !== null) onReveal({ fromMs: h.clockMs, toMs: h.endMs });
+    if (h.clockMs !== null) t.onReveal({ fromMs: h.clockMs, toMs: h.endMs });
   };
+}
+
+export function QuickSearch({
+  view,
+  open,
+  onOpenChange,
+  ...targets
+}: {
+  view: SessionView;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+} & JumpTargets) {
+  const pick = useJump(view, targets);
   return <SearchDialog view={view} open={open} onOpenChange={onOpenChange} onPick={pick} />;
 }

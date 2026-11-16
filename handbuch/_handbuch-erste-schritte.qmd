@@ -57,8 +57,10 @@ und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an 
 **Rückgängig** (Strg+Z, auf dem Mac ⌘Z) nimmt den letzten Schritt zurück, etwa eine entfernte Quelle, einen
 gelöschten Anker, einen übernommenen Vorschlag oder "Lage passt". **Wiederholen** geht mit Strg+Y oder
 Strg+Umschalt+Z (⇧⌘Z). Beide Knöpfe stehen auch oben neben **Suchen**. Feldspur fragt deshalb vor dem Löschen nicht
-mehr nach; stattdessen erscheint unten kurz ein Hinweis mit **Rückgängig**. In Textfeldern gilt Strg+Z wie gewohnt
-für den Text im Feld. Der Verlauf gilt, solange das Projekt offen ist. Nach dem Einsammeln oder der Tonspur-Analyse
+mehr nach; stattdessen erscheint unten kurz ein Hinweis mit **Rückgängig**. Nach dem Rückgängigmachen springt
+**Zeigen** im Hinweis an die Stelle, die sich geändert hat, etwa die Mitschrift-Zeile oder den Tagebucheintrag. In
+Textfeldern macht Strg+Z zuerst den Text im Feld rückgängig; ist dort nichts mehr zurückzunehmen, geht es mit dem
+Projekt weiter. Der Verlauf gilt, solange das Projekt offen ist. Nach dem Einsammeln oder der Tonspur-Analyse
 beginnt er neu.
 
 Feldspur hat ein helles und ein dunkles Erscheinungsbild und folgt der Einstellung deines Systems.

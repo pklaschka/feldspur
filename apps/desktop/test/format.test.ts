@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { maskClock, normalizeClock, offsetText, parseOffset, stepClock } from "../src/renderer/format.ts";
+import { maskClock, maskClockAt, normalizeClock, offsetText, parseOffset, stepClock } from "../src/renderer/format.ts";
 
 describe("Uhrabweichung eingeben", () => {
   it("Minuten und Sekunden wie bisher", () => {
@@ -45,6 +45,23 @@ describe("Uhrzeit als Maskenfeld", () => {
     expect(maskClock("93")).toBe("09:3");
     expect(maskClock("9:")).toBe("09:");
     expect(maskClock("9:15")).toBe("09:15");
+  });
+
+  it("korrigiert mitten in der Uhrzeit, ohne die Maske durcheinanderzubringen", () => {
+    // „15:00“, die 5 gelöscht (Marke danach an Stelle 1), dann 6 getippt.
+    expect(maskClockAt("1:00", 1)).toEqual({ value: "1:00", caret: 1 });
+    expect(maskClockAt("16:00", 2)).toEqual({ value: "16:00", caret: 2 });
+    // Ziffer in volle Stunde getippt: überschreibt die folgende.
+    expect(maskClockAt("165:00", 2)).toEqual({ value: "16:00", caret: 2 });
+    // In den Minuten: „10:30“, 3 gelöscht, 4 getippt.
+    expect(maskClockAt("10:0", 3)).toEqual({ value: "10:0", caret: 3 });
+    expect(maskClockAt("10:40", 4)).toEqual({ value: "10:40", caret: 4 });
+    // Oder ohne Löschen: in „10:30“ hinter dem Doppelpunkt 4 getippt, überschreibt die 3.
+    expect(maskClockAt("10:430", 4)).toEqual({ value: "10:40", caret: 4 });
+    // Doppelpunkt gelöscht: Ziffern fließen wie beim Tippen.
+    expect(maskClockAt("1500", 2)).toEqual({ value: "15:00", caret: 2 });
+    // Beim Tippen am Ende wie bisher.
+    expect(maskClockAt("103", 3)).toEqual({ value: "10:3", caret: 4 });
   });
 
   it("ergänzt und prüft beim Verlassen", () => {

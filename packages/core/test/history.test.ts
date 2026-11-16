@@ -56,6 +56,20 @@ describe("Rückgängig und Wiederholen", () => {
     expect(store.listEvidence(session.id)).toHaveLength(1);
   });
 
+  it("nennt die betroffenen Zeilen, damit die Oberfläche dorthin springen kann", () => {
+    const { store, source } = setup();
+    const line = store.history.record("Mitschrift geändert", () =>
+      store.addTranscriptLine({ sourceId: source.id, atMs: 12_000, speaker: "", text: "Hallo" }),
+    );
+    store.history.undo();
+    // Beim Rückgängigmachen verschwindet die Zeile; genannt wird sie trotzdem, mit ihren alten Werten.
+    expect(store.history.lastTouched()).toEqual([
+      { table: "transcript_lines", row: expect.objectContaining({ id: line.id, source_id: source.id, at_ms: 12_000 }) },
+    ]);
+    store.history.redo();
+    expect(store.history.lastTouched()[0]).toMatchObject({ table: "transcript_lines", row: { id: line.id } });
+  });
+
   it("mehrere Schritte nacheinander, neue Aktion verwirft Wiederholen", () => {
     const { store, device } = setup();
     store.history.record("A", () => store.updateDevice(device.id, { label: "A" }));

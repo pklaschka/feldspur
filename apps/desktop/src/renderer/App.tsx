@@ -1,6 +1,6 @@
 import { Tabs } from "radix-ui";
 import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import type { ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
+import type { HistoryTarget, ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
 import { ExportStep } from "./ExportStep.tsx";
@@ -14,7 +14,7 @@ import { renderImageRefJpeg } from "./stillRender.ts";
 import { Review } from "./Review.tsx";
 import { PlaybackProvider } from "./playback.tsx";
 import { Preview } from "./Preview.tsx";
-import { QuickSearch, type Reveal } from "./SearchDialog.tsx";
+import { QuickSearch, useJump, type JumpTargets, type Reveal } from "./SearchDialog.tsx";
 import { SessionDetails } from "./SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "./SourceMenu.tsx";
 import { Transcriber } from "./Transcriber.tsx";
@@ -418,45 +418,51 @@ function SessionPane({
                 <Button variant="link" size="sm" onClick={() => setEditing(true)}>
                   Einsatzdaten bearbeiten
                 </Button>
-                <span className="ml-auto flex items-center" role="group" aria-label="Verlauf">
+                {/* Eigene Zeile in der Mitte statt an der Grundlinie: Symbole haben keine Grundlinie wie Text. */}
+                <span className="ml-auto flex items-center gap-0.5 self-center">
+                  <span className="flex items-center gap-0.5" role="group" aria-label="Verlauf">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="inline-grid size-7 place-items-center px-0! py-0!"
+                      aria-label="Rückgängig"
+                      data-testid="undo"
+                      disabled={!history.state.undo}
+                      title={
+                        history.state.undo
+                          ? `Rückgängig: ${history.state.undo} (${isMac ? "⌘Z" : "Strg+Z"})`
+                          : "Nichts rückgängig zu machen"
+                      }
+                      onClick={() => history.step(false)}
+                    >
+                      <HistoryGlyph />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="inline-grid size-7 place-items-center px-0! py-0!"
+                      aria-label="Wiederholen"
+                      disabled={!history.state.redo}
+                      title={
+                        history.state.redo
+                          ? `Wiederholen: ${history.state.redo} (${isMac ? "⇧⌘Z" : "Strg+Y"})`
+                          : "Nichts zu wiederholen"
+                      }
+                      onClick={() => history.step(true)}
+                    >
+                      <HistoryGlyph redo />
+                    </Button>
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label="Rückgängig"
-                    data-testid="undo"
-                    disabled={!history.state.undo}
-                    title={
-                      history.state.undo
-                        ? `Rückgängig: ${history.state.undo} (${isMac ? "⌘Z" : "Strg+Z"})`
-                        : "Nichts rückgängig zu machen"
-                    }
-                    onClick={() => history.step(false)}
+                    className="h-7"
+                    onClick={() => setSearching(true)}
+                    title="Mitschrift, Tagebuch, Quellen und Episoden durchsuchen (Strg/⌘+K)"
                   >
-                    <HistoryGlyph />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Wiederholen"
-                    disabled={!history.state.redo}
-                    title={
-                      history.state.redo
-                        ? `Wiederholen: ${history.state.redo} (${isMac ? "⇧⌘Z" : "Strg+Y"})`
-                        : "Nichts zu wiederholen"
-                    }
-                    onClick={() => history.step(true)}
-                  >
-                    <HistoryGlyph redo />
+                    Suchen <kbd className="ml-1 font-mono text-[0.78rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
                   </Button>
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearching(true)}
-                  title="Mitschrift, Tagebuch, Quellen und Episoden durchsuchen (Strg/⌘+K)"
-                >
-                  Suchen <kbd className="ml-1 font-mono text-[0.78rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
-                </Button>
               </div>
               {/* Die vier Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur.
                */}
@@ -614,7 +620,17 @@ function SessionPane({
           onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
         <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
-        <UndoToast toast={history.toast} onAction={history.step} onClose={history.dismiss} />
+        <UndoToast
+          view={view}
+          toast={history.toast}
+          onAction={history.step}
+          onClose={history.dismiss}
+          onSource={setSelected}
+          onTranscribe={setTranscribeId}
+          onDiary={setDiaryPage}
+          onReview={() => setStep("review")}
+          onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
+        />
       </SourceActionsProvider>
     </PlaybackProvider>
   );
@@ -636,6 +652,8 @@ const NOTIFY = new Set([
 
 interface Toast {
   text: string;
+  /** Wo der rückgängig gemachte Schritt etwas geändert hat („Zeigen“). */
+  target?: HistoryTarget | null;
   /** Was der Knopf im Hinweis tut: false = rückgängig, true = wiederholen. */
   redo: boolean;
   n: number;
@@ -677,37 +695,63 @@ function useHistory(
     else setState(await api.historyState());
     setToast(
       r.label
-        ? { text: `${redo ? "Wiederholt" : "Rückgängig gemacht"}: ${r.label}`, redo: !redo, n: Date.now() }
+        ? {
+            text: `${redo ? "Wiederholt" : "Rückgängig gemacht"}: ${r.label}`,
+            redo: !redo,
+            n: Date.now(),
+            target: r.target,
+          }
         : null,
     );
   };
   const stepRef = useRef(step);
   stepRef.current = step;
-  // Strg/⌘+Z, Strg/⌘+Umschalt+Z und Strg+Y. In Textfeldern bleibt es beim Rückgängig des Feldes.
+  // Strg/⌘+Z, Strg/⌘+Umschalt+Z und Strg+Y. In Textfeldern macht zuerst das Feld rückgängig; hat es nichts
+  // mehr, geht es mit dem Projekt weiter. Ob das Feld etwas getan hat, zeigt sein „beforeinput“ (historyUndo).
   useEffect(() => {
+    let fieldActed = false;
+    const onBeforeInput = (e: InputEvent) => {
+      if (e.inputType === "historyUndo" || e.inputType === "historyRedo") fieldActed = true;
+    };
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey || isEditable(document.activeElement)) return;
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const key = e.key.toLowerCase();
       const redo = key === "y" || (key === "z" && e.shiftKey);
       if (key !== "z" && key !== "y") return;
+      if (isEditable(document.activeElement)) {
+        fieldActed = false;
+        // Kurz warten: Unter macOS kommt das Rückgängig des Feldes über das Menü, also etwas später.
+        setTimeout(() => {
+          if (!fieldActed) void stepRef.current(redo);
+        }, 60);
+        return;
+      }
       e.preventDefault();
       void stepRef.current(redo);
     };
+    window.addEventListener("beforeinput", onBeforeInput, true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("beforeinput", onBeforeInput, true);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
   return { state, toast, step: (redo: boolean) => void step(redo), dismiss: () => setToast(null) };
 }
 
 function UndoToast({
+  view,
   toast,
   onAction,
   onClose,
+  ...targets
 }: {
+  view: SessionView;
   toast: Toast | null;
   onAction: (redo: boolean) => void;
   onClose: () => void;
-}) {
+} & JumpTargets) {
+  const jump = useJump(view, targets);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(onClose, 8000);
@@ -730,6 +774,24 @@ function UndoToast({
       >
         {toast.redo ? "Wiederholen" : "Rückgängig"}
       </button>
+      {toast.target && (
+        <button
+          className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
+          title="Dorthin springen, wo sich etwas geändert hat"
+          onClick={() => {
+            const t = toast.target!;
+            const row = view.rows.find((r) => r.id === t.sourceId);
+            jump({
+              kind: t.kind,
+              target: t.sourceId,
+              atMs: t.atMs,
+              clockMs: row?.startMs != null ? row.startMs + (t.atMs ?? 0) : null,
+            });
+          }}
+        >
+          Zeigen
+        </button>
+      )}
       <button className="cursor-pointer opacity-70 hover:opacity-100" aria-label="Hinweis ausblenden" onClick={onClose}>
         ×
       </button>
