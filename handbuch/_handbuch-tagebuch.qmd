@@ -15,7 +15,9 @@ auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
 
 Öffne die Seite mit **Tagebuch abtippen** und zieh einen Rahmen um einen Eintrag. Dann trägst du ein:
 
-- **Notiert um**: die Uhrzeit, zu der du den Eintrag geschrieben hast.
+- **Notiert um**: die Uhrzeit, zu der du den Eintrag geschrieben hast. Es reichen die Ziffern, der Doppelpunkt kommt
+  von selbst ("1030" wird 10:30, "930" wird 09:30). Mit ↑ und ↓ verschiebst du die Zeit um eine Minute, mit Umschalt
+  um zehn. Eine unmögliche Zeit wie 25:00 färbt das Feld rot und wird nicht gespeichert.
 - **bezieht sich auf … Min. davor**: wie weit der Eintrag zurückreicht. Der Standard steht in den Einsatzdaten.
 - wie du ihn erfasst:
   - **Volltext**: wortgetreu abgetippt,
@@ -24,6 +26,14 @@ auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
 
 Ein Eintrag kann auf einer anderen Seite weitergehen; dann ziehst du dort einen weiteren Rahmen für denselben Eintrag.
 Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
+
+### Blättern und Zoomen
+
+Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst.
+Die Pfeile oben rechts tun dasselbe. Jede Seite steht zuerst ganz im Bild; kleine Scans werden dafür vergrößert. Zum
+Entziffern zoomst du mit **+** und **−** oben rechts, mit **Strg/⌘ + Mausrad** an der Stelle unter der Maus oder,
+wenn kein Textfeld den Fokus hat, mit den Tasten + und −. Ein Klick auf die Prozentzahl (oder die Taste 0) zeigt
+wieder die ganze Seite.
 
 ### Seitenzahlen und Doppelseiten
 

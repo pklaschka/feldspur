@@ -4,7 +4,7 @@
  */
 import { diaryPageLabel, suggestPageNo } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import {
   mediaUrl,
   type DiaryEntryRow,
@@ -15,7 +15,7 @@ import {
   type SourceRow,
 } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { hm } from "./format.ts";
+import { hm, maskClockAt, normalizeClock, stepClock } from "./format.ts";
 import { loadPdf, PdfPageCanvas } from "./pdf.tsx";
 import { Button, Choice, ConfirmButton, cx, Notice } from "./ui.tsx";
 
@@ -130,6 +130,7 @@ export function DiaryEditor({
   }, [pageId]);
   const page = pageId ? (pages.find((p) => p.key === navKey) ?? pages.find((p) => p.mainId === pageId) ?? null) : null;
   const [selected, setSelected] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
   const [continuing, setContinuing] = useState<string | null>(null);
 
   const onSurface = (sf: { sourceId: string; page?: number }) =>
@@ -158,6 +159,85 @@ export function DiaryEditor({
     onPage(p.mainId);
   };
 
+  // Zoom: 1 = Seite passt ganz in die Fläche (kleine Scans werden dafür auch vergrößert), darüber hineingezoomt.
+  const area = useRef<HTMLDivElement>(null);
+  const [areaSize, observeArea] = useElementSize();
+  const [zoom, setZoomState] = useState(1);
+  // Beim Zoomen bleibt die Stelle unter der Maus (oder die Mitte) stehen; die Scrollposition folgt nach dem Rendern.
+  const pendingScroll = useRef<{ fx: number; fy: number; px: number; py: number } | null>(null);
+  const setZoom = (next: number, at?: { x: number; y: number }) => {
+    const el = area.current;
+    const z = Math.min(ZOOM_MAX, Math.max(1, Math.round(next * 100) / 100));
+    if (el && z !== zoom) {
+      const px = at?.x ?? el.clientWidth / 2;
+      const py = at?.y ?? el.clientHeight / 2;
+      pendingScroll.current = {
+        fx: (el.scrollLeft + px) / Math.max(1, el.scrollWidth),
+        fy: (el.scrollTop + py) / Math.max(1, el.scrollHeight),
+        px,
+        py,
+      };
+    }
+    setZoomState(z);
+  };
+  useLayoutEffect(() => {
+    const el = area.current;
+    const p = pendingScroll.current;
+    if (!el || !p) return;
+    pendingScroll.current = null;
+    el.scrollLeft = p.fx * el.scrollWidth - p.px;
+    el.scrollTop = p.fy * el.scrollHeight - p.py;
+  });
+  // Neue Seite: wieder ganz zeigen und oben anfangen.
+  useEffect(() => {
+    setZoomState(1);
+    area.current?.scrollTo({ top: 0, left: 0 });
+  }, [page?.key]);
+  // Strg/⌘ + Mausrad zoomt an der Maus (auch Touchpad-Spreizen), ohne Strg wird wie gewohnt gescrollt.
+  const wheel = useRef<(e: WheelEvent) => void>(() => {});
+  wheel.current = (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const r = area.current!.getBoundingClientRect();
+    setZoom(zoom * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.004)), {
+      x: e.clientX - r.left,
+      y: e.clientY - r.top,
+    });
+  };
+  const areaRef = (el: HTMLDivElement | null) => {
+    area.current = el;
+    observeArea(el);
+    if (!el || el.dataset.wheel) return;
+    el.dataset.wheel = "1";
+    el.addEventListener("wheel", (e) => wheel.current(e), { passive: false });
+  };
+
+  // Tastenkürzel: Bild auf/ab blättert (auch beim Tippen), +/−/0 zoomen außerhalb von Textfeldern.
+  const pageIndex = page ? pages.findIndex((p) => p.key === page.key) : -1;
+  const keys = useRef<(e: KeyboardEvent) => void>(() => {});
+  keys.current = (e) => {
+    if (!page || e.altKey) return;
+    if (e.key === "PageDown" || e.key === "PageUp") {
+      const next = pages[pageIndex + (e.key === "PageDown" ? 1 : -1)];
+      e.preventDefault();
+      if (next) goto(next);
+      return;
+    }
+    const t = e.target as HTMLElement | null;
+    if (e.ctrlKey || e.metaKey || t?.closest("input, textarea, [contenteditable=true]")) return;
+    if (e.key === "+" || e.key === "=") setZoom(zoom * 1.25);
+    else if (e.key === "-") setZoom(zoom / 1.25);
+    else if (e.key === "0") setZoom(1);
+    else return;
+    e.preventDefault();
+  };
+  useEffect(() => {
+    if (!page) return;
+    const on = (e: KeyboardEvent) => keys.current(e);
+    window.addEventListener("keydown", on, true);
+    return () => window.removeEventListener("keydown", on, true);
+  }, [!!page]);
+
   const draw = async (sf: Surface, region: Region) => {
     const r = { ...region, page: sf.page };
     if (contEntry) {
@@ -173,6 +253,8 @@ export function DiaryEditor({
     if (res) {
       onView(res.view);
       setSelected(res.entryId);
+      // Neue Box: gleich die Uhrzeit eintippen können.
+      setFresh(res.entryId);
     }
   };
   const patch = (id: string, p: DiaryPatch) => void guard(() => api.patchDiaryEntry(id, p)).then((v) => v && onView(v));
@@ -192,6 +274,62 @@ export function DiaryEditor({
               <span className="text-[0.85rem] text-muted">{page.surfaces.length} Bilder auf dieser Seite</span>
             )}
             <span className="flex-1" />
+            <span className="flex items-center gap-1" role="group" aria-label="Blättern">
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Vorige Seite"
+                title="Vorige Seite (Bild ↑)"
+                disabled={pageIndex <= 0}
+                onClick={() => goto(pages[pageIndex - 1]!)}
+              >
+                ‹
+              </Button>
+              <span className="min-w-14 text-center font-mono text-[0.85rem] text-muted" data-testid="diary-page-of">
+                {pageIndex + 1} / {pages.length}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Nächste Seite"
+                title="Nächste Seite (Bild ↓)"
+                disabled={pageIndex >= pages.length - 1}
+                onClick={() => goto(pages[pageIndex + 1]!)}
+              >
+                ›
+              </Button>
+            </span>
+            <span className="flex items-center gap-1" role="group" aria-label="Zoom">
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Verkleinern"
+                title="Verkleinern (−)"
+                disabled={zoom <= 1}
+                onClick={() => setZoom(zoom / 1.25)}
+              >
+                −
+              </Button>
+              <button
+                className="min-w-14 cursor-pointer rounded px-1 text-center font-mono text-[0.85rem] text-muted hover:text-ink disabled:cursor-default"
+                title="Ganze Seite zeigen (0)"
+                data-testid="diary-zoom"
+                disabled={zoom === 1}
+                onClick={() => setZoom(1)}
+              >
+                {zoom === 1 ? "ganz" : `${Math.round(zoom * 100)} %`}
+              </button>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Vergrößern"
+                title="Vergrößern (+, Strg/⌘ + Mausrad)"
+                disabled={zoom >= ZOOM_MAX}
+                onClick={() => setZoom(zoom * 1.25)}
+              >
+                +
+              </Button>
+            </span>
             <Dialog.Close asChild>
               <Button size="sm">Fertig</Button>
             </Dialog.Close>
@@ -220,7 +358,7 @@ export function DiaryEditor({
             ))}
           </nav>
 
-          <div className="relative overflow-auto bg-sunken p-4">
+          <div ref={areaRef} className="relative overflow-auto bg-sunken p-4" data-testid="diary-area">
             {contEntry && (
               <div className="sticky top-0 z-10 mb-2">
                 <Notice>
@@ -252,6 +390,8 @@ export function DiaryEditor({
                     key={sKey(sf)}
                     surface={sf}
                     label={page.surfaces.length > 1 ? `${row.label} · ${row.fileName}` : null}
+                    fit={fitBox(areaSize, page.surfaces.length > 1)}
+                    zoom={zoom}
                     entries={onSurface(sf)}
                     selected={selected}
                     onSelect={setSelected}
@@ -273,6 +413,7 @@ export function DiaryEditor({
                 suggestPage={(i) => suggestions.get(`${e.id}#${i}`) ?? null}
                 onPage={(i, n) => void guard(() => api.setDiaryRegionPage(e.id, i, n)).then((v) => v && onView(v))}
                 active={selected === e.id}
+                fresh={fresh === e.id}
                 onFocus={() => setSelected(e.id)}
                 onPatch={(p) => patch(e.id, p)}
                 onContinue={() => setContinuing(e.id)}
@@ -306,6 +447,8 @@ function Thumb({ surface }: { surface: Surface }) {
 function PageCanvas({
   surface,
   label,
+  fit,
+  zoom,
   entries,
   selected,
   onSelect,
@@ -313,12 +456,20 @@ function PageCanvas({
 }: {
   surface: Surface;
   label: string | null;
+  /** Platz, in den die Seite bei Zoom 1 ganz passt. */
+  fit: { w: number; h: number };
+  zoom: number;
   entries: DiaryEntryRow[];
   selected: string | null;
   onSelect: (id: string) => void;
   onDraw: (r: Region) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
+  const natural = useNaturalSize(surface);
+  // Ganz zeigen heißt: so groß wie möglich, ohne über Breite oder Höhe hinauszugehen. Kleine Scans werden dafür
+  // vergrößert; PDF-Seiten höchstens 900 px breit, damit Text in der Breite lesbar bleibt.
+  const fitScale = natural ? Math.min(fit.w / natural.w, fit.h / natural.h) : 0;
+  const cssW = natural && fitScale > 0 ? Math.max(120, Math.round(natural.w * fitScale * zoom)) : null;
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const rel = (e: PointerEvent) => {
     const b = box.current!.getBoundingClientRect();
@@ -337,7 +488,7 @@ function PageCanvas({
     height: `${r.h * 100}%`,
   });
   return (
-    <figure className={cx("mx-auto max-w-full", surface.isPdf ? "w-[min(900px,100%)]" : "w-fit")}>
+    <figure className="mx-auto" style={{ width: cssW ?? undefined, visibility: cssW ? undefined : "hidden" }}>
       {label && <figcaption className="mb-1 font-mono text-[0.82rem] text-muted">{label}</figcaption>}
       <div
         ref={box}
@@ -367,13 +518,18 @@ function PageCanvas({
           />
         )}
         {surface.isPdf ? (
-          <PdfPageCanvas sourceId={surface.sourceId} page={surface.page} className="block rounded bg-white shadow" />
+          <PdfPageCanvas
+            sourceId={surface.sourceId}
+            page={surface.page}
+            maxWidth={cssW ?? 900}
+            className="block rounded bg-white shadow"
+          />
         ) : (
           <img
             src={mediaUrl(surface.sourceId)}
             alt="Tagebuchseite"
             draggable={false}
-            className="block max-h-[calc(100vh-9rem)] max-w-full rounded shadow"
+            className="block w-full rounded shadow"
           />
         )}
         {entries.flatMap((e) =>
@@ -473,6 +629,7 @@ function EntryCard({
   suggestPage,
   onPage,
   active,
+  fresh,
   onFocus,
   onPatch,
   onContinue,
@@ -486,6 +643,8 @@ function EntryCard({
   suggestPage: (index: number) => number | null;
   onPage: (index: number, pageNo: number | null) => void;
   active: boolean;
+  /** Gerade aufgezogen: Fokus ins Feld „Notiert um“. */
+  fresh: boolean;
   onFocus: () => void;
   onPatch: (p: DiaryPatch) => void;
   onContinue: () => void;
@@ -548,18 +707,14 @@ function EntryCard({
         )}
       </div>
       <div className="flex flex-wrap items-end gap-3 text-[0.9rem]">
-        <label className="grid gap-0.5">
-          <span className="text-muted">Notiert um</span>
-          <input
-            className="w-20 font-mono"
-            placeholder="hh:mm"
-            value={noted}
-            aria-label={`Notierzeit ${label}`}
-            onChange={(e) => setNoted(e.target.value)}
-            onBlur={() => noted !== (entry.notedAt ?? "") && onPatch({ notedAt: noted })}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-          />
-        </label>
+        <ClockField
+          label="Notiert um"
+          ariaLabel={`Notierzeit ${label}`}
+          value={noted}
+          autoFocus={fresh}
+          onChange={setNoted}
+          onCommit={(v) => v !== (entry.notedAt ?? "") && onPatch({ notedAt: v })}
+        />
         <label className="grid gap-0.5">
           <span className="text-muted">bezieht sich auf</span>
           <span className="flex items-center gap-1">
@@ -626,5 +781,155 @@ function EntryCard({
         </ConfirmButton>
       </div>
     </div>
+  );
+}
+
+const ZOOM_MAX = 6;
+
+/** Platz für eine Seite bei Zoom 1: Fläche ohne Innenabstand; mehrere Bilder einer Seite teilen sich nicht die Höhe. */
+function fitBox(area: { w: number; h: number }, several: boolean): { w: number; h: number } {
+  // Noch nicht gemessen: nichts zeigen statt einer winzigen Seite.
+  if (!area.w || !area.h) return { w: 0, h: 0 };
+  const w = Math.max(200, area.w - 32);
+  const h = Math.max(200, area.h - 32 - (several ? 24 : 0));
+  return { w, h };
+}
+
+/**
+ * Größe eines Elements, das erst später erscheint (im Dialog). Gemessen wird über die Ref-Funktion: Radix hängt den
+ * Dialoginhalt erst nach dem eigenen Rendern ein, ein Effekt im Editor käme dafür zu früh und bliebe bei 0 stehen
+ * (dann war die Seite beim Öffnen winzig).
+ */
+function useElementSize(): [{ w: number; h: number }, (el: HTMLElement | null) => void] {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const observed = useRef<{ el: HTMLElement; ro: ResizeObserver } | null>(null);
+  const observe = useCallback((el: HTMLElement | null) => {
+    if (observed.current?.el === el) return;
+    observed.current?.ro.disconnect();
+    observed.current = null;
+    if (!el) return;
+    const measure = () =>
+      setSize((s) =>
+        s.w === el.clientWidth && s.h === el.clientHeight ? s : { w: el.clientWidth, h: el.clientHeight },
+      );
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    observed.current = { el, ro };
+    measure();
+  }, []);
+  useEffect(() => () => observed.current?.ro.disconnect(), []);
+  return [size, observe];
+}
+
+/** Natürliche Größe eines Scans (Bild in Pixeln, PDF-Seite in Punkten, beim PDF höchstens 900 px breit). */
+/** Schon bekannte Größen: Beim Blättern zurück steht die Seite sofort in der richtigen Größe da. */
+const naturalSizes = new Map<string, { w: number; h: number }>();
+
+function useNaturalSize(surface: Surface): { w: number; h: number } | null {
+  const key = `${surface.sourceId}#${surface.page}`;
+  const [size, setSizeState] = useState<{ w: number; h: number } | null>(() => naturalSizes.get(key) ?? null);
+  const setSize = (s: { w: number; h: number }) => {
+    naturalSizes.set(key, s);
+    setSizeState(s);
+  };
+  useEffect(() => {
+    let alive = true;
+    const known = naturalSizes.get(key);
+    setSizeState(known ?? null);
+    if (known) return;
+    if (surface.isPdf) {
+      loadPdf(surface.sourceId)
+        .then((d) => d.getPage(surface.page + 1))
+        .then(
+          (p) => {
+            const v = p.getViewport({ scale: 1 });
+            // Breite Seiten nicht über 900 px aufblasen: daran misst sich „ganz zeigen“ bei PDF.
+            const k = Math.min(1, 900 / v.width) * 4;
+            if (alive) setSize({ w: v.width * k, h: v.height * k });
+          },
+          () => alive && setSize({ w: 900, h: 1270 }),
+        );
+    } else {
+      const img = new Image();
+      img.onload = () => alive && setSize({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => alive && setSize({ w: 800, h: 1100 });
+      img.src = mediaUrl(surface.sourceId);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [surface.sourceId, surface.page, surface.isPdf]);
+  return size;
+}
+
+/** Uhrzeit „hh:mm“ als Maskenfeld: nur Ziffern, Doppelpunkt von selbst, ↑/↓ verschieben um eine Minute. */
+function ClockField({
+  label,
+  ariaLabel,
+  value,
+  onChange,
+  onCommit,
+  autoFocus = false,
+}: {
+  label: ReactNode;
+  ariaLabel: string;
+  autoFocus?: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  onCommit: (v: string) => void;
+}) {
+  const valid = normalizeClock(value) !== null;
+  const input = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  // Nach der Maske die Schreibmarke dorthin setzen, wo getippt wurde, statt ans Ende.
+  useLayoutEffect(() => {
+    if (caret.current === null || document.activeElement !== input.current) return;
+    input.current!.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [value]);
+  useEffect(() => {
+    if (autoFocus) input.current?.focus();
+  }, [autoFocus]);
+  return (
+    <label className="grid gap-0.5">
+      <span className="text-muted">{label}</span>
+      <input
+        className={cx("w-20 font-mono", !valid && "border-bad text-bad")}
+        placeholder="hh:mm"
+        inputMode="numeric"
+        maxLength={6}
+        ref={input}
+        value={value}
+        aria-label={ariaLabel}
+        aria-invalid={!valid}
+        title={valid ? "Uhrzeit, z. B. 1030 für 10:30. ↑/↓: eine Minute, mit Umschalt zehn." : "Keine gültige Uhrzeit"}
+        onChange={(e) => {
+          const el = e.target;
+          const m = maskClockAt(el.value, el.selectionStart ?? el.value.length);
+          caret.current = m.caret;
+          onChange(m.value);
+          // Uhrzeit vollständig am Ende getippt: gleich ins nächste Feld (das Verlassen speichert sie).
+          if (m.value.length === 5 && m.caret === 5 && normalizeClock(m.value) && m.value !== value) {
+            const fields = [...document.querySelectorAll<HTMLElement>("input, textarea, select")].filter(
+              (f) => !(f as HTMLInputElement).disabled && f.offsetParent !== null,
+            );
+            requestAnimationFrame(() => fields[fields.indexOf(el) + 1]?.focus());
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            e.preventDefault();
+            onChange(stepClock(value, (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1)));
+          }
+        }}
+        onBlur={() => {
+          const n = normalizeClock(value);
+          if (n === null) return; // ungültig: stehen lassen und rot zeigen, nichts speichern
+          onChange(n);
+          onCommit(n);
+        }}
+      />
+    </label>
   );
 }

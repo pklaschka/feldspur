@@ -194,6 +194,12 @@ try {
   await editor.getByRole("navigation", { name: "Seiten" }).getByRole("button").nth(1).click();
   const sheet = editor.getByTestId("diary-page");
   await sheet.locator("img").waitFor();
+  // Beim Öffnen „ganz“: die Seite füllt Breite oder Höhe der Fläche, statt winzig zu sein.
+  await page.waitForFunction(() => {
+    const a = document.querySelector("[data-testid=diary-area]")!.getBoundingClientRect();
+    const p = document.querySelector("[data-testid=diary-page]")!.getBoundingClientRect();
+    return p.width > (a.width - 40) * 0.9 || p.height > (a.height - 40) * 0.9;
+  });
   const drag = async (x0: number, y0: number, x1: number, y1: number) => {
     const b = (await sheet.boundingBox())!;
     await page.mouse.move(b.x + b.width * x0, b.y + b.height * y0);
@@ -205,17 +211,57 @@ try {
   await editor.getByLabel("Notierzeit Eintrag 2").waitFor();
   await drag(0.06, 0.46, 0.94, 0.8);
   await editor.getByLabel("Notierzeit Eintrag 3").waitFor();
+  // Neue Box: Fokus steht gleich im Uhrzeitfeld.
+  await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Notierzeit Eintrag 3");
   for (const [n, at, text] of [
     [2, "10:35", "Streit am Käsestand, Händlerin holt Marktaufsicht"],
     [3, "10:41", "Gespräch mit Testperson B über Standgebühren"],
   ] as const) {
-    await editor.getByLabel(`Notierzeit Eintrag ${n}`).fill(at);
-    await editor.getByLabel(`Notierzeit Eintrag ${n}`).press("Enter");
+    // Maskenfeld: nur Ziffern tippen, der Doppelpunkt kommt von selbst.
+    const field = editor.getByLabel(`Notierzeit Eintrag ${n}`);
+    await field.fill("");
+    await field.pressSequentially(at.replace(":", ""));
+    if ((await field.inputValue()) !== at) throw new Error(`Maske: ${await field.inputValue()} statt ${at}`);
+    // Vollständig getippt: weiter ins nächste Feld.
+    await page.waitForFunction(
+      (l) => document.activeElement?.getAttribute("aria-label") === l,
+      `Bezugszeitraum Eintrag ${n}`,
+    );
+    // Mitten in der Uhrzeit korrigieren: Stundenziffer löschen und neu tippen, die Maske bleibt stehen.
+    await field.focus();
+    await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(2, 2));
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("9");
+    const fixed = `1${at.slice(1, 1)}9${at.slice(2)}`;
+    if ((await field.inputValue()) !== fixed) throw new Error(`Korrektur: ${await field.inputValue()} statt ${fixed}`);
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type(at[1]!);
+    if ((await field.inputValue()) !== at) throw new Error(`Zurück: ${await field.inputValue()} statt ${at}`);
+    await field.press("Enter");
     await editor.getByLabel(`Kurzform Eintrag ${n}`).fill(text);
     await editor.getByLabel(`Kurzform Eintrag ${n}`).blur();
   }
   await editor.getByText("10:26–10:41").waitFor();
   await shot("-tagebuch");
+  // Blättern mit Bild auf/ab, auch während ein Textfeld den Fokus hat; Zoom über Knopf und Tasten.
+  const pageOf = editor.getByTestId("diary-page-of");
+  const pageBefore = await pageOf.innerText();
+  await editor.getByLabel("Kurzform Eintrag 3").focus();
+  await page.keyboard.press("PageUp");
+  await pageOf.filter({ hasNotText: pageBefore }).waitFor();
+  await page.keyboard.press("PageDown");
+  await pageOf.filter({ hasText: pageBefore }).waitFor();
+  const w0 = (await sheet.boundingBox())!.width;
+  await editor.getByRole("button", { name: "Vergrößern" }).click();
+  await editor.getByRole("button", { name: "Vergrößern" }).click();
+  await page.waitForTimeout(100);
+  const w1 = (await sheet.boundingBox())!.width;
+  console.log(
+    `Tagebuch: Blättern ${pageBefore} ↔ vorige Seite, Zoom ${await editor.getByTestId("diary-zoom").innerText()}`,
+  );
+  if (w1 < w0 * 1.4) throw new Error(`Zoom wirkt nicht: ${w0} → ${w1}`);
+  await shot("-tagebuch-zoom");
+  await editor.getByTestId("diary-zoom").click();
   await editor.getByRole("button", { name: "Fertig" }).click();
   await editor.waitFor({ state: "detached" });
   const diaryItems = await page.getByTestId("tl-diary").count();
@@ -288,6 +334,25 @@ try {
   if (!inWindow) throw new Error(`Karte liegt außerhalb des Fensters: ${JSON.stringify(cardBox)}`);
   await shot("-zeitachse-karte");
   await page.mouse.move(0, 0);
+  {
+    // Mittlere Maustaste gedrückt ziehen verschiebt die Zeitachse.
+    await page.getByRole("button", { name: "Vergrößern" }).first().click();
+    await page.getByRole("button", { name: "Vergrößern" }).first().click();
+    const axis = page.locator("canvas").first();
+    const b = (await axis.boundingBox())!;
+    const scrollOf = () => axis.evaluate((c) => c.parentElement!.parentElement!.scrollLeft);
+    await axis.evaluate((c) => (c.parentElement!.parentElement!.scrollLeft = 200));
+    const s0 = await scrollOf();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down({ button: "middle" });
+    await page.mouse.move(b.x + b.width / 2 + 120, b.y + b.height / 2, { steps: 4 });
+    await page.mouse.up({ button: "middle" });
+    const s1 = await scrollOf();
+    if (Math.abs(s0 - s1 - 120) > 2) throw new Error(`Verschieben mit Mausrad: ${s0} → ${s1}`);
+    console.log(`Zeitachse mit mittlerer Maustaste verschoben: ${s0} → ${s1}`);
+    await page.getByRole("button", { name: "Einpassen" }).click();
+    await page.mouse.move(0, 0);
+  }
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
   await shot("-ausgeben");
