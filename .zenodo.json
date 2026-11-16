@@ -12,5 +12,25 @@
   "license": "EUPL-1.2",
   "upload_type": "software",
   "language": "deu",
-  "keywords": ["Ethnografie", "Feldforschung", "qualitative Forschung", "MAXQDA", "Multimedia", "Zeitachse"]
+  "keywords": ["Ethnografie", "Feldforschung", "qualitative Forschung", "MAXQDA", "Multimedia", "Zeitachse"],
+  "related_identifiers": [
+    {
+      "identifier": "https://purl.archive.org/feldspur",
+      "relation": "isDocumentedBy",
+      "resource_type": "publication-other",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://purl.archive.org/feldspur/pdf",
+      "relation": "isDocumentedBy",
+      "resource_type": "publication-other",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://purl.archive.org/feldspur/repo",
+      "relation": "isSupplementTo",
+      "resource_type": "software",
+      "scheme": "url"
+    }
+  ]
 }

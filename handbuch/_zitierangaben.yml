@@ -1,0 +1,10 @@
+# Zitierangaben für Begleittext und Handbuch (Webseite: citation_*-Angaben für Zotero und Google Scholar,
+# außerdem der Abschnitt „Zitat“ am Ende der Seite). stand.ts ergänzt daraus _zitation.yml um den Stand.
+citation:
+  type: article
+  title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
+  url: https://purl.archive.org/feldspur
+  pdf-url: https://purl.archive.org/feldspur/pdf
+  # Erstveröffentlichung; bleibt fest, der wechselnde Stand steht in „issue“.
+  issued: 2026-11-16
+  available-date: 2026-11-16

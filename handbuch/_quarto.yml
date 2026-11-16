@@ -4,6 +4,8 @@ project:
   # Das Logo wird nur aus CSS und Kopf verlinkt, Quarto kopiert es deshalb nicht von selbst.
   resources:
     - bilder/logo.svg
+  # Zitierangaben mit aktuellem Stand erzeugen (siehe stand.ts).
+  pre-render: stand.ts
   # Bricht ab, wenn die Webseite etwas von fremden Servern lädt.
   post-render: extern-pruefen.ts
 

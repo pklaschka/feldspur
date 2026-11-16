@@ -16,6 +16,13 @@ authors:
     orcid: "https://orcid.org/0009-0005-9995-5687"
 repository-code: "https://purl.archive.org/feldspur/repo"
 url: "https://purl.archive.org/feldspur"
+identifiers:
+  - type: url
+    value: "https://purl.archive.org/feldspur"
+    description: Begleittext und Handbuch (Webseite)
+  - type: url
+    value: "https://purl.archive.org/feldspur/pdf"
+    description: Begleittext und Handbuch (PDF)
 abstract: >-
   Forschungswerkzeug für die Ethnografie. Feldspur legt alle
   Aufzeichnungen eines Feldeinsatzes (Tagebuchscans, Video,
