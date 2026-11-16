@@ -285,20 +285,53 @@ main p,
 main li {
   max-width: 68ch;
 }
-// Kästen so breit wie der Text, statt rechts leer zu laufen. Ohne Seitenstreifen: ein feiner Rahmen
-// in der Farbe der Art (wie die Hinweise in der App), der Kopf mit etwas Luft.
+// Hinweiskästen schlicht wie eine Randbemerkung im Buch: keine Rahmen, kein Symbol, keine Kopfleiste.
+// Nur eine leise Fläche in der Farbe der Art und eine kleine Überschrift in der Sans. So breit wie der Text.
 main .callout {
-  max-width: calc(68ch + 1.6rem);
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent) !important;
-  border-left-width: 1px !important;
-  border-radius: 6px;
+  max-width: calc(68ch + 2.4rem);
+  margin-block: 1.6rem;
+  padding: 0.95rem 1.2rem 0.2rem;
+  border: 0 !important;
+  border-left-width: 0 !important;
+  border-radius: 4px;
+  box-shadow: none;
+}
+@each $art, $farbe in (
+  note: $callout-color-note,
+  tip: $callout-color-tip,
+  warning: $callout-color-warning,
+  important: $callout-color-important,
+  caution: $callout-color-caution
+) {
+  main .callout-#{$art} {
+    background: rgba($farbe, 0.07) !important;
+    .callout-title-container {
+      color: $farbe;
+    }
+  }
+}
+main .callout .callout-header {
+  background: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 0.2rem;
+}
+main .callout .callout-icon-container {
+  display: none;
+}
+main .callout .callout-title-container {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+main .callout .callout-body-container,
+main .callout .callout-body {
+  padding: 0 !important;
+  background: none !important;
 }
 main .callout p,
 main .callout li {
   max-width: none;
-}
-main .callout .callout-header {
-  padding-block: 0.35rem !important;
 }
 // Kopf auch auf schmalen Fenstern mit Rand.
 .quarto-title-banner {
@@ -313,9 +346,6 @@ html {
 }
 a {
   text-underline-offset: 0.18em;
-}
-.callout-important .callout-title-container {
-  font-weight: 600;
 }
 
 .fs-fusszeile {
