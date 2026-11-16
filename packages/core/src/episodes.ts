@@ -4,7 +4,7 @@
  * zählt nicht. Dazwischen liegen Zwischenzeiten, die im Export als Tafeln mit
  * Uhrzeit und Tagebuchnotiz erscheinen.
  */
-import type { Id, Interval, Source } from "./model.ts";
+import type { EpisodeEdit, Id, Interval, Source } from "./model.ts";
 import type { ResolveResult } from "./resolve.ts";
 import type { LocalMs } from "./time.ts";
 
@@ -29,6 +29,8 @@ export interface EpisodeOptions {
   mergeGapMs?: number;
   /** Puffer vor und nach jeder Aktivität. */
   padMs?: number;
+  /** Anpassungen von Hand, in der Reihenfolge, in der sie gemacht wurden. Sie gelten nach dem Puffer. */
+  edits?: Pick<EpisodeEdit, "sourceId" | "fromMs" | "toMs" | "mode">[];
 }
 
 export interface EpisodeResult {
@@ -55,6 +57,17 @@ function subtract(iv: Interval, holes: Interval[]): Interval[] {
   return parts;
 }
 
+/** Intervalle sortieren und Überlappungen zusammenfassen. */
+function normalize(list: Interval[]): Interval[] {
+  const out: Interval[] = [];
+  for (const iv of [...list].filter((i) => i.endMs > i.startMs).sort((a, b) => a.startMs - b.startMs)) {
+    const last = out.at(-1);
+    if (last && iv.startMs <= last.endMs) last.endMs = Math.max(last.endMs, iv.endMs);
+    else out.push({ ...iv });
+  }
+  return out;
+}
+
 export function computeEpisodes(
   sources: Source[],
   resolved: ResolveResult,
@@ -74,14 +87,18 @@ export function computeEpisodes(
       startMs: p.startMs + h.startMs,
       endMs: p.startMs + h.endMs,
     }));
-    for (const part of subtract({ startMs: p.startMs, endMs: p.endMs }, holes)) {
-      // Puffer nur nach innen in die Aufnahme hinein, nie über ihre Grenzen.
-      spans.push({
-        sourceId: s.id,
-        startMs: Math.max(p.startMs, part.startMs - pad),
-        endMs: Math.min(p.endMs, part.endMs + pad),
-      });
+    // Puffer nur nach innen in die Aufnahme hinein, nie über ihre Grenzen.
+    let parts = subtract({ startMs: p.startMs, endMs: p.endMs }, holes).map((part) => ({
+      startMs: Math.max(p.startMs, part.startMs - pad),
+      endMs: Math.min(p.endMs, part.endMs + pad),
+    }));
+    for (const e of opts.edits ?? []) {
+      if (e.sourceId !== s.id) continue;
+      const iv = { startMs: Math.max(p.startMs, p.startMs + e.fromMs), endMs: Math.min(p.endMs, p.startMs + e.toMs) };
+      if (iv.endMs <= iv.startMs) continue;
+      parts = e.mode === "include" ? normalize([...parts, iv]) : normalize(parts).flatMap((x) => subtract(x, [iv]));
     }
+    for (const part of normalize(parts)) spans.push({ sourceId: s.id, ...part });
   }
   spans.sort((a, b) => a.startMs - b.startMs);
 

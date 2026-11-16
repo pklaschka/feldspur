@@ -3,7 +3,7 @@
  * Layout (Zeilen, Elemente mit Pixelrechtecken), Treffersuche und Zeichnen.
  */
 import type { DeviceRow, DiaryEntryRow, EpisodeRow, GapRow, SourceRow, TranscriptRow } from "../shared/api.ts";
-import { hm } from "./format.ts";
+import { clock, hm } from "./format.ts";
 
 export const MIN = 60_000;
 export const RULER_H = 30;
@@ -201,6 +201,48 @@ export interface DrawState {
   playheadMs: number | null;
   /** Mitschrift je Quelle, nach Stelle sortiert; wird in den Clips als Textvorschau gezeigt. */
   transcripts: Map<string, TranscriptRow[]>;
+  /** Hüllkurven je Quelle (0–250, logarithmisch) für die Wellenform in den Clips. */
+  envelopes?: Map<string, Envelope>;
+  /** Gerade gezogene Episodengrenze: neue Lage als Vorschau. */
+  dragEdge?: { t: number } | null;
+}
+
+export interface Envelope {
+  /** Werte je Sekunde. */
+  rate: number;
+  data: Uint8Array;
+}
+
+const EPISODE_ROW = { top: RULER_H + 9, bottom: RULER_H + 31 };
+
+/** Grenze einer Episode unter dem Zeiger (± 5 px), zum Ziehen. */
+export function edgeAt(
+  items: Item[],
+  s: Scale,
+  x: number,
+  y: number,
+): { index: number; edge: "start" | "end"; t: number } | null {
+  if (y < EPISODE_ROW.top - 2 || y > EPISODE_ROW.bottom + 2) return null;
+  let best: { index: number; edge: "start" | "end"; t: number; d: number } | null = null;
+  for (const it of items) {
+    if (it.type !== "episode") continue;
+    for (const edge of ["start", "end"] as const) {
+      const t = edge === "start" ? it.t0 : it.t1;
+      const d = Math.abs(xOf(s, t) - x);
+      if (d <= 5 && (!best || d < best.d)) best = { index: it.ep.index, edge, t, d };
+    }
+  }
+  return best && { index: best.index, edge: best.edge, t: best.t };
+}
+
+/** Laute Stelle in einer Zwischenzeit unter dem Zeiger (± 6 px): daraus wird auf Klick eine Mini-Episode. */
+export function loudAt(items: Item[], s: Scale, x: number, y: number): number | null {
+  if (y < EPISODE_ROW.top || y > EPISODE_ROW.bottom) return null;
+  for (const it of items) {
+    if (it.type !== "gap") continue;
+    for (const t of it.gap.loudAtMs) if (Math.abs(xOf(s, t) - x) <= 6) return t;
+  }
+  return null;
 }
 
 /** Mitschrift je Quelle, sortiert, nur Zeilen mit Text. */
@@ -319,6 +361,9 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
       ctx.setLineDash([3, 3]);
       ctx.strokeStyle = p.line2;
       ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = p.warn;
+      for (const t of it.gap.loudAtMs) ctx.fillRect(Math.round(x(t)) - 1, y + 3, 3, 16);
       if (it.gap.loudAtMs.length && w > 60) {
         ctx.fillStyle = p.warn;
         ctx.font = `500 11px ${p.sans}`;
@@ -360,6 +405,8 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
         ctx.globalAlpha = 1;
         ctx.save();
         ctx.clip();
+        const env = r.startMs !== null ? st.envelopes?.get(r.id) : undefined;
+        if (env) waveform(ctx, env, r.startMs!, x, x0, w, y, BAR_H, alpha(k, 0.45), W);
         const idle = hatch(ctx, alpha(k, 0.3), p.panel);
         for (const i of r.idle) {
           ctx.fillStyle = idle ?? p.sunken;
@@ -427,6 +474,32 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
       ctx.fill();
       ctx.restore();
     }
+  }
+
+  // Vorschau beim Ziehen einer Episodengrenze: gestrichelte Linie mit Uhrzeit.
+  if (st.dragEdge) {
+    const px = Math.round(x(st.dragEdge.t)) + 0.5;
+    ctx.save();
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(px, RULER_H);
+    ctx.lineTo(px, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const label = clock(st.dragEdge.t);
+    ctx.font = `600 11px ${p.mono}`;
+    const tw = ctx.measureText(label).width + 8;
+    const lx = Math.min(Math.max(2, px - tw / 2), W - tw - 2);
+    ctx.fillStyle = p.accent;
+    roundRect(ctx, lx, 2, tw, 16, 4);
+    ctx.fill();
+    ctx.fillStyle = p.panel;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, lx + tw / 2, 10);
+    ctx.restore();
   }
 }
 
@@ -512,6 +585,41 @@ function transcriptPreview(
     ctx.globalAlpha = 0.8;
     ctx.fillText(fitted, tx, ty);
     ctx.globalAlpha = 1;
+  }
+}
+
+/** Hüllkurve als gespiegelte Wellenform in der Mitte des Clips, je Bildschirmspalte der lauteste Wert. */
+function waveform(
+  ctx: CanvasRenderingContext2D,
+  env: Envelope,
+  startMs: number,
+  x: (t: number) => number,
+  x0: number,
+  w: number,
+  y: number,
+  h: number,
+  color: string,
+  W: number,
+) {
+  const from = Math.max(0, Math.floor(x0));
+  const to = Math.min(W, Math.ceil(x0 + w));
+  if (to <= from) return;
+  const msPerPx = x(startMs + 60_000) - x(startMs) > 0 ? 60_000 / (x(startMs + 60_000) - x(startMs)) : 0;
+  if (!msPerPx) return;
+  const mid = y + h / 2;
+  const maxH = h / 2 - 3;
+  ctx.fillStyle = color;
+  for (let px = from; px < to; px++) {
+    const t0 = (px - x0) * msPerPx;
+    const i0 = Math.max(0, Math.floor((t0 / 1000) * env.rate));
+    const i1 = Math.min(env.data.length, Math.max(i0 + 1, Math.ceil(((t0 + msPerPx) / 1000) * env.rate)));
+    let m = 0;
+    for (let i = i0; i < i1; i++) if (env.data[i]! > m) m = env.data[i]!;
+    // Leises Rauschen (unterste 40 %) ausblenden, damit Sprache heraussticht.
+    const v = Math.max(0, (m / 250 - 0.4) / 0.6);
+    if (v <= 0) continue;
+    const hh = Math.max(1, v * maxH);
+    ctx.fillRect(px, mid - hh, 1, hh * 2);
   }
 }
 

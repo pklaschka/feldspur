@@ -197,6 +197,21 @@ export const sourceNotes = sqliteTable(
   (t) => [index("source_notes_source").on(t.sourceId)],
 );
 
+export const episodeEdits = sqliteTable(
+  "episode_edits",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    fromMs: integer("from_ms").notNull(),
+    toMs: integer("to_ms").notNull(),
+    mode: text("mode", { enum: ["include", "exclude"] }).notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("episode_edits_source").on(t.sourceId)],
+);
+
 export const audioAnalysis = sqliteTable("audio_analysis", {
   sourceId: text("source_id")
     .primaryKey()

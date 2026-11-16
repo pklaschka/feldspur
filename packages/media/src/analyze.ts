@@ -110,7 +110,7 @@ export function sessionEpisodes(
   const input = store.loadResolveInput(sessionId);
   const resolved = resolveTimeline(input);
   const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
-  return computeEpisodes(input.sources, resolved, idle);
+  return computeEpisodes(input.sources, resolved, idle, { edits: store.listEpisodeEdits(sessionId) });
 }
 
 /**

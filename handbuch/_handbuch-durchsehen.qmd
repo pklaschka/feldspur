@@ -52,4 +52,19 @@ denen nur Fotos und Tagebucheinträge entstanden sind. Episoden brauchen abgegli
 Sie helfen, lange Feldtage mit vergessenem Diktiergerät kompakt auszugeben (@sec-ausgeben). Ohne Episoden bleibt
 alles in Echtzeit.
 
+Was Feldspur vorschlägt, kannst du direkt auf der Zeitachse anpassen:
+
+- **Grenze ziehen**: Fährst du in der Episodenzeile über den Beginn oder das Ende einer Episode, wird der Zeiger zum
+  Doppelpfeil. Zieh die Grenze an die richtige Stelle; eine gestrichelte Linie zeigt die Uhrzeit auf die Sekunde.
+  Vergrößern geht nur, soweit dort eine Aufnahme läuft.
+- **Mini-Episode**: Kurze Striche in den Zwischenzeiten markieren laute Stellen (z. B. ein Gespräch im Vorbeigehen).
+  Ein Klick darauf macht daraus eine Episode von etwa 30 Sekunden. Liegt sie näher als 5 Minuten an einer anderen,
+  werden beide verbunden.
+- **Wellenform**: In den Audio- und Videospuren zeigt eine Wellenform, wo gesprochen wird. Leises Rauschen blendet
+  sie aus, damit Gesprächsstellen auffallen.
+
+Hast du etwas angepasst, steht unter "Episoden" **↺ zurücksetzen**; damit verwirfst du alle Anpassungen des Einsatzes.
+Jede Anpassung lässt sich auch einzeln rückgängig machen (Strg+Z). Feldspur speichert die Anpassung je Aufnahme ab
+Dateibeginn, sie wandert also mit, wenn du den Abgleich der Uhren später änderst.
+
 Von hier aus geht es weiter zum Abtippen des Tagebuchs (@sec-tagebuch) und zum Mitschreiben (@sec-mitschreiben).

@@ -51,6 +51,7 @@ import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setP
 import { resolveToolPaths } from "./tools.ts";
 import { addNote, deleteNote, updateNote } from "./notes.ts";
 import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
+import { addEpisodeAround, moveEpisodeEdge, timelineEnvelopes } from "./episodes.ts";
 import { buildSessionView } from "./view.ts";
 import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 
@@ -159,6 +160,26 @@ function historyTarget(rows: TouchedRow[], view: SessionView): HistoryTarget | n
 function registerIpc(): void {
   ipcMain.handle(IPC.undo, (_e, sessionId: string | null) => historyStep(false, sessionId));
   ipcMain.handle(IPC.redo, (_e, sessionId: string | null) => historyStep(true, sessionId));
+  undoable(
+    IPC.moveEpisodeEdge,
+    "Episodengrenze verschoben",
+    (_e, id: string, edge: "start" | "end", from: number, to: number) => {
+      const s = requireStore();
+      moveEpisodeEdge(s, id, edge, from, to);
+      return buildSessionView(s, id);
+    },
+  );
+  undoable(IPC.addEpisodeAround, "Mini-Episode angelegt", (_e, id: string, atMs: number) => {
+    const s = requireStore();
+    addEpisodeAround(s, id, atMs);
+    return buildSessionView(s, id);
+  });
+  undoable(IPC.resetEpisodes, "Episoden zurückgesetzt", (_e, id: string) => {
+    const s = requireStore();
+    s.clearEpisodeEdits(id);
+    return buildSessionView(s, id);
+  });
+  ipcMain.handle(IPC.envelopes, (_e, id: string) => timelineEnvelopes(requireStore(), id));
   ipcMain.handle(IPC.historyState, () => (store ? store.history.state() : { undo: null, redo: null, serial: 0 }));
   ipcMain.handle(IPC.currentProject, () => projectInfo());
 
