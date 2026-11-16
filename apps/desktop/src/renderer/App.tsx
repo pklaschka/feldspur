@@ -336,6 +336,7 @@ function SessionPane({
   const unsynced = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
   const hasRef = view.devices.some((d) => d.isReference);
   const unplaced = view.rows.filter((r) => r.status === "unplaced").length;
+  const toCheck = view.rows.filter((r) => r.status === "check" && !r.partOf).length;
   const steps: { id: Step; n: number; title: string; badge: string | null; warn?: boolean }[] = [
     { id: "collect", n: 1, title: "Einsammeln", badge: view.rows.length ? `${view.rows.length}` : null },
     {
@@ -349,7 +350,7 @@ function SessionPane({
           : view.proposals.length
             ? `${view.proposals.length} zu prüfen`
             : unsynced
-              ? `${unsynced} offen`
+              ? `${unsynced} ohne Abgleich`
               : "✓",
       warn: !hasRef || unsynced > 0 || view.proposals.length > 0,
     },
@@ -357,8 +358,15 @@ function SessionPane({
       id: "review",
       n: 3,
       title: "Durchsehen",
-      badge: unplaced ? `${unplaced} ohne Zeit` : view.episodes ? `${view.episodes.length} Episoden` : null,
-      warn: unplaced > 0,
+      // Dieselben Wörter wie überall: „zu prüfen“ heißt bestätigen, „ohne …“ heißt, es fehlt noch etwas.
+      badge: unplaced
+        ? `${unplaced} ohne Zeit`
+        : toCheck
+          ? `${toCheck} zu prüfen`
+          : view.episodes
+            ? `${view.episodes.length} Episoden`
+            : null,
+      warn: unplaced > 0 || toCheck > 0,
     },
     {
       id: "export",
@@ -547,7 +555,6 @@ function SessionPane({
           view={view}
           open={searching}
           onOpenChange={setSearching}
-          transcribing={transcribeId !== null}
           onSource={setSelected}
           onTranscribe={setTranscribeId}
           onDiary={setDiaryPage}

@@ -340,7 +340,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
         onKeyDown={(e) => e.key === "Enter" && commit()}
       />
       <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
-        {device.offsetMs === null ? "offen" : BASIS_TEXT[device.offsetBasis]}
+        {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
       </span>
     </span>
   );
