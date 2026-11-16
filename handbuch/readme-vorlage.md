@@ -3,28 +3,21 @@
 
 <img src="packaging/icon.svg" alt="" width="112">
 
-# $title$
+# $title$<br><sub><em>$tagline$</em></sub>
 
-_$tagline$_
-
-$for(by-author)$**$it.name.literal$**$if(it.orcid)$ · [ORCID $it.orcid$](https://orcid.org/$it.orcid$)$endif$$sep$ · $endfor$<br>
+$for(by-author)$**$it.name.literal$**$if(it.orcid)$ <a href="https://orcid.org/$it.orcid$"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID $it.orcid$"></a>$endif$$sep$ · $endfor$<br>
 Stand: $date$
 
-[![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f)](https://pklaschka.github.io/feldspur/)
-[![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&color=3a281d)](https://github.com/pklaschka/feldspur/releases)
-[![CI](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml/badge.svg)](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml)
-[![Windows · macOS · Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-44692f)](https://github.com/pklaschka/feldspur/releases)
-[![Lizenz: EUPL-1.2](https://img.shields.io/badge/Lizenz-EUPL--1.2-5b5d53)](LICENSE)
-[![Text: CC BY 4.0](https://img.shields.io/badge/Text-CC%20BY%204.0-5b5d53)](https://creativecommons.org/licenses/by/4.0/deed.de)
+[![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://pklaschka.github.io/feldspur/)
+[![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&labelColor=3a281d&color=5b5d53)](https://github.com/pklaschka/feldspur/releases)
+[![Plattformen](https://img.shields.io/badge/Plattformen-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-5b5d53?labelColor=3a281d)](https://github.com/pklaschka/feldspur/releases)
+[![Lizenz](https://img.shields.io/badge/Lizenz-EUPL--1.2%20%C2%B7%20Text%20CC%20BY%204.0-5b5d53?labelColor=3a281d)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/pklaschka/feldspur/ci.yml?label=CI&labelColor=3a281d&color=44692f)](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml)
 
 </div>
 
-$if(abstract)$
-**Zusammenfassung.** $abstract$
-$endif$
-
-$if(keywords)$
-**Schlüsselwörter:** $for(keywords)$$keywords$$sep$, $endfor$
-$endif$
+> **Zusammenfassung.** $abstract$
+>
+> **Schlüsselwörter:** $for(keywords)$$keywords$$sep$, $endfor$
 
 $body$

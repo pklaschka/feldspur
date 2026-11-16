@@ -3,34 +3,28 @@
 
 <img src="packaging/icon.svg" alt="" width="112">
 
-# Feldspur
+# Feldspur<br><sub><em>Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen</em></sub>
 
-_Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
-
-**Zuri Nimca Klaschka** · [ORCID 0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687)<br>
+**Zuri Nimca Klaschka** <a href="https://orcid.org/0009-0005-9995-5687"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID 0009-0005-9995-5687"></a><br>
 Stand: 16. November 2026
 
-[![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f)](https://pklaschka.github.io/feldspur/)
-[![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&color=3a281d)](https://github.com/pklaschka/feldspur/releases)
-[![CI](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml/badge.svg)](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml)
-[![Windows · macOS · Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-44692f)](https://github.com/pklaschka/feldspur/releases)
-[![Lizenz: EUPL-1.2](https://img.shields.io/badge/Lizenz-EUPL--1.2-5b5d53)](LICENSE)
-[![Text: CC BY 4.0](https://img.shields.io/badge/Text-CC%20BY%204.0-5b5d53)](https://creativecommons.org/licenses/by/4.0/deed.de)
+[![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://pklaschka.github.io/feldspur/)
+[![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&labelColor=3a281d&color=5b5d53)](https://github.com/pklaschka/feldspur/releases)
+[![Plattformen](https://img.shields.io/badge/Plattformen-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-5b5d53?labelColor=3a281d)](https://github.com/pklaschka/feldspur/releases)
+[![Lizenz](https://img.shields.io/badge/Lizenz-EUPL--1.2%20%C2%B7%20Text%20CC%20BY%204.0-5b5d53?labelColor=3a281d)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/pklaschka/feldspur/ci.yml?label=CI&labelColor=3a281d&color=44692f)](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml)
 
 </div>
 
-**Zusammenfassung.** Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
-deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
-(und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
-Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
-ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
-Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
-führt durch die Arbeit mit dem Programm.
+> **Zusammenfassung.** Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
+> deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
+> (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
+> Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
+> ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
+> Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
+> führt durch die Arbeit mit dem Programm.
 
-**Schlüsselwörter:** Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science
-
-**Begleittext und Handbuch** lesen: [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/), auch als
-PDF, das jeder Release beiliegt.
+> **Schlüsselwörter:** Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science
 
 > [!IMPORTANT]
 >

@@ -18,9 +18,6 @@ format:
     template: handbuch/readme-vorlage.md
 ---
 
-**Begleittext und Handbuch** lesen: [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/), auch als
-PDF, das jeder Release beiliegt.
-
 {{< include handbuch/_hinweise.qmd >}}
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
