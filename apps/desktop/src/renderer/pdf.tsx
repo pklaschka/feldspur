@@ -39,6 +39,9 @@ export function usePdfPageCount(sourceId: string | null): number | null {
   return n;
 }
 
+/** Obergrenze für die Bildpunkte einer gerenderten PDF-Seite (etwa 4096 × 4096). */
+const MAX_PIXELS = 16_777_216;
+
 /**
  * Eine PDF-Seite als Canvas in voller Breite des Elternelements.
  * onSize meldet das Seitenverhältnis, sobald die Seite gerendert ist.
@@ -57,34 +60,51 @@ export function PdfPageCanvas({
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
+  const drawn = useRef(false);
   useEffect(() => {
     let alive = true;
     let task: { cancel(): void } | null = null;
-    void (async () => {
-      try {
-        const doc = await loadPdf(sourceId);
-        const p = await doc.getPage(page + 1);
-        const c = ref.current;
-        if (!alive || !c) return;
-        const base = p.getViewport({ scale: 1 });
-        const cssW = Math.min(maxWidth, c.parentElement?.clientWidth || base.width);
-        const scale = (cssW / base.width) * (window.devicePixelRatio || 1);
-        const vp = p.getViewport({ scale });
-        c.width = Math.round(vp.width);
-        c.height = Math.round(vp.height);
-        c.style.aspectRatio = `${base.width} / ${base.height}`;
-        const t = p.render({ canvas: c, viewport: vp });
-        task = t;
-        await t.promise;
-      } catch (e) {
-        if (alive && (e as Error).name !== "RenderingCancelledException") {
-          console.error("PDF-Seite", page + 1, e);
-          setFailed(true);
-        }
-      }
-    })();
+    // Beim Zoomen ändert sich maxWidth in schneller Folge: erst rendern, wenn es kurz ruhig ist.
+    const timer = setTimeout(
+      () =>
+        void (async () => {
+          try {
+            const doc = await loadPdf(sourceId);
+            const p = await doc.getPage(page + 1);
+            const c = ref.current;
+            if (!alive || !c) return;
+            const base = p.getViewport({ scale: 1 });
+            const cssW = Math.min(maxWidth, c.parentElement?.clientWidth || base.width);
+            // Höchstens MAX_PIXELS Bildpunkte: Größere Leinwände kosten viel Speicher und bleiben im Zweifel weiß.
+            // Darüber wird das Bild nur noch hochskaliert, was beim Abtippen reicht.
+            const wanted = (cssW / base.width) * (window.devicePixelRatio || 1);
+            const scale = Math.min(wanted, Math.sqrt(MAX_PIXELS / (base.width * base.height)));
+            const vp = p.getViewport({ scale });
+            // In eine eigene Leinwand rendern und erst fertig übernehmen: sonst ist die Seite währenddessen leer.
+            const off = document.createElement("canvas");
+            off.width = Math.round(vp.width);
+            off.height = Math.round(vp.height);
+            const t = p.render({ canvas: off, viewport: vp });
+            task = t;
+            await t.promise;
+            if (!alive) return;
+            c.width = off.width;
+            c.height = off.height;
+            c.style.aspectRatio = `${base.width} / ${base.height}`;
+            c.getContext("2d")!.drawImage(off, 0, 0);
+            drawn.current = true;
+          } catch (e) {
+            if (alive && (e as Error).name !== "RenderingCancelledException") {
+              console.error("PDF-Seite", page + 1, e);
+              setFailed(true);
+            }
+          }
+        })(),
+      drawn.current ? 150 : 0,
+    );
     return () => {
       alive = false;
+      clearTimeout(timer);
       task?.cancel();
     };
   }, [sourceId, page, maxWidth]);
