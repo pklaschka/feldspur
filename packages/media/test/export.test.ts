@@ -9,6 +9,7 @@ import { exportSession } from "../src/export.ts";
 import { montagePreview } from "../src/montage-preview.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { buildScaffold, entryText, timestamp } from "../src/scaffold.ts";
+import { unzip } from "./xlsx.test.ts";
 import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay, makeSyncVideo } from "./fixtures.ts";
 
 describe("Zeitmarken", () => {
@@ -100,11 +101,12 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("schreibt Video, Zeitgerüst und Begleitprotokoll", { timeout: 180_000 }, async () => {
-    const out = process.env.FELDSPUR_EXPORT_KEEP ?? join(dir, "export");
+    const out = join(dir, "export");
     const r = await exportSession(store, sessionId, out);
     expect(r.files).toEqual([
       "Feldtag_2026-09-14_Testmarkt.mp4",
       "Feldtag_2026-09-14_Testmarkt.docx",
+      "Feldtag_2026-09-14_Testmarkt_Variablen.xlsx",
       "Feldtag_2026-09-14_Testmarkt_Begleitprotokoll.csv",
     ]);
     const probe = JSON.parse(
@@ -130,7 +132,10 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     expect(probe.chapters.length).toBe(0);
     const docx = readFileSync(join(out, r.files[1]!));
     expect(docx.subarray(0, 2).toString()).toBe("PK");
-    const csv = readFileSync(join(out, r.files[2]!), "utf8");
+    const vars = unzip(readFileSync(join(out, r.files[2]!)))["xl/worksheets/sheet1.xml"]!;
+    expect(vars).toContain(">Dokumentname<");
+    expect(vars).toContain(">Feldtag_2026-09-14_Testmarkt<");
+    const csv = readFileSync(join(out, r.files[3]!), "utf8");
     expect(csv.split("\r\n")[0]).toContain("Kurzzeichen;Art;Datei");
     expect(csv).toContain("ZOOM0001.m4a");
   });

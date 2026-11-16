@@ -30,6 +30,17 @@ Optionen:
 
 Mit **Montage ansehen** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
+### Dokumentvariablen (.xlsx)
+
+Die Datei `…_Variablen.xlsx` enthält die Angaben zum Einsatz als **Dokumentvariablen** für MAXQDA: Einsatz, Datum,
+Ort, Zeitzone, Forschende, Geräte, Referenzuhr, Zahl der Quellen, Beginn und Ende, Videolänge, Art der Montage,
+Montage-ID und deine **weiteren Angaben** aus den Einsatzdaten (z. B. DOI). So kannst du in MAXQDA später nach Ort,
+Datum oder Gerät filtern und vergleichen.
+
+Die ersten beiden Spalten sind Dokumentgruppe und Dokumentname. Der Dokumentname ist der Name, den MAXQDA dem
+Zeitgerüst beim Import gibt (Dateiname ohne Endung). Liegt das Dokument in MAXQDA in einer Dokumentgruppe, trag
+deren Namen vorher in der Spalte "Dokumentgruppe" ein, sonst findet MAXQDA das Dokument nicht.
+
 ### Begleitprotokoll (.csv)
 
 Das **Begleitprotokoll** hält für jede Datei Herkunft und Zeitnachweis fest: Kurzzeichen, Originaldatei,
@@ -40,4 +51,6 @@ beruht, und das Material lässt sich sauber archivieren.
 
 Lies das Zeitgerüst in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
 Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA.
-Ein Einsatz ergibt genau ein MAXQDA-Dokument.
+Ein Einsatz ergibt genau ein MAXQDA-Dokument. Die Dokumentvariablen liest du danach über **Variablen ›
+Dokumentvariablen importieren** aus der .xlsx-Datei ein; mehrere Einsätze kannst du dafür auch in einer Tabelle
+untereinander kopieren.

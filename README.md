@@ -171,7 +171,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Zeitgerüsts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
   nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
   weil die LGPL-Fassung von FFmpeg keine Schrift setzt; „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den
-  Originalen ab. Dazu ein **Begleitprotokoll** (.csv) mit Herkunft und Zeitnachweis jeder Datei.
+  Originalen ab. Dazu **Dokumentvariablen** (.xlsx) für MAXQDA und ein **Begleitprotokoll** (.csv) mit Herkunft und
+  Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Zeitgerüst, Montage, Mitschrift
   und Suche führen den Eintrag an der Notierzeit; der Bezugszeitraum steht als Hinweis dabei.
@@ -264,7 +265,7 @@ Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zu
 
 ## Noch offen
 
-- Ausgabe: Dokumentvariablen im Zeitgerüst; Resolve-Schnittliste in Resolve selbst erproben.
+- Ausgabe: Resolve-Schnittliste in Resolve selbst erproben.
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
 - ExifTool statt exifr für RAW/HEIC.
 - Code-Signatur (Windows, macOS-Notarisierung).

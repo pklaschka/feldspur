@@ -1,9 +1,9 @@
 /**
- * Ausgeben: Zeitgerüst (.docx), Begleitprotokoll (.csv) und Montagevideo in einen Ordner.
+ * Ausgeben: Zeitgerüst (.docx), Dokumentvariablen (.xlsx), Begleitprotokoll (.csv) und Montagevideo in einen Ordner.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
 import { levelText, sessionLevels } from "./analyze.ts";
 import type { AudioLevel } from "./audio.ts";
@@ -12,6 +12,7 @@ import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
 import { buildScaffold, type ImageRef, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
+import { xlsx, type Cell } from "./xlsx.ts";
 
 export interface ExportOptions {
   /** Ohne Video geht es schnell; nützlich zum Prüfen des Gerüsts. */
@@ -53,6 +54,43 @@ export function safeName(s: string): string {
       .replace(/^[._]+|[._]+$/g, "")
       .slice(0, 80) || "Einsatz"
   );
+}
+
+/**
+ * Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren): erste Spalten Dokumentgruppe und
+ * Dokumentname, danach je Variable eine Spalte. Der Dokumentname ist der Name, den MAXQDA beim Import des
+ * Zeitgerüsts vergibt (Dateiname ohne Endung); die Gruppe bleibt leer und lässt sich in Excel nachtragen.
+ */
+export function documentVariables(sc: Scaffold, documentName: string): Cell[][] {
+  const h = sc.header;
+  const placed = new Set(sc.input.sources.filter((s) => sc.resolved.placements.has(s.id)).map((s) => s.deviceId));
+  const devices = sc.input.devices.filter((d) => placed.has(d.id)).map((d) => d.label);
+  const first = sc.plan.segments[0];
+  const last = sc.plan.segments.at(-1);
+  const vars: [string, Cell][] = [
+    ["Einsatz", h.title],
+    ["Datum", h.date],
+    ["Ort", h.place],
+    ["Zeitzone", sc.input.session.timeZone],
+    ["Forschende", h.researchers.join(", ")],
+    ["Geräte", devices.join(", ")],
+    ["Referenzuhr", h.reference ?? ""],
+    ["Quellen", h.sources.length],
+    ["Beginn", first ? formatClock(first.fromMs) : ""],
+    ["Ende", last ? formatClock(last.toMs) : ""],
+    ["Videolänge (Min.)", Math.round(sc.plan.durationMs / 6000) / 10],
+    ["Montage", h.modeLabel],
+    ["Montage-ID", h.montageId],
+  ];
+  for (const [k, v] of Object.entries(h.extra)) {
+    // Eigene Felder dürfen eingebaute nicht überschreiben; MAXQDA erlaubt höchstens 63 Zeichen im Namen.
+    const name = (vars.some(([n]) => n === k) ? `${k} (Einsatz)` : k).slice(0, 63);
+    if (k.trim()) vars.push([name, v]);
+  }
+  return [
+    ["Dokumentgruppe", "Dokumentname", ...vars.map(([k]) => k)],
+    ["", documentName, ...vars.map(([, v]) => v)],
+  ];
 }
 
 export function baseName(sc: Scaffold): string {
@@ -130,6 +168,14 @@ async function stillOf(
   return data && size ? { data, ...size } : null;
 }
 
+/** Pfad einer Ausgabedatei im Zielordner; bricht ab, falls ein Name doch aus dem Ordner herausführen würde. */
+function outPath(outDir: string, name: string): string {
+  const dir = resolve(outDir);
+  const path = resolve(dir, name);
+  if (!path.startsWith(dir + sep)) throw new Error(`Ungültiger Dateiname für die Ausgabe: ${name}`);
+  return path;
+}
+
 export async function exportSession(
   store: ProjectStore,
   sessionId: Id,
@@ -163,7 +209,7 @@ export async function exportSession(
       onProgress: (done, total) => opts.onProgress?.("Lautstärke messen", done, total),
     });
     if (opts.video !== false) {
-      await renderMontage(sc, join(outDir, media), {
+      await renderMontage(sc, outPath(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
@@ -176,15 +222,17 @@ export async function exportSession(
 
     if (opts.resolve) {
       const xml = montageFcpxml(sc, planPieces(sc), { projectName: base, audioMix: opts.audioMix });
-      await writeFile(join(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
+      await writeFile(outPath(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
       files.push(`${base}_Resolve.fcpxml`);
     }
 
     opts.onProgress?.("Zeitgerüst", 0, 1);
     const docx = await scaffoldDocx(sc, { mediaFileName: media, stills });
-    await writeFile(join(outDir, `${base}.docx`), docx);
+    await writeFile(outPath(outDir, `${base}.docx`), docx);
     files.push(`${base}.docx`);
-    await writeFile(join(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc, levels), "utf8");
+    await writeFile(outPath(outDir, `${base}_Variablen.xlsx`), xlsx(documentVariables(sc, base), "Dokumentvariablen"));
+    files.push(`${base}_Variablen.xlsx`);
+    await writeFile(outPath(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc, levels), "utf8");
     files.push(`${base}_Begleitprotokoll.csv`);
     opts.onProgress?.("Fertig", 1, 1);
     return { dir: outDir, files, durationMs: sc.plan.durationMs };
