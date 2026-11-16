@@ -3,7 +3,7 @@
 
 <img src="packaging/icon.svg" alt="" width="112">
 
-# Feldspur<br><sub><em>Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen</em></sub>
+# Feldspur<br><sub><sub><em>Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen</em></sub></sub>
 
 **Zuri Nimca Klaschka** <a href="https://orcid.org/0009-0005-9995-5687"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID 0009-0005-9995-5687"></a><br>
 Stand: 16. November 2026
@@ -23,7 +23,7 @@ Stand: 16. November 2026
 > ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
 > Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
 > führt durch die Arbeit mit dem Programm.
-
+>
 > **Schlüsselwörter:** Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science
 
 > [!IMPORTANT]

@@ -3,7 +3,7 @@
 
 <img src="packaging/icon.svg" alt="" width="112">
 
-# $title$<br><sub><em>$tagline$</em></sub>
+# $title$<br><sub><sub><em>$tagline$</em></sub></sub>
 
 $for(by-author)$**$it.name.literal$**$if(it.orcid)$ <a href="https://orcid.org/$it.orcid$"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID $it.orcid$"></a>$endif$$sep$ · $endfor$<br>
 Stand: $date$
@@ -16,7 +16,7 @@ Stand: $date$
 
 </div>
 
-> **Zusammenfassung.** $abstract$
+> **Zusammenfassung.** $abstract/chomp$
 >
 > **Schlüsselwörter:** $for(keywords)$$keywords$$sep$, $endfor$
 
