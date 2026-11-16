@@ -39,6 +39,11 @@ dann Schritt für Schritt durch die Arbeit mit Feldspur.
 
 {{< include _ki.qmd >}}
 
+```{=typst}
+// Der Handbuch-Teil beginnt im Druck auf einer rechten Seite.
+#pagebreak(to: "odd")
+```
+
 # Handbuch {#sec-handbuch}
 
 ::: {.callout-note}
@@ -64,6 +69,8 @@ echten Forschungsdaten.
 {{< include _handbuch-ausgeben.qmd >}}
 
 {{< include _zitieren.qmd >}}
+
+{{< include _erklaerungen.qmd >}}
 
 # Literatur {.unnumbered}
 

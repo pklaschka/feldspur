@@ -10,7 +10,7 @@ function Div(el)
   local farbe = ({ important = "terrakotta", warning = "rost", caution = "rost", tip = "moos" })[art] or "ocker"
   local blocks = pandoc.List()
   blocks:insert(pandoc.RawBlock("typst", "#block(fill: papier, stroke: (left: 3pt + " .. farbe ..
-    "), inset: 10pt, radius: (right: 3pt), width: 100%, breakable: true)["))
+    "), inset: 10pt, radius: (right: 3pt), width: 100%, breakable: false)["))
   for i, b in ipairs(el.content) do
     if i == 1 and b.t == "Header" then
       blocks:insert(pandoc.RawBlock("typst", "#text(font: sans)["))

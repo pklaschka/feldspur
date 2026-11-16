@@ -11,13 +11,26 @@ $for(by-author)$
 $if(it.name.literal)$
     ( name: [$it.name.literal$],
       affiliation: [$for(it.affiliations)$$it.name$$sep$, $endfor$],
-      email: [$it.email$] ),
+      email: [$it.email$],
+      orcid: "$it.orcid$" ),
 $endif$
 $endfor$
     ),
 $endif$
 $if(date)$
-  date: [$date$],
+  date: "$date$",
+$endif$
+$if(doi)$
+  doi: "$doi$",
+$endif$
+$if(keywords)$
+  keywords: ($for(keywords)$[$keywords$],$endfor$),
+$endif$
+$if(citation.url)$
+  url: "$citation.url$",
+$endif$
+$if(license)$
+  license: [$license$],
 $endif$
 $if(lang)$
   lang: "$lang$",

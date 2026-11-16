@@ -269,6 +269,11 @@ h2 {
 h3 {
   margin-top: 2rem;
 }
+// Das App-Icon vor dem Titel, wie in der App oben links.
+.quarto-title-banner h1.title {
+  padding-left: 1.35em;
+  background: url("bilder/logo.svg") no-repeat left center / 1.1em 1.1em;
+}
 .quarto-title-banner .subtitle {
   font-style: italic;
   opacity: 0.9;

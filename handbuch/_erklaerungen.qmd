@@ -1,0 +1,13 @@
+<!-- Im PDF stehen diese Angaben auf der Rückseite der Titelseite (typst-template.typ). -->
+::: {.content-visible when-format="html"}
+
+# Erklärungen {.unnumbered}
+
+**Interessenkonflikte.** Ich erkläre, dass keine Interessenkonflikte bestehen. Feldspur ist mein eigenes
+Forschungswerkzeug und (noch) kein Produkt; ich verdiene daran nichts. Wohlgemerkt: Ich entwickle das Werkzeug
+und forsche zugleich damit. Das prägt meinen Blick darauf, auch beim Schreiben dieses Handbuchs.
+
+**Generative KI.** Feldspur ist zu großen Teilen mit generativer KI (Claude, Anthropic) entwickelt worden. Wie,
+steht in @sec-ki.
+
+:::
