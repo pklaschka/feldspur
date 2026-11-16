@@ -113,3 +113,40 @@ export function splitSpeaker(input: string): { speaker: string | null; text: str
   const m = /^\s*([\p{L}\d]{1,6}):\s+(.*)$/su.exec(input);
   return m ? { speaker: m[1]!, text: m[2]! } : { speaker: null, text: input };
 }
+
+/**
+ * Maske für Uhrzeiten „hh:mm“ beim Tippen: nur Ziffern, der Doppelpunkt kommt von selbst. Eine erste Ziffer über 2
+ * ist die Stunde („9“ → „09“), ebenso eine einzelne Ziffer vor einem getippten Doppelpunkt („9:“ → „09:“).
+ */
+export function maskClock(input: string): string {
+  let digits = input.replace(/\D/g, "");
+  if (/^\d[:.,h ]/.test(input) || /^[3-9]/.test(digits)) digits = `0${digits}`;
+  digits = digits.slice(0, 4);
+  if (digits.length < 2) return digits;
+  // Ein getippter Trenner nach der Stunde bleibt stehen, damit man „10:“ sieht, bevor die Minuten kommen.
+  if (digits.length === 2) return /[:.,h ]$/.test(input) ? `${digits}:` : digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+/**
+ * Fertige Eingabe „hh:mm“ prüfen und ergänzen: „10“ → „10:00“, „930“ → „09:30“, „10:5“ → „10:05“.
+ * Leer bleibt leer; ungültige Zeiten (25:00, 10:75) ergeben null.
+ */
+export function normalizeClock(input: string): string | null {
+  const t = input.trim();
+  if (!t) return "";
+  const m = /^(\d{1,2})(?:[:.,h ](\d{1,2})?)?$/.exec(t) ?? /^(\d{1,2})(\d{2})$/.exec(t.replace(/\D/g, ""));
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2] ?? 0);
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/** Uhrzeit „hh:mm“ um Minuten verschieben, über Mitternacht hinweg. */
+export function stepClock(value: string, minutes: number): string {
+  const n = normalizeClock(value);
+  if (!n) return value;
+  const total = (((Number(n.slice(0, 2)) * 60 + Number(n.slice(3)) + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}

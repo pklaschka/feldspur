@@ -209,13 +209,36 @@ try {
     [2, "10:35", "Streit am Käsestand, Händlerin holt Marktaufsicht"],
     [3, "10:41", "Gespräch mit Testperson B über Standgebühren"],
   ] as const) {
-    await editor.getByLabel(`Notierzeit Eintrag ${n}`).fill(at);
-    await editor.getByLabel(`Notierzeit Eintrag ${n}`).press("Enter");
+    // Maskenfeld: nur Ziffern tippen, der Doppelpunkt kommt von selbst.
+    const field = editor.getByLabel(`Notierzeit Eintrag ${n}`);
+    await field.fill("");
+    await field.pressSequentially(at.replace(":", ""));
+    if ((await field.inputValue()) !== at) throw new Error(`Maske: ${await field.inputValue()} statt ${at}`);
+    await field.press("Enter");
     await editor.getByLabel(`Kurzform Eintrag ${n}`).fill(text);
     await editor.getByLabel(`Kurzform Eintrag ${n}`).blur();
   }
   await editor.getByText("10:26–10:41").waitFor();
   await shot("-tagebuch");
+  // Blättern mit Bild auf/ab, auch während ein Textfeld den Fokus hat; Zoom über Knopf und Tasten.
+  const pageOf = editor.getByTestId("diary-page-of");
+  const pageBefore = await pageOf.innerText();
+  await editor.getByLabel("Kurzform Eintrag 3").focus();
+  await page.keyboard.press("PageUp");
+  await pageOf.filter({ hasNotText: pageBefore }).waitFor();
+  await page.keyboard.press("PageDown");
+  await pageOf.filter({ hasText: pageBefore }).waitFor();
+  const w0 = (await sheet.boundingBox())!.width;
+  await editor.getByRole("button", { name: "Vergrößern" }).click();
+  await editor.getByRole("button", { name: "Vergrößern" }).click();
+  await page.waitForTimeout(100);
+  const w1 = (await sheet.boundingBox())!.width;
+  console.log(
+    `Tagebuch: Blättern ${pageBefore} ↔ vorige Seite, Zoom ${await editor.getByTestId("diary-zoom").innerText()}`,
+  );
+  if (w1 < w0 * 1.4) throw new Error(`Zoom wirkt nicht: ${w0} → ${w1}`);
+  await shot("-tagebuch-zoom");
+  await editor.getByTestId("diary-zoom").click();
   await editor.getByRole("button", { name: "Fertig" }).click();
   await editor.waitFor({ state: "detached" });
   const diaryItems = await page.getByTestId("tl-diary").count();
