@@ -311,6 +311,8 @@ export interface SessionView {
   /** null = Episoden aus (session.episodes) oder Tonspuren noch nicht analysiert */
   episodes: EpisodeRow[] | null;
   gaps: GapRow[];
+  /** Anzahl der Anpassungen von Hand (Grenzen verschoben, Mini-Episoden). */
+  episodeEdits: number;
   analyzedCount: number;
   avCount: number;
 }
@@ -485,6 +487,17 @@ export interface FeldspurApi {
    * keinen gab), das Projekt und die Ansicht des Einsatzes, falls es ihn danach noch gibt.
    */
   undo(sessionId: string | null): Promise<HistoryResult>;
+  /**
+   * Grenze einer Episode verschieben (Uhrzeiten in ms). edge: "start" oder "end" der Episode, die bei fromMs endet
+   * bzw. beginnt. Nach außen nimmt Feldspur die Strecke in den laufenden Aufnahmen hinzu, nach innen heraus.
+   */
+  moveEpisodeEdge(sessionId: string, edge: "start" | "end", fromMs: number, toMs: number): Promise<SessionView>;
+  /** Kurze Episode um eine Uhrzeit (laute Stelle in der Stille), aus allen dort laufenden Aufnahmen. */
+  addEpisodeAround(sessionId: string, atMs: number): Promise<SessionView>;
+  /** Alle Anpassungen von Hand an den Episoden verwerfen. */
+  resetEpisodes(sessionId: string): Promise<SessionView>;
+  /** Hüllkurven der analysierten Tonspuren, vier Werte je Sekunde (0–250, logarithmisch). */
+  envelopes(sessionId: string): Promise<Record<string, { rate: number; data: Uint8Array }>>;
   redo(sessionId: string | null): Promise<HistoryResult>;
   historyState(): Promise<{ undo: string | null; redo: string | null; serial: number }>;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
@@ -547,6 +560,10 @@ export const IPC = {
   patchDiaryEntry: "diary:patch",
   progress: "progress",
   undo: "history:undo",
+  moveEpisodeEdge: "episodes:move-edge",
+  addEpisodeAround: "episodes:add-around",
+  resetEpisodes: "episodes:reset",
+  envelopes: "episodes:envelopes",
   redo: "history:redo",
   historyState: "history:state",
   previewExport: "export:preview",

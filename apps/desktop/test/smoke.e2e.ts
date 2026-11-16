@@ -164,6 +164,51 @@ try {
   await page.getByRole("switch", { name: "Episoden bilden" }).click();
   await page.getByTestId("episode").first().waitFor({ state: "attached" });
   console.log(`Episoden: ${(await page.getByTestId("episode").allTextContents()).join(", ")}`);
+  {
+    // Episoden von Hand: Ende von E1 nach rechts ziehen, rückgängig machen; laute Stelle zur Mini-Episode.
+    const epBox = (await page.locator("canvas").first().boundingBox())!;
+    const [f, t] = (
+      await page
+        .getByText(/^\d\d:\d\d – \d\d:\d\d/)
+        .first()
+        .innerText()
+    )
+      .match(/\d\d:\d\d/g)!
+      .map((x) => Number(x.slice(0, 2)) * 60 + Number(x.slice(3)));
+    const xAtMs = (ms: number) => {
+      const d = new Date(ms);
+      const min = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+      return epBox.x + ((min - f!) / (t! - f!)) * epBox.width;
+    };
+    const epView = () => page.evaluate((id) => window.feldspur.getSession(id!), sessionId);
+    const before = await page.getByTestId("episode").allTextContents();
+    const e1 = (await epView()).episodes![0]!;
+    const rowY = epBox.y + 30 + 20;
+    await page.mouse.move(xAtMs(e1.endMs), rowY);
+    await page.mouse.down();
+    await page.mouse.move(xAtMs(e1.endMs) + 40, rowY, { steps: 5 });
+    await shot("-episode-ziehen");
+    await page.mouse.up();
+    await page.getByTestId("episode").first().filter({ hasNotText: before[0]! }).waitFor({ state: "attached" });
+    const moved = await page.getByTestId("episode").allTextContents();
+    console.log(`Episodengrenze gezogen: ${before.join(", ")} → ${moved.join(", ")}`);
+    await shot("-episode-gezogen");
+    await page.keyboard.press("Control+z");
+    await page.getByTestId("episode").first().filter({ hasText: before[0]! }).waitFor({ state: "attached" });
+    const loud = (await epView()).gaps.flatMap((g) => g.loudAtMs)[0];
+    if (loud !== undefined) {
+      const n = before.length;
+      await page.mouse.click(xAtMs(loud), rowY);
+      // Liegt die laute Stelle nah an einer Episode, wächst diese; sonst kommt eine dazu. Beides zählt als Anpassung.
+      await page.getByRole("button", { name: /zurücksetzen/ }).waitFor();
+      console.log(
+        `Mini-Episode bei ${new Date(loud).toISOString().slice(11, 19)}: ${(await page.getByTestId("episode").allTextContents()).join(", ")}`,
+      );
+      await page.getByRole("button", { name: /zurücksetzen/ }).click();
+      await page.waitForFunction((k) => document.querySelectorAll("[data-testid=episode]").length === k, n);
+    }
+    await page.mouse.move(0, 0);
+  }
   await page
     .getByTestId("tl-clip")
     .filter({ hasText: /C00(01|12)\.MP4/ })

@@ -18,6 +18,7 @@ import {
   Person,
   Source,
   SourceNote,
+  EpisodeEdit,
   SyncAnchor,
   TimeEvidence,
   TranscriptLine,
@@ -538,6 +539,31 @@ export class ProjectStore {
     });
     this.db.insert(schema.sourceNotes).values(n).run();
     return n;
+  }
+
+  // ── Episoden von Hand ────────────────────────────────────────────────────
+
+  addEpisodeEdit(input: Omit<In<typeof EpisodeEdit>, "id" | "createdAt">): EpisodeEdit {
+    const e = EpisodeEdit.parse({ ...input, id: randomUUID(), createdAt: new Date().toISOString() });
+    this.db.insert(schema.episodeEdits).values(e).run();
+    return e;
+  }
+
+  /** Anpassungen eines Einsatzes in der Reihenfolge, in der sie gemacht wurden (spätere gelten zuletzt). */
+  listEpisodeEdits(sessionId: Id): EpisodeEdit[] {
+    return this.db
+      .select({ e: schema.episodeEdits })
+      .from(schema.episodeEdits)
+      .innerJoin(schema.sources, eq(schema.sources.id, schema.episodeEdits.sourceId))
+      .where(eq(schema.sources.sessionId, sessionId))
+      .orderBy(asc(schema.episodeEdits.createdAt), asc(schema.episodeEdits.id))
+      .all()
+      .map(({ e }) => EpisodeEdit.parse(e));
+  }
+
+  clearEpisodeEdits(sessionId: Id): void {
+    for (const e of this.listEpisodeEdits(sessionId))
+      this.db.delete(schema.episodeEdits).where(eq(schema.episodeEdits.id, e.id)).run();
   }
 
   /** Notizen aller Quellen eines Einsatzes: je Quelle erst die ohne Strecke, dann nach Stelle. */

@@ -7,10 +7,12 @@ import {
   buildItems,
   diaryPreview,
   draw,
+  edgeAt,
   EPISODE_H,
   groupTranscript,
   hitTest,
   lineAt,
+  loudAt,
   MIN,
   readPalette,
   RULER_H,
@@ -18,6 +20,7 @@ import {
   tOf,
   TRACK_H,
   xOf,
+  type Envelope,
   type Item,
   type Track,
 } from "./timeline.ts";
@@ -36,6 +39,7 @@ export function Review({
   onSelect,
   onNext,
   onEpisodes,
+  onEpisodeEdit,
   reveal,
 }: {
   view: SessionView;
@@ -44,6 +48,7 @@ export function Review({
   onNext: () => void;
   /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
   onEpisodes: (on: boolean) => void;
+  onEpisodeEdit: (e: EpisodeEdit) => void;
   /** Sprungziel von außen (Suche): Uhrzeit oder Bereich ins Bild holen. */
   reveal: (Reveal & { n: number }) | null;
 }) {
@@ -72,6 +77,7 @@ export function Review({
       onSelect={onSelect}
       onNext={onNext}
       onEpisodes={onEpisodes}
+      onEpisodeEdit={onEpisodeEdit}
       reveal={reveal}
     />
   );
@@ -85,6 +91,7 @@ function Timeline({
   onSelect,
   onNext,
   onEpisodes,
+  onEpisodeEdit,
   reveal,
 }: {
   view: SessionView;
@@ -94,6 +101,7 @@ function Timeline({
   onSelect: (id: string) => void;
   onNext: () => void;
   onEpisodes: (on: boolean) => void;
+  onEpisodeEdit: (e: EpisodeEdit) => void;
   reveal: (Reveal & { n: number }) | null;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -106,6 +114,9 @@ function Timeline({
     null,
   );
   const [themeTick, setThemeTick] = useState(0);
+  const envelopes = useEnvelopes(view);
+  /** Ziehen einer Episodengrenze: Ausgangslage und aktuelle Lage (Uhrzeit). */
+  const [drag, setDrag] = useState<{ edge: "start" | "end"; from: number; t: number } | null>(null);
   const { position, seek } = usePlayback();
   const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
   const playheadMs = position && playRow?.startMs != null ? playRow.startMs + position.atMs : null;
@@ -182,8 +193,10 @@ function Timeline({
       hover: hover?.item ?? null,
       playheadMs,
       transcripts,
+      envelopes,
+      dragEdge: drag && { t: drag.t },
     });
-  }, [width, height, scale, tracks, items, selected, hover, themeTick, playheadMs, transcripts]);
+  }, [width, height, scale, tracks, items, selected, hover, themeTick, playheadMs, transcripts, envelopes, drag]);
 
   // Aktueller Ausschnitt, auch zwischen zwei Renderdurchläufen (mehrere Mausrad-Ereignisse pro Bild).
   const live = useRef<{ ppm: number; scrollX: number; pendingScroll?: number }>({ ppm, scrollX });
@@ -287,13 +300,50 @@ function Timeline({
     const r = canvas.current!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  const onMove = (e: MouseEvent) => {
+  // Unter dem Zeiger: Grenze einer Episode (ziehen) oder laute Stelle in der Stille (Klick = Mini-Episode).
+  const [handle, setHandle] = useState<"edge" | "loud" | null>(null);
+  const onDown = (e: MouseEvent) => {
+    if (e.button !== 0) return;
     const { x, y } = local(e);
+    const hit = edgeAt(items, scale, x, y);
+    if (!hit) return;
+    e.preventDefault();
+    setHover(null);
+    setDrag({ edge: hit.edge, from: hit.t, t: hit.t });
+    const move = (ev: globalThis.MouseEvent) => {
+      const r = canvas.current!.getBoundingClientRect();
+      // Auf ganze Sekunden runden: genauer lässt sich eine Grenze ohnehin nicht setzen.
+      const t = Math.round(tOf(scaleRef.current, ev.clientX - r.left) / 1000) * 1000;
+      setDrag((d) => d && { ...d, t });
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setDrag((d) => {
+        if (d && Math.abs(d.t - d.from) >= 1000)
+          queueMicrotask(() => onEpisodeEdit({ kind: "edge", edge: d.edge, fromMs: d.from, toMs: d.t }));
+        return null;
+      });
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  const onMove = (e: MouseEvent) => {
+    if (drag) return;
+    const { x, y } = local(e);
+    setHandle(edgeAt(items, scale, x, y) ? "edge" : loudAt(items, scale, x, y) !== null ? "loud" : null);
     const it = hitTest(items, scale, x, y);
     setHover(it ? { item: it, x, y, clientX: e.clientX, clientY: e.clientY } : null);
   };
   const onClick = (e: MouseEvent) => {
     const { x, y } = local(e);
+    const loud = loudAt(items, scale, x, y);
+    if (loud !== null && !edgeAt(items, scale, x, y)) {
+      onEpisodeEdit({ kind: "loud", atMs: loud });
+      return;
+    }
     const it = hitTest(items, scale, x, y);
     if (!it || it.type === "episode" || it.type === "gap") return;
     onSelect(it.row.id);
@@ -410,7 +460,22 @@ function Timeline({
             <span className="grid min-w-0 flex-1">
               <b className="font-semibold">Episoden</b>
               <span className="truncate text-[0.85rem] text-muted">
-                {!view.session.episodes ? "aus" : view.episodes ? "aus Tonspuren" : "nach Abgleich"}
+                {!view.session.episodes ? (
+                  "aus"
+                ) : view.episodeEdits ? (
+                  <button
+                    className="cursor-pointer text-accent underline-offset-2 hover:underline"
+                    title={`Von Hand angepasst (${view.episodeEdits}×). Klick verwirft die Anpassungen; Episoden entstehen dann wieder nur aus den Tonspuren.`}
+                    aria-label="Angepasste Episoden zurücksetzen"
+                    onClick={() => onEpisodeEdit({ kind: "reset" })}
+                  >
+                    ↺ zurücksetzen
+                  </button>
+                ) : view.episodes ? (
+                  "aus Tonspuren"
+                ) : (
+                  "nach Abgleich"
+                )}
               </span>
             </span>
             <Toggle checked={view.session.episodes} onChange={onEpisodes} label="Episoden bilden" />
@@ -447,16 +512,21 @@ function Timeline({
               data-track-h={TRACK_H}
               className={cx(
                 "sticky left-0 block",
-                hover?.item && hover.item.type !== "episode" && hover.item.type !== "gap" && "cursor-pointer",
+                drag || handle === "edge"
+                  ? "cursor-ew-resize"
+                  : (handle === "loud" ||
+                      (hover?.item && hover.item.type !== "episode" && hover.item.type !== "gap")) &&
+                      "cursor-pointer",
               )}
               style={{ width, height }}
+              onMouseDown={onDown}
               onMouseMove={onMove}
               onMouseLeave={() => setHover(null)}
               onClick={onClick}
               aria-hidden
             />
           </div>
-          {hover && <HoverCard item={hover.item} line={hoverLine} x={hover.clientX} y={hover.clientY} />}
+          {hover && !drag && <HoverCard item={hover.item} line={hoverLine} x={hover.clientX} y={hover.clientY} />}
         </div>
       </div>
 
@@ -487,7 +557,7 @@ function Timeline({
 
       <div className="mx-0.5 mt-2.5 flex flex-wrap gap-5 text-[0.85rem] text-muted">
         <Legend swatch="hatch h-2.5 w-4.5 rounded-xs border border-line-2">Stille (≥ 5 Min.)</Legend>
-        <Legend swatch="h-2.5 w-[3px] bg-warn">laute Stelle in der Stille</Legend>
+        <Legend swatch="h-2.5 w-[3px] bg-warn">laute Stelle in der Stille (Klick: Mini-Episode)</Legend>
         <Legend swatch="h-2.5 w-4.5 border-r-[3px] border-k-diary bg-linear-to-r from-transparent to-k-diary/40">
           Tagebuch: Bezugszeitraum bis Notierzeit
         </Legend>
@@ -495,7 +565,8 @@ function Timeline({
           Lage prüfen (anklicken, rechts bestätigen)
         </Legend>
         <span className="ml-auto">
-          Klick in Audio/Video spult dorthin · Mausrad zoomt an der Maus · Umschalt + Mausrad verschiebt
+          Klick in Audio/Video spult dorthin · Episodengrenzen lassen sich ziehen · Mausrad zoomt an der Maus · Umschalt
+          + Mausrad verschiebt
         </span>
       </div>
       {/* Direkt unter Achse und Legende: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
@@ -567,12 +638,19 @@ function HoverCard({
   let lines: string[];
   if (item.type === "episode") {
     title = `Episode E${item.ep.index}`;
-    lines = [`${clock(item.ep.startMs)} – ${clock(item.ep.endMs)}`, item.ep.sourceLabels.join(", ")];
+    lines = [
+      `${clock(item.ep.startMs)} – ${clock(item.ep.endMs)}`,
+      item.ep.sourceLabels.join(", "),
+      "Ränder ziehen, um die Episode zu ändern",
+    ];
   } else if (item.type === "gap") {
     title = "Zwischenzeit";
     lines = [`${clock(item.gap.startMs)} – ${clock(item.gap.endMs)}`];
     if (item.gap.itemLabels.length) lines.push(item.gap.itemLabels.join(", "));
-    if (item.gap.loudAtMs.length) lines.push(`laut: ${item.gap.loudAtMs.slice(0, 4).map(clock).join(", ")}`);
+    if (item.gap.loudAtMs.length) {
+      lines.push(`laut: ${item.gap.loudAtMs.slice(0, 4).map(clock).join(", ")}`);
+      lines.push("Klick auf eine laute Stelle macht sie zur Mini-Episode");
+    }
   } else if (item.type === "diary") {
     const e = item.entry;
     title = `Tagebuch ${item.row.label} · Eintrag ${e.number}`;
@@ -642,4 +720,34 @@ function Tray({
       </div>
     </section>
   );
+}
+
+export type EpisodeEdit =
+  | { kind: "edge"; edge: "start" | "end"; fromMs: number; toMs: number }
+  | { kind: "loud"; atMs: number }
+  | { kind: "reset" };
+
+/**
+ * Hüllkurven für die Wellenform in den Clips. Neu geholt, wenn sich die Analyse ändert (Anzahl analysierter
+ * Tonspuren oder deren Leerlauf), nicht bei jeder anderen Änderung.
+ */
+function useEnvelopes(view: SessionView): Map<string, Envelope> {
+  const [map, setMap] = useState(new Map<string, Envelope>());
+  const key = `${view.session.id}|${view.analyzedCount}|${view.rows.map((r) => `${r.id}:${r.idle.length}`).join(",")}`;
+  useEffect(() => {
+    let alive = true;
+    if (!view.analyzedCount) {
+      setMap(new Map());
+      return;
+    }
+    void window.feldspur.envelopes(view.session.id).then(
+      (r) => alive && setMap(new Map(Object.entries(r))),
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return map;
 }
