@@ -30,7 +30,7 @@ Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass
 
 ### Ohne Uhrzeit
 
-Quellen, für die Feldspur noch keine Uhrzeit kennt, liegen unten im Bereich **Ohne Uhrzeit**. Wähle sie aus und gib
+Quellen, für die Feldspur noch keine Uhrzeit kennt, liegen direkt unter der Zeitachse im Bereich **Ohne Uhrzeit**. Wähle sie aus und gib
 ihnen eine Zeit (@sec-abgleichen).
 
 ![Wiedergabe mehrerer gleichzeitig laufender Aufnahmen](bilder/wiedergabe.png){#fig-wiedergabe}

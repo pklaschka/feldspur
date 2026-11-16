@@ -25,6 +25,7 @@ Tastenkürzel:
 | Esc           | Abspielen / anhalten (beim Fortsetzen springt die Wiedergabe 1 s zurück)       |
 | F8 / F9       | 5 Sekunden zurück / vor                                                        |
 | F7            | langsamer (mit Umschalt schneller)                                             |
+| Alt+↑ / ↓     | zur Zeile davor / danach (unten die neue Zeile)                                |
 | Enter         | Zeile anlegen, nächste beginnen                                                |
 | Strg/⌘+Enter  | Zeile an der Schreibmarke teilen                                               |
 | `B1: …`       | Sprecher wechseln, wenn die Zeile so beginnt                                   |

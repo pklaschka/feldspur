@@ -1,6 +1,9 @@
 ## Ausgeben {#sec-ausgeben}
 
-Im letzten Schritt schreibt Feldspur einen **Ordner pro Einsatz** mit drei Teilen.
+Im letzten Schritt schreibt Feldspur einen **Ordner pro Einsatz** mit drei Teilen. Ist vorher noch etwas offen, etwa
+eine Uhr ohne Abgleich, steht das unter **Noch offen** mit Links dorthin; der Knopf heißt dann **Trotzdem ausgeben…**.
+Änderst du nach der Ausgabe noch etwas, ist sie als **Veraltet** markiert; **Erneut ausgeben…** rechnet nur das
+Geänderte neu.
 
 ![Ausgabe mit Vorschau des Zeitgerüsts](bilder/ausgeben.png){#fig-ausgeben}
 
