@@ -83,7 +83,7 @@ Wer Feldspur in der eigenen Arbeit verwendet oder darauf verweist, zitiert es bi
 das Werkzeug verändert sich (noch) stark:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
-> (Version 0.1.0) \[Software\]. <https://github.com/pklaschka/feldspur>
+> (Version 0.1.0) \[Software\]. <https://purl.archive.org/feldspur/repo>
 
 Autor\*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687).
 
