@@ -129,10 +129,13 @@ export function updateChangelog(current: string | null, version: string, date: s
   return [head, section, ...keep.map((s) => s.trimEnd() + "\n")].join("\n\n").replace(/\n{3,}/g, "\n\n");
 }
 
+/** Text wörtlich in einem regulären Ausdruck verwenden. */
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /** Den Abschnitt einer Version aus CHANGELOG.md holen. */
 export function changelogSection(changelog: string, version: string): string {
   const sections = changelog.replace(/\r\n/g, "\n").split(/^(?=## )/m);
-  const hit = sections.find((s) => new RegExp(`^## \\[?v?${version.replace(/\./g, "\\.")}[\\]\\s]`).test(s));
+  const hit = sections.find((s) => new RegExp(`^## \\[?v?${escapeRegExp(version)}[\\]\\s]`).test(s));
   if (!hit) throw new Error(`Kein Abschnitt für ${version} in CHANGELOG.md`);
   return hit.replace(/^## .*\n/, "").trim();
 }

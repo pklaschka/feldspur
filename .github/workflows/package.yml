@@ -29,6 +29,10 @@ on:
 env:
   FFMPEG_LINE: "8.1"
 
+# Nur lesen; Artefakte gehen über upload-artifact, nicht über das Repository.
+permissions:
+  contents: read
+
 jobs:
   package:
     strategy:

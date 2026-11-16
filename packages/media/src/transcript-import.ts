@@ -10,7 +10,8 @@ export interface ImportedLine {
   text: string;
 }
 
-const TIME = /(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
+// Stunden höchstens dreistellig: begrenzte Wiederholungen, damit lange Ziffernfolgen nicht quadratisch prüfen.
+const TIME = /(?:(\d{1,3}):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
 
 function stamp(s: string): number | null {
   const m = TIME.exec(s);
@@ -29,7 +30,7 @@ function speakerName(raw: string): string {
 /** Sprecher am Zeilenanfang abtrennen: „[SPEAKER_01]: …“, „SPEAKER_01: …“, „<v Anna>…“, „(B1) …“. */
 function splitSpeaker(text: string): { speaker: string; text: string } {
   const t = text.trim();
-  let m = /^<v(?:\.[^ >]*)?\s+([^>]+)>\s*([\s\S]*?)(?:<\/v>)?$/.exec(t);
+  let m = /^<v(?:\.[^\s>]*)?\s+([^\s>][^>]*)>([\s\S]*?)(?:<\/v>)?$/.exec(t);
   if (m) return { speaker: speakerName(m[1]!), text: m[2]!.trim() };
   m = /^\[([^\]]{1,40})\]:?\s*([\s\S]*)$/.exec(t);
   if (m) return { speaker: speakerName(m[1]!), text: m[2]!.trim() };
@@ -40,7 +41,7 @@ function splitSpeaker(text: string): { speaker: string; text: string } {
 
 const clean = (s: string) =>
   s
-    .replace(/<\/?(?:i|b|u|c|v)[^>]*>/g, "")
+    .replace(/<\/?(?:i|b|u|c|v)[^<>]*>/g, "")
     .replace(/\s+/g, " ")
     .trim();
 

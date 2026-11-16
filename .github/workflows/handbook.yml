@@ -17,6 +17,10 @@ on:
         type: string
         default: ""
 
+# Nur lesen; Artefakte gehen über upload-artifact, nicht über das Repository.
+permissions:
+  contents: read
+
 jobs:
   handbuch:
     runs-on: ubuntu-latest
