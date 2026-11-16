@@ -463,7 +463,10 @@ try {
   await page.getByTestId("project-menu").click();
   await page.getByRole("menuitem", { name: "Änderungsprotokoll…" }).click();
   const log = page.getByTestId("change-log");
-  const redone = log.getByTestId("change-step").filter({ hasText: /^.*Wiederholt: / }).first();
+  const redone = log
+    .getByTestId("change-step")
+    .filter({ hasText: /^.*Wiederholt: / })
+    .first();
   await redone.waitFor();
   await redone.getByRole("button").click();
   await redone.getByText("Quelle gelöscht").waitFor();
