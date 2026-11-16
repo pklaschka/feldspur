@@ -31,13 +31,7 @@ dann Schritt für Schritt durch die Arbeit mit Feldspur.
 
 # Handbuch {#sec-handbuch}
 
-::: {.callout-note}
-## Bildschirmfotos veraltet
-
-Die Bildschirmfotos in diesem Handbuch zeigen einen älteren Stand der Oberfläche. Vor dem nächsten Release steht ein
-Redesign an, danach erneuere ich sie. Zu sehen sind übrigens nur erfundene Beispieldaten (ein "Testmarkt"), keine
-echten Forschungsdaten.
-:::
+Die Bildschirmfotos zeigen nur erfundene Beispieldaten (einen "Testmarkt"), keine echten Forschungsdaten.
 
 {{< include _handbuch-erste-schritte.qmd >}}
 
