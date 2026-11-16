@@ -118,14 +118,61 @@ export function splitSpeaker(input: string): { speaker: string | null; text: str
  * Maske für Uhrzeiten „hh:mm“ beim Tippen: nur Ziffern, der Doppelpunkt kommt von selbst. Eine erste Ziffer über 2
  * ist die Stunde („9“ → „09“), ebenso eine einzelne Ziffer vor einem getippten Doppelpunkt („9:“ → „09:“).
  */
-export function maskClock(input: string): string {
+export function maskClock(input: string, caret = input.length): string {
+  return maskClockAt(input, caret).value;
+}
+
+const SEP = /[:.,h ]/;
+
+/**
+ * Wie maskClock, mit Schreibmarke: Wird mitten in einer Uhrzeit korrigiert, bleibt der Doppelpunkt stehen, und die
+ * Marke bleibt an ihrer Stelle. „15:00“, die 5 gelöscht, ergibt „1:00“ (nicht „10:0“); tippt man dann 6, steht
+ * „16:00“ da. Eine Ziffer in einem vollen Teil überschreibt die folgende.
+ */
+export function maskClockAt(input: string, caret = input.length): { value: string; caret: number } {
+  const atEnd = caret >= input.length;
+  const sep = input.search(SEP);
+  if (sep >= 0 && !atEnd) {
+    // Korrektur mitten im Feld: Stunden und Minuten getrennt behandeln.
+    const fit = (part: string, from: number) => {
+      let digits = "";
+      let mark = -1;
+      for (let i = 0; i < part.length; i++) {
+        if (from + i === caret) mark = digits.length;
+        if (/\d/.test(part[i]!)) digits += part[i];
+      }
+      if (from + part.length === caret) mark = digits.length;
+      // Zu lang: die Ziffer hinter der Marke fällt weg (überschreiben), sonst die letzte.
+      if (digits.length > 2)
+        digits =
+          mark >= 0 && mark < digits.length ? digits.slice(0, mark) + digits.slice(mark + 1) : digits.slice(0, 2);
+      return { digits: digits.slice(0, 2), mark };
+    };
+    const h = fit(input.slice(0, sep), 0);
+    const m = fit(input.slice(sep + 1), sep + 1);
+    const value = `${h.digits}:${m.digits}`;
+    const at =
+      h.mark >= 0 && caret <= sep
+        ? Math.min(h.mark, h.digits.length)
+        : h.digits.length + 1 + Math.max(0, Math.min(m.mark, m.digits.length));
+    return { value, caret: at };
+  }
   let digits = input.replace(/\D/g, "");
-  if (/^\d[:.,h ]/.test(input) || /^[3-9]/.test(digits)) digits = `0${digits}`;
+  const before = input.slice(0, caret).replace(/\D/g, "").length;
+  let pad = 0;
+  if (/^\d[:.,h ]/.test(input) || /^[3-9]/.test(digits)) {
+    digits = `0${digits}`;
+    pad = 1;
+  }
   digits = digits.slice(0, 4);
-  if (digits.length < 2) return digits;
+  let value: string;
+  if (digits.length < 2) value = digits;
   // Ein getippter Trenner nach der Stunde bleibt stehen, damit man „10:“ sieht, bevor die Minuten kommen.
-  if (digits.length === 2) return /[:.,h ]$/.test(input) ? `${digits}:` : digits;
-  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  else if (digits.length === 2) value = SEP.test(input.at(-1) ?? "") ? `${digits}:` : digits;
+  else value = `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  const d = Math.min(before + pad, digits.length);
+  const at = atEnd ? value.length : d > 2 ? d + 1 : d;
+  return { value, caret: at };
 }
 
 /**

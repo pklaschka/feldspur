@@ -15,7 +15,7 @@ import {
   type SourceRow,
 } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { hm, maskClock, normalizeClock, stepClock } from "./format.ts";
+import { hm, maskClockAt, normalizeClock, stepClock } from "./format.ts";
 import { loadPdf, PdfPageCanvas } from "./pdf.tsx";
 import { Button, Choice, ConfirmButton, cx, Notice } from "./ui.tsx";
 
@@ -130,6 +130,7 @@ export function DiaryEditor({
   }, [pageId]);
   const page = pageId ? (pages.find((p) => p.key === navKey) ?? pages.find((p) => p.mainId === pageId) ?? null) : null;
   const [selected, setSelected] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
   const [continuing, setContinuing] = useState<string | null>(null);
 
   const onSurface = (sf: { sourceId: string; page?: number }) =>
@@ -251,6 +252,8 @@ export function DiaryEditor({
     if (res) {
       onView(res.view);
       setSelected(res.entryId);
+      // Neue Box: gleich die Uhrzeit eintippen können.
+      setFresh(res.entryId);
     }
   };
   const patch = (id: string, p: DiaryPatch) => void guard(() => api.patchDiaryEntry(id, p)).then((v) => v && onView(v));
@@ -409,6 +412,7 @@ export function DiaryEditor({
                 suggestPage={(i) => suggestions.get(`${e.id}#${i}`) ?? null}
                 onPage={(i, n) => void guard(() => api.setDiaryRegionPage(e.id, i, n)).then((v) => v && onView(v))}
                 active={selected === e.id}
+                fresh={fresh === e.id}
                 onFocus={() => setSelected(e.id)}
                 onPatch={(p) => patch(e.id, p)}
                 onContinue={() => setContinuing(e.id)}
@@ -624,6 +628,7 @@ function EntryCard({
   suggestPage,
   onPage,
   active,
+  fresh,
   onFocus,
   onPatch,
   onContinue,
@@ -637,6 +642,8 @@ function EntryCard({
   suggestPage: (index: number) => number | null;
   onPage: (index: number, pageNo: number | null) => void;
   active: boolean;
+  /** Gerade aufgezogen: Fokus ins Feld „Notiert um“. */
+  fresh: boolean;
   onFocus: () => void;
   onPatch: (p: DiaryPatch) => void;
   onContinue: () => void;
@@ -703,6 +710,7 @@ function EntryCard({
           label="Notiert um"
           ariaLabel={`Notierzeit ${label}`}
           value={noted}
+          autoFocus={fresh}
           onChange={setNoted}
           onCommit={(v) => v !== (entry.notedAt ?? "") && onPatch({ notedAt: v })}
         />
@@ -845,14 +853,27 @@ function ClockField({
   value,
   onChange,
   onCommit,
+  autoFocus = false,
 }: {
   label: ReactNode;
   ariaLabel: string;
+  autoFocus?: boolean;
   value: string;
   onChange: (v: string) => void;
   onCommit: (v: string) => void;
 }) {
   const valid = normalizeClock(value) !== null;
+  const input = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  // Nach der Maske die Schreibmarke dorthin setzen, wo getippt wurde, statt ans Ende.
+  useLayoutEffect(() => {
+    if (caret.current === null || document.activeElement !== input.current) return;
+    input.current!.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [value]);
+  useEffect(() => {
+    if (autoFocus) input.current?.focus();
+  }, [autoFocus]);
   return (
     <label className="grid gap-0.5">
       <span className="text-muted">{label}</span>
@@ -860,12 +881,17 @@ function ClockField({
         className={cx("w-20 font-mono", !valid && "border-bad text-bad")}
         placeholder="hh:mm"
         inputMode="numeric"
-        maxLength={5}
+        maxLength={6}
+        ref={input}
         value={value}
         aria-label={ariaLabel}
         aria-invalid={!valid}
         title={valid ? "Uhrzeit, z. B. 1030 für 10:30. ↑/↓: eine Minute, mit Umschalt zehn." : "Keine gültige Uhrzeit"}
-        onChange={(e) => onChange(maskClock(e.target.value))}
+        onChange={(e) => {
+          const m = maskClockAt(e.target.value, e.target.selectionStart ?? e.target.value.length);
+          caret.current = m.caret;
+          onChange(m.value);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
           else if (e.key === "ArrowUp" || e.key === "ArrowDown") {

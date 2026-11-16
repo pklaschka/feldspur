@@ -205,6 +205,8 @@ try {
   await editor.getByLabel("Notierzeit Eintrag 2").waitFor();
   await drag(0.06, 0.46, 0.94, 0.8);
   await editor.getByLabel("Notierzeit Eintrag 3").waitFor();
+  // Neue Box: Fokus steht gleich im Uhrzeitfeld.
+  await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Notierzeit Eintrag 3");
   for (const [n, at, text] of [
     [2, "10:35", "Streit am Käsestand, Händlerin holt Marktaufsicht"],
     [3, "10:41", "Gespräch mit Testperson B über Standgebühren"],
@@ -214,6 +216,15 @@ try {
     await field.fill("");
     await field.pressSequentially(at.replace(":", ""));
     if ((await field.inputValue()) !== at) throw new Error(`Maske: ${await field.inputValue()} statt ${at}`);
+    // Mitten in der Uhrzeit korrigieren: Stundenziffer löschen und neu tippen, die Maske bleibt stehen.
+    await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(2, 2));
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("9");
+    const fixed = `1${at.slice(1, 1)}9${at.slice(2)}`;
+    if ((await field.inputValue()) !== fixed) throw new Error(`Korrektur: ${await field.inputValue()} statt ${fixed}`);
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type(at[1]!);
+    if ((await field.inputValue()) !== at) throw new Error(`Zurück: ${await field.inputValue()} statt ${at}`);
     await field.press("Enter");
     await editor.getByLabel(`Kurzform Eintrag ${n}`).fill(text);
     await editor.getByLabel(`Kurzform Eintrag ${n}`).blur();
