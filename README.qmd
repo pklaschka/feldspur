@@ -15,7 +15,7 @@ format:
     shift-heading-level-by: 1
     output-file: README.md
     # Den Titelblock setzt README.qmd selbst (zentriert, mit Logo).
-    template: handbuch/readme-vorlage.md
+    template: handbuch/_readme-vorlage.md
 ---
 
 {{< include handbuch/_hinweise.qmd >}}
