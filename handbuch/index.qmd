@@ -22,8 +22,8 @@ license: "CC BY 4.0"
 
 {{< include _hinweise.qmd >}}
 
-Diesen Text gibt es als Webseite und als PDF (das außerdem jedem Release beiliegt). Er hat zwei Teile. Im
-Begleittext erzähle ich, warum es Feldspur gibt (@sec-motivation), wie es sich zu bestehenden Werkzeugen verhält
+Diesen Text gibt es als Webseite und als PDF (das außerdem jedem Release beiliegt und sich als Broschüre drucken
+lässt). Er hat zwei Teile. Im Begleittext erzähle ich, warum es Feldspur gibt (@sec-motivation), wie es sich zu bestehenden Werkzeugen verhält
 (@sec-einordnung) und wie es mithilfe generativer KI entstanden ist (@sec-ki). Das Handbuch (@sec-handbuch) führt
 dann Schritt für Schritt durch die Arbeit mit Feldspur.
 
