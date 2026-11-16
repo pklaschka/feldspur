@@ -1,6 +1,6 @@
 /** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
 import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
-import { Fragment, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import type { SourceKind } from "@feldspur/core/model";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -10,10 +10,11 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 type Variant = "default" | "primary" | "link" | "ghost";
 const VARIANT: Record<Variant, string> = {
   default:
-    "rounded-[7px] border border-line-2 bg-panel shadow-xs hover:enabled:border-muted data-[state=on]:border-accent data-[state=on]:bg-accent-soft",
-  primary: "rounded-[7px] border border-accent bg-accent font-medium text-accent-ink hover:enabled:brightness-110",
+    "rounded-lg border border-line-2 bg-panel shadow-xs hover:enabled:border-muted hover:enabled:bg-panel-2 data-[state=on]:border-accent data-[state=on]:bg-accent-soft",
+  primary:
+    "rounded-lg border border-accent bg-accent font-semibold text-accent-ink shadow-xs hover:enabled:brightness-[1.08] disabled:border-line-2 disabled:bg-sunken disabled:text-muted disabled:shadow-none",
   link: "text-accent hover:underline",
-  ghost: "rounded-md hover:bg-sunken",
+  ghost: "rounded-lg hover:bg-sunken",
 };
 
 export function Button({
@@ -22,11 +23,11 @@ export function Button({
   className,
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" }) {
-  const pad = variant === "link" ? "" : size === "sm" ? "px-2.5 py-0.5 text-[0.82rem]" : "px-3 py-1.5";
+  const pad = variant === "link" ? "" : size === "sm" ? "px-2.5 py-0.5 text-[0.86rem]" : "px-3.5 py-1.5";
   return (
     <button
       className={cx(
-        "cursor-pointer whitespace-nowrap disabled:cursor-default disabled:opacity-50",
+        "cursor-pointer whitespace-nowrap disabled:cursor-default disabled:opacity-60",
         pad,
         VARIANT[variant],
         className,
@@ -36,13 +37,51 @@ export function Button({
   );
 }
 
+/**
+ * Löschen in zwei Schritten: Der erste Klick fragt nach („Wirklich löschen?“), erst der zweite löscht.
+ * Nach ein paar Sekunden oder beim Verlassen fällt der Knopf von selbst zurück.
+ */
+export function ConfirmButton({
+  onConfirm,
+  children,
+  confirmLabel = "Wirklich löschen?",
+  className,
+  ...rest
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
+  onConfirm: () => void;
+  confirmLabel?: string;
+  variant?: Variant;
+  size?: "sm" | "md";
+}) {
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), 4000);
+    return () => clearTimeout(t);
+  }, [asking]);
+  return (
+    <Button
+      {...rest}
+      className={cx(className, asking && "font-semibold !text-bad")}
+      onBlur={() => setAsking(false)}
+      onClick={() => {
+        if (!asking) return setAsking(true);
+        setAsking(false);
+        onConfirm();
+      }}
+    >
+      {asking ? confirmLabel : children}
+    </Button>
+  );
+}
+
 export function Pill({ tone = "plain", children }: { tone?: "plain" | "accent" | "warn"; children: ReactNode }) {
   const t = {
     plain: "bg-sunken text-ink-2",
     accent: "bg-accent-soft font-medium text-accent",
     warn: "bg-warn-soft text-warn",
   }[tone];
-  return <span className={cx("inline-block rounded-full px-2 text-[0.72rem] whitespace-nowrap", t)}>{children}</span>;
+  return <span className={cx("inline-block rounded-full px-2 text-[0.8rem] whitespace-nowrap", t)}>{children}</span>;
 }
 
 export function Glyph({ kind, size = "md" }: { kind: SourceKind; size?: "sm" | "md" }) {
@@ -50,7 +89,7 @@ export function Glyph({ kind, size = "md" }: { kind: SourceKind; size?: "sm" | "
     <span
       aria-hidden
       className={cx(
-        `k-${kind} inline-grid flex-none place-items-center rounded-[7px] bg-k/15 text-[0.8rem] text-k`,
+        `k-${kind} inline-grid flex-none place-items-center rounded-full bg-k/14 text-[0.85rem] text-k`,
         size === "sm" ? "size-[22px]" : "size-[26px]",
       )}
     >
@@ -97,19 +136,22 @@ export function StepHeader({
   summary,
   help,
   children,
+  className,
 }: {
   title: string;
   summary?: ReactNode;
   help?: ReactNode;
   children?: ReactNode;
+  /** Etwa eine Höchstbreite, damit die Knöpfe rechts bei ihrem Inhalt bleiben statt am Fensterrand. */
+  className?: string;
 }) {
   return (
-    <Collapsible.Root className="mb-4">
+    <Collapsible.Root className={cx("mb-4", className)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-56 flex-[1_1_0%]">
-          <h2 className="text-[1.05rem] font-semibold">{title}</h2>
+          <h2 className="text-[1.4rem] leading-tight font-semibold">{title}</h2>
           {(summary || help) && (
-            <p className="text-[0.85rem] text-muted">
+            <p className="mt-0.5 text-[0.92rem] text-muted">
               {summary}
               {help && (
                 <>
@@ -125,7 +167,7 @@ export function StepHeader({
         {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
       </div>
       {help && (
-        <Collapsible.Content className="mt-2 max-w-[72ch] rounded-lg border border-line bg-panel-2 px-3.5 py-2.5 text-[0.85rem] text-ink-2">
+        <Collapsible.Content className="mt-3 max-w-[68ch] rounded-xl border border-line bg-panel-2 px-4 py-3 text-[0.92rem] leading-relaxed text-ink-2">
           {help}
         </Collapsible.Content>
       )}
@@ -133,19 +175,60 @@ export function StepHeader({
   );
 }
 
+/** Der Feldmarker aus dem App-Symbol: Mast mit Fahne. Markiert, wo man gerade steht. */
+export function FlagMark({ className, size = 14 }: { className?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" className={className} aria-hidden>
+      <path d="M1.5 1v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M1.5 1.2 12 4.2 1.5 7.2Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** Schließen-Knopf mit ausreichend großer Fläche. */
-export function CloseButton({ onClick, label = "Schließen" }: { onClick: () => void; label?: string }) {
+export function CloseButton({
+  onClick,
+  label = "Schließen",
+  confirm = false,
+}: {
+  onClick: () => void;
+  label?: string;
+  /** Zum Löschen: erst nachfragen („löschen?“), dann ausführen. */
+  confirm?: boolean;
+}) {
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), 4000);
+    return () => clearTimeout(t);
+  }, [asking]);
+  // Ein einziger Knopf, damit der Fokus beim Nachfragen und danach erhalten bleibt.
   return (
     <button
       type="button"
-      aria-label={label}
+      aria-label={asking ? "Wirklich löschen?" : label}
+      aria-live={confirm ? "polite" : undefined}
       title={label}
-      onClick={onClick}
-      className="grid size-7 flex-none cursor-pointer place-items-center rounded-md text-muted hover:bg-sunken hover:text-ink"
+      onBlur={() => setAsking(false)}
+      onClick={() => {
+        if (confirm && !asking) return setAsking(true);
+        setAsking(false);
+        onClick();
+      }}
+      className={cx(
+        "h-7 flex-none cursor-pointer rounded-full",
+        asking
+          ? "bg-bad/10 px-2.5 text-[0.85rem] font-semibold whitespace-nowrap text-bad"
+          : "grid size-7 place-items-center text-muted hover:bg-sunken hover:text-ink",
+      )}
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <path d="m4 4 8 8M12 4l-8 8" />
-      </svg>
+      {asking ? (
+        "Wirklich löschen?"
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <path d="m4 4 8 8M12 4l-8 8" />
+        </svg>
+      )}
     </button>
   );
 }
@@ -153,7 +236,7 @@ export function CloseButton({ onClick, label = "Schließen" }: { onClick: () => 
 /** Erklärt die Statuspunkte. */
 export function StatusLegend() {
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem] text-muted">
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.86rem] text-muted">
       {(["ok", "check", "unplaced"] as const).map((s) => (
         <span key={s} className="inline-flex items-center gap-1.5">
           <StatusDot status={s} />
@@ -165,24 +248,21 @@ export function StatusLegend() {
 }
 const STATUS_LEGEND = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
 
+/** Überschrift eines Abschnitts in Seitenleisten und Kästen. */
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={cx("mt-4 mb-1.5 text-[0.7rem] font-semibold tracking-[0.06em] text-muted uppercase", className)}>
-      {children}
-    </div>
-  );
+  return <h3 className={cx("mt-5 mb-1.5 text-[1rem] font-semibold text-ink", className)}>{children}</h3>;
 }
 
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <section className={cx("rounded-[10px] border border-line bg-panel px-4.5 py-4 shadow-xs", className)}>
+    <section className={cx("rounded-xl border border-line bg-panel px-5 py-4 shadow-sm", className)}>
       {children}
     </section>
   );
 }
 
 export function Notice({ children }: { children: ReactNode }) {
-  return <p className="my-2 rounded-[7px] bg-accent-soft px-3 py-1.5 text-[0.85rem]">{children}</p>;
+  return <p className="my-2 rounded-lg bg-accent-soft px-3 py-1.5 text-[0.9rem]">{children}</p>;
 }
 
 export function StatusDot({ status, className }: { status: "ok" | "check" | "unplaced"; className?: string }) {
@@ -200,7 +280,7 @@ export function Tip({ content, children }: { content: ReactNode; children: React
         <Tooltip.Content
           side="top"
           sideOffset={6}
-          className="z-50 max-w-xs rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] whitespace-pre-line text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+          className="z-50 max-w-xs rounded-lg bg-ink px-2.5 py-1.5 text-[0.86rem] whitespace-pre-line text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
         >
           {content}
           <Tooltip.Arrow className="fill-ink dark:fill-panel-2" />
@@ -230,7 +310,7 @@ export function Choice<T extends string>({
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
       aria-label={label}
-      className="inline-flex w-fit overflow-hidden rounded-[7px] border border-line-2"
+      className="inline-flex w-fit overflow-hidden rounded-lg border border-line-2"
     >
       {options.map((o) => (
         <ToggleGroup.Item
@@ -238,7 +318,7 @@ export function Choice<T extends string>({
           value={o.value}
           disabled={o.disabled}
           title={o.title}
-          className="cursor-pointer border-l border-line-2 bg-panel px-2.5 py-1 text-[0.8rem] first:border-l-0 hover:enabled:bg-sunken disabled:cursor-default disabled:opacity-40 data-[state=on]:bg-accent-soft data-[state=on]:font-medium data-[state=on]:text-accent"
+          className="cursor-pointer border-l border-line-2 bg-panel px-2.5 py-1 text-[0.86rem] first:border-l-0 hover:enabled:bg-sunken disabled:cursor-default disabled:opacity-40 data-[state=on]:bg-accent-soft data-[state=on]:font-medium data-[state=on]:text-accent"
         >
           {o.label}
         </ToggleGroup.Item>
@@ -269,7 +349,7 @@ export function Picker({
       <Select.Trigger
         aria-label={label}
         className={cx(
-          "inline-flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-line-2 bg-panel px-2 py-1 text-left data-[placeholder]:text-muted",
+          "inline-flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border border-line-2 bg-panel px-2 py-1 text-left data-[placeholder]:text-muted",
           className,
         )}
       >
@@ -282,7 +362,7 @@ export function Picker({
         <Select.Content
           position="popper"
           sideOffset={4}
-          className="z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-line bg-panel shadow-lg"
+          className="z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-line bg-panel shadow-lg"
         >
           <Select.Viewport className="p-1">
             {options.map((o) => (
@@ -290,7 +370,7 @@ export function Picker({
                 {o.groupStart !== undefined && (
                   <>
                     <Select.Separator className="my-1 h-px bg-line" />
-                    <div className="px-2 pt-0.5 pb-1 text-[0.72rem] text-muted">{o.groupStart}</div>
+                    <div className="px-2 pt-0.5 pb-1 text-[0.78rem] text-muted">{o.groupStart}</div>
                   </>
                 )}
                 <Select.Item
@@ -323,9 +403,9 @@ export function Toggle({
       checked={checked}
       onCheckedChange={onChange}
       aria-label={label}
-      className="relative h-4 w-7 flex-none cursor-pointer rounded-full bg-line-2 data-[state=checked]:bg-accent"
+      className="relative h-[18px] w-8 flex-none cursor-pointer rounded-full bg-line-2 data-[state=checked]:bg-accent"
     >
-      <Switch.Thumb className="block size-3 translate-x-0.5 rounded-full bg-panel transition-transform data-[state=checked]:translate-x-[14px]" />
+      <Switch.Thumb className="block size-3.5 translate-x-0.5 rounded-full bg-panel shadow-xs transition-transform data-[state=checked]:translate-x-[16px]" />
     </Switch.Root>
   );
 }

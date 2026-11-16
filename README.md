@@ -1,13 +1,30 @@
-# Feldspur
-
 <!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
+<div align="center">
 
-Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
-**eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zuerst für MAXQDA.
+<img src="packaging/icon.svg" alt="" width="112">
 
-**Begleittext und Handbuch:** [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/) (auch als PDF,
-das jeder Release beiliegt). Der Begleittext erzählt, warum es Feldspur gibt, ordnet es in bestehende Werkzeuge und
-Literatur ein und legt offen, wie es mit generativer KI entsteht.
+# Feldspur<br><sub><sub><em>Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen</em></sub></sub>
+
+**Zuri Nimca Klaschka** <a href="https://orcid.org/0009-0005-9995-5687"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID 0009-0005-9995-5687"></a><br>
+Stand: 16. November 2026
+
+[![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://pklaschka.github.io/feldspur/)
+[![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&labelColor=3a281d&color=5b5d53)](https://github.com/pklaschka/feldspur/releases)
+[![Plattformen](https://img.shields.io/badge/Plattformen-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-5b5d53?labelColor=3a281d)](https://github.com/pklaschka/feldspur/releases)
+[![Lizenz](https://img.shields.io/badge/Lizenz-EUPL--1.2%20%C2%B7%20Text%20CC%20BY%204.0-5b5d53?labelColor=3a281d)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/pklaschka/feldspur/ci.yml?label=CI&labelColor=3a281d&color=44692f)](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml)
+
+</div>
+
+> **Zusammenfassung.** Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
+> deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
+> (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
+> Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
+> ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
+> Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
+> führt durch die Arbeit mit dem Programm.
+>
+> **Schlüsselwörter:** Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science
 
 > [!IMPORTANT]
 >
@@ -120,6 +137,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
 - **docx** (9.15.0, MIT) schreibt das Zeitgerüst als Word-Datei, mit eingebetteten Bildern. Kein Zusatzprogramm
   nötig; Pandoc oder LibreOffice wären schwerer mitzuliefern.
 - **pdf.js** (`pdfjs-dist`, 6.x) für PDF-Scans in Vorschau und Abtipp-Ansicht.
+- **Schriften Source Sans 3 und Source Serif 4** (`@fontsource-variable/…`, SIL OFL 1.1) liegen in der App, damit sie
+  auf jedem System gleich aussehen und ohne Netz laden.
 
 ## Begriffe im Code
 

@@ -189,6 +189,11 @@ function Body({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.id]);
+  // Sprung von außen (Suche, während Mitschreiben offen ist) an eine andere Stelle derselben Aufnahme.
+  useEffect(() => {
+    if (position?.sourceId === row.id && Math.abs(position.atMs - posRef.current) > 1000) seekTo(position.atMs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position]);
   useEffect(() => {
     if (media.current) media.current.playbackRate = Number(speed);
   }, [speed]);
@@ -244,6 +249,23 @@ function Body({
         e.preventDefault();
         nextSpeed(e.shiftKey ? 1 : -1);
         break;
+      case "prevLine":
+      case "nextLine": {
+        e.preventDefault();
+        // Reihenfolge: alle Zeilen der Liste, dann die neue Zeile unten.
+        const fields = [
+          ...(list.current?.querySelectorAll<HTMLTextAreaElement>(
+            '[data-line] textarea[aria-label="Text der Zeile"]',
+          ) ?? []),
+          ...(input.current ? [input.current] : []),
+        ];
+        const i = fields.findIndex((f) => f === document.activeElement);
+        const next =
+          i < 0 ? fields.at(-1) : fields[Math.max(0, Math.min(fields.length - 1, i + (e.key === "ArrowUp" ? -1 : 1)))];
+        next?.focus();
+        next?.scrollIntoView({ block: "nearest" });
+        break;
+      }
       case "type":
         // Tippen ohne Fokus landet in der neuen Zeile; der Buchstabe geht mit.
         input.current?.focus();
@@ -349,7 +371,7 @@ function Body({
           options={sourceOptions(row, avRows)}
           className="w-72"
         />
-        <span className="text-[0.8rem] text-muted">
+        <span className="text-[0.85rem] text-muted">
           {lines.length} {lines.length === 1 ? "Zeile" : "Zeilen"}
         </span>
         <span className="flex-1" />
@@ -362,7 +384,7 @@ function Body({
         <section className="flex min-h-0 flex-col border-r border-line">
           {!failed && (
             <div className="border-b border-line px-4 pt-2.5 pb-2" data-testid="transcriber-wave">
-              <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[0.8rem]">
+              <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[0.85rem]">
                 <span className="font-medium">Waveform</span>
                 <Choice
                   label="Ausschnitt"
@@ -371,7 +393,7 @@ function Body({
                   options={SPANS.map((s) => ({ value: s, label: SPAN_LABEL[s] }))}
                 />
                 <label
-                  className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                  className="inline-flex cursor-pointer items-center gap-1.5 text-[0.85rem]"
                   title="Leise Stellen deutlicher zeigen (dB-Skala)"
                 >
                   <Toggle checked={logScale} onChange={setLogScale} label="logarithmisch" />
@@ -406,7 +428,7 @@ function Body({
             data-testid="lines"
           >
             {items.length === 0 && (
-              <li className="py-6 text-center text-[0.85rem] text-muted">
+              <li className="py-6 text-center text-[0.9rem] text-muted">
                 Noch nichts mitgeschrieben. Starte die Wiedergabe mit Esc und tippe unten mit. Enter legt die Zeile an.
               </li>
             )}
@@ -426,7 +448,7 @@ function Body({
               ) : it.kind === "event" ? (
                 <li
                   key={it.event.key}
-                  className="my-1 flex items-baseline gap-3 rounded-md bg-panel-2 px-2 py-1 text-[0.8rem] text-ink-2"
+                  className="my-1 flex items-baseline gap-3 rounded-md bg-panel-2 px-2 py-1 text-[0.85rem] text-ink-2"
                   data-testid="event"
                 >
                   <button
@@ -456,7 +478,7 @@ function Body({
             }}
           >
             <span
-              className="w-24 flex-none pt-1.5 font-mono text-[0.78rem] text-muted"
+              className="w-24 flex-none pt-1.5 font-mono text-[0.82rem] text-muted"
               title="Zeitmarke der neuen Zeile"
             >
               {positionText(mark ?? pos)}
@@ -510,7 +532,7 @@ function Body({
 
         <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
           {failed ? (
-            <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.8rem] text-warn">
+            <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.85rem] text-warn">
               Diese Datei lässt sich hier nicht abspielen (Format oder Codec).
             </p>
           ) : row.kind === "video" ? (
@@ -564,7 +586,7 @@ function Body({
             </div>
             <div className="mt-2">
               <label
-                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.85rem]"
                 title="Beim Abspielen die aktuelle Zeile im Blick behalten"
               >
                 <Toggle checked={follow} onChange={setFollow} label="Liste läuft mit" />
@@ -573,7 +595,7 @@ function Body({
             </div>
             <div className="mt-1.5">
               <label
-                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8rem]"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-[0.85rem]"
                 title="Zeilen, die in gleichzeitig laufenden Aufnahmen schon mitgeschrieben sind (nur lesen)"
               >
                 <Toggle checked={showOthers} onChange={setShowOthers} label="Andere Spuren zeigen" />
@@ -583,13 +605,15 @@ function Body({
             </div>
           </div>
           <NotesPanel row={row} notes={notes} pos={pos} apply={apply} onSeek={seekTo} />
-          <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.8rem]">
+          <dl className="grid max-w-[75ch] grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.85rem]">
             <dt className="font-mono font-medium">Esc</dt>
             <dd>Abspielen / anhalten (springt beim Fortsetzen 1 s zurück)</dd>
             <dt className="font-mono font-medium">F8 / F9</dt>
             <dd>5 s zurück / vor</dd>
             <dt className="font-mono font-medium">F7</dt>
             <dd>langsamer (mit Umschalt schneller)</dd>
+            <dt className="font-mono font-medium">Alt+↑ / ↓</dt>
+            <dd>Zur Zeile davor / danach (unten die neue Zeile)</dd>
             <dt className="font-mono font-medium">Enter</dt>
             <dd>Zeile anlegen. Die Zeitmarke ist die Stelle, an der du angefangen hast zu tippen.</dd>
             <dt className="font-mono font-medium">Strg/⌘+Enter</dt>
@@ -603,18 +627,18 @@ function Body({
               (auch in bestehenden Zeilen)
             </dd>
           </dl>
-          <p className="-mt-1 text-[0.8rem] text-muted">
+          <p className="-mt-1 max-w-[75ch] text-[0.85rem] text-muted">
             Die Tasten gelten überall im Dialog. Tippst du, während nichts ausgewählt ist, geht es in der neuen Zeile
             weiter.
           </p>
-          <p className="text-[0.8rem] text-muted">
+          <p className="max-w-[75ch] text-[0.85rem] text-muted">
             Jede Zeile speichert die Stelle in {row.label}. Die Uhrzeit folgt dem Abgleich, auch wenn du ihn später
             änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Grau hinterlegte Zeilen mit
             Kurzzeichen stammen aus der Mitschrift einer anderen Spur, die zur selben Zeit lief: Was dort schon steht,
             musst du hier nicht noch einmal abtippen. Notizen sind Arbeitsstand und gehen nicht ins Zeitgerüst.
           </p>
           {row.kind === "video" && (
-            <p className="text-[0.8rem] text-muted">{KIND_LABEL.video}: Ton und Bild aus der Datei.</p>
+            <p className="text-[0.85rem] text-muted">{KIND_LABEL.video}: Ton und Bild aus der Datei.</p>
           )}
         </aside>
       </div>
@@ -643,14 +667,14 @@ function OtherLineItem({
       title={`Aus der Mitschrift von ${line.label}, nur lesen`}
     >
       <button
-        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.8rem] hover:text-accent"
+        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
         onClick={() => onSeek(atMs)}
         title="Hierhin springen"
       >
         <At ms={atMs} startMs={startMs} />
       </button>
       <button
-        className="w-14 flex-none cursor-pointer truncate pt-1 text-left font-mono text-[0.8rem] font-medium hover:text-accent"
+        className="w-14 flex-none cursor-pointer truncate pt-1 text-left font-mono text-[0.85rem] font-medium hover:text-accent"
         onClick={() => onOpen(line)}
         title={`In ${line.label} mitschreiben (an dieser Stelle)`}
       >
@@ -729,7 +753,7 @@ const Line = memo(function Line({
       data-line={line.id}
     >
       <button
-        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.8rem] hover:text-accent"
+        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
         onClick={() => actions.seek(line.atMs)}
         title="Hierhin springen"
       >
@@ -784,7 +808,7 @@ const Line = memo(function Line({
         >
           Zeit hierher
         </Button>
-        <CloseButton label="Zeile löschen" onClick={() => actions.remove(line.id)} />
+        <CloseButton label="Zeile löschen" confirm={!!line.text.trim()} onClick={() => actions.remove(line.id)} />
       </span>
     </li>
   );

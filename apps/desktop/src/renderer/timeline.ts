@@ -8,10 +8,16 @@ import { hm } from "./format.ts";
 export const MIN = 60_000;
 export const RULER_H = 30;
 export const EPISODE_H = 40;
-export const TRACK_H = 52;
+/** Höhe einer Spur; auf großen Bildschirmen höher (setTrackHeight), damit die Achse den Platz nutzt. */
+export let TRACK_H = 52;
 /** Höhe der Balken in einer Spur. */
-const BAR_H = 32;
-const BAR_Y = (TRACK_H - BAR_H) / 2;
+let BAR_H = 32;
+let BAR_Y = (TRACK_H - BAR_H) / 2;
+export function setTrackHeight(h: number): void {
+  TRACK_H = h;
+  BAR_H = Math.round(h * 0.62);
+  BAR_Y = (TRACK_H - BAR_H) / 2;
+}
 /** Kurze Clips bleiben sichtbar und anklickbar. */
 export const MIN_CLIP_W = 6;
 
@@ -390,14 +396,15 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
       ctx.strokeStyle = p.accent;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(px, RULER_H - 6);
+      ctx.moveTo(px, RULER_H - 13);
       ctx.lineTo(px, H);
       ctx.stroke();
+      // Der Abspielkopf als Feldmarker, wie im App-Symbol: Fahne an der Mastspitze.
       ctx.fillStyle = p.accent;
       ctx.beginPath();
-      ctx.moveTo(px - 5, RULER_H - 8);
-      ctx.lineTo(px + 5, RULER_H - 8);
-      ctx.lineTo(px, RULER_H - 2);
+      ctx.moveTo(px, RULER_H - 14);
+      ctx.lineTo(px + 9, RULER_H - 11);
+      ctx.lineTo(px, RULER_H - 7);
       ctx.closePath();
       ctx.fill();
       ctx.restore();

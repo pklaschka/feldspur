@@ -13,6 +13,7 @@ import {
   MIN,
   readPalette,
   RULER_H,
+  setTrackHeight,
   tOf,
   TRACK_H,
   xOf,
@@ -20,6 +21,7 @@ import {
   type Track,
 } from "./timeline.ts";
 import { usePlayback } from "./playback.tsx";
+import type { Reveal } from "./SearchDialog.tsx";
 import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
 
 const LABEL_W = 180;
@@ -32,6 +34,7 @@ export function Review({
   onSelect,
   onNext,
   onEpisodes,
+  reveal,
 }: {
   view: SessionView;
   selected: string | null;
@@ -39,6 +42,8 @@ export function Review({
   onNext: () => void;
   /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
   onEpisodes: (on: boolean) => void;
+  /** Sprungziel von außen (Suche): Uhrzeit oder Bereich ins Bild holen. */
+  reveal: (Reveal & { n: number }) | null;
 }) {
   // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
   const rows = view.rows.filter((r) => !r.partOf);
@@ -65,6 +70,7 @@ export function Review({
       onSelect={onSelect}
       onNext={onNext}
       onEpisodes={onEpisodes}
+      reveal={reveal}
     />
   );
 }
@@ -77,6 +83,7 @@ function Timeline({
   onSelect,
   onNext,
   onEpisodes,
+  reveal,
 }: {
   view: SessionView;
   placed: SourceRow[];
@@ -85,6 +92,7 @@ function Timeline({
   onSelect: (id: string) => void;
   onNext: () => void;
   onEpisodes: (on: boolean) => void;
+  reveal: (Reveal & { n: number }) | null;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -120,15 +128,29 @@ function Timeline({
     [tracks, view.episodes, view.gaps, view.diary],
   );
   const transcripts = useMemo(() => groupTranscript(view.transcript), [view.transcript]);
+  // Die Spuren teilen sich die freie Höhe (Kopf, Legende und „Ohne Uhrzeit“ abgezogen), statt unten Platz frei
+  // zu lassen; zwischen 52 und 88 px, damit wenige Spuren nicht zu Balken aufquellen.
+  const free = window.innerHeight - 340 - (unplaced.length ? 56 : 0) - RULER_H - EPISODE_H;
+  setTrackHeight(Math.max(52, Math.min(88, Math.floor(free / Math.max(1, tracks.length)))));
   const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
   const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
 
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    // Solange Durchsehen ausgeblendet ist, ist die Breite 0: dann den alten Ausschnitt behalten und beim
+    // Wiedereinblenden die Scrollposition erneut setzen (ausgeblendete Elemente verlieren sie).
+    const measure = () => {
+      if (!el.clientWidth) return;
+      live.current = { ...live.current, pendingScroll: live.current.scrollX };
+      setWidth(el.clientWidth);
+      setScrollX(live.current.scrollX);
+      // Ausgeblendet wird nicht gezeichnet; beim Wiedereinblenden einmal neu zeichnen.
+      setThemeTick((n) => n + 1);
+    };
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setWidth(el.clientWidth);
+    measure();
     return () => ro.disconnect();
   }, []);
 
@@ -141,7 +163,7 @@ function Timeline({
 
   useEffect(() => {
     const c = canvas.current;
-    if (!c) return;
+    if (!c || !scroller.current?.clientWidth) return;
     const dpr = window.devicePixelRatio || 1;
     c.width = Math.round(width * dpr);
     c.height = Math.round(height * dpr);
@@ -191,6 +213,24 @@ function Timeline({
     live.current = { ...live.current, scrollX: target, pendingScroll: target };
     setScrollX(target);
   };
+
+  // Sprung von außen (Suche): einen Bereich einpassen, eine Uhrzeit ins Bild holen, falls sie draußen liegt.
+  // Solange die Achse noch nie sichtbar war, stimmt die Breite nicht: dann warten, bis sie gemessen ist.
+  const measured = width > 0 && !!scroller.current?.clientWidth;
+  const doneReveal = useRef(0);
+  useEffect(() => {
+    if (!reveal || !measured || doneReveal.current === reveal.n) return;
+    doneReveal.current = reveal.n;
+    const { fromMs, toMs } = reveal;
+    if (toMs !== undefined && toMs > fromMs) {
+      const p = Math.min(MAX_PPM, Math.max(fit, (width * 0.8) / ((toMs - fromMs) / MIN)));
+      zoomTo(p, { t: (fromMs + toMs) / 2, x: width / 2 });
+      return;
+    }
+    const px = xOf(scale, fromMs);
+    if (px < 0 || px > width) centerOn(fromMs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal?.n, measured, width]);
 
   // Neue Scrollposition anwenden, sobald die Breite zum neuen Zoom passt.
   useLayoutEffect(() => {
@@ -301,7 +341,8 @@ function Timeline({
           </span>
         }
       >
-        <Button variant="primary" onClick={onNext}>
+        {/* Wie in Abgleichen: „Weiter“ wird erst zum Hauptknopf, wenn nichts mehr zu prüfen ist. */}
+        <Button variant={toCheck.length || unplaced.length ? "default" : "primary"} onClick={onNext}>
           Weiter: Ausgeben →
         </Button>
       </StepHeader>
@@ -356,7 +397,7 @@ function Timeline({
         </Button>
       </div>
 
-      <div className="flex overflow-hidden rounded-[10px] border border-line bg-panel shadow-xs">
+      <div className="flex overflow-hidden rounded-xl border border-line bg-panel shadow-xs">
         <div className="flex-none border-r border-line" style={{ width: LABEL_W }}>
           <div className="border-b border-line bg-panel-2" style={{ height: RULER_H }} />
           <div
@@ -365,7 +406,7 @@ function Timeline({
           >
             <span className="grid min-w-0 flex-1">
               <b className="font-semibold">Episoden</b>
-              <span className="truncate text-[0.8rem] text-muted">
+              <span className="truncate text-[0.85rem] text-muted">
                 {!view.session.episodes ? "aus" : view.episodes ? "aus Tonspuren" : "nach Abgleich"}
               </span>
             </span>
@@ -381,10 +422,13 @@ function Timeline({
             >
               <Glyph kind={t.device?.kind ?? "other"} />
               <span className="grid min-w-0 leading-tight">
-                <b className="truncate font-medium" title={t.device?.label}>
+                {/* Lange Gerätenamen brechen um statt abgeschnitten zu werden; die Zusatzzeile weicht dann. */}
+                <b className="line-clamp-2 text-[0.92rem] font-medium break-words" title={t.device?.label}>
                   {t.device?.label ?? "Ohne Gerät"}
                 </b>
-                <span className="text-[0.8rem] text-muted">{trackSub(t, view.rows)}</span>
+                <span className="truncate text-[0.8rem] text-muted" title={trackSub(t, view.rows)}>
+                  {trackSub(t, view.rows)}
+                </span>
               </span>
             </div>
           ))}
@@ -397,6 +441,7 @@ function Timeline({
           <div style={{ width: innerW, height }}>
             <canvas
               ref={canvas}
+              data-track-h={TRACK_H}
               className={cx(
                 "sticky left-0 block",
                 hover?.item && hover.item.type !== "episode" && hover.item.type !== "gap" && "cursor-pointer",
@@ -439,7 +484,7 @@ function Timeline({
         </ul>
       </VisuallyHidden.Root>
 
-      <div className="mx-0.5 mt-2.5 flex flex-wrap gap-5 text-[0.8rem] text-muted">
+      <div className="mx-0.5 mt-2.5 flex flex-wrap gap-5 text-[0.85rem] text-muted">
         <Legend swatch="hatch h-2.5 w-4.5 rounded-xs border border-line-2">Stille (≥ 5 Min.)</Legend>
         <Legend swatch="h-2.5 w-[3px] bg-warn">laute Stelle in der Stille</Legend>
         <Legend swatch="h-2.5 w-4.5 border-r-[3px] border-k-diary bg-linear-to-r from-transparent to-k-diary/40">
@@ -452,6 +497,7 @@ function Timeline({
           Klick in Audio/Video spult dorthin · Mausrad zoomt an der Maus · Umschalt + Mausrad verschiebt
         </span>
       </div>
+      {/* Direkt unter Achse und Legende: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
   );
@@ -534,7 +580,7 @@ function HoverCard({
   const left = offset + Math.min(Math.max(8, x + 12), width - 240);
   return (
     <div
-      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.78rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.82rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
       style={{ left, top: y + 14 }}
     >
       <b className="block font-semibold">{title}</b>
@@ -557,10 +603,10 @@ function Tray({
   onSelect: (id: string) => void;
 }) {
   return (
-    <section className="mt-5">
-      <div className="mb-2 flex flex-wrap items-center gap-3">
-        <h3 className="text-[0.9rem] font-semibold">Ohne Uhrzeit</h3>
-        <span className="text-[0.8rem] text-muted">
+    <section className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-bad/6 px-3 py-2">
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h3 className="text-[0.95rem] font-semibold text-bad">Ohne Uhrzeit ({rows.length})</h3>
+        <span className="text-[0.85rem] text-muted">
           Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein.
         </span>
       </div>

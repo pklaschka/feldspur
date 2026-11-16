@@ -185,7 +185,7 @@ function Editor({
     <div className="grid gap-3">
       <div className="flex items-center gap-3">
         <Dialog.Title className="font-semibold">Feinabgleich</Dialog.Title>
-        <span className="text-[0.82rem] text-muted">
+        <span className="text-[0.86rem] text-muted">
           Ziehe die zweite Spur, bis die Spitzen übereinanderliegen. Feiner mit Zoom oder den Pfeiltasten.
         </span>
         <span className="flex-1" />
@@ -227,7 +227,7 @@ function Editor({
             onPan={setAAt}
             listen={listen}
           />
-          <div className="flex flex-wrap items-center gap-2 text-[0.82rem]">
+          <div className="flex flex-wrap items-center gap-2 text-[0.86rem]">
             <span className="text-muted">Zoom</span>
             <Button size="sm" disabled={zoom === 0} onClick={() => setZoom(zoom - 1)} aria-label="weiter weg">
               −
@@ -273,11 +273,11 @@ function Editor({
             />
           </div>
           <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
-            <span className="font-mono text-[0.85rem]" data-testid="fine-result">
+            <span className="font-mono text-[0.9rem]" data-testid="fine-result">
               {a.label} bei {msText(aAt)} = {b.label} bei {msText(bAt)}
             </span>
-            <span className="text-[0.8rem] text-muted">{shiftText(delta - startDelta.current)} gegenüber vorher</span>
-            {outOfB && <span className="text-[0.8rem] text-warn">liegt außerhalb der zweiten Aufnahme</span>}
+            <span className="text-[0.85rem] text-muted">{shiftText(delta - startDelta.current)} gegenüber vorher</span>
+            {outOfB && <span className="text-[0.85rem] text-warn">liegt außerhalb der zweiten Aufnahme</span>}
             <input
               className="min-w-40 flex-1"
               placeholder="Notiz, z. B. „Satz: ‚Dann fangen wir an‘“"
@@ -291,7 +291,7 @@ function Editor({
           </div>
         </>
       ) : (
-        <p className="text-[0.85rem] text-muted">Wähle zwei verschiedene Aufnahmen mit Ton.</p>
+        <p className="text-[0.9rem] text-muted">Wähle zwei verschiedene Aufnahmen mit Ton.</p>
       )}
     </div>
   );
@@ -314,12 +314,12 @@ function Side({
 }) {
   return (
     <div className="grid gap-1 rounded-lg border border-line bg-panel-2 p-2.5">
-      <span className="flex items-center gap-2 text-[0.8rem] font-medium text-ink-2">
+      <span className="flex items-center gap-2 text-[0.85rem] font-medium text-ink-2">
         <span className={cx("inline-block h-2.5 w-5 rounded-sm", tone === "a" ? "bg-ink-2/60" : "bg-accent/70")} />
         {title}
       </span>
       <Picker label={title} placeholder="Aufnahme wählen…" value={value} onChange={onPick} options={options} />
-      <span className="font-mono text-[0.8rem] text-muted">Stelle {msText(at)}</span>
+      <span className="font-mono text-[0.85rem] text-muted">Stelle {msText(at)}</span>
     </div>
   );
 }
@@ -522,7 +522,7 @@ function Overlay({
           e.preventDefault();
         }}
       />
-      <div className="flex items-center gap-2 text-[0.78rem] text-muted">
+      <div className="flex items-center gap-2 text-[0.82rem] text-muted">
         <Button size="sm" onClick={() => player.toggle(aAt, delta)} data-testid="fine-play">
           {player.playing ? "■ Anhalten" : "▶ Anhören"}
         </Button>

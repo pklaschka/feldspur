@@ -17,7 +17,7 @@ import {
 import type { Guard } from "./App.tsx";
 import { hm } from "./format.ts";
 import { loadPdf, PdfPageCanvas } from "./pdf.tsx";
-import { Button, Choice, cx, Notice } from "./ui.tsx";
+import { Button, Choice, ConfirmButton, cx, Notice } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -189,7 +189,7 @@ export function DiaryEditor({
           <header className="col-span-3 flex items-center gap-3 border-b border-line px-4 py-2.5">
             <Dialog.Title className="text-base font-semibold">Tagebuch abtippen</Dialog.Title>
             {page && page.surfaces.length > 1 && (
-              <span className="text-[0.8rem] text-muted">{page.surfaces.length} Bilder auf dieser Seite</span>
+              <span className="text-[0.85rem] text-muted">{page.surfaces.length} Bilder auf dieser Seite</span>
             )}
             <span className="flex-1" />
             <Dialog.Close asChild>
@@ -208,13 +208,14 @@ export function DiaryEditor({
                 )}
               >
                 <Thumb surface={p.surfaces[0]!} />
-                <div className="flex justify-between text-[0.78rem]">
-                  <b className="font-mono">{p.label}</b>
-                  <span className="text-muted">
-                    {p.surfaces.length > 1 && `${p.surfaces.length} Bilder · `}
+                {/* Seitenangabe und Zählung je auf eine eigene Zeile, damit „S. 3–4“ nicht mitten im Bereich bricht. */}
+                <div className="flex items-baseline justify-between gap-2 text-[0.82rem]">
+                  <b className="font-mono whitespace-nowrap">{p.label}</b>
+                  <span className="text-muted" title="Einträge auf dieser Seite">
                     {entriesOn(p).length || "–"}
                   </span>
                 </div>
+                {p.surfaces.length > 1 && <div className="text-[0.78rem] text-muted">{p.surfaces.length} Bilder</div>}
               </button>
             ))}
           </nav>
@@ -231,7 +232,7 @@ export function DiaryEditor({
               </div>
             )}
             {here.length === 0 && !contEntry && (
-              <p className="mb-2 text-center text-[0.85rem] text-muted">
+              <p className="mb-2 text-center text-[0.9rem] text-muted">
                 Zieh mit der Maus einen Rahmen um den ersten Eintrag. Für eine ganze Seite reicht ein Rahmen über alles.
               </p>
             )}
@@ -262,7 +263,7 @@ export function DiaryEditor({
           </div>
 
           <aside className="overflow-y-auto border-l border-line p-3" aria-label="Einträge">
-            {here.length === 0 && <p className="text-[0.85rem] text-muted">Noch keine Einträge auf dieser Seite.</p>}
+            {here.length === 0 && <p className="text-[0.9rem] text-muted">Noch keine Einträge auf dieser Seite.</p>}
             {here.map((e) => (
               <EntryCard
                 key={e.id}
@@ -337,7 +338,7 @@ function PageCanvas({
   });
   return (
     <figure className={cx("mx-auto max-w-full", surface.isPdf ? "w-[min(900px,100%)]" : "w-fit")}>
-      {label && <figcaption className="mb-1 font-mono text-[0.78rem] text-muted">{label}</figcaption>}
+      {label && <figcaption className="mb-1 font-mono text-[0.82rem] text-muted">{label}</figcaption>}
       <div
         ref={box}
         data-testid="diary-page"
@@ -393,7 +394,7 @@ function PageCanvas({
                   onClick={() => onSelect(e.id)}
                   aria-label={`Eintrag ${e.number}`}
                   className={cx(
-                    "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.75rem] font-semibold text-white",
+                    "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.8rem] font-semibold text-white",
                     selected === e.id ? "bg-accent" : "bg-k-diary",
                   )}
                 >
@@ -515,10 +516,10 @@ function EntryCard({
       className={cx("mb-3 grid gap-2 rounded-lg border p-3", active ? "border-accent" : "border-line")}
     >
       <div className="flex items-center gap-2">
-        <span className="grid size-6 place-items-center rounded bg-k-diary text-[0.78rem] font-semibold text-white">
+        <span className="grid size-6 place-items-center rounded bg-k-diary text-[0.82rem] font-semibold text-white">
           {entry.number}
         </span>
-        <span className="text-[0.8rem] text-muted">
+        <span className="text-[0.85rem] text-muted">
           {entry.regions.map((r, i) => (
             <span key={i} className="mr-1.5 inline-flex items-center gap-0.5">
               <button
@@ -541,12 +542,12 @@ function EntryCard({
         </span>
         <span className="flex-1" />
         {entry.window && (
-          <span className="font-mono text-[0.78rem] text-ink-2">
+          <span className="font-mono text-[0.82rem] text-ink-2">
             {hm(entry.window.fromMs)}–{hm(entry.window.toMs)}
           </span>
         )}
       </div>
-      <div className="flex flex-wrap items-end gap-3 text-[0.85rem]">
+      <div className="flex flex-wrap items-end gap-3 text-[0.9rem]">
         <label className="grid gap-0.5">
           <span className="text-muted">Notiert um</span>
           <input
@@ -615,14 +616,14 @@ function EntryCard({
           onBlur={() => full !== entry.fullText && onPatch({ fullText: full })}
         />
       )}
-      <div className="flex gap-3 text-[0.8rem]">
+      <div className="flex gap-3 text-[0.85rem]">
         <Button variant="link" onClick={onContinue}>
           auf anderer Seite fortsetzen
         </Button>
         <span className="flex-1" />
-        <Button variant="link" className="text-bad" onClick={onDelete}>
+        <ConfirmButton variant="link" className="text-bad" onConfirm={onDelete}>
           Eintrag löschen
-        </Button>
+        </ConfirmButton>
       </div>
     </div>
   );

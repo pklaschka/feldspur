@@ -21,6 +21,7 @@ const view = {
     { sourceId: "a1", atMs: 5_000, clockMs: h(10, 0) + 5_000, speaker: "S1", text: "Wir treffen uns am Brunnen." },
     { sourceId: "a1", atMs: 65_000, clockMs: h(10, 1) + 5_000, speaker: "S2", text: "Die Straße ist gesperrt." },
   ],
+  notes: [{ id: "n1", sourceId: "a1", fromMs: 120_000, toMs: null, text: "Hier noch abtippen", done: false }],
   diary: [
     {
       number: 1,
@@ -56,6 +57,15 @@ describe("Schnellsuche", () => {
     expect(search(items, "10:30").map((x) => x.kind)).toContain("diary");
     expect(search(items, "10:15").map((x) => x.kind)).not.toContain("diary");
     expect(search(items, "marktplatz").map((x) => x.kind)).toEqual(["source"]);
+  });
+
+  it("findet Notizen an ihrer Stelle in der Aufnahme", () => {
+    const [hit] = search(items, "abtippen");
+    expect(hit).toMatchObject({ kind: "note", target: "a1", atMs: 120_000, clockMs: h(10, 2) });
+  });
+
+  it("gibt Episoden mit ihrem Ende aus, damit die Zeitachse sie einpassen kann", () => {
+    expect(items.find((x) => x.kind === "episode")).toMatchObject({ clockMs: h(10, 0), endMs: h(10, 30) });
   });
 
   it("markiert die Treffer im Text", () => {

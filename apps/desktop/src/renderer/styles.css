@@ -1,53 +1,72 @@
 /* Feldspur – Tailwind v4. Farben als Variablen, damit Hell/Dunkel nur die Variablen tauscht. */
 @import "tailwindcss";
+@import "@fontsource-variable/source-sans-3";
+@import "@fontsource-variable/source-sans-3/wght-italic.css";
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/source-serif-4/opsz-italic.css";
 
 :root {
-  --bg: #f4f5f3;
-  --panel: #ffffff;
-  --panel-2: #f8f9f7;
-  --sunken: #eceee9;
-  --ink: #1c2328;
-  --ink-2: #44515a;
-  --muted: #5f6b73;
-  --line: #dde1dc;
-  --line-2: #c9cfc8;
-  --accent: #2f5bd3;
-  --accent-ink: #ffffff;
-  --accent-soft: #e6ecfb;
-  --k-video: #3a63d8;
-  --k-audio: #107a5f;
-  --k-photo: #8b4fc0;
-  --k-diary: #a8571f;
-  --k-other: #6c7880;
-  --good: #107a5f;
-  --warn: #9a5c00;
-  --bad: #b23a48;
-  --warn-soft: #fbf0dc;
+  /* Feldbuch: Arbeitsfläche in hellem Salbei (Moos aus dem App-Symbol), Blätter aus Papier,
+     die Leiste links in der Umbra des Feldmarkers. Akzent Terrakotta. */
+  --bg: #e7ebe3;
+  --panel: #fcfbf7;
+  --panel-2: #f4f5ef;
+  --sunken: #dfe4da;
+  --ink: #26241f;
+  --ink-2: #47443c;
+  --muted: #5b5d53;
+  --line: #d7dccf;
+  --line-2: #bcc2b3;
+  --accent: #a4441f;
+  --accent-ink: #fffaf2;
+  --accent-soft: #f3e1d3;
+  --rail: #3a281d;
+  --rail-ink: #f5ecdf;
+  --rail-muted: #c9b7a2;
+  --rail-hover: #4a3427;
+  --rail-active: #5c3d2b;
+  --k-video: #3b5d85;
+  --k-audio: #44692f;
+  --k-photo: #7e4877;
+  --k-diary: #8e5524;
+  --k-other: #66675d;
+  --good: #44692f;
+  --warn: #8f5a07;
+  --bad: #a3302f;
+  --warn-soft: #f6e7c9;
+  --shadow: 30 32 24;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111518;
-    --panel: #181d21;
-    --panel-2: #1c2226;
-    --sunken: #0d1113;
-    --ink: #e6ebee;
-    --ink-2: #bcc6cc;
-    --muted: #8b979e;
-    --line: #2a3237;
-    --line-2: #364047;
-    --accent: #7c9cff;
-    --accent-ink: #0d1430;
-    --accent-soft: #1e2a4a;
-    --k-video: #7c9cff;
-    --k-audio: #43c49f;
-    --k-photo: #b88ae6;
-    --k-diary: #e59a62;
-    --k-other: #8b979e;
-    --good: #43c49f;
-    --warn: #e7a84a;
-    --bad: #ef7d8b;
-    --warn-soft: #33270f;
+    /* Abends unter der Lampe: warmes Dunkel, die Leiste noch etwas tiefer. */
+    --bg: #1a1815;
+    --panel: #23201c;
+    --panel-2: #292520;
+    --sunken: #14120f;
+    --ink: #efe8dc;
+    --ink-2: #d0c6b6;
+    --muted: #a59a89;
+    --line: #37322b;
+    --line-2: #4a433a;
+    --accent: #e48f63;
+    --accent-ink: #26140a;
+    --accent-soft: #452b1d;
+    --rail: #110e0b;
+    --rail-ink: #efe6da;
+    --rail-muted: #a59683;
+    --rail-hover: #221b16;
+    --rail-active: #3a2619;
+    --k-video: #91b2da;
+    --k-audio: #a0c584;
+    --k-photo: #d5a0cb;
+    --k-diary: #dcaa72;
+    --k-other: #a59a89;
+    --good: #a0c584;
+    --warn: #e8b95e;
+    --bad: #f08d87;
+    --warn-soft: #3b2e15;
+    --shadow: 0 0 0;
     color-scheme: dark;
   }
 }
@@ -69,13 +88,23 @@
   --color-warn: var(--warn);
   --color-bad: var(--bad);
   --color-warn-soft: var(--warn-soft);
+  --color-rail: var(--rail);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-muted: var(--rail-muted);
+  --color-rail-hover: var(--rail-hover);
+  --color-rail-active: var(--rail-active);
   --color-k: var(--k);
   --color-k-video: var(--k-video);
   --color-k-audio: var(--k-audio);
   --color-k-photo: var(--k-photo);
   --color-k-diary: var(--k-diary);
-  --font-sans: "IBM Plex Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-sans: "Source Sans 3 Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Source Serif 4 Variable", Charter, Georgia, serif;
+  /* Zeiten und Kürzel: dieselbe Schrift mit gleich breiten Ziffern statt einer technischen Festbreitenschrift. */
+  --font-mono: "Source Sans 3 Variable", system-ui, sans-serif;
+  --shadow-xs: 0 1px 2px rgb(var(--shadow) / 0.06);
+  --shadow-sm: 0 1px 3px rgb(var(--shadow) / 0.08), 0 1px 2px rgb(var(--shadow) / 0.05);
+  --shadow-lg: 0 10px 30px -8px rgb(var(--shadow) / 0.22), 0 4px 10px -4px rgb(var(--shadow) / 0.12);
 }
 
 @layer base {
@@ -85,11 +114,28 @@
     height: 100%;
   }
   body {
-    @apply bg-bg font-sans text-[13.5px] leading-[1.45] text-ink antialiased;
+    @apply bg-bg font-sans text-[14.5px] leading-[1.5] text-ink antialiased;
   }
   input,
   textarea {
-    @apply rounded-md border border-line-2 bg-panel px-2 py-1;
+    @apply rounded-lg border border-line-2 bg-panel px-2 py-1;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-serif tracking-[-0.005em];
+  }
+  /* Was der Browser sonst selbst zeichnet, trägt auch die Farben der App. */
+  ::selection {
+    @apply bg-accent-soft;
+  }
+  html {
+    scrollbar-color: var(--line-2) transparent;
+    caret-color: var(--accent);
+  }
+  ::placeholder {
+    color: var(--muted);
+    opacity: 1;
   }
   :focus-visible {
     @apply outline-2 outline-offset-1 outline-accent;
@@ -114,6 +160,13 @@
   .k-gps,
   .k-other {
     --k: var(--k-other);
+  }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
   }
   /* Schraffur für Stille und Zwischenzeiten; Farbe über --hatch. */
   .hatch {

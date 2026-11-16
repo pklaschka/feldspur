@@ -60,7 +60,7 @@ export function MontageView({
         >
           <div className="flex items-center gap-3 border-b border-line px-4 py-2.5">
             <Dialog.Title className="font-semibold">Montage ansehen</Dialog.Title>
-            <span className="text-[0.82rem] text-muted">
+            <span className="text-[0.86rem] text-muted">
               Vorschau aus den Originalen, so wie das Montagevideo aufgebaut ist. Nichts wird gerechnet.
             </span>
             <span className="ml-auto" />
@@ -304,16 +304,16 @@ function Controls({
         <Button size="sm" onClick={() => jump(1)} title="Nächstes Stück" aria-label="Nächstes Stück">
           ⏭
         </Button>
-        <span className="ml-2 font-mono text-[0.85rem] tabular-nums" data-testid="montage-time">
+        <span className="ml-2 font-mono text-[0.9rem] tabular-nums" data-testid="montage-time">
           {formatDuration(t)} / {formatDuration(durationMs)}
         </span>
-        <span className="font-mono text-[0.85rem] text-muted tabular-nums">· Uhr {formatClock(clock)}</span>
-        <span className="truncate text-[0.85rem] text-muted">· {pieces[current]!.title}</span>
-        <label className="ml-auto flex items-center gap-2 text-[0.82rem] text-ink-2">
+        <span className="font-mono text-[0.9rem] text-muted tabular-nums">· Uhr {formatClock(clock)}</span>
+        <span className="truncate text-[0.9rem] text-muted">· {pieces[current]!.title}</span>
+        <label className="ml-auto flex items-center gap-2 text-[0.86rem] text-ink-2">
           <Toggle checked={mixAll} onChange={onMixAll} label="Ton aller Geräte" />
           Ton aller Geräte
         </label>
-        <span className="ml-3 text-[0.78rem] text-muted">Leertaste: Abspielen · ←/→: 10 s</span>
+        <span className="ml-3 text-[0.82rem] text-muted">Leertaste: Abspielen · ←/→: 10 s</span>
       </div>
     </div>
   );

@@ -1,0 +1,6 @@
+Schriften für das Handbuch (Webseite und PDF), dieselben wie in der App:
+Source Sans 3 und Source Serif 4 von Adobe, SIL Open Font License 1.1 (siehe OFL.txt).
+- *.woff2: variable Schriften für die Webseite (aus @fontsource-variable, Teilmengen latin und latin-ext),
+  eingebunden in ../stil.scss.
+- *.otf: statische Schnitte für das PDF (Typst liest kein woff2), aus den Releases von
+  github.com/adobe-fonts/source-sans und github.com/adobe-fonts/source-serif.

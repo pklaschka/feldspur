@@ -16,6 +16,8 @@ export interface SourceActions {
   setPartOf(sourceId: string, mainId: string | null): void;
   setFollows(sourceId: string, prevId: string | null): void;
   preview(sourceId: string): void;
+  /** Mitschreiben für eine Audio- oder Videoquelle öffnen. */
+  transcribe(sourceId: string): void;
 }
 
 const Ctx = createContext<SourceActions | null>(null);
@@ -30,7 +32,7 @@ const IMAGE = new Set(["photo", "diary"]);
 const AV = new Set(["audio", "video"]);
 
 const item =
-  "flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-[0.85rem] outline-none data-[disabled]:cursor-default data-[disabled]:opacity-40 data-[highlighted]:bg-accent-soft";
+  "flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-[0.9rem] outline-none data-[disabled]:cursor-default data-[disabled]:opacity-40 data-[highlighted]:bg-accent-soft";
 const content = "z-50 min-w-56 max-w-80 rounded-lg border border-line bg-panel p-1 shadow-lg";
 const sep = "my-1 h-px bg-line";
 
@@ -52,7 +54,7 @@ function Sub({ label, children, disabled }: { label: string; children: ReactNode
 
 const rowLabel = (r: SourceRow) => (
   <>
-    <b className="font-mono text-[0.8rem]">{r.label}</b>
+    <b className="font-mono text-[0.85rem]">{r.label}</b>
     <span className="truncate text-ink-2">{r.fileName}</span>
   </>
 );
@@ -94,12 +96,17 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content className={content} align="end" sideOffset={4} onClick={(e) => e.stopPropagation()}>
-            <DropdownMenu.Label className="truncate px-2.5 pt-1 pb-1.5 text-[0.75rem] text-muted">
+            <DropdownMenu.Label className="truncate px-2.5 pt-1 pb-1.5 text-[0.8rem] text-muted">
               {row.label} · {row.fileName}
             </DropdownMenu.Label>
             {(row.previewable || row.isPdf || AV.has(row.kind)) && (
               <DropdownMenu.Item className={item} onSelect={() => a.preview(row.id)}>
                 Groß ansehen
+              </DropdownMenu.Item>
+            )}
+            {AV.has(row.kind) && (
+              <DropdownMenu.Item className={item} onSelect={() => a.transcribe(row.id)}>
+                Mitschreiben…
               </DropdownMenu.Item>
             )}
             {!row.partOf && (
@@ -212,7 +219,7 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
             {!noClock && (
               <>
                 {others.length > 0 && <DropdownMenu.Separator className={sep} />}
-                <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.75rem] text-muted">
+                <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.8rem] text-muted">
                   Zeitzone der Geräteuhr
                 </DropdownMenu.Label>
                 <DropdownMenu.RadioGroup
@@ -241,7 +248,7 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
             {device.hasUtcStamps && (
               <>
                 <DropdownMenu.Separator className={sep} />
-                <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.75rem] text-muted">
+                <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.8rem] text-muted">
                   Zeitstempel mit „Z“ (UTC) in den Metadaten
                 </DropdownMenu.Label>
                 <DropdownMenu.RadioGroup
@@ -363,7 +370,7 @@ function ZoneDialog({
         <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
         <AlertDialog.Content className="fixed top-1/2 left-1/2 z-50 w-[min(26rem,90vw)] -translate-1/2 rounded-xl border border-line bg-panel p-5 shadow-xl">
           <AlertDialog.Title className="font-semibold">{title}</AlertDialog.Title>
-          <AlertDialog.Description className="mt-2 text-[0.85rem] text-ink-2">
+          <AlertDialog.Description className="mt-2 text-[0.9rem] text-ink-2">
             Auf welche Zeitzone war die Uhr des Geräts gestellt? Seine Ortszeit-Stempel werden von dort in die Zeitzone
             des Einsatzes umgerechnet.
           </AlertDialog.Description>

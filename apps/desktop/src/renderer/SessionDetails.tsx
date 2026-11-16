@@ -15,8 +15,8 @@ const ZONES: string[] = (() => {
   }
 })();
 
-const label = "grid gap-1 text-[0.85rem] font-medium";
-const hint = "text-[0.78rem] font-normal text-muted";
+const label = "grid gap-1 text-[0.9rem] font-medium";
+const hint = "text-[0.82rem] font-normal text-muted";
 
 export function SessionDetails({
   view,
@@ -93,7 +93,7 @@ export function SessionDetails({
               </label>
             </div>
             {dateMoves && (
-              <p className="rounded-md bg-warn-soft px-3 py-2 text-[0.82rem] text-warn">
+              <p className="rounded-md bg-warn-soft px-3 py-2 text-[0.86rem] text-warn">
                 Von Hand eingetragene Uhrzeiten und Notierzeiten im Tagebuch wandern mit auf den neuen Tag. Zeiten aus
                 Dateien bleiben, wie sie sind.
               </p>
@@ -124,7 +124,7 @@ export function SessionDetails({
               </label>
             </div>
             <fieldset className="grid gap-2">
-              <legend className="mb-1 text-[0.85rem] font-medium">Weitere Angaben</legend>
+              <legend className="mb-1 text-[0.9rem] font-medium">Weitere Angaben</legend>
               <p className={hint}>Für den Quellennachweis, z. B. DOI oder Projektnummer.</p>
               {extra.map(([k, v], i) => (
                 <div key={i} className="flex gap-2">

@@ -3,7 +3,7 @@ import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
 import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
-import { Button, cx, Glyph, Notice, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
+import { Button, cx, FlagMark, Glyph, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -16,6 +16,7 @@ export function Collect({
   onRename,
   onNext,
   onOpenDiary,
+  onTranscribe,
 }: {
   view: SessionView;
   guard: Guard;
@@ -25,10 +26,13 @@ export function Collect({
   onRename: (deviceId: string, label: string) => void;
   onNext: () => void;
   onOpenDiary: (pageId: string) => void;
+  onTranscribe: (sourceId: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [hover, setHover] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; warnings: { fileName: string; message: string }[] } | null>(
+    null,
+  );
 
   const importPaths = async (paths: string[]) => {
     if (!paths.length) return;
@@ -39,8 +43,7 @@ export function Collect({
     onView(r.view);
     const parts = [`${r.added} ${r.added === 1 ? "Quelle" : "Quellen"} übernommen`];
     if (r.duplicates) parts.push(`${r.duplicates} schon vorhanden`);
-    if (r.warnings.length) parts.push(`${r.warnings.length} Hinweise`);
-    setNotice(parts.join(" · "));
+    setNotice({ text: parts.join(" · "), warnings: r.warnings });
   };
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -75,14 +78,14 @@ export function Collect({
       </StepHeader>
       <div
         className={cx(
-          "mb-5 flex items-center gap-4 rounded-[10px] border-[1.5px] border-dashed px-4 py-3",
+          "mb-5 flex items-center gap-4 rounded-xl border-[1.5px] border-dashed px-4 py-3",
           hover ? "border-accent bg-accent-soft" : "border-line-2 bg-panel-2",
           empty && "flex-col px-8 py-16 text-center",
         )}
       >
         <div className="flex-1">
           <b>{busy ? "Lese Dateien, Metadaten und Prüfsummen…" : "Dateien oder ganze Ordner hier ablegen"}</b>
-          <div className="text-[0.8rem] text-muted">
+          <div className="text-[0.85rem] text-muted">
             Video, Audio, Fotos, Tagebuchscans (JPG/PDF), Notizen (TXT/MD). Originale bleiben, wo sie sind.
           </div>
         </div>
@@ -90,12 +93,46 @@ export function Collect({
           Dateien wählen…
         </Button>
       </div>
-      {notice && <Notice>{notice}</Notice>}
+      {notice && (
+        <div
+          className="my-2 rounded-lg bg-accent-soft px-3 py-2 text-[0.9rem]"
+          role="status"
+          data-testid="import-notice"
+        >
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <span>{notice.text}.</span>
+            {/* Nach dem Einsammeln ist die Referenzuhr der nächste Schritt. */}
+            {!view.devices.some((d) => d.isReference) && view.devices.length > 0 && (
+              <Button variant="link" onClick={onNext}>
+                Weiter: Referenzuhr wählen →
+              </Button>
+            )}
+            <span className="flex-1" />
+            <Button variant="link" className="text-[0.85rem] text-muted" onClick={() => setNotice(null)}>
+              Ausblenden
+            </Button>
+          </div>
+          {notice.warnings.length > 0 && (
+            <details className="mt-1">
+              <summary className="cursor-pointer text-warn">
+                {notice.warnings.length} {notice.warnings.length === 1 ? "Hinweis" : "Hinweise"} ansehen
+              </summary>
+              <ul className="mt-1 grid gap-0.5 pl-4 text-[0.85rem]">
+                {notice.warnings.map((w, i) => (
+                  <li key={i}>
+                    <b className="font-medium">{w.fileName}</b>: {w.message}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
       {!empty && (
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="font-semibold">Geräte</h3>
-            <span className="text-[0.8rem] text-muted">
+            <span className="text-[0.85rem] text-muted">
               erkannt aus Kameramodell oder Dateinamen · Namen anklicken zum Ändern
             </span>
             <span className="flex-1" />
@@ -112,10 +149,11 @@ export function Collect({
                 onSelect={onSelect}
                 onRename={(label) => onRename(d.id, label)}
                 onOpenDiary={onOpenDiary}
+                onTranscribe={onTranscribe}
               />
             ))}
             {unassigned.length > 0 && (
-              <section className="k-other overflow-hidden rounded-[10px] border border-t-[3px] border-line border-t-k bg-panel shadow-xs">
+              <section className="k-other overflow-hidden rounded-xl border border-line bg-panel shadow-xs">
                 <header className="flex items-center gap-2 px-3 pt-3 pb-2">
                   <Glyph kind="other" />
                   <span className="font-semibold">Ohne Gerät</span>
@@ -138,6 +176,7 @@ function DeviceCard({
   onSelect,
   onRename,
   onOpenDiary,
+  onTranscribe,
 }: {
   device: DeviceRow;
   view: SessionView;
@@ -146,18 +185,27 @@ function DeviceCard({
   onSelect: (id: string) => void;
   onRename: (label: string) => void;
   onOpenDiary: (pageId: string) => void;
+  onTranscribe: (sourceId: string) => void;
 }) {
+  // Mitschreiben beginnt bei der ersten Aufnahme, die noch keine Zeile hat (sonst bei der ersten).
+  const av = rows.filter((r) => r.kind === "audio" || r.kind === "video");
+  const firstOpen = av.find((r) => !view.transcript.some((l) => l.sourceId === r.id)) ?? av[0];
   const kinds = [...new Set(rows.map((r) => r.kind))];
   return (
     <section
-      className={`k-${device.kind} overflow-hidden rounded-[10px] border border-t-[3px] border-line border-t-k bg-panel shadow-xs`}
+      className={`k-${device.kind} overflow-hidden rounded-xl border border-line bg-panel shadow-xs`}
       data-testid="device-card"
       data-device={device.label}
     >
       <header className="flex items-center gap-2 px-3 pt-3">
         <Glyph kind={device.kind} />
         <EditableName value={device.label} onCommit={onRename} />
-        {device.isReference && <Pill tone="accent">Referenzuhr</Pill>}
+        {device.isReference && (
+          <Pill tone="accent">
+            <FlagMark size={10} className="mr-1 inline align-[-1px]" />
+            Referenzuhr
+          </Pill>
+        )}
         {device.timeZone && <Pill>Uhr: {device.timeZone}</Pill>}
         <span className="flex-1" />
         {device.kind === "diary" && rows[0] && (
@@ -167,9 +215,22 @@ function DeviceCard({
         )}
         <DeviceMenu device={device} view={view} />
       </header>
-      <div className="pr-3 pb-2 pl-[3.1rem] text-[0.8rem] text-muted">
-        {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
-        {device.personName && ` · ${device.personName}`}
+      <div className="flex flex-wrap items-baseline gap-x-2 pr-3 pb-2 pl-[3.1rem] text-[0.85rem] text-muted">
+        <span>
+          {rows.length} {rows.length === 1 ? "Datei" : "Dateien"} · {kinds.map((k) => KIND_LABEL[k]).join(", ")}
+          {device.personName && ` · ${device.personName}`}
+        </span>
+        {/* In der Unterzeile, damit der Gerätename im Kopf Platz behält. */}
+        {firstOpen && (
+          <Button
+            variant="link"
+            className="text-[0.85rem]"
+            onClick={() => onTranscribe(firstOpen.id)}
+            title={`${firstOpen.label} abhören und mitschreiben`}
+          >
+            Mitschreiben…
+          </Button>
+        )}
       </div>
       <SourceList view={view} rows={rows} selected={selected} onSelect={onSelect} />
     </section>
@@ -216,7 +277,7 @@ function SourceList({
             )}
             onClick={() => onSelect(r.id)}
           >
-            <span className={`k-${r.kind} font-mono text-[0.78rem] font-medium text-k`}>
+            <span className={`k-${r.kind} font-mono text-[0.82rem] font-medium text-k`}>
               {nested && <span className="mr-1 text-muted">↳</span>}
               {r.label}
             </span>
@@ -224,10 +285,10 @@ function SourceList({
               <span className="block truncate" title={r.fileName}>
                 {r.fileName}
               </span>
-              {r.follows && <span className="block text-[0.75rem] text-muted">setzt {label(r.follows)} fort</span>}
-              {nested && <span className="block text-[0.75rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
+              {r.follows && <span className="block text-[0.8rem] text-muted">setzt {label(r.follows)} fort</span>}
+              {nested && <span className="block text-[0.8rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
             </span>
-            <span className="font-mono text-[0.78rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
+            <span className="font-mono text-[0.82rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
               {r.startMs === null
                 ? "–"
                 : r.endMs !== null && r.endMs !== r.startMs

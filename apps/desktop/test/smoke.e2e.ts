@@ -59,7 +59,9 @@ const page = await app.firstWindow();
 const logs: string[] = [];
 page.on("console", (m) => m.type() === "error" && logs.push(m.text()));
 try {
-  await page.setViewportSize({ width: 1280, height: 800 });
+  // Fenstergröße für die Bildschirmfotos, z. B. FELDSPUR_VIEWPORT=1920x1080 (Standard 1280x800).
+  const [vw, vh] = (process.env.FELDSPUR_VIEWPORT ?? "1280x800").split("x").map(Number);
+  await page.setViewportSize({ width: vw!, height: vh! });
   await page.getByText("+ neuer Einsatz").click();
   await page.getByLabel("Titel").fill("Testmarkt");
   await page.getByLabel("Datum").fill("2026-09-14");
@@ -126,6 +128,7 @@ try {
     await page.getByRole("combobox", { name: label }).click();
     await page.getByRole("option", { name: option }).click();
   };
+  await page.getByRole("button", { name: "+ Neuer Anker" }).click();
   await pick("Erste Aufnahme", /A-01/);
   await page.getByLabel("Erste Aufnahme, Stelle").fill("9:00");
   await pick("Zweite Aufnahme", /IMG_20260914_104050/);
@@ -139,6 +142,12 @@ try {
     .getByTestId("anchor-list")
     .locator("li", { hasText: "Glocke" })
     .getByRole("button", { name: "löschen" })
+    .click();
+  // Löschen fragt einmal nach.
+  await page
+    .getByTestId("anchor-list")
+    .locator("li", { hasText: "Glocke" })
+    .getByRole("button", { name: "Wirklich löschen?" })
     .click();
   await fotoClock.getByText("offen").waitFor();
 
@@ -240,7 +249,8 @@ try {
     .innerText();
   const [from, to] = rangeText.match(/\d\d:\d\d/g)!.map((t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3)));
   const xAt = (min: number) => box.x + ((min - from!) / (to! - from!)) * box.width;
-  await page.mouse.click(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 1) * 52 + 26);
+  const trackH = Number(await page.locator("canvas").getAttribute("data-track-h"));
+  await page.mouse.click(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 0.5) * trackH);
   await page.getByTestId("inspector").getByText("Tagebuch_S01.jpg").first().waitFor();
   await page.getByRole("button", { name: "Schließen" }).click();
   // Klick in die Tonspur spult den Player dorthin: 10:16:20 ist im Rekorder 1:20.
@@ -612,18 +622,21 @@ try {
   await montage.waitFor({ state: "detached" });
   // Standard ist Echtzeit; nach Episoden geschnitten wird das Video kürzer. Ausgegeben wird
   // danach nach Episoden, damit der Rauchtest schnell bleibt.
-  const lengthOf = () => page.getByText("Videolänge").locator("xpath=..").locator("b").innerText();
+  const lengthOf = () => page.getByTestId("export-summary").locator("b").first().innerText();
   const inRealtime = await lengthOf();
   await page.getByRole("switch", { name: "Nach Episoden schneiden" }).click();
-  await page.getByText("Zwischentafeln").waitFor();
-  await page.waitForFunction((l) => {
-    const b = [...document.querySelectorAll("b")].find((e) => e.nextElementSibling?.textContent === "Videolänge");
-    return !!b && b.textContent !== l;
-  }, inRealtime);
+  await page
+    .getByTestId("export-summary")
+    .getByText(/Zwischentafeln/)
+    .waitFor();
+  await page.waitForFunction(
+    (l) => document.querySelector("[data-testid=export-summary] b")?.textContent !== l,
+    inRealtime,
+  );
   console.log(`Videolänge: ${inRealtime} in Echtzeit, ${await lengthOf()} nach Episoden`);
   const t0 = Date.now();
   await page.getByRole("switch", { name: "Schnittliste für DaVinci Resolve" }).click();
-  await page.getByRole("button", { name: "Ausgeben…" }).click();
+  await page.getByRole("button", { name: /^(Trotzdem a|A)usgeben…$/ }).click();
   // Während der Ausgabe den Reiter wechseln: Sie läuft weiter, der Reiter zeigt den Fortschritt.
   await page.getByTestId("export-progress").waitFor();
   await page.getByRole("tab", { name: /Durchsehen/ }).click();
@@ -661,7 +674,7 @@ try {
   );
   await page.keyboard.press("Control+o");
   await page.getByRole("menuitem", { name: "Neues Projekt…" }).click();
-  await page.getByText("Lege links einen Einsatz an").waitFor();
+  await page.getByRole("heading", { name: "Noch kein Einsatz" }).waitFor();
   await page.keyboard.press("Control+o");
   await page.getByRole("menuitem", { name: /^Test/ }).click();
   await page.getByRole("heading", { name: "Testmarkt" }).waitFor();

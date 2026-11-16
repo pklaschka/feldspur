@@ -71,7 +71,7 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
   return (
     <div data-testid="page-numbering">
       <Eyebrow>Seitenzählung</Eyebrow>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.85rem]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.9rem]">
         <label className="flex items-center gap-2">
           {row.isPdf ? "Erste Seite" : "Seite"}
           <input
@@ -94,7 +94,7 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
           Doppelseite
         </label>
       </div>
-      <p className="mt-1.5 text-[0.8rem] text-muted">
+      <p className="mt-1.5 text-[0.85rem] text-muted">
         {shows
           ? `${row.label} zeigt ${shows}${row.pageSpread ? ". Rahmen links gehören zur linken, rechts zur rechten Seite." : "."}`
           : row.pageSpread

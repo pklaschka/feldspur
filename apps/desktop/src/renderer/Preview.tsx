@@ -56,7 +56,7 @@ export function Preview({
                 </Dialog.Title>
                 <span className="flex-1" />
                 {group.length > 1 && (
-                  <span className="flex items-center gap-1.5 text-[0.85rem]">
+                  <span className="flex items-center gap-1.5 text-[0.9rem]">
                     <Button
                       size="sm"
                       disabled={index === 0}

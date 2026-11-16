@@ -1,4 +1,4 @@
-/** Schnellsuche (Strg/⌘+K): Mitschrift, Tagebuch, Quellen und Episoden eines Einsatzes. */
+/** Schnellsuche (Strg/⌘+K): Mitschrift, Notizen, Tagebuch, Quellen und Episoden eines Einsatzes. */
 import { formatClock } from "@feldspur/core/time";
 import { Dialog } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { cx } from "./ui.tsx";
 
 const KIND_LABEL: Record<Hit["kind"], string> = {
   line: "Mitschrift",
+  note: "Notiz",
   diary: "Tagebuch",
   source: "Quelle",
   episode: "Episode",
@@ -53,7 +54,7 @@ export function SearchDialog({
           <input
             autoFocus
             className="m-3 rounded-lg border border-line bg-panel-2 px-3 py-2 text-[0.95rem]"
-            placeholder="Mitschrift, Tagebuch, Quellen, Uhrzeit (z. B. 10:15) …"
+            placeholder="Mitschrift, Notizen, Tagebuch, Quellen, Uhrzeit (z. B. 10:15) …"
             aria-label="Suchen"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -76,9 +77,9 @@ export function SearchDialog({
             role="listbox"
             aria-label="Treffer"
           >
-            {query.trim() && !hits.length && <li className="px-3 py-3 text-[0.85rem] text-muted">Nichts gefunden.</li>}
+            {query.trim() && !hits.length && <li className="px-3 py-3 text-[0.9rem] text-muted">Nichts gefunden.</li>}
             {!query.trim() && (
-              <li className="px-3 py-3 text-[0.85rem] text-muted">
+              <li className="px-3 py-3 text-[0.9rem] text-muted">
                 {items.length} Einträge durchsuchbar. Mehrere Wörter: alle müssen vorkommen. ↑↓ wählen, Enter springt
                 hin.
               </li>
@@ -96,11 +97,11 @@ export function SearchDialog({
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(h)}
               >
-                <span className="pt-0.5 font-mono text-[0.78rem] text-muted">
+                <span className="pt-0.5 font-mono text-[0.82rem] text-muted">
                   {h.clockMs === null ? "–" : formatClock(h.clockMs)}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[0.78rem] text-muted">
+                  <span className="block truncate text-[0.82rem] text-muted">
                     {KIND_LABEL[h.kind]} · {h.title}
                   </span>
                   <span className="line-clamp-2 text-[0.88rem]">
@@ -124,31 +125,62 @@ export function SearchDialog({
   );
 }
 
-/** Suchdialog samt Sprung zur Fundstelle (braucht den PlaybackProvider). */
+/** Wohin ein Sprung auf der Zeitachse zielt: eine Uhrzeit oder ein Bereich (Episode). */
+export interface Reveal {
+  fromMs: number;
+  toMs?: number;
+}
+
+/**
+ * Suchdialog samt Sprung zur Fundstelle (braucht den PlaybackProvider). Jede Trefferart hat ein festes Ziel:
+ * - Mitschrift, Notiz: im offenen Mitschreiben dorthin spulen, sonst Durchsehen mit Quelle und Stelle.
+ * - Quelle: Durchsehen, Quelle gewählt und auf der Zeitachse ins Bild geholt.
+ * - Episode: Durchsehen, Zeitachse auf die Episode gezoomt.
+ * - Tagebuch: Abtippen auf der Seite des Eintrags; ohne Seite die Stelle auf der Zeitachse.
+ */
 export function QuickSearch({
   view,
   open,
   onOpenChange,
+  transcribing,
   onSource,
+  onTranscribe,
   onDiary,
   onReview,
+  onReveal,
 }: {
   view: SessionView;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  /** Mitschreiben ist gerade offen. */
+  transcribing: boolean;
   onSource: (id: string) => void;
-  onDiary: (pageId: string) => void;
+  onTranscribe: (id: string | null) => void;
+  onDiary: (pageId: string | null) => void;
   onReview: () => void;
+  onReveal: (r: Reveal) => void;
 }) {
   const { seek } = usePlayback();
   const pick = (h: Hit) => {
-    if (h.kind === "diary") return h.target ? onDiary(h.target) : undefined;
-    if (h.kind === "episode") return onReview();
-    onSource(h.target);
-    if (h.kind === "line") {
-      onReview();
+    const row = view.rows.find((r) => r.id === h.target);
+    const av = row?.kind === "audio" || row?.kind === "video";
+    if ((h.kind === "line" || h.kind === "note") && transcribing && av) {
       if (h.atMs !== undefined) seek(h.target, h.atMs);
+      onTranscribe(h.target);
+      return;
     }
+    if (h.kind === "diary" && h.target) {
+      onTranscribe(null);
+      onDiary(h.target);
+      return;
+    }
+    // Alles andere landet in Durchsehen; offene Fenster schließen, damit man sieht, wohin es geht.
+    onTranscribe(null);
+    onDiary(null);
+    onReview();
+    if (h.kind !== "episode" && h.kind !== "diary") onSource(h.target);
+    if (h.atMs !== undefined) seek(h.target, h.atMs);
+    if (h.clockMs !== null) onReveal({ fromMs: h.clockMs, toMs: h.endMs });
   };
   return <SearchDialog view={view} open={open} onOpenChange={onOpenChange} onPick={pick} />;
 }
