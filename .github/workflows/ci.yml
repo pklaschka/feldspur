@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Nur lesen; Artefakte gehen über upload-artifact, nicht über das Repository.
+permissions:
+  contents: read
+
 jobs:
   check:
     strategy:

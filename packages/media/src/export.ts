@@ -51,8 +51,9 @@ export function safeName(s: string): string {
       // eslint-disable-next-line no-control-regex -- Steuerzeichen sind in Dateinamen unzulässig
       .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")
       .replace(/\s+/g, "_")
-      .replace(/^[._]+|[._]+$/g, "")
-      .slice(0, 80) || "Einsatz"
+      .replace(/^[._]+/, "")
+      .slice(0, 80)
+      .replace(/[^._][._]*$/, (m) => m[0]!) || "Einsatz"
   );
 }
 
