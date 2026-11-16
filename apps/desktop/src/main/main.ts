@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
-import { localMs, ProjectStore } from "@feldspur/core";
+import { localMs, ProjectStore, type TouchedRow } from "@feldspur/core";
 import {
   analyzeSession,
   applyImport,
@@ -28,6 +28,8 @@ import {
   type SessionPatch,
   type TranscriptPatch,
   type HistoryResult,
+  type HistoryTarget,
+  type SessionView,
   type SourceNoteInput,
   type ProjectInfo,
 } from "../shared/api.ts";
@@ -116,7 +118,42 @@ function historyStep(redo: boolean, sessionId: string | null): HistoryResult {
   const s = requireStore();
   const label = redo ? s.history.redo() : s.history.undo();
   const alive = sessionId && s.listSessions().some((x) => x.id === sessionId);
-  return { label, project: projectInfo()!, view: alive ? buildSessionView(s, sessionId) : null };
+  const view = alive ? buildSessionView(s, sessionId) : null;
+  return {
+    label,
+    project: projectInfo()!,
+    view,
+    target: label && view ? historyTarget(s.history.lastTouched(), view) : null,
+  };
+}
+
+/** Die erste geänderte Zeile, die sich in der Oberfläche zeigen lässt (Mitschrift, Notiz, Tagebuch, Quelle). */
+function historyTarget(rows: TouchedRow[], view: SessionView): HistoryTarget | null {
+  const known = new Set(view.rows.map((r) => r.id));
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+  for (const { table, row } of rows) {
+    const sourceId = str(row.source_id);
+    if (table === "transcript_lines" && sourceId && known.has(sourceId))
+      return { kind: "line", sourceId, atMs: Number(row.at_ms) };
+    if (table === "source_notes" && sourceId && known.has(sourceId))
+      return { kind: "note", sourceId, atMs: row.from_ms == null ? undefined : Number(row.from_ms) };
+    if (table === "diary_entries") {
+      let regions: { sourceId?: string }[] = [];
+      try {
+        regions = JSON.parse(String(row.regions)) as { sourceId?: string }[];
+      } catch {
+        // Ohne lesbare Bereiche gibt es nichts zu zeigen.
+      }
+      const sid = regions[0]?.sourceId;
+      if (sid && known.has(sid)) return { kind: "diary", sourceId: sid };
+    }
+  }
+  // Sonst die Quelle, um die es ging (Zeitbelege, Anker, Episoden-Anpassungen, die Quelle selbst).
+  for (const { table, row } of rows) {
+    const sid = table === "sources" ? str(row.id) : (str(row.source_id) ?? str(row.a_source_id));
+    if (sid && known.has(sid)) return { kind: "source", sourceId: sid };
+  }
+  return null;
 }
 
 function registerIpc(): void {
