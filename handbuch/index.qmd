@@ -1,23 +1,8 @@
 ---
-title: "Feldspur"
-subtitle: "Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
-author:
-  - name:
-      given: Zuri Nimca
-      family: Klaschka
-    orcid: 0009-0005-9995-5687
+metadata-files: [_metadaten.yml]
 date: last-modified
 date-format: "D. MMMM YYYY"
 lang: de
-abstract: |
-  Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
-  deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
-  (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
-  Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
-  ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
-  Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
-  führt durch die Arbeit mit dem Programm.
-keywords: [Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science]
 bibliography: literatur.bib
 citation:
   type: article

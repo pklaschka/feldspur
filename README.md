@@ -1,14 +1,36 @@
+<!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
+<div align="center">
+
+<img src="packaging/icon.svg" alt="" width="112">
+
 # Feldspur
 
-<!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
-<img src="packaging/icon.svg" alt="" width="96" align="right">
+_Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
 
-Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
-**eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zuerst für MAXQDA.
+**Zuri Nimca Klaschka** · [ORCID 0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687)<br>
+Stand: 16. November 2026
 
-**Begleittext und Handbuch:** [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/) (auch als PDF,
-das jeder Release beiliegt). Der Begleittext erzählt, warum es Feldspur gibt, ordnet es in bestehende Werkzeuge und
-Literatur ein und legt offen, wie es mit generativer KI entsteht.
+[![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f)](https://pklaschka.github.io/feldspur/)
+[![Neueste Version](https://img.shields.io/github/v/release/pklaschka/feldspur?include_prereleases&label=Version&color=3a281d)](https://github.com/pklaschka/feldspur/releases)
+[![CI](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml/badge.svg)](https://github.com/pklaschka/feldspur/actions/workflows/ci.yml)
+[![Windows · macOS · Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-44692f)](https://github.com/pklaschka/feldspur/releases)
+[![Lizenz: EUPL-1.2](https://img.shields.io/badge/Lizenz-EUPL--1.2-5b5d53)](LICENSE)
+[![Text: CC BY 4.0](https://img.shields.io/badge/Text-CC%20BY%204.0-5b5d53)](https://creativecommons.org/licenses/by/4.0/deed.de)
+
+</div>
+
+**Zusammenfassung.** Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
+deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
+(und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
+Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
+ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
+Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
+führt durch die Arbeit mit dem Programm.
+
+**Schlüsselwörter:** Ethnografie, Feldforschung, qualitative Forschung, Multi-Species-Ethnografie, MAXQDA, Open Science
+
+**Begleittext und Handbuch** lesen: [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/), auch als
+PDF, das jeder Release beiliegt.
 
 > [!IMPORTANT]
 >

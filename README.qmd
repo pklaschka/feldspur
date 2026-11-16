@@ -1,5 +1,9 @@
 ---
-title: Feldspur
+# Titel, Autor*in, Zusammenfassung und Schlüsselwörter kommen aus dem Manuskript.
+metadata-files: [handbuch/_metadaten.yml]
+# Fester „Stand“, damit die CI-Prüfung (README passt zu README.qmd) nicht jeden Tag anschlägt. Bei Releases mitziehen.
+date: 2026-11-16
+date-format: "D. MMMM YYYY"
 lang: de
 filters:
   - handbuch/anfuehrungszeichen.lua
@@ -10,19 +14,12 @@ format:
     wrap: preserve
     shift-heading-level-by: 1
     output-file: README.md
+    # Den Titelblock setzt README.qmd selbst (zentriert, mit Logo).
+    template: handbuch/readme-vorlage.md
 ---
 
-```{=markdown}
-<!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
-<img src="packaging/icon.svg" alt="" width="96" align="right">
-```
-
-Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
-**eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zuerst für MAXQDA.
-
-**Begleittext und Handbuch:** [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/) (auch als PDF,
-das jeder Release beiliegt). Der Begleittext erzählt, warum es Feldspur gibt, ordnet es in bestehende Werkzeuge und
-Literatur ein und legt offen, wie es mit generativer KI entsteht.
+**Begleittext und Handbuch** lesen: [pklaschka.github.io/feldspur](https://pklaschka.github.io/feldspur/), auch als
+PDF, das jeder Release beiliegt.
 
 {{< include handbuch/_hinweise.qmd >}}
 
