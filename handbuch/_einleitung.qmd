@@ -1,8 +1,8 @@
-# Warum Feldspur? {#sec-motivation}
+# Motivation {#sec-motivation}
 
 ## 708 Artefakte aus vier Tagen
 
-Nach vier Forschungstagen in einem Projekt zum Thema Otter im Zoo hatte ich:
+Nach vier Forschungstagen in einem Projekt zum Thema "Otter im Zoo" hatte ich:
 
 - 45 Doppelseiten Feldnotizen, also insgesamt 90 Seiten, wobei jede zweite Seite der Reflexion diente, mit 123 mit
   Zeitstempeln versehenen Einträgen,
@@ -25,26 +25,25 @@ experimentellen Ansätzen. Daher kam dann auch – nach der Verzweiflung ob der 
 eine eigene Lösung zu finden. Und zwar in einer Zeit, in der man mit Claude und Co. recht schnell individuelle
 Lösungen bauen kann, deren Entwicklung sich früher nicht gelohnt hätte.
 
-Dass ich mir das zugetraut habe, liegt auch an meinem Hintergrund: Ich habe mehr als zehn Jahre als
-Softwareentwicklerin gearbeitet.^[Unter anderem bei Adobe, außerdem mit eigenen Softwareprodukten. "Good enough" für
+Dass ich mir das zugetraut habe, liegt vermutlich auch an meinem Hintergrund: Ich habe mehr als zehn Jahre als
+Softwareentwicklerin gearbeitet.^[Unter anderem bei Adobe, außerdem selbstständig mit eigenen Softwareprodukten. "Good enough" für
 die eigene Forschung ist deshalb nicht der Punkt, an dem ich bei so etwas aufhöre. Ich will es richtig machen, damit
 es im Zweifel auch anderen helfen kann.] Ich kann also einschätzen, was ein solches Werkzeug braucht, und die Arbeit
-der KI anleiten und prüfen, statt mich blind auf sie zu verlassen (@sec-ki).
-
-Wie sich Feldspur zu bestehenden Werkzeugen und zur Literatur verhält, ordnet @sec-einordnung ein.
+der KI anleiten und prüfen, statt mich blind auf sie zu verlassen (mehr dazu in @sec-ki).
 
 ## Offen und zitierbar
 
 Ich bin große Verfechterin von Open Source und Open Science. Deshalb entsteht Feldspur im Offenen und wird gut
-zitierbar archiviert (@sec-zitieren). Zur Förderung der Wissenschaft.
+zitierbar archiviert (@sec-zitieren).
 
-Daher kommt auch eine zweite Motivation: meine Forschungsartefakte nicht nur in einer (für mich gerade so
+Aus diesen Prinzipien stammt auch eine zweite Motivation: meine Forschungsartefakte nicht nur in einer (für mich gerade so
 nachvollziehbaren) Zettelwirtschaft zu haben, sondern sauber archivierbar sortiert. Denn wo immer möglich ist es in
 meinen Augen im Sinne der Wissenschaft, auch qualitatives Forschungsmaterial zitierfähig zur Verfügung zu stellen.
 Schließlich ist es die empirische Grundlage unserer Ergebnisse. Mir ist bewusst, dass das wegen
-Anonymisierungspflichten u. Ä. oft leichter gesagt als getan ist. Feldspur kann dabei zumindest helfen: Es hält jede
+Anonymisierungspflichten u. Ä. oft leichter gesagt als getan ist. Feldspur kann dabei aber zumindest helfen: Es hält jede
 Originaldatei mit Prüfsumme, Herkunft und Zeitnachweis in einem Begleitprotokoll fest.
+Und exportiert die Daten in einem Format, das sich gut archivieren lässt, wie ein einzelnes Transkript pro Forschungstag, das alle Artefakte mit Zeitstempeln enthält. So kann man die Daten auch noch Jahre später nachvollziehen.
 
 Vielleicht hilft Feldspur auch über die Wissenschaft hinaus. Chronologische Ereignisse aus verschiedenen Quellen
 zusammenzuführen und zu analysieren, kann schließlich auch in anderen Bereichen nützlich sein. Das ist aber nur ein
-Nebeneffekt. Mein Hauptfokus liegt woanders.
+Nebeneffekt. Mein Hauptfokus liegt auf der Forschung.
