@@ -16,11 +16,11 @@ Stand: 16. November 2026
 
 </div>
 
-> **Zusammenfassung.** Ethnografische Feldeinsätze hinterlassen Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
+> **Zusammenfassung.** Ethnografische Feldeinsätze hinterlassen im modernen Forschungsfeld Tagebuchseiten, Fotos, Audio- und Videoaufnahmen – oft von vielen Geräten,
 > deren Uhren selten übereinstimmen. Wie lässt sich daraus ein Material machen, das sich zeitlich geordnet auswerten
-> (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Werkzeug, das dieses Material nach
+> (und zitieren) lässt? Feldspur ist mein Versuch einer Antwort: ein Open-Source-Programm, das dieses Material nach
 > Uhrzeit auf eine gemeinsame Achse legt, jede Zuordnung über sichtbare Zeitbelege nachvollziehbar macht und daraus
-> ein Dokument mit Zeitmarken für die Analyse in MAXQDA erzeugt. Im Begleittext beschreibe ich den Anlass, ordne
+> ein Dokument mit Zeitmarken für die Analyse in MAXQDA u. Ä. erzeugt. Im Begleittext beschreibe ich den Auslöser für die Entwicklung, ordne
 > Feldspur in bestehende Werkzeuge ein und lege offen, wie es mithilfe generativer KI entstanden ist. Das Handbuch
 > führt durch die Arbeit mit dem Programm.
 >
@@ -42,8 +42,7 @@ Stand: 16. November 2026
 >
 > Feldspur entsteht als Werkzeug für meine eigene ethnografische Forschung. Es richtet sich nach meinen Arbeitsabläufen
 > und hat weder stabile Formate noch Support oder Garantien. Projektdateien und Ausgaben können sich zwischen Versionen
-> ändern. Wer es ausprobieren möchte, ist herzlich eingeladen. Mit Ecken und Kanten ist aber zu rechnen. Ergebnisse, die in eine
-> Analyse oder Veröffentlichung eingehen, sollten daher möglichst an den Originalaufnahmen geprüft werden.
+> ändern. Wer es ausprobieren möchte, ist herzlich eingeladen. Mit Ecken und Kanten ist aber zu rechnen.
 
 ![Zeitachse mit dem erfundenen Testmarkt](docs/zeitachse.png)
 
@@ -62,14 +61,13 @@ Von mir stammen die Fragestellung, das Konzept, die Anforderungen aus der Feldfo
 die Richtung vor, sehe Ergebnisse durch und probiere sie aus. Jede Zeile Code lese ich allerdings nicht selbst gegen.
 Commits, an denen die KI beteiligt war, tragen im Repository eine `Co-Authored-By`-Zeile.
 
-Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat). Auch das kann sich nicht jede\*r leisten. Ich
-erwähne es deshalb zur Transparenz. Und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu
-stellen.
+Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat).
+Auch das kann sich nicht jede\*r leisten – es entsteht also ein weiteres diskriminierendes Gefälle in der Forschung.
+Und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu stellen.
 
 ### Was das für die Nutzung heißt
 
-- Der Code kann Fehler enthalten, die weder Tests noch ich bemerkt haben. Ergebnisse, die in eine Analyse oder
-  Veröffentlichung eingehen, bitte an den Originalaufnahmen prüfen.
+- Der Code kann Fehler enthalten, die weder Tests noch ich bemerkt haben.
 - Feldspur ist deshalb bewusst auf Nachvollziehbarkeit gebaut: Originale werden nie verändert und über Prüfsummen
   belegt. Jede Lage auf der Zeitachse wird aus sichtbaren Zeitbelegen berechnet. Automatische Vorschläge (z. B.
   Sync-Anker) zählen erst, wenn sie von Hand bestätigt wurden.
