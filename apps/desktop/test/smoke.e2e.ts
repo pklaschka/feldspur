@@ -245,6 +245,12 @@ try {
   await editor.getByRole("navigation", { name: "Seiten" }).getByRole("button").nth(1).click();
   const sheet = editor.getByTestId("diary-page");
   await sheet.locator("img").waitFor();
+  // Beim Öffnen „ganz“: die Seite füllt Breite oder Höhe der Fläche, statt winzig zu sein.
+  await page.waitForFunction(() => {
+    const a = document.querySelector("[data-testid=diary-area]")!.getBoundingClientRect();
+    const p = document.querySelector("[data-testid=diary-page]")!.getBoundingClientRect();
+    return p.width > (a.width - 40) * 0.9 || p.height > (a.height - 40) * 0.9;
+  });
   const drag = async (x0: number, y0: number, x1: number, y1: number) => {
     const b = (await sheet.boundingBox())!;
     await page.mouse.move(b.x + b.width * x0, b.y + b.height * y0);
@@ -267,7 +273,13 @@ try {
     await field.fill("");
     await field.pressSequentially(at.replace(":", ""));
     if ((await field.inputValue()) !== at) throw new Error(`Maske: ${await field.inputValue()} statt ${at}`);
+    // Vollständig getippt: weiter ins nächste Feld.
+    await page.waitForFunction(
+      (l) => document.activeElement?.getAttribute("aria-label") === l,
+      `Bezugszeitraum Eintrag ${n}`,
+    );
     // Mitten in der Uhrzeit korrigieren: Stundenziffer löschen und neu tippen, die Maske bleibt stehen.
+    await field.focus();
     await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(2, 2));
     await page.keyboard.press("Backspace");
     await page.keyboard.type("9");
@@ -373,6 +385,25 @@ try {
   if (!inWindow) throw new Error(`Karte liegt außerhalb des Fensters: ${JSON.stringify(cardBox)}`);
   await shot("-zeitachse-karte");
   await page.mouse.move(0, 0);
+  {
+    // Mittlere Maustaste gedrückt ziehen verschiebt die Zeitachse.
+    await page.getByRole("button", { name: "Vergrößern" }).first().click();
+    await page.getByRole("button", { name: "Vergrößern" }).first().click();
+    const axis = page.locator("canvas").first();
+    const b = (await axis.boundingBox())!;
+    const scrollOf = () => axis.evaluate((c) => c.parentElement!.parentElement!.scrollLeft);
+    await axis.evaluate((c) => (c.parentElement!.parentElement!.scrollLeft = 200));
+    const s0 = await scrollOf();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down({ button: "middle" });
+    await page.mouse.move(b.x + b.width / 2 + 120, b.y + b.height / 2, { steps: 4 });
+    await page.mouse.up({ button: "middle" });
+    const s1 = await scrollOf();
+    if (Math.abs(s0 - s1 - 120) > 2) throw new Error(`Verschieben mit Mausrad: ${s0} → ${s1}`);
+    console.log(`Zeitachse mit mittlerer Maustaste verschoben: ${s0} → ${s1}`);
+    await page.getByRole("button", { name: "Einpassen" }).click();
+    await page.mouse.move(0, 0);
+  }
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
   await shot("-ausgeben");

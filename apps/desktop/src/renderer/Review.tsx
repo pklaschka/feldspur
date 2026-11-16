@@ -298,6 +298,29 @@ function Timeline({
     }
   }, [playheadMs]);
 
+  // Mittlere Maustaste (Mausrad drücken) und ziehen verschiebt die Zeitachse.
+  const [panning, setPanning] = useState(false);
+  const onPanStart = (e: MouseEvent) => {
+    if (e.button !== 1 || !scroller.current) return;
+    e.preventDefault(); // sonst startet der Browser sein eigenes Auto-Scrollen
+    const el = scroller.current;
+    const x0 = e.clientX;
+    const s0 = el.scrollLeft;
+    setPanning(true);
+    setHover(null);
+    const move = (ev: globalThis.MouseEvent) => {
+      el.scrollLeft = s0 - (ev.clientX - x0);
+    };
+    const up = (ev: globalThis.MouseEvent) => {
+      if (ev.button !== 1) return;
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setPanning(false);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
   const local = (e: MouseEvent) => {
     const r = canvas.current!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -505,7 +528,9 @@ function Timeline({
         </div>
         <div
           ref={scroller}
-          className="relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+          className={cx("relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden", panning && "cursor-grabbing")}
+          onMouseDown={onPanStart}
+          onAuxClick={(e) => e.button === 1 && e.preventDefault()}
           onScroll={(e) => {
             // Steht eine neue Position noch aus (mehrere Mausrad-Schritte zwischen zwei Bildern), meldet das
             // Scroll-Ereignis noch die alte. Übernommen, würde ein Bild lang der alte Ausschnitt zum neuen Zoom
@@ -528,7 +553,7 @@ function Timeline({
               )}
               style={{ width, height }}
               onMouseDown={onDown}
-              onMouseMove={onMove}
+              onMouseMove={(e) => !panning && onMove(e)}
               onMouseLeave={() => setHover(null)}
               onClick={onClick}
               aria-hidden
@@ -574,7 +599,7 @@ function Timeline({
         </Legend>
         <span className="ml-auto">
           Klick in Audio/Video spult dorthin · Episodengrenzen lassen sich ziehen · Mausrad zoomt an der Maus · Umschalt
-          + Mausrad verschiebt
+          + Mausrad oder Mausrad gedrückt ziehen verschiebt
         </span>
       </div>
       {/* Direkt unter Achse und Legende: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
