@@ -9,6 +9,7 @@ Im Schritt **Durchsehen** liegt alles auf einer Zeitachse: eine Spur pro Gerät,
 - Ein **Klick** in eine Audio- oder Videospur spult dorthin; die laufenden Aufnahmen erscheinen in der Wiedergabe.
   Beim Abspielen läuft die Zeitachse mit.
 - Das **Mausrad** zoomt an der Mausposition, mit **Umschalt** (oder waagerechtem Wischen) verschiebst du die Achse.
+  Du kannst sie auch mit gedrückter **mittlerer Maustaste** (Mausrad drücken) ziehen.
   Regler und +/− zoomen um die Abspielposition.
 - Ein Klick auf eine Quelle öffnet sie in der Detailleiste.
 - Tagebuchbalken zeigen ihre Kurzform oder die erste Zeile, Clips zeigen ihre Mitschrift-Zeilen als Striche. Fährst
