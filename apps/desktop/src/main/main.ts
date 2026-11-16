@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
 import { localMs, ProjectStore, type TouchedRow } from "@feldspur/core";
 import {
@@ -33,6 +33,7 @@ import {
   type SourceNoteInput,
   type ProjectInfo,
 } from "../shared/api.ts";
+import { changeLogCsv } from "./changelog.ts";
 import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion, setRegionPage } from "./diary.ts";
 import {
   addManualAnchor,
@@ -181,6 +182,21 @@ function registerIpc(): void {
   });
   ipcMain.handle(IPC.envelopes, (_e, id: string) => timelineEnvelopes(requireStore(), id));
   ipcMain.handle(IPC.historyState, () => (store ? store.history.state() : { undo: null, redo: null, serial: 0 }));
+  ipcMain.handle(IPC.changeLog, (_e, opts: { limit?: number; before?: number }) =>
+    store ? store.history.changeLog(opts) : [],
+  );
+  ipcMain.handle(IPC.exportChangeLog, async () => {
+    const s = requireStore();
+    const info = projectInfo()!;
+    const r = await dialog.showSaveDialog(win!, {
+      title: "Änderungsprotokoll speichern",
+      defaultPath: join(dirname(info.path), `${basename(info.path, ".feldspur")}_Aenderungsprotokoll.csv`),
+      filters: [{ name: "CSV", extensions: ["csv"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    await writeFile(r.filePath, changeLogCsv(s.history), "utf8");
+    return r.filePath;
+  });
   ipcMain.handle(IPC.currentProject, () => projectInfo());
 
   ipcMain.handle(IPC.newProject, async () => {

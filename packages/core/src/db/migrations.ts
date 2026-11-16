@@ -169,4 +169,19 @@ export const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX episode_edits_source ON episode_edits(source_id);
   `,
+  // 12: Dauerhaftes Änderungsprotokoll (jede Änderung mit Werten vorher und nachher)
+  `
+  CREATE TABLE change_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL,
+    step INTEGER,
+    label TEXT,
+    tbl TEXT NOT NULL,
+    op TEXT NOT NULL,
+    row_key TEXT NOT NULL,
+    before TEXT,
+    after TEXT
+  );
+  CREATE INDEX change_log_step ON change_log(step);
+  `,
 ];

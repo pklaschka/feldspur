@@ -8,6 +8,7 @@ import { ExportProvider, percent, useExport } from "./exportState.tsx";
 import { formatDay } from "./format.ts";
 import { Inspector, type Todo } from "./Inspector.tsx";
 import { renderOverlays } from "./overlay.ts";
+import { ChangeLog } from "./ChangeLog.tsx";
 import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
 import { renderImageRefJpeg } from "./stillRender.ts";
@@ -48,6 +49,7 @@ export function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [projectMenu, setProjectMenu] = useState(false);
+  const [changeLog, setChangeLog] = useState(false);
 
   // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
   useEffect(() => {
@@ -170,7 +172,9 @@ export function App() {
                 onOpenRecent={(path) => void guard(() => api.openRecent(path)).then(adopt)}
                 onOpenOther={() => void guard(api.openProject).then(adopt)}
                 onNew={() => void guard(api.newProject).then(adopt)}
+                onChangeLog={() => setChangeLog(true)}
               />
+              <ChangeLog open={changeLog} onOpenChange={setChangeLog} />
             </div>
             <h2 className="mx-2 mt-7 mb-1.5 text-[1rem] font-semibold text-rail-ink">Einsätze</h2>
             {project.sessions.map((s) => (

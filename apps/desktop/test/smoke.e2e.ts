@@ -459,6 +459,20 @@ try {
   await src("Einkaufsliste.txt").waitFor({ state: "detached" });
   console.log("Rückgängig: im Textfeld erst das Feld, dann das Projekt; „Zeigen“ springt zur Quelle");
 
+  // Änderungsprotokoll: auch Rückgängig und Wiederholen stehen drin, mit Werten vorher/nachher.
+  await page.getByTestId("project-menu").click();
+  await page.getByRole("menuitem", { name: "Änderungsprotokoll…" }).click();
+  const log = page.getByTestId("change-log");
+  const redone = log.getByTestId("change-step").filter({ hasText: /^.*Wiederholt: / }).first();
+  await redone.waitFor();
+  await redone.getByRole("button").click();
+  await redone.getByText("Quelle gelöscht").waitFor();
+  await redone.getByText("Einkaufsliste.txt").first().waitFor();
+  await shot("-aenderungsprotokoll");
+  await page.keyboard.press("Escape");
+  await log.waitFor({ state: "detached" });
+  console.log(`Änderungsprotokoll: ${await log.count()} offen, Wiederholen mit Werten sichtbar`);
+
   await menuFor("Tagebuch_S02_Rueckseite.jpg");
   await page.getByRole("menuitem", { name: /Als weiteres Bild zu Seite/ }).click();
   await page.getByRole("menuitem", { name: /Tagebuch_S02\.jpg/ }).click();

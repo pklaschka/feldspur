@@ -14,6 +14,8 @@ import type Database from "better-sqlite3";
 
 /** Tabellen, die nur Zwischenergebnisse halten. Sie werden mitprotokolliert, leeren aber den Verlauf nicht. */
 const CACHE_TABLES = new Set(["audio_analysis"]);
+/** Das dauerhafte Änderungsprotokoll selbst: nie rückgängig, nie protokolliert. */
+const LOG_TABLE = "change_log";
 /** Höchstens so viele Schritte behalten. */
 const MAX_STEPS = 100;
 
@@ -21,6 +23,26 @@ interface Step {
   label: string;
   from: number;
   to: number;
+}
+
+/** Eine protokollierte Änderung an einer Zeile. */
+export interface ChangeEntry {
+  table: string;
+  op: "insert" | "update" | "delete";
+  /** id der Zeile, sonst ihre rowid. */
+  rowKey: string;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+}
+
+/** Ein Schritt im dauerhaften Protokoll: eine Aktion mit allen Zeilen, die sie geändert hat. */
+export interface ChangeStep {
+  step: number;
+  /** ISO-Zeit (UTC) der ersten Änderung. */
+  at: string;
+  /** Beschriftung der Aktion; null bei Änderungen ohne Beschriftung (Einsammeln, Tonspur-Analyse). */
+  label: string | null;
+  changes: ChangeEntry[];
 }
 
 export interface HistoryState {
@@ -61,7 +83,9 @@ export class History {
       )
       .pluck()
       .all() as string[];
+    const hasLog = tables.includes(LOG_TABLE);
     for (const t of tables) {
+      if (t === LOG_TABLE) continue;
       const cols = (sqlite.prepare(`PRAGMA main.table_info(${q(t)})`).all() as { name: string }[]).map((c) => c.name);
       const log = (sql: string) => `INSERT INTO temp.undolog(tbl, sql) VALUES (${lit(t)}, ${sql});`;
       const set = cols.map((c) => `${lit(`${q(c)}=`)}||quote(OLD.${q(c)})`).join(`||','||`);
@@ -80,8 +104,94 @@ export class History {
           ${log(`${lit(`INSERT INTO main.${q(t)}(rowid,${cols.map(q).join(",")}) VALUES(`)}||OLD.rowid||','||${values}||')'`)}
         END;
       `);
+      if (hasLog && !CACHE_TABLES.has(t)) this.changeTriggers(t, cols);
     }
     this.seen = this.maxSeq();
+  }
+
+  /**
+   * Dauerhaftes Protokoll: Jede Änderung an einer Zeile landet mit den Spalten vorher und nachher (JSON) in
+   * change_log. Die Beschriftung setzt record() bzw. undo()/redo() danach für alle Zeilen ihres Schritts.
+   */
+  private changeTriggers(t: string, cols: string[]): void {
+    const json = (row: "OLD" | "NEW") => `json_object(${cols.map((c) => `${lit(c)}, ${row}.${q(c)}`).join(", ")})`;
+    const key = (row: "OLD" | "NEW") =>
+      cols.includes("id") ? `CAST(${row}."id" AS TEXT)` : `CAST(${row}.rowid AS TEXT)`;
+    const changed = cols.map((c) => `OLD.${q(c)} IS NOT NEW.${q(c)}`).join(" OR ");
+    const ins = (op: string, k: string, before: string, after: string) =>
+      `INSERT INTO main.${LOG_TABLE}(at, tbl, op, row_key, before, after) VALUES (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ${lit(t)}, '${op}', ${k}, ${before}, ${after});`;
+    this.sqlite.exec(`
+      DROP TRIGGER IF EXISTS temp.${q(`log_ins_${t}`)};
+      DROP TRIGGER IF EXISTS temp.${q(`log_upd_${t}`)};
+      DROP TRIGGER IF EXISTS temp.${q(`log_del_${t}`)};
+      CREATE TEMP TRIGGER ${q(`log_ins_${t}`)} AFTER INSERT ON main.${q(t)} BEGIN
+        ${ins("insert", key("NEW"), "NULL", json("NEW"))}
+      END;
+      CREATE TEMP TRIGGER ${q(`log_upd_${t}`)} AFTER UPDATE ON main.${q(t)} WHEN ${changed} BEGIN
+        ${ins("update", key("NEW"), json("OLD"), json("NEW"))}
+      END;
+      CREATE TEMP TRIGGER ${q(`log_del_${t}`)} AFTER DELETE ON main.${q(t)} BEGIN
+        ${ins("delete", key("OLD"), json("OLD"), "NULL")}
+      END;
+    `);
+    this.logging = true;
+  }
+
+  private logging = false;
+
+  private maxLogId(): number {
+    if (!this.logging) return 0;
+    return (this.sqlite.prepare(`SELECT coalesce(max(id), 0) FROM main.${LOG_TABLE}`).pluck().get() as number) ?? 0;
+  }
+
+  /** Protokollzeilen nach `after` als einen Schritt beschriften. Ohne Zeilen entsteht kein Schritt. */
+  private labelLog(after: number, label: string | null): void {
+    if (!this.logging) return;
+    const next =
+      ((this.sqlite.prepare(`SELECT coalesce(max(step), 0) FROM main.${LOG_TABLE}`).pluck().get() as number) ?? 0) + 1;
+    this.sqlite
+      .prepare(`UPDATE main.${LOG_TABLE} SET step = ?, label = ? WHERE id > ? AND step IS NULL`)
+      .run(next, label, after);
+  }
+
+  /** Dauerhaftes Protokoll, neueste Schritte zuerst. `before`: nur Schritte davor (zum Weiterblättern). */
+  changeLog(opts: { limit?: number; before?: number } = {}): ChangeStep[] {
+    if (!this.logging) return [];
+    this.settle();
+    const steps = this.sqlite
+      .prepare(
+        `SELECT step, min(at) AS at, max(label) AS label FROM main.${LOG_TABLE}
+         WHERE step IS NOT NULL AND step < ? GROUP BY step ORDER BY step DESC LIMIT ?`,
+      )
+      .all(opts.before ?? Number.MAX_SAFE_INTEGER, opts.limit ?? 50) as {
+      step: number;
+      at: string;
+      label: string | null;
+    }[];
+    if (!steps.length) return [];
+    const rows = this.sqlite
+      .prepare(
+        `SELECT step, tbl, op, row_key, before, after FROM main.${LOG_TABLE} WHERE step BETWEEN ? AND ? ORDER BY id`,
+      )
+      .all(steps.at(-1)!.step, steps[0]!.step) as {
+      step: number;
+      tbl: string;
+      op: ChangeEntry["op"];
+      row_key: string;
+      before: string | null;
+      after: string | null;
+    }[];
+    const by = new Map(steps.map((s) => [s.step, { ...s, changes: [] as ChangeEntry[] }]));
+    const parse = (v: string | null) => (v === null ? null : (JSON.parse(v) as Record<string, unknown>));
+    for (const r of rows)
+      by.get(r.step)?.changes.push({
+        table: r.tbl,
+        op: r.op,
+        rowKey: r.row_key,
+        before: parse(r.before),
+        after: parse(r.after),
+      });
+    return [...by.values()];
   }
 
   private maxSeq(): number {
@@ -93,6 +203,8 @@ export class History {
    * Zwischenspeicher-Zeilen werden einfach verworfen.
    */
   private settle(): void {
+    // Änderungen ohne Beschriftung (Einsammeln, Analyse) bilden im Protokoll einen eigenen Schritt.
+    this.labelLog(0, null);
     const max = this.maxSeq();
     if (max <= this.seen) return;
     const real = this.sqlite
@@ -108,7 +220,12 @@ export class History {
   record<T>(label: string, fn: () => T): T {
     this.settle();
     const from = this.seen + 1;
-    const result = this.sqlite.transaction(fn)();
+    const logFrom = this.maxLogId();
+    const result = this.sqlite.transaction(() => {
+      const r = fn();
+      this.labelLog(logFrom, label);
+      return r;
+    })();
     const to = this.maxSeq();
     this.seen = to;
     if (to >= from) {
@@ -128,7 +245,7 @@ export class History {
     this.settle();
     const step = this.undoStack.pop();
     if (!step) return null;
-    this.redoStack.push(this.replay(step));
+    this.redoStack.push(this.replay(step, `Rückgängig: ${step.label}`));
     return step.label;
   }
 
@@ -136,7 +253,7 @@ export class History {
     this.settle();
     const step = this.redoStack.pop();
     if (!step) return null;
-    this.undoStack.push(this.replay(step));
+    this.undoStack.push(this.replay(step, `Wiederholt: ${step.label}`));
     return step.label;
   }
 
@@ -162,8 +279,9 @@ export class History {
   }
 
   /** Befehle eines Schritts rückwärts ausführen; die Trigger liefern dabei den Gegenschritt. */
-  private replay(step: Step): Step {
+  private replay(step: Step, logLabel: string): Step {
     return this.sqlite.transaction(() => {
+      const logFrom = this.maxLogId();
       // Zeilen mit Fremdschlüsseln kommen in umgekehrter Reihenfolge zurück: erst am Ende prüfen.
       this.sqlite.pragma("defer_foreign_keys = ON");
       const rows = this.sqlite
@@ -187,6 +305,7 @@ export class History {
       }
       // Rückwärts ausgeführt: umdrehen, damit die Reihenfolge der ursprünglichen Aktion gilt.
       this.touched = touched.reverse();
+      this.labelLog(logFrom, logLabel);
       const to = this.maxSeq();
       this.seen = to;
       return { label: step.label, from, to };

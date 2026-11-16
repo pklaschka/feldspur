@@ -2,7 +2,15 @@
  * Schnittstelle zwischen Oberfläche (Renderer) und Hauptprozess.
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
-import type { FieldSession, LevelMode, OffsetBasis, Peaks, PlacementStatus, SourceKind } from "@feldspur/core";
+import type {
+  ChangeStep,
+  FieldSession,
+  LevelMode,
+  OffsetBasis,
+  Peaks,
+  PlacementStatus,
+  SourceKind,
+} from "@feldspur/core";
 import type { MontagePreview } from "@feldspur/media";
 
 export interface RecentProject {
@@ -509,6 +517,10 @@ export interface FeldspurApi {
   envelopes(sessionId: string): Promise<Record<string, { rate: number; data: Uint8Array }>>;
   redo(sessionId: string | null): Promise<HistoryResult>;
   historyState(): Promise<{ undo: string | null; redo: string | null; serial: number }>;
+  /** Dauerhaftes Änderungsprotokoll des Projekts, neueste Schritte zuerst; `before` blättert weiter zurück. */
+  changeLog(opts: { limit?: number; before?: number }): Promise<ChangeStep[]>;
+  /** Ganzes Änderungsprotokoll als CSV speichern (Speichern-Dialog). Gibt den Pfad zurück, null bei Abbruch. */
+  exportChangeLog(): Promise<string | null>;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
 }
@@ -575,6 +587,8 @@ export const IPC = {
   envelopes: "episodes:envelopes",
   redo: "history:redo",
   historyState: "history:state",
+  changeLog: "history:change-log",
+  exportChangeLog: "history:export-change-log",
   previewExport: "export:preview",
   montagePreview: "export:montage",
   exportSession: "export:run",

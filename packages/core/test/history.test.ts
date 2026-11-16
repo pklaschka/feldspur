@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 import { ProjectStore } from "../src/db/store.ts";
 import { T } from "./scenario.ts";
@@ -108,5 +111,73 @@ describe("Rückgängig und Wiederholen", () => {
     ).toThrow("geht nicht");
     expect(store.getDevice(device.id).label).toBe("Rekorder");
     expect(store.history.state().undo).toBeNull();
+  });
+});
+
+describe("Dauerhaftes Änderungsprotokoll", () => {
+  it("hält jede Aktion mit Werten vorher und nachher fest", () => {
+    const { store, device } = setup();
+    store.history.record("Gerät umbenannt", () => store.updateDevice(device.id, { label: "Diktiergerät" }));
+    const [step] = store.history.changeLog();
+    expect(step).toMatchObject({ label: "Gerät umbenannt" });
+    // updateDevice setzt erst die Referenzuhr zurück, dann alles: zwei Zeilen, die letzte mit dem neuen Namen.
+    expect(step!.changes.at(-1)).toEqual({
+      table: "devices",
+      op: "update",
+      rowKey: device.id,
+      before: expect.objectContaining({ label: "Rekorder" }),
+      after: expect.objectContaining({ label: "Diktiergerät" }),
+    });
+  });
+
+  it("protokolliert Rückgängig und Wiederholen als eigene Schritte", () => {
+    const { store, device } = setup();
+    store.history.record("Gerät umbenannt", () => store.updateDevice(device.id, { label: "Diktiergerät" }));
+    store.history.undo();
+    store.history.redo();
+    expect(
+      store.history
+        .changeLog()
+        .map((s) => s.label)
+        .slice(0, 3),
+    ).toEqual(["Wiederholt: Gerät umbenannt", "Rückgängig: Gerät umbenannt", "Gerät umbenannt"]);
+    expect(store.history.changeLog()[1]!.changes.find((c) => c.before?.label !== c.after?.label)).toMatchObject({
+      before: { label: "Diktiergerät" },
+      after: { label: "Rekorder" },
+    });
+  });
+
+  it("fasst Änderungen ohne Beschriftung zu einem Schritt zusammen und überlebt das Schließen", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feldspur-log-"));
+    const file = join(dir, "p.feldspur");
+    try {
+      const store = ProjectStore.open(file);
+      const session = store.addSession({ title: "Testmarkt", date: "2026-09-14", place: "", extra: {} });
+      store.addDevice({ sessionId: session.id, label: "A", isReference: true });
+      const log = store.history.changeLog();
+      expect(log).toHaveLength(1);
+      expect(log[0]).toMatchObject({ label: null });
+      expect(log[0]!.changes.map((c) => `${c.table}:${c.op}`)).toEqual([
+        "project_meta:insert",
+        "sessions:insert",
+        "devices:insert",
+      ]);
+      store.close();
+      const again = ProjectStore.open(file);
+      expect(again.history.changeLog()).toHaveLength(1);
+      again.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("blättert mit before zu älteren Schritten", () => {
+    const { store, device } = setup();
+    for (const l of ["B", "C", "D"]) store.history.record(`→ ${l}`, () => store.updateDevice(device.id, { label: l }));
+    const first = store.history.changeLog({ limit: 2 });
+    expect(first.map((s) => s.label)).toEqual(["→ D", "→ C"]);
+    const more = store.history.changeLog({ limit: 2, before: first.at(-1)!.step });
+    // Ganz zu Beginn: das Anlegen ohne Beschriftung.
+    expect(more.map((s) => s.label)).toEqual(["→ B", null]);
   });
 });
