@@ -242,7 +242,7 @@
     item("Zitieren", [
       Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse
       zusammenführen. Begleittext und Handbuch._
-      #if doi != none [#link("https://doi.org/" + doi)[https://doi.org/#doi]] else if url != none [#link(url)]
+      #if doi != none [#link("https://doi.org/" + doi)] else if url != none [#link(url)]
     ])
     item("DOI", if doi != none [#link("https://doi.org/" + doi)[#doi]] else [
       Jedes Release wird auf Zenodo archiviert und erhält dort eine DOI. Sie steht dann hier.
