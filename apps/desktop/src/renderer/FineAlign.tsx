@@ -11,6 +11,7 @@ import { Dialog } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mediaUrl, type AlignResult, type SessionView, type SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
+import { prepareCanvas } from "./canvas.ts";
 import { Button, Choice, CloseButton, cx, Picker } from "./ui.tsx";
 import { usePeakTiles } from "./Waveform.tsx";
 import { applyLevel, LEVEL_MEDIA_PROPS, resumeAudio, setPan } from "./level.ts";
@@ -391,12 +392,8 @@ function Overlay({
   useEffect(() => {
     const el = canvas.current;
     if (!el || width <= 0) return;
-    const dpr = window.devicePixelRatio || 1;
-    el.width = Math.round(width * dpr);
-    el.height = Math.round(LANE_H * dpr);
-    const ctx = el.getContext("2d");
+    const ctx = prepareCanvas(el, width, LANE_H);
     if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const cs = getComputedStyle(el);
     const v = (n: string) => cs.getPropertyValue(n).trim() || "#888";
     const w = width;

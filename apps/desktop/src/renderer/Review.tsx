@@ -1,5 +1,6 @@
 import { Slider, VisuallyHidden } from "radix-ui";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import type { SessionView, SourceRow, TranscriptRow } from "../shared/api.ts";
 import { clock, hm, lage, STATUS_TEXT } from "./format.ts";
 import {
@@ -20,6 +21,7 @@ import {
   type Item,
   type Track,
 } from "./timeline.ts";
+import { prepareCanvas } from "./canvas.ts";
 import { usePlayback } from "./playback.tsx";
 import type { Reveal } from "./SearchDialog.tsx";
 import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
@@ -99,7 +101,10 @@ function Timeline({
   const [width, setWidth] = useState(700);
   const [scrollX, setScrollX] = useState(0);
   const [zoom, setZoom] = useState<number | null>(null); // px pro Minute; null = einpassen
-  const [hover, setHover] = useState<{ item: Item; x: number; y: number } | null>(null);
+  // x/y: auf der Leinwand (Treffer, Mitschrift-Zeile); clientX/clientY: im Fenster (Lage der Karte).
+  const [hover, setHover] = useState<{ item: Item; x: number; y: number; clientX: number; clientY: number } | null>(
+    null,
+  );
   const [themeTick, setThemeTick] = useState(0);
   const { position, seek } = usePlayback();
   const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
@@ -161,14 +166,12 @@ function Timeline({
     return () => mq.removeEventListener("change", on);
   }, []);
 
-  useEffect(() => {
+  // Vor dem Anzeigen zeichnen (Layout-Effekt), damit nach Scrollen oder Zoomen nie ein alter Ausschnitt aufblitzt.
+  useLayoutEffect(() => {
     const c = canvas.current;
     if (!c || !scroller.current?.clientWidth) return;
-    const dpr = window.devicePixelRatio || 1;
-    c.width = Math.round(width * dpr);
-    c.height = Math.round(height * dpr);
-    const ctx = c.getContext("2d")!;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = prepareCanvas(c, width, height);
+    if (!ctx) return;
     draw(ctx, readPalette(document.documentElement), {
       scale,
       width,
@@ -287,7 +290,7 @@ function Timeline({
   const onMove = (e: MouseEvent) => {
     const { x, y } = local(e);
     const it = hitTest(items, scale, x, y);
-    setHover(it ? { item: it, x, y } : null);
+    setHover(it ? { item: it, x, y, clientX: e.clientX, clientY: e.clientY } : null);
   };
   const onClick = (e: MouseEvent) => {
     const { x, y } = local(e);
@@ -453,9 +456,7 @@ function Timeline({
               aria-hidden
             />
           </div>
-          {hover && (
-            <HoverCard item={hover.item} line={hoverLine} x={hover.x} y={hover.y} width={width} offset={scrollX} />
-          )}
+          {hover && <HoverCard item={hover.item} line={hoverLine} x={hover.clientX} y={hover.clientY} />}
         </div>
       </div>
 
@@ -540,17 +541,28 @@ function HoverCard({
   line,
   x,
   y,
-  width,
-  offset,
 }: {
   item: Item;
   /** Zeile der Mitschrift unter dem Zeiger. */
   line: TranscriptRow | null;
+  /** Mauszeiger im Fenster. */
   x: number;
   y: number;
-  width: number;
-  offset: number;
 }) {
+  const card = useRef<HTMLDivElement>(null);
+  // Die Karte liegt über allem (Portal, fest positioniert), damit Achse und Rahmen sie nicht abschneiden. Passt
+  // sie rechts oder unten nicht mehr ins Fenster, klappt sie auf die andere Seite des Zeigers.
+  useLayoutEffect(() => {
+    const el = card.current;
+    if (!el) return;
+    const { width: w, height: h } = el.getBoundingClientRect();
+    const gap = 14;
+    const left = x + gap + w > window.innerWidth - 8 ? Math.max(8, x - gap - w) : x + gap;
+    const top = y + gap + h > window.innerHeight - 8 ? Math.max(8, y - gap - h) : y + gap;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.visibility = "visible";
+  });
   let title: string;
   let lines: string[];
   if (item.type === "episode") {
@@ -577,11 +589,12 @@ function HoverCard({
       lines.push(`${line.clockMs !== null ? clock(line.clockMs) : ""} „${t.length > 140 ? `${t.slice(0, 137)}…` : t}“`);
     }
   }
-  const left = offset + Math.min(Math.max(8, x + 12), width - 240);
-  return (
+  return createPortal(
     <div
-      className="pointer-events-none absolute z-10 w-max max-w-60 rounded-md bg-ink px-2.5 py-1.5 text-[0.82rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
-      style={{ left, top: y + 14 }}
+      ref={card}
+      data-testid="timeline-hover"
+      className="pointer-events-none fixed z-50 w-max max-w-72 rounded-md bg-ink px-2.5 py-1.5 text-[0.82rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+      style={{ left: x + 14, top: y + 14, visibility: "hidden" }}
     >
       <b className="block font-semibold">{title}</b>
       {lines.map((l) => (
@@ -589,7 +602,8 @@ function HoverCard({
           {l}
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
