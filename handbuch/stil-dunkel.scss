@@ -16,3 +16,10 @@ $callout-color-tip: #a0c584;
 $callout-color-warning: #e8b95e;
 $callout-color-important: #e48f63;
 $callout-color-caution: #f08d87;
+
+/*-- scss:rules --*/
+// Der BibTeX-Block im Abschnitt „Zitat“ hat keine Syntaxfarben und bliebe sonst schwarz auf dunklem Grund.
+.quarto-appendix-bibtex,
+.quarto-appendix-bibtex code {
+  color: $code-color;
+}

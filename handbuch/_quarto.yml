@@ -5,7 +5,10 @@ project:
   resources:
     - bilder/logo.svg
   # Bricht ab, wenn die Webseite etwas von fremden Servern lädt.
-  post-render: extern-pruefen.ts
+  # Stand in die Zitierangaben der Webseite (siehe zitierangaben.ts), danach die Prüfung.
+  post-render:
+    - zitierangaben.ts
+    - extern-pruefen.ts
 
 manuscript:
   article: index.qmd
