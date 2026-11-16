@@ -254,6 +254,8 @@ function Timeline({
     if (target === undefined || !scroller.current) return;
     scroller.current.scrollLeft = target;
     live.current = { ...live.current, pendingScroll: undefined };
+    // Hat der Browser die Position begrenzt, zählt seine.
+    if (Math.abs(scroller.current.scrollLeft - target) > 1) setScrollX(scroller.current.scrollLeft);
   });
 
   // Mausrad zoomt auf die Mausposition; waagerecht (Touchpad, Umschalt + Rad) wird verschoben.
@@ -504,7 +506,13 @@ function Timeline({
         <div
           ref={scroller}
           className="relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
-          onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)}
+          onScroll={(e) => {
+            // Steht eine neue Position noch aus (mehrere Mausrad-Schritte zwischen zwei Bildern), meldet das
+            // Scroll-Ereignis noch die alte. Übernommen, würde ein Bild lang der alte Ausschnitt zum neuen Zoom
+            // gezeichnet: Das war das Springen und Flackern beim Zoomen.
+            if (live.current.pendingScroll !== undefined) return;
+            setScrollX(e.currentTarget.scrollLeft);
+          }}
         >
           <div style={{ width: innerW, height }}>
             <canvas

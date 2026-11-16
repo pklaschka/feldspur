@@ -256,6 +256,8 @@ try {
   await editor.getByLabel("Notierzeit Eintrag 2").waitFor();
   await drag(0.06, 0.46, 0.94, 0.8);
   await editor.getByLabel("Notierzeit Eintrag 3").waitFor();
+  // Neue Box: Fokus steht gleich im Uhrzeitfeld.
+  await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Notierzeit Eintrag 3");
   for (const [n, at, text] of [
     [2, "10:35", "Streit am Käsestand, Händlerin holt Marktaufsicht"],
     [3, "10:41", "Gespräch mit Testperson B über Standgebühren"],
@@ -265,6 +267,15 @@ try {
     await field.fill("");
     await field.pressSequentially(at.replace(":", ""));
     if ((await field.inputValue()) !== at) throw new Error(`Maske: ${await field.inputValue()} statt ${at}`);
+    // Mitten in der Uhrzeit korrigieren: Stundenziffer löschen und neu tippen, die Maske bleibt stehen.
+    await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(2, 2));
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("9");
+    const fixed = `1${at.slice(1, 1)}9${at.slice(2)}`;
+    if ((await field.inputValue()) !== fixed) throw new Error(`Korrektur: ${await field.inputValue()} statt ${fixed}`);
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type(at[1]!);
+    if ((await field.inputValue()) !== at) throw new Error(`Zurück: ${await field.inputValue()} statt ${at}`);
     await field.press("Enter");
     await editor.getByLabel(`Kurzform Eintrag ${n}`).fill(text);
     await editor.getByLabel(`Kurzform Eintrag ${n}`).blur();
@@ -391,6 +402,31 @@ try {
   await page.keyboard.press("Control+y");
   await src("Einkaufsliste.txt").waitFor({ state: "detached" });
   console.log("Rückgängig: Quelle mit Strg+Z zurück, mit Strg+Y wieder entfernt");
+  // Im Textfeld: erst das Feld, danach geht es mit dem Projekt weiter.
+  await page.evaluate(() => {
+    const el = document.createElement("input");
+    el.id = "probe";
+    el.setAttribute("aria-label", "Probe");
+    document.body.append(el);
+  });
+  const probe = page.getByLabel("Probe");
+  await probe.focus();
+  await page.keyboard.type("ab");
+  await page.keyboard.press("Control+z");
+  await page.waitForTimeout(300);
+  if ((await probe.inputValue()) !== "") throw new Error("Feld nicht rückgängig");
+  if ((await src("Einkaufsliste.txt").count()) > 0) throw new Error("Projekt zu früh rückgängig");
+  await page.keyboard.press("Control+z");
+  await src("Einkaufsliste.txt").waitFor();
+  await page.evaluate(() => document.getElementById("probe")?.remove());
+  // „Zeigen“ springt zur betroffenen Quelle.
+  await page.getByTestId("undo-toast").getByRole("button", { name: "Zeigen" }).click();
+  await page.getByTestId("inspector").getByText("Einkaufsliste.txt").first().waitFor();
+  await page.getByRole("tab", { name: /Einsammeln/ }).click();
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+y");
+  await src("Einkaufsliste.txt").waitFor({ state: "detached" });
+  console.log("Rückgängig: im Textfeld erst das Feld, dann das Projekt; „Zeigen“ springt zur Quelle");
 
   await menuFor("Tagebuch_S02_Rueckseite.jpg");
   await page.getByRole("menuitem", { name: /Als weiteres Bild zu Seite/ }).click();

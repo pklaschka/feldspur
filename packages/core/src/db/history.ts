@@ -31,6 +31,15 @@ export interface HistoryState {
   serial: number;
 }
 
+/** Eine Zeile, die der letzte Schritt verändert hat, mit ihren Spalten (vorher oder nachher, was es gibt). */
+export interface TouchedRow {
+  table: string;
+  row: Record<string, unknown>;
+}
+
+const STMT = /^(?:DELETE FROM|UPDATE|INSERT INTO) main\."((?:[^"]|"")+)"/;
+const ROWID = /(?:rowid=(\d+)$|VALUES\((\d+),)/;
+
 const q = (name: string) => `"${name.replace(/"/g, '""')}"`;
 const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
@@ -40,6 +49,7 @@ export class History {
   /** Letzte Protokollzeile, die zu einem bekannten Schritt gehört (oder schon geprüft ist). */
   private seen = 0;
   private serial = 0;
+  private touched: TouchedRow[] = [];
 
   constructor(private readonly sqlite: Database.Database) {
     sqlite.exec(
@@ -139,6 +149,11 @@ export class History {
     };
   }
 
+  /** Zeilen, die das letzte Rückgängig oder Wiederholen verändert hat (in der Reihenfolge der Aktion). */
+  lastTouched(): TouchedRow[] {
+    return this.touched;
+  }
+
   clear(): void {
     this.undoStack = [];
     this.redoStack = [];
@@ -156,7 +171,22 @@ export class History {
         .all(step.from, step.to) as { seq: number; sql: string }[];
       this.sqlite.prepare("DELETE FROM temp.undolog WHERE seq BETWEEN ? AND ?").run(step.from, step.to);
       const from = this.maxSeq() + 1;
-      for (const r of rows) this.sqlite.exec(r.sql);
+      const touched: TouchedRow[] = [];
+      const snapshot = (table: string, rowid: number) =>
+        this.sqlite.prepare(`SELECT * FROM main.${q(table)} WHERE rowid = ?`).get(rowid) as
+          | Record<string, unknown>
+          | undefined;
+      for (const r of rows) {
+        const t = STMT.exec(r.sql)?.[1]?.replace(/""/g, '"');
+        const id = ROWID.exec(r.sql);
+        const rowid = id ? Number(id[1] ?? id[2]) : NaN;
+        const before = t && Number.isFinite(rowid) ? snapshot(t, rowid) : undefined;
+        this.sqlite.exec(r.sql);
+        const row = before ?? (t && Number.isFinite(rowid) ? snapshot(t, rowid) : undefined);
+        if (t && row) touched.push({ table: t, row });
+      }
+      // Rückwärts ausgeführt: umdrehen, damit die Reihenfolge der ursprünglichen Aktion gilt.
+      this.touched = touched.reverse();
       const to = this.maxSeq();
       this.seen = to;
       return { label: step.label, from, to };

@@ -3,7 +3,7 @@ export * from "./model.ts";
 export * from "./filename.ts";
 export * from "./resolve.ts";
 export { ProjectStore, FILE_FORMAT, SCHEMA_VERSION, type OpenOptions } from "./db/store.ts";
-export { History, type HistoryState } from "./db/history.ts";
+export { History, type HistoryState, type TouchedRow } from "./db/history.ts";
 export * from "./episodes.ts";
 export * from "./montage.ts";
 export * from "./waveform.ts";
