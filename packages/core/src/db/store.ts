@@ -25,6 +25,7 @@ import {
   type SourceKind,
 } from "../model.ts";
 import type { ResolveInput } from "../resolve.ts";
+import { History } from "./history.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import * as schema from "./schema.ts";
 
@@ -54,11 +55,14 @@ export interface OpenOptions {
 
 export class ProjectStore {
   readonly db: BetterSQLite3Database<typeof schema>;
+  /** Rückgängig/Wiederholen für Aktionen, die über `history.record` laufen. */
+  readonly history: History;
   private constructor(
     private readonly sqlite: Database.Database,
     readonly path: string,
   ) {
     this.db = drizzle(sqlite, { schema });
+    this.history = new History(sqlite);
   }
 
   /** Neue Projektdatei anlegen. Schlägt fehl, wenn die Datei schon ein Projekt ist. */

@@ -365,6 +365,12 @@ export interface SessionPatch {
   extra?: Record<string, string>;
 }
 
+export interface HistoryResult {
+  label: string | null;
+  project: ProjectInfo;
+  view: SessionView | null;
+}
+
 export interface FeldspurApi {
   newProject(): Promise<ProjectInfo | null>;
   openProject(): Promise<ProjectInfo | null>;
@@ -474,6 +480,13 @@ export interface FeldspurApi {
   onStillRequest(render: (ref: unknown, pdf: boolean) => Promise<Uint8Array>): () => void;
   showInFolder(path: string): Promise<void>;
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
+  /**
+   * Letzten Schritt rückgängig machen bzw. wiederholen. Gibt die Beschriftung des Schritts zurück (null, wenn es
+   * keinen gab), das Projekt und die Ansicht des Einsatzes, falls es ihn danach noch gibt.
+   */
+  undo(sessionId: string | null): Promise<HistoryResult>;
+  redo(sessionId: string | null): Promise<HistoryResult>;
+  historyState(): Promise<{ undo: string | null; redo: string | null; serial: number }>;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
 }
@@ -533,6 +546,9 @@ export const IPC = {
   deleteDiaryEntry: "diary:delete",
   patchDiaryEntry: "diary:patch",
   progress: "progress",
+  undo: "history:undo",
+  redo: "history:redo",
+  historyState: "history:state",
   previewExport: "export:preview",
   montagePreview: "export:montage",
   exportSession: "export:run",

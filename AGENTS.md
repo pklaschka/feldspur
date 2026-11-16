@@ -35,6 +35,8 @@ release. Add a tool name to select part of the graph. For example, run
 - Sprache: Oberfläche, Kommentare und Commit-Texte auf Deutsch; Bezeichner im Code auf Englisch.
 - Lage auf der Zeitachse nie speichern, immer aus Belegen berechnen (`packages/core/src/resolve.ts`).
 - Migrationen in `packages/core/src/db/migrations.ts` nur anhängen, nie ändern.
+- IPC-Aufrufe, die Daten ändern, mit `undoable(…, "Beschriftung", …)` anmelden (Rückgängig, `packages/core/src/db/history.ts`).
+  Schreibt etwas außerhalb davon in die Projektdatei, leert das den Verlauf.
 - Keine echten Forschungsdaten in Tests oder Fixtures.
 - Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
 - Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
