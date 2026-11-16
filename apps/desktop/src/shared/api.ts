@@ -365,10 +365,19 @@ export interface SessionPatch {
   extra?: Record<string, string>;
 }
 
+/** Wo ein rückgängig gemachter Schritt etwas geändert hat, damit „Zeigen“ dorthin springen kann. */
+export interface HistoryTarget {
+  kind: "line" | "note" | "diary" | "source";
+  sourceId: string;
+  /** Stelle in der Datei (Mitschrift, Notiz). */
+  atMs?: number;
+}
+
 export interface HistoryResult {
   label: string | null;
   project: ProjectInfo;
   view: SessionView | null;
+  target: HistoryTarget | null;
 }
 
 export interface FeldspurApi {

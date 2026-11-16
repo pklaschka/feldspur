@@ -14,7 +14,7 @@ const VARIANT: Record<Variant, string> = {
   primary:
     "rounded-lg border border-accent bg-accent font-semibold text-accent-ink shadow-xs hover:enabled:brightness-[1.08] disabled:border-line-2 disabled:bg-sunken disabled:text-muted disabled:shadow-none",
   link: "text-accent hover:underline",
-  ghost: "rounded-lg hover:bg-sunken",
+  ghost: "rounded-lg hover:enabled:bg-sunken",
 };
 
 export function Button({
@@ -27,7 +27,7 @@ export function Button({
   return (
     <button
       className={cx(
-        "cursor-pointer whitespace-nowrap disabled:cursor-default disabled:opacity-60",
+        "cursor-pointer whitespace-nowrap disabled:cursor-default disabled:opacity-40",
         pad,
         VARIANT[variant],
         className,
