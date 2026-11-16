@@ -18,8 +18,9 @@ citation:
   issued: 2026-11-16
   available-date: 2026-11-16
 license: "CC BY 4.0"
-# Übergreifende Zenodo-DOI (alle Versionen); jedes Release archiviert auch dieses PDF.
-doi: 10.5281/zenodo.24289969
+# DOI der Software auf Zenodo (alle Versionen). Bewusst nicht `doi:`: Zenodo archiviert den Quellcode, nicht
+# dieses Dokument, und `doi:` würde die Webseite als diese DOI ausweisen (citation_doi).
+software-doi: 10.5281/zenodo.24289969
 ---
 
 {{< include _hinweise.qmd >}}

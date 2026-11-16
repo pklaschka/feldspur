@@ -20,8 +20,8 @@ $endif$
 $if(date)$
   date: "$date$",
 $endif$
-$if(doi)$
-  doi: "$doi$",
+$if(software-doi)$
+  doi: "$software-doi$",
 $endif$
 $if(keywords)$
   keywords: ($for(keywords)$[$keywords$],$endfor$),
