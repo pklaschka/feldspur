@@ -288,6 +288,25 @@ try {
   if (!inWindow) throw new Error(`Karte liegt außerhalb des Fensters: ${JSON.stringify(cardBox)}`);
   await shot("-zeitachse-karte");
   await page.mouse.move(0, 0);
+  {
+    // Mittlere Maustaste gedrückt ziehen verschiebt die Zeitachse.
+    await page.getByRole("button", { name: "Vergrößern" }).first().click();
+    await page.getByRole("button", { name: "Vergrößern" }).first().click();
+    const axis = page.locator("canvas").first();
+    const b = (await axis.boundingBox())!;
+    const scrollOf = () => axis.evaluate((c) => c.parentElement!.parentElement!.scrollLeft);
+    await axis.evaluate((c) => (c.parentElement!.parentElement!.scrollLeft = 200));
+    const s0 = await scrollOf();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down({ button: "middle" });
+    await page.mouse.move(b.x + b.width / 2 + 120, b.y + b.height / 2, { steps: 4 });
+    await page.mouse.up({ button: "middle" });
+    const s1 = await scrollOf();
+    if (Math.abs(s0 - s1 - 120) > 2) throw new Error(`Verschieben mit Mausrad: ${s0} → ${s1}`);
+    console.log(`Zeitachse mit mittlerer Maustaste verschoben: ${s0} → ${s1}`);
+    await page.getByRole("button", { name: "Einpassen" }).click();
+    await page.mouse.move(0, 0);
+  }
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
   await shot("-ausgeben");
