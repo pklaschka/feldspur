@@ -18,6 +18,8 @@ citation:
   issued: 2026-11-16
   available-date: 2026-11-16
 license: "CC BY 4.0"
+# Übergreifende Zenodo-DOI (alle Versionen); jedes Release archiviert auch dieses PDF.
+doi: 10.5281/zenodo.24289969
 ---
 
 {{< include _hinweise.qmd >}}

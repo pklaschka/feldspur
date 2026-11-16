@@ -9,6 +9,7 @@
 Stand: 16. November 2026
 
 [![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://purl.archive.org/feldspur)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.24289969-5b5d53?labelColor=3a281d)](https://doi.org/10.5281/zenodo.24289969)
 [![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&labelColor=3a281d&color=5b5d53)](https://github.com/pklaschka/feldspur/releases)
 [![Plattformen](https://img.shields.io/badge/Plattformen-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-5b5d53?labelColor=3a281d)](https://github.com/pklaschka/feldspur/releases)
 [![Lizenz](https://img.shields.io/badge/Lizenz-EUPL--1.2%20%C2%B7%20Text%20CC%20BY%204.0-5b5d53?labelColor=3a281d)](LICENSE)
@@ -103,9 +104,10 @@ samt PDF übernehmen können.
 Die vollständigen Angaben zum Programm stehen in
 [`CITATION.cff`](https://github.com/pklaschka/feldspur/blob/main/CITATION.cff); GitHub bietet daraus „Cite this
 repository“ (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Dieser
-Text liegt jedem Release als PDF bei und wird so mit archiviert. Sobald es diese DOIs gibt, sind sie die beste
-Angabe: die DOI der verwendeten Version für das Programm und für den Text in genau diesem Stand, die übergreifende
-DOI (alle Versionen) nur, wenn es um Feldspur im Allgemeinen geht.
+Text liegt jedem Release als PDF bei und wird so mit archiviert. Diese DOIs sind die beste Angabe: die DOI der
+verwendeten Version (sie steht auf deren Zenodo-Seite) für das Programm und für den Text in genau diesem Stand, die
+übergreifende DOI [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (alle Versionen, führt immer zur neuesten) nur, wenn es um
+Feldspur im Allgemeinen geht.
 
 Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/). Dieser Text steht unter
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de).

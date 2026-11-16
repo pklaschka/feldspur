@@ -9,6 +9,7 @@ $for(by-author)$**$it.name.literal$**$if(it.orcid)$ <a href="https://orcid.org/$
 Stand: $date$
 
 [![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://purl.archive.org/feldspur)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.24289969-5b5d53?labelColor=3a281d)](https://doi.org/10.5281/zenodo.24289969)
 [![Version](https://img.shields.io/github/package-json/v/pklaschka/feldspur?label=Version&labelColor=3a281d&color=5b5d53)](https://github.com/pklaschka/feldspur/releases)
 [![Plattformen](https://img.shields.io/badge/Plattformen-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-5b5d53?labelColor=3a281d)](https://github.com/pklaschka/feldspur/releases)
 [![Lizenz](https://img.shields.io/badge/Lizenz-EUPL--1.2%20%C2%B7%20Text%20CC%20BY%204.0-5b5d53?labelColor=3a281d)](LICENSE)
