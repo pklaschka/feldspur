@@ -10,6 +10,8 @@ catalog:
   vite-plus: 1.6.0
 overrides:
   vite@*: "catalog:"
+  # Dependabot #2 (DoS über globParts): nur electron-builder zieht minimatch 9/10.
+  minimatch@>=7.0.0 <11.0.1: ^11.0.1
 peerDependencyRules:
   allowAny:
     - vite
