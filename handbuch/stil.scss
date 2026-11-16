@@ -296,13 +296,16 @@ main .callout {
   border-radius: 4px;
   box-shadow: none;
 }
-@each $art, $farbe in (
-  note: $callout-color-note,
-  tip: $callout-color-tip,
-  warning: $callout-color-warning,
-  important: $callout-color-important,
-  caution: $callout-color-caution
-) {
+@each $art,
+  $farbe
+    in (
+      note: $callout-color-note,
+      tip: $callout-color-tip,
+      warning: $callout-color-warning,
+      important: $callout-color-important,
+      caution: $callout-color-caution
+    )
+{
   main .callout-#{$art} {
     background: rgba($farbe, 0.07) !important;
     .callout-title-container {
