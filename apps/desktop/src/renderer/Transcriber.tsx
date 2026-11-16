@@ -533,7 +533,8 @@ function Body({
         <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
           {failed ? (
             <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.85rem] text-warn">
-              Diese Datei lässt sich hier nicht abspielen (Format oder Codec).
+              Diese Datei lässt sich hier nicht abspielen (Format oder Codec). Wandle sie in MP4 (H.264) bzw. WAV oder
+              M4A um; siehe Handbuch, „Formate“.
             </p>
           ) : row.kind === "video" ? (
             <video

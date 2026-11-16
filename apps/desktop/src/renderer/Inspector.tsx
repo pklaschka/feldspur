@@ -329,6 +329,12 @@ function SourceDetails({
           {row.level && <LevelPanel row={row} level={row.level} actions={actions} />}
         </>
       )}
+      {(row.kind === "photo" || row.kind === "diary") && !row.previewable && !row.isPdf && (
+        <p className="mt-3.5 rounded-lg bg-warn-soft px-3 py-2 text-[0.85rem] text-warn" data-testid="no-preview">
+          Keine Vorschau: Feldspur zeigt Bilder als JPEG, PNG, WebP oder GIF. Die Zeit liest es trotzdem. Zum Ansehen
+          und Abtippen wandle die Datei selbst um; siehe Handbuch, „Formate“.
+        </p>
+      )}
       {(row.previewable || row.isPdf) && (
         <button
           type="button"
@@ -898,8 +904,8 @@ function Player({ row }: { row: SourceRow }) {
     <div className="mt-3.5">
       {failed ? (
         <p className="rounded-lg bg-warn-soft px-3 py-2 text-[0.85rem] text-warn">
-          Diese Datei lässt sich hier nicht abspielen (Format oder Codec). Für die Wiedergabe kommen später
-          Vorschau-Kopien.
+          Diese Datei lässt sich hier nicht abspielen (Format oder Codec). Ins Montagevideo kommt sie trotzdem. Zum
+          Abhören und Mitschreiben wandle sie in MP4 (H.264) bzw. WAV oder M4A um; siehe Handbuch, „Formate“.
         </p>
       ) : row.kind === "video" ? (
         <video {...props} className="block max-h-56 w-full rounded-lg bg-black" />

@@ -268,6 +268,4 @@ Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zu
 ## Noch offen
 
 - Ausgabe: Resolve-Schnittliste in Resolve selbst erproben.
-- Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
-- ExifTool statt exifr für RAW/HEIC.
 - Code-Signatur (Windows, macOS-Notarisierung).
