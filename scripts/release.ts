@@ -167,7 +167,19 @@ Lizenz: [EUPL-1.2](https://github.com/${repo}/blob/v${version}/LICENSE). Zitiere
 `;
 }
 
-/** Versionen in den Dateien setzen, die eine tragen. packages/* bleiben unverändert. */
+/** Datum wie im README-Kopf und im Handbuch („D. MMMM YYYY“, deutsch), z. B. 16. November 2026. */
+export function germanDate(isoDate: string): string {
+  return new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(`${isoDate}T00:00:00Z`),
+  );
+}
+
+/**
+ * Versionen in den Dateien setzen, die eine tragen. packages/* bleiben unverändert.
+ * Außer den Metadaten (package.json, CITATION.cff, .zenodo.json) auch die Zitierbeispiele im Handbuch
+ * (handbuch/_zitieren.qmd) und den „Stand“ der README (README.qmd). README.md wird gleich mitgezogen, so wie
+ * `vp run readme` es erzeugen würde; die CI-Prüfung (README passt zu den Bausteinen) bleibt damit grün.
+ */
 export function bumpFiles(root: string, version: string, date: string): string[] {
   const touched: string[] = [];
   const edit = (rel: string, fn: (s: string) => string) => {
@@ -183,6 +195,14 @@ export function bumpFiles(root: string, version: string, date: string): string[]
   edit("package.json", jsonVersion);
   edit("apps/desktop/package.json", jsonVersion);
   edit(".zenodo.json", jsonVersion);
+  // Zitierbeispiele: „(Version x)“ für das Programm, „(Stand: …)“ für den Text, in Baustein und erzeugter README.
+  const citeExamples = (s: string) =>
+    s
+      .replace(/\(Version [^)\s]+\)/g, `(Version ${version})`)
+      .replace(/\(Stand: [^)]+\)/g, `(Stand: ${germanDate(date)})`);
+  edit("handbuch/_zitieren.qmd", citeExamples);
+  edit("README.qmd", (s) => s.replace(/^date: .*$/m, `date: ${date}`));
+  edit("README.md", (s) => citeExamples(s).replace(/^Stand: .*$/m, `Stand: ${germanDate(date)}`));
   edit("CITATION.cff", (s) => {
     let t = s.replace(/^version:.*$/m, `version: ${version}`);
     t = /^date-released:/m.test(t)
