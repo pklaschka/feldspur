@@ -270,6 +270,24 @@ try {
   await page.getByRole("button", { name: "Schließen" }).click();
   await page.mouse.move(xAt(10 * 60 + 16), box.y + 30 + 40 + 26);
   await shot("-durchsehen");
+  // Die Karte zur untersten Spur darf nicht am Rand der Zeitachse abgeschnitten werden.
+  await page.mouse.move(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 0.5) * trackH);
+  const card = page.getByTestId("timeline-hover");
+  await card.waitFor();
+  const cardBox = (await card.boundingBox())!;
+  const view = page.viewportSize()!;
+  const inWindow =
+    cardBox.x >= 0 &&
+    cardBox.y >= 0 &&
+    cardBox.x + cardBox.width <= view.width &&
+    cardBox.y + cardBox.height <= view.height;
+  const outsideAxis = cardBox.y + cardBox.height > box.y + box.height;
+  console.log(
+    `Zeitachsen-Karte: ${inWindow ? "ganz im Fenster" : "abgeschnitten"}${outsideAxis ? ", ragt über die Achse hinaus" : ""}`,
+  );
+  if (!inWindow) throw new Error(`Karte liegt außerhalb des Fensters: ${JSON.stringify(cardBox)}`);
+  await shot("-zeitachse-karte");
+  await page.mouse.move(0, 0);
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
   await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
   await shot("-ausgeben");

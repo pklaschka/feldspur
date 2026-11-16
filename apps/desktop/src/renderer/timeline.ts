@@ -148,22 +148,40 @@ function alpha(hex: string, a: number): string {
   return `rgba(${parseInt(m[1]!, 16)}, ${parseInt(m[2]!, 16)}, ${parseInt(m[3]!, 16)}, ${a})`;
 }
 
+/**
+ * Schraffur als Muster. Die 7×7-Kachel und das Muster werden zwischengespeichert: früher entstand bei jedem
+ * Zeichnen (also bei jeder Mausbewegung) für jeden Clip mit Leerlauf eine neue Leinwand. Auf macOS erschöpfte das
+ * die Grafikspeicher („Failed to allocate IOSurface of size 7x7“) und ließ die Zeitachse flackern.
+ */
+const hatchTiles = new Map<string, OffscreenCanvas>();
+const hatchPatterns = new WeakMap<CanvasRenderingContext2D, Map<string, CanvasPattern | null>>();
 function hatch(ctx: CanvasRenderingContext2D, color: string, bg: string | null): CanvasPattern | null {
-  const c = new OffscreenCanvas(7, 7);
-  const g = c.getContext("2d")!;
-  if (bg) {
-    g.fillStyle = bg;
-    g.fillRect(0, 0, 7, 7);
+  const key = `${color}|${bg ?? ""}`;
+  let byCtx = hatchPatterns.get(ctx);
+  if (!byCtx) hatchPatterns.set(ctx, (byCtx = new Map()));
+  if (byCtx.has(key)) return byCtx.get(key)!;
+  let tile = hatchTiles.get(key);
+  if (!tile) {
+    tile = new OffscreenCanvas(7, 7);
+    // Ohne Grafikkarte im Speicher halten: die Kachel ist winzig und wird nur als Vorlage gelesen.
+    const g = tile.getContext("2d", { willReadFrequently: true })!;
+    if (bg) {
+      g.fillStyle = bg;
+      g.fillRect(0, 0, 7, 7);
+    }
+    g.strokeStyle = color;
+    g.lineWidth = 2.2;
+    g.beginPath();
+    for (const o of [-7, 0, 7]) {
+      g.moveTo(o, 7);
+      g.lineTo(o + 7, 0);
+    }
+    g.stroke();
+    hatchTiles.set(key, tile);
   }
-  g.strokeStyle = color;
-  g.lineWidth = 2.2;
-  g.beginPath();
-  for (const o of [-7, 0, 7]) {
-    g.moveTo(o, 7);
-    g.lineTo(o + 7, 0);
-  }
-  g.stroke();
-  return ctx.createPattern(c, "repeat");
+  const pattern = ctx.createPattern(tile, "repeat");
+  byCtx.set(key, pattern);
+  return pattern;
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number | number[]) {

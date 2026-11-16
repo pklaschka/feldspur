@@ -5,6 +5,7 @@
  */
 import { peakLevel, type Peaks, type WaveformScale } from "@feldspur/core/waveform";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { prepareCanvas } from "./canvas.ts";
 
 const api = window.feldspur;
 
@@ -80,12 +81,8 @@ export function Waveform({
   useEffect(() => {
     const el = canvas.current;
     if (!el || width <= 0) return;
-    const dpr = window.devicePixelRatio || 1;
-    el.width = Math.round(width * dpr);
-    el.height = Math.round(height * dpr);
-    const ctx = el.getContext("2d");
+    const ctx = prepareCanvas(el, width, height);
     if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw(ctx, el, { peaks, fromMs, toMs, scale, width, height, cursorMs, markers, bands, tone, ticks });
   }, [peaks, fromMs, toMs, scale, width, height, cursorMs, markers, bands, tone, ticks]);
 
