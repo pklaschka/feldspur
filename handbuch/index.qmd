@@ -7,7 +7,9 @@ bibliography: literatur.bib
 citation:
   type: article
   title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
-  url: https://pklaschka.github.io/feldspur/
+  url: https://purl.archive.org/feldspur
+  pdf-url: https://purl.archive.org/feldspur/pdf
+  available-date: 2026-11-16
 license: "CC BY 4.0"
 ---
 

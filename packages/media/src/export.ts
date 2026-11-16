@@ -3,7 +3,7 @@
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
 import { levelText, sessionLevels } from "./analyze.ts";
 import type { AudioLevel } from "./audio.ts";
@@ -168,6 +168,14 @@ async function stillOf(
   return data && size ? { data, ...size } : null;
 }
 
+/** Pfad einer Ausgabedatei im Zielordner; bricht ab, falls ein Name doch aus dem Ordner herausführen würde. */
+function outPath(outDir: string, name: string): string {
+  const dir = resolve(outDir);
+  const path = resolve(dir, name);
+  if (!path.startsWith(dir + sep)) throw new Error(`Ungültiger Dateiname für die Ausgabe: ${name}`);
+  return path;
+}
+
 export async function exportSession(
   store: ProjectStore,
   sessionId: Id,
@@ -201,7 +209,7 @@ export async function exportSession(
       onProgress: (done, total) => opts.onProgress?.("Lautstärke messen", done, total),
     });
     if (opts.video !== false) {
-      await renderMontage(sc, join(outDir, media), {
+      await renderMontage(sc, outPath(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
@@ -214,17 +222,17 @@ export async function exportSession(
 
     if (opts.resolve) {
       const xml = montageFcpxml(sc, planPieces(sc), { projectName: base, audioMix: opts.audioMix });
-      await writeFile(join(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
+      await writeFile(outPath(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
       files.push(`${base}_Resolve.fcpxml`);
     }
 
     opts.onProgress?.("Zeitgerüst", 0, 1);
     const docx = await scaffoldDocx(sc, { mediaFileName: media, stills });
-    await writeFile(join(outDir, `${base}.docx`), docx);
+    await writeFile(outPath(outDir, `${base}.docx`), docx);
     files.push(`${base}.docx`);
-    await writeFile(join(outDir, `${base}_Variablen.xlsx`), xlsx(documentVariables(sc, base), "Dokumentvariablen"));
+    await writeFile(outPath(outDir, `${base}_Variablen.xlsx`), xlsx(documentVariables(sc, base), "Dokumentvariablen"));
     files.push(`${base}_Variablen.xlsx`);
-    await writeFile(join(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc, levels), "utf8");
+    await writeFile(outPath(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc, levels), "utf8");
     files.push(`${base}_Begleitprotokoll.csv`);
     opts.onProgress?.("Fertig", 1, 1);
     return { dir: outDir, files, durationMs: sc.plan.durationMs };
