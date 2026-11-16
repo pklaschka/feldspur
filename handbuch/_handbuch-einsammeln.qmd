@@ -33,3 +33,27 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
 - **Entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
 
 Wenn alles eingesammelt ist, geht es mit **Weiter** zum Abgleichen.
+
+### Formate {#sec-formate}
+
+Feldspur nimmt jede Datei auf und liest ihre Zeit, so gut es geht. Ansehen, abhören und mitschreiben kannst du aber
+nur Formate, die das Programmfenster selbst darstellen kann. Feldspur legt dafür keine eigenen Kopien an. Wandle
+andere Formate vorher selbst um, und sammle die umgewandelte Datei zusätzlich ein oder statt des Originals. Ins
+Montagevideo kommen auch die Videos und Tonaufnahmen aus der rechten Spalte, weil FFmpeg sie liest. Kann Feldspur eine
+Datei nicht zeigen, steht in der Detailleiste ein Hinweis.
+
+| Art | Geht direkt | Selbst umwandeln |
+|---|---|---|
+| Video | MP4, MOV, M4V, MKV und WebM mit H.264, VP9 oder AV1 | MTS/M2TS, AVI; HEVC (H.265) je nach Rechner |
+| Audio | WAV, MP3, M4A/AAC, FLAC, OGG, Opus | WMA, AMR |
+| Fotos und Scans | JPEG, PNG, WebP, GIF, PDF | HEIC/HEIF, TIFF, DNG und andere RAW-Formate |
+
+Zum Umwandeln eignen sich z. B. HandBrake oder FFmpeg für Video und Audio (Ziel: MP4 mit H.264 und AAC, oder WAV)
+sowie die Fotos-App, Vorschau (macOS) oder darktable für Bilder (Ziel: JPEG). Achte darauf, dass das Werkzeug die
+Aufnahmezeit mitnimmt; sonst trägst du sie in Feldspur von Hand ein (@sec-abgleichen). Das Original bleibt die
+Quelle, auf die sich das Begleitprotokoll bezieht, wenn du es mit einsammelst.
+
+::: {.callout-note}
+HEVC-Videos von neueren Handys spielt Feldspur unter macOS und Windows meist ab, weil es dort den Decoder des
+Systems nutzt. Unter Linux fehlt er in der Regel. Bleibt das Bild schwarz, wandle das Video in H.264 um.
+:::
