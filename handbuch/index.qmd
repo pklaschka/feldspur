@@ -8,8 +8,6 @@ lang: de
 language:
   title-block-published: "Stand"
 bibliography: literatur.bib
-# APA wie in Zotero, auch für den Zitiervorschlag am Ende der Webseite (apa.csl aus dem CSL-Projekt, CC BY-SA 3.0).
-csl: apa.csl
 license: "CC BY 4.0"
 ---
 

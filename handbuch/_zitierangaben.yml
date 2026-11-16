@@ -1,6 +1,6 @@
 # Zitierangaben für Begleittext und Handbuch (Webseite: citation_*-Angaben für Zotero und Google Scholar,
-# außerdem der Abschnitt „Zitat“ am Ende der Seite). stand.ts ergänzt daraus _zitation.yml um den Stand (Feld „number“: so setzt der APA-Stil
-# „(Stand: …)“ hinter den Titel) und schreibt citation_issue für Zotero nach _stand-kopf.html.
+# außerdem der Abschnitt „Zitat“ am Ende der Seite). stand.ts ergänzt daraus _zitation.yml um den Stand (Feld „number“, im BibTeX als number) und
+# schreibt citation_issue für Zotero sowie den Zitiervorschlag im APA-Stil (zitiervorschlag.ts).
 citation:
   type: article
   title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
