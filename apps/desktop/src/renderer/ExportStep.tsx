@@ -1,5 +1,6 @@
 /**
- * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Zeitgerüst (.docx) und Begleitprotokoll.
+ * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Zeitgerüst (.docx), Dokumentvariablen und
+ * Begleitprotokoll.
  */
 import { useEffect, useState } from "react";
 import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
@@ -15,6 +16,7 @@ const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
   [/\.docx$/, "Zeitgerüst für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
+  [/\.xlsx$/, "Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren)"],
   [/\.csv$/, "Begleitprotokoll: Herkunft und Zeitnachweis jeder Datei"],
   [/\.fcpxml$/, "Schnittliste für DaVinci Resolve (Datei › Importieren › Timeline)"],
 ];
