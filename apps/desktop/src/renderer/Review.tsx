@@ -13,6 +13,7 @@ import {
   MIN,
   readPalette,
   RULER_H,
+  setTrackHeight,
   tOf,
   TRACK_H,
   xOf,
@@ -127,6 +128,10 @@ function Timeline({
     [tracks, view.episodes, view.gaps, view.diary],
   );
   const transcripts = useMemo(() => groupTranscript(view.transcript), [view.transcript]);
+  // Die Spuren teilen sich die freie Höhe (Kopf, Legende und „Ohne Uhrzeit“ abgezogen), statt unten Platz frei
+  // zu lassen; zwischen 52 und 88 px, damit wenige Spuren nicht zu Balken aufquellen.
+  const free = window.innerHeight - 340 - (unplaced.length ? 56 : 0) - RULER_H - EPISODE_H;
+  setTrackHeight(Math.max(52, Math.min(88, Math.floor(free / Math.max(1, tracks.length)))));
   const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
   const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
 
@@ -210,8 +215,12 @@ function Timeline({
   };
 
   // Sprung von außen (Suche): einen Bereich einpassen, eine Uhrzeit ins Bild holen, falls sie draußen liegt.
+  // Solange die Achse noch nie sichtbar war, stimmt die Breite nicht: dann warten, bis sie gemessen ist.
+  const measured = width > 0 && !!scroller.current?.clientWidth;
+  const doneReveal = useRef(0);
   useEffect(() => {
-    if (!reveal) return;
+    if (!reveal || !measured || doneReveal.current === reveal.n) return;
+    doneReveal.current = reveal.n;
     const { fromMs, toMs } = reveal;
     if (toMs !== undefined && toMs > fromMs) {
       const p = Math.min(MAX_PPM, Math.max(fit, (width * 0.8) / ((toMs - fromMs) / MIN)));
@@ -221,7 +230,7 @@ function Timeline({
     const px = xOf(scale, fromMs);
     if (px < 0 || px > width) centerOn(fromMs);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reveal?.n]);
+  }, [reveal?.n, measured, width]);
 
   // Neue Scrollposition anwenden, sobald die Breite zum neuen Zoom passt.
   useLayoutEffect(() => {
@@ -432,6 +441,7 @@ function Timeline({
           <div style={{ width: innerW, height }}>
             <canvas
               ref={canvas}
+              data-track-h={TRACK_H}
               className={cx(
                 "sticky left-0 block",
                 hover?.item && hover.item.type !== "episode" && hover.item.type !== "gap" && "cursor-pointer",
@@ -487,6 +497,7 @@ function Timeline({
           Klick in Audio/Video spult dorthin · Mausrad zoomt an der Maus · Umschalt + Mausrad verschiebt
         </span>
       </div>
+      {/* Direkt unter Achse und Legende: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
   );
@@ -592,9 +603,9 @@ function Tray({
   onSelect: (id: string) => void;
 }) {
   return (
-    <section className="mt-5">
-      <div className="mb-2 flex flex-wrap items-center gap-3">
-        <h3 className="text-[0.9rem] font-semibold">Ohne Uhrzeit</h3>
+    <section className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-bad/6 px-3 py-2">
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h3 className="text-[0.95rem] font-semibold text-bad">Ohne Uhrzeit ({rows.length})</h3>
         <span className="text-[0.85rem] text-muted">
           Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein.
         </span>

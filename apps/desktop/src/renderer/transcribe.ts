@@ -35,7 +35,16 @@ export function oneParagraph(text: string): string {
   return text.replace(/\s*[\r\n]+\s*/g, " ");
 }
 
-export type TranscriberKey = "toggle" | "back" | "forward" | "slower" | "faster" | "type" | null;
+export type TranscriberKey =
+  | "toggle"
+  | "back"
+  | "forward"
+  | "slower"
+  | "faster"
+  | "prevLine"
+  | "nextLine"
+  | "type"
+  | null;
 
 /** Was beim Mitschreiben aus einem Tastendruck folgt; nur die Felder, die dafür zählen. */
 export interface KeyLike {
@@ -77,6 +86,10 @@ export function transcriberKey(e: KeyLike, target: TargetLike | null, newLine: u
       return "forward";
     case "F7":
       return e.shiftKey ? "faster" : "slower";
+    case "ArrowUp":
+    case "ArrowDown":
+      // Alt + ↑/↓: zwischen den Zeilen (und der neuen Zeile) wandern, ohne die Maus.
+      if (e.altKey && !e.ctrlKey && !e.metaKey) return e.key === "ArrowUp" ? "prevLine" : "nextLine";
   }
   if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey || !newLine) return null;
   if (target?.closest(EDITABLE)) return null;

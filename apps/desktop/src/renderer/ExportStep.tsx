@@ -36,6 +36,12 @@ function loadOptions(): Options {
   }
 }
 
+/**
+ * Stand des Zeitgerüsts beim Start der letzten Ausgabe je Einsatz. Weicht die Vorschau danach ab, ist das
+ * Ergebnis veraltet. Gilt bis zum Neustart; danach fehlt der Vergleich und es gibt keinen Hinweis.
+ */
+const exportedWith = new Map<string, string>();
+
 export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) => void }) {
   const [preview, setPreview] = useState<ScaffoldPreview | null>(null);
   const [opts, setOpts] = useState(loadOptions);
@@ -71,7 +77,12 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
       live = false;
     };
   }, [view, sessionId, realtime]);
-  const run = () => ex.start(sessionId, { video, resolve, mixAudio, realtime });
+  const run = () => {
+    if (preview) exportedWith.set(sessionId, preview.lines.join("\n"));
+    ex.start(sessionId, { video, resolve, mixAudio, realtime });
+  };
+  const before = exportedWith.get(sessionId);
+  const stale = !!result && !!preview && before !== undefined && before !== preview.lines.join("\n");
 
   const empty = !preview || preview.durationMs <= 0;
   const pct = percent(progress);
@@ -80,6 +91,7 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
   return (
     <>
       <StepHeader
+        className="max-w-[1240px]"
         title="Ausgeben"
         summary="Ein Ordner pro Einsatz: Montagevideo, Zeitgerüst für MAXQDA und Begleitprotokoll."
         help={
@@ -104,7 +116,7 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
         }
       />
       {(busy || result || error) && (
-        <Panel className="mb-4 max-w-[1100px]">
+        <Panel className="mb-4 max-w-[1240px]">
           {busy && (
             <div data-testid="export-progress">
               <div className="mb-1 flex justify-between text-[0.9rem]">
@@ -128,8 +140,8 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
             <div data-testid="export-result">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <p className="font-serif text-[1.1rem]">
-                  <span className="text-good">Fertig.</span> {result.files.length} Dateien im Ordner „
-                  {fileName(result.dir)}“.
+                  {stale ? <span className="text-warn">Veraltet.</span> : <span className="text-good">Fertig.</span>}{" "}
+                  {result.files.length} Dateien im Ordner „{fileName(result.dir)}“.
                 </p>
                 <Button size="sm" onClick={() => void api.showInFolder(result.files[0] ?? result.dir)}>
                   Im Ordner zeigen
@@ -145,111 +157,131 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-[0.85rem] text-muted">
-                Änderst du danach noch etwas, gib den Einsatz einfach erneut aus; nur Geändertes wird neu gerechnet.
-              </p>
+              {stale ? (
+                <div
+                  className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-warn/8 px-3 py-2"
+                  role="status"
+                  data-testid="export-stale"
+                >
+                  <p className="text-[0.9rem] text-warn">
+                    Seit dieser Ausgabe hat sich etwas geändert. Nur Geändertes wird neu gerechnet.
+                  </p>
+                  <Button size="sm" disabled={!!ex.job} onClick={run}>
+                    Erneut ausgeben…
+                  </Button>
+                </div>
+              ) : (
+                <p className="mt-2 text-[0.85rem] text-muted">
+                  Änderst du danach noch etwas, gib den Einsatz einfach erneut aus; nur Geändertes wird neu gerechnet.
+                </p>
+              )}
             </div>
           )}
         </Panel>
       )}
-      <div className="grid max-w-[1100px] gap-4 2xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <Panel>
-          <p className="font-serif text-[1.1rem] leading-snug" data-testid="export-summary">
-            {!preview ? (
-              "Die Montage wird berechnet…"
-            ) : (
-              <>
-                Das Montagevideo wird <b className="font-semibold">{formatDuration(preview.durationMs)}</b> lang
-                {withEpisodes ? (
-                  <>
-                    , mit <b className="font-semibold">{preview.episodes}</b>{" "}
-                    {preview.episodes === 1 ? "Episode" : "Episoden"} und{" "}
-                    <b className="font-semibold">{preview.cards}</b> {realtime ? "Zwischenzeiten" : "Zwischentafeln"}.
-                  </>
-                ) : (
-                  realtime && ", der ganze Einsatz in Echtzeit."
-                )}
-              </>
-            )}
-            <Button
-              variant="link"
-              className="ml-2 font-sans text-[0.9rem]"
-              disabled={empty}
-              onClick={() => setWatching(true)}
-            >
-              Montage ansehen
-            </Button>
-          </p>
-          <MontageView
-            sessionId={sessionId}
-            realtime={realtime}
-            open={watching}
-            onOpenChange={setWatching}
-            levels={new Map(view.rows.map((r) => [r.id, r.level]))}
-          />
-          <div className="mt-4 grid gap-3">
-            {withEpisodes && (
-              <Option
-                checked={byEpisodes}
-                onChange={(v) => set({ byEpisodes: v })}
-                label="Nach Episoden schneiden"
-                hint="Kürzer, aber Videozeit ≠ Uhrzeit. Aus: der ganze Einsatz in Echtzeit."
-              />
-            )}
-            <Option
-              checked={video}
-              onChange={(v) => set({ video: v })}
-              label="Montagevideo mit ausgeben"
-              hint="Dauert einige Minuten. Aus: nur Zeitgerüst und Protokoll."
-            />
-            <Option
-              checked={mixAudio}
-              onChange={(v) => set({ mixAudio: v })}
-              label="Ton aller Geräte mischen"
-              hint="Aus: nur der Ton der Hauptquelle."
-            />
-            <Option
-              checked={resolve}
-              onChange={(v) => set({ resolve: v })}
-              label="Schnittliste für DaVinci Resolve"
-              hint="Dieselbe Montage als FCPXML, ohne Einblendungen."
-            />
-          </div>
-          {!withEpisodes && (
-            <p className="mt-3 text-[0.85rem] text-muted">
-              Nach Episoden schneiden geht, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
+      {/* Nebeneinander, sobald die Mitte breit genug ist (Containerbreite, nicht Fenster): so bleibt die Vorschau lesbar. */}
+      <div className="@container max-w-[1240px]">
+        <div className="grid gap-4 @4xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+          <Panel>
+            <p className="font-serif text-[1.1rem] leading-snug" data-testid="export-summary">
+              {!preview ? (
+                "Die Montage wird berechnet…"
+              ) : (
+                <>
+                  Das Montagevideo wird <b className="font-semibold">{formatDuration(preview.durationMs)}</b> lang
+                  {withEpisodes ? (
+                    <>
+                      , mit <b className="font-semibold">{preview.episodes}</b>{" "}
+                      {preview.episodes === 1 ? "Episode" : "Episoden"} und{" "}
+                      <b className="font-semibold">{preview.cards}</b> {realtime ? "Zwischenzeiten" : "Zwischentafeln"}.
+                    </>
+                  ) : (
+                    realtime && ", der ganze Einsatz in Echtzeit."
+                  )}
+                </>
+              )}
+              <Button
+                variant="link"
+                className="ml-2 font-sans text-[0.9rem]"
+                disabled={empty}
+                onClick={() => setWatching(true)}
+              >
+                Montage ansehen
+              </Button>
             </p>
-          )}
-          {open.length > 0 && !empty && (
-            <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-open">
-              <b className="block font-semibold text-warn">Noch offen</b>
-              <p className="mb-1.5 text-[0.85rem]">
-                Ausgeben geht trotzdem; was offen ist, steht dann so im Zeitgerüst, wie es gerade liegt.
+            <MontageView
+              sessionId={sessionId}
+              realtime={realtime}
+              open={watching}
+              onOpenChange={setWatching}
+              levels={new Map(view.rows.map((r) => [r.id, r.level]))}
+            />
+            <div className="mt-4 grid gap-3">
+              {withEpisodes && (
+                <Option
+                  checked={byEpisodes}
+                  onChange={(v) => set({ byEpisodes: v })}
+                  label="Nach Episoden schneiden"
+                  hint="Kürzer, aber Videozeit ≠ Uhrzeit. Aus: der ganze Einsatz in Echtzeit."
+                />
+              )}
+              <Option
+                checked={video}
+                onChange={(v) => set({ video: v })}
+                label="Montagevideo mit ausgeben"
+                hint="Dauert einige Minuten. Aus: nur Zeitgerüst und Protokoll."
+              />
+              <Option
+                checked={mixAudio}
+                onChange={(v) => set({ mixAudio: v })}
+                label="Ton aller Geräte mischen"
+                hint="Aus: nur der Ton der Hauptquelle."
+              />
+              <Option
+                checked={resolve}
+                onChange={(v) => set({ resolve: v })}
+                label="Schnittliste für DaVinci Resolve"
+                hint="Dieselbe Montage als FCPXML, ohne Einblendungen."
+              />
+            </div>
+            {!withEpisodes && (
+              <p className="mt-3 text-[0.85rem] text-muted">
+                Nach Episoden schneiden geht, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
               </p>
-              <TodoList items={open} onGo={onGo} />
-            </section>
-          )}
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>
-              {busy ? "Gibt aus…" : open.length ? "Trotzdem ausgeben…" : "Ausgeben…"}
-            </Button>
-            {empty && <span className="text-[0.9rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
-            {elsewhere && <span className="text-[0.9rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>}
-          </div>
-        </Panel>
-        <Panel className="min-w-0">
-          <h3 className="mb-2 text-[1rem] font-semibold">Vorschau des Zeitgerüsts</h3>
-          <ol
-            className="max-h-[60vh] max-w-[80ch] overflow-y-auto font-serif text-[0.92rem] leading-relaxed text-ink-2"
-            data-testid="scaffold-preview"
-          >
-            {preview?.lines.map((l, i) => (
-              <li key={i} className="border-b border-line/60 py-1 break-words text-pretty">
-                {l}
-              </li>
-            ))}
-          </ol>
-        </Panel>
+            )}
+            {open.length > 0 && !empty && (
+              <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-open">
+                <b className="block font-semibold text-warn">Noch offen</b>
+                <p className="mb-1.5 text-[0.85rem]">
+                  Ausgeben geht trotzdem; was offen ist, steht dann so im Zeitgerüst, wie es gerade liegt.
+                </p>
+                <TodoList items={open} onGo={onGo} />
+              </section>
+            )}
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>
+                {busy ? "Gibt aus…" : open.length ? "Trotzdem ausgeben…" : "Ausgeben…"}
+              </Button>
+              {empty && <span className="text-[0.9rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
+              {elsewhere && (
+                <span className="text-[0.9rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>
+              )}
+            </div>
+          </Panel>
+          <Panel className="min-w-0">
+            <h3 className="mb-2 text-[1rem] font-semibold">Vorschau des Zeitgerüsts</h3>
+            <ol
+              className="max-h-[calc(100vh-16rem)] overflow-y-auto font-serif text-[0.92rem] leading-relaxed text-ink-2"
+              data-testid="scaffold-preview"
+            >
+              {preview?.lines.map((l, i) => (
+                <li key={i} className="border-b border-line/60 py-1 break-words text-pretty">
+                  {l}
+                </li>
+              ))}
+            </ol>
+          </Panel>
+        </div>
       </div>
     </>
   );

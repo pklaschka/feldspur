@@ -14,16 +14,17 @@ const TOP = LAYOUT.top.h;
 const MAIN = LAYOUT.main;
 const BOTTOM = LAYOUT.bottom;
 
+// Farben und Schrift wie die App (Umbra der Seitenleiste, Papier, Ocker für Episoden, Moos für Ton).
 const C = {
-  bar: "rgba(16,23,27,0.94)",
-  ink: "#e9eef0",
-  muted: "#9aabb1",
-  line: "#2c3a40",
-  episode: "#ffe36a",
-  audio: "#4cc6a2",
+  bar: "rgba(28,20,14,0.94)",
+  ink: "#f5ecdf",
+  muted: "#c9b7a2",
+  line: "#4a3427",
+  episode: "#e8b95e",
+  audio: "#a0c584",
 };
-const FONT = '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif';
-const MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
+const FONT = '"Source Sans 3", "Segoe UI", system-ui, sans-serif';
+const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 function wrap(ctx: Ctx2D, text: string, maxW: number): string[] {
   const out: string[] = [];

@@ -249,6 +249,23 @@ function Body({
         e.preventDefault();
         nextSpeed(e.shiftKey ? 1 : -1);
         break;
+      case "prevLine":
+      case "nextLine": {
+        e.preventDefault();
+        // Reihenfolge: alle Zeilen der Liste, dann die neue Zeile unten.
+        const fields = [
+          ...(list.current?.querySelectorAll<HTMLTextAreaElement>(
+            '[data-line] textarea[aria-label="Text der Zeile"]',
+          ) ?? []),
+          ...(input.current ? [input.current] : []),
+        ];
+        const i = fields.findIndex((f) => f === document.activeElement);
+        const next =
+          i < 0 ? fields.at(-1) : fields[Math.max(0, Math.min(fields.length - 1, i + (e.key === "ArrowUp" ? -1 : 1)))];
+        next?.focus();
+        next?.scrollIntoView({ block: "nearest" });
+        break;
+      }
       case "type":
         // Tippen ohne Fokus landet in der neuen Zeile; der Buchstabe geht mit.
         input.current?.focus();
@@ -588,13 +605,15 @@ function Body({
             </div>
           </div>
           <NotesPanel row={row} notes={notes} pos={pos} apply={apply} onSeek={seekTo} />
-          <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.85rem]">
+          <dl className="grid max-w-[75ch] grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-[0.85rem]">
             <dt className="font-mono font-medium">Esc</dt>
             <dd>Abspielen / anhalten (springt beim Fortsetzen 1 s zurück)</dd>
             <dt className="font-mono font-medium">F8 / F9</dt>
             <dd>5 s zurück / vor</dd>
             <dt className="font-mono font-medium">F7</dt>
             <dd>langsamer (mit Umschalt schneller)</dd>
+            <dt className="font-mono font-medium">Alt+↑ / ↓</dt>
+            <dd>Zur Zeile davor / danach (unten die neue Zeile)</dd>
             <dt className="font-mono font-medium">Enter</dt>
             <dd>Zeile anlegen. Die Zeitmarke ist die Stelle, an der du angefangen hast zu tippen.</dd>
             <dt className="font-mono font-medium">Strg/⌘+Enter</dt>
@@ -608,11 +627,11 @@ function Body({
               (auch in bestehenden Zeilen)
             </dd>
           </dl>
-          <p className="-mt-1 text-[0.85rem] text-muted">
+          <p className="-mt-1 max-w-[75ch] text-[0.85rem] text-muted">
             Die Tasten gelten überall im Dialog. Tippst du, während nichts ausgewählt ist, geht es in der neuen Zeile
             weiter.
           </p>
-          <p className="text-[0.85rem] text-muted">
+          <p className="max-w-[75ch] text-[0.85rem] text-muted">
             Jede Zeile speichert die Stelle in {row.label}. Die Uhrzeit folgt dem Abgleich, auch wenn du ihn später
             änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Grau hinterlegte Zeilen mit
             Kurzzeichen stammen aus der Mitschrift einer anderen Spur, die zur selben Zeit lief: Was dort schon steht,

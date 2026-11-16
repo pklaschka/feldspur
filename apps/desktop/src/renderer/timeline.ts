@@ -8,10 +8,16 @@ import { hm } from "./format.ts";
 export const MIN = 60_000;
 export const RULER_H = 30;
 export const EPISODE_H = 40;
-export const TRACK_H = 52;
+/** Höhe einer Spur; auf großen Bildschirmen höher (setTrackHeight), damit die Achse den Platz nutzt. */
+export let TRACK_H = 52;
 /** Höhe der Balken in einer Spur. */
-const BAR_H = 32;
-const BAR_Y = (TRACK_H - BAR_H) / 2;
+let BAR_H = 32;
+let BAR_Y = (TRACK_H - BAR_H) / 2;
+export function setTrackHeight(h: number): void {
+  TRACK_H = h;
+  BAR_H = Math.round(h * 0.62);
+  BAR_Y = (TRACK_H - BAR_H) / 2;
+}
 /** Kurze Clips bleiben sichtbar und anklickbar. */
 export const MIN_CLIP_W = 6;
 

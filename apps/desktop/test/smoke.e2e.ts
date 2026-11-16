@@ -59,7 +59,9 @@ const page = await app.firstWindow();
 const logs: string[] = [];
 page.on("console", (m) => m.type() === "error" && logs.push(m.text()));
 try {
-  await page.setViewportSize({ width: 1280, height: 800 });
+  // Fenstergröße für die Bildschirmfotos, z. B. FELDSPUR_VIEWPORT=1920x1080 (Standard 1280x800).
+  const [vw, vh] = (process.env.FELDSPUR_VIEWPORT ?? "1280x800").split("x").map(Number);
+  await page.setViewportSize({ width: vw!, height: vh! });
   await page.getByText("+ neuer Einsatz").click();
   await page.getByLabel("Titel").fill("Testmarkt");
   await page.getByLabel("Datum").fill("2026-09-14");
@@ -247,7 +249,8 @@ try {
     .innerText();
   const [from, to] = rangeText.match(/\d\d:\d\d/g)!.map((t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3)));
   const xAt = (min: number) => box.x + ((min - from!) / (to! - from!)) * box.width;
-  await page.mouse.click(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 1) * 52 + 26);
+  const trackH = Number(await page.locator("canvas").getAttribute("data-track-h"));
+  await page.mouse.click(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 0.5) * trackH);
   await page.getByTestId("inspector").getByText("Tagebuch_S01.jpg").first().waitFor();
   await page.getByRole("button", { name: "Schließen" }).click();
   // Klick in die Tonspur spult den Player dorthin: 10:16:20 ist im Rekorder 1:20.

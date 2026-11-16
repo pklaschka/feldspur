@@ -66,7 +66,8 @@ export function Sync({
   const [progress, setProgress] = useState<string | null>(null);
   /** Ergebnis der letzten Tonspur-Analyse; was davon noch offen ist, steht in `view`. */
   const [analysis, setAnalysis] = useState<{ analyzed: number; failed: number } | null>(null);
-  const [accepting, setAccepting] = useState(false);
+  /** Fortschritt der Sammelübernahme: [erledigt, gesamt]. */
+  const [accepting, setAccepting] = useState<[number, number] | null>(null);
   const [fine, setFine] = useState<FineAlignStart | null>(null);
   const hasReference = view.devices.some((d) => d.isReference);
 
@@ -92,10 +93,12 @@ export function Sync({
   const sure = view.proposals.filter(isSure);
   /** Alle eindeutigen Vorschläge nacheinander übernehmen (unsichere bleiben zum Anhören stehen). */
   const acceptSure = async () => {
-    setAccepting(true);
     let last: SessionView | undefined;
-    for (const p of sure) last = (await guard(() => api.confirmAnchor(p.anchorId))) ?? last;
-    setAccepting(false);
+    for (const [i, p] of sure.entries()) {
+      setAccepting([i, sure.length]);
+      last = (await guard(() => api.confirmAnchor(p.anchorId))) ?? last;
+    }
+    setAccepting(null);
     if (last) onView(last);
   };
   const openClocks = view.devices.filter((d) => !d.isReference && d.offsetMs === null);
@@ -120,6 +123,7 @@ export function Sync({
   return (
     <div>
       <StepHeader
+        className="max-w-[1500px]"
         title="Uhren abgleichen"
         summary={
           hasReference
@@ -143,7 +147,7 @@ export function Sync({
           Weiter: Durchsehen →
         </Button>
       </StepHeader>
-      <div className="grid gap-4">
+      <div className="grid max-w-[1500px] gap-4">
         <Panel>
           {progress && <Notice>{progress}</Notice>}
           {notice && !progress && !done && sure.length < 2 && <Notice>{notice}</Notice>}
@@ -168,8 +172,10 @@ export function Sync({
                 {analysis && `${analysis.analyzed} ${analysis.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert. `}
                 {view.proposals.length} Vorschläge, davon {sure.length} eindeutig. Unsichere bleiben zum Anhören stehen.
               </span>
-              <Button variant="primary" size="sm" disabled={accepting} onClick={() => void acceptSure()}>
-                {accepting ? "Übernehme…" : `Alle eindeutigen übernehmen (${sure.length})`}
+              <Button variant="primary" size="sm" disabled={!!accepting} onClick={() => void acceptSure()}>
+                {accepting
+                  ? `Übernehme ${accepting[0] + 1} von ${accepting[1]}…`
+                  : `Alle eindeutigen übernehmen (${sure.length})`}
               </Button>
             </div>
           )}

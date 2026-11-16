@@ -40,8 +40,10 @@ function Logo({ small }: { small?: boolean }) {
 }
 
 export function App() {
-  const nav = usePaneWidth("einsaetze", 210, 150, 420);
-  const inspector = usePaneWidth("seitenleiste", 310, 260, 720);
+  // Auf großen Bildschirmen (1080p, 1440p) bekommen Einsatzliste und Seitenleiste von Anfang an mehr Platz.
+  const wide = window.innerWidth >= 2200 ? 2 : window.innerWidth >= 1700 ? 1 : 0;
+  const nav = usePaneWidth("einsaetze", [210, 230, 250][wide]!, 150, 420);
+  const inspector = usePaneWidth("seitenleiste", [310, 360, 420][wide]!, 260, 720);
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

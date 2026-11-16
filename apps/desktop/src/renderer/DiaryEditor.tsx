@@ -208,13 +208,14 @@ export function DiaryEditor({
                 )}
               >
                 <Thumb surface={p.surfaces[0]!} />
-                <div className="flex justify-between text-[0.82rem]">
-                  <b className="font-mono">{p.label}</b>
-                  <span className="text-muted">
-                    {p.surfaces.length > 1 && `${p.surfaces.length} Bilder · `}
+                {/* Seitenangabe und Zählung je auf eine eigene Zeile, damit „S. 3–4“ nicht mitten im Bereich bricht. */}
+                <div className="flex items-baseline justify-between gap-2 text-[0.82rem]">
+                  <b className="font-mono whitespace-nowrap">{p.label}</b>
+                  <span className="text-muted" title="Einträge auf dieser Seite">
                     {entriesOn(p).length || "–"}
                   </span>
                 </div>
+                {p.surfaces.length > 1 && <div className="text-[0.78rem] text-muted">{p.surfaces.length} Bilder</div>}
               </button>
             ))}
           </nav>

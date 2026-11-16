@@ -136,14 +136,17 @@ export function StepHeader({
   summary,
   help,
   children,
+  className,
 }: {
   title: string;
   summary?: ReactNode;
   help?: ReactNode;
   children?: ReactNode;
+  /** Etwa eine Höchstbreite, damit die Knöpfe rechts bei ihrem Inhalt bleiben statt am Fensterrand. */
+  className?: string;
 }) {
   return (
-    <Collapsible.Root className="mb-4">
+    <Collapsible.Root className={cx("mb-4", className)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-56 flex-[1_1_0%]">
           <h2 className="text-[1.4rem] leading-tight font-semibold">{title}</h2>
