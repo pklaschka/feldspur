@@ -17,7 +17,7 @@ import {
 import type { Guard } from "./App.tsx";
 import { hm, maskClock, normalizeClock, stepClock } from "./format.ts";
 import { loadPdf, PdfPageCanvas } from "./pdf.tsx";
-import { Button, Choice, ConfirmButton, cx, Notice } from "./ui.tsx";
+import { Button, Choice, cx, Notice } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -767,9 +767,9 @@ function EntryCard({
           auf anderer Seite fortsetzen
         </Button>
         <span className="flex-1" />
-        <ConfirmButton variant="link" className="text-bad" onConfirm={onDelete}>
+        <Button variant="link" className="text-bad" onClick={onDelete}>
           Eintrag löschen
-        </ConfirmButton>
+        </Button>
       </div>
     </div>
   );

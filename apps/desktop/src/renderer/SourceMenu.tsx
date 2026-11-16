@@ -62,7 +62,6 @@ const rowLabel = (r: SourceRow) => (
 /** „⋯“-Menü einer Quelle. */
 export function SourceMenu({ row, view, className }: { row: SourceRow; view: SessionView; className?: string }) {
   const a = useActions();
-  const [confirm, setConfirm] = useState(false);
   const [naming, setNaming] = useState(false);
   const others = view.allDevices.filter((d) => d.id !== row.deviceId);
   const pages = view.rows.filter((r) => r.id !== row.id && IMAGE.has(r.kind) && !r.partOf && r.partOf !== row.id);
@@ -151,23 +150,14 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
                 </Sub>
               ))}
             <DropdownMenu.Separator className={sep} />
-            <DropdownMenu.Item className={cx(item, "text-bad")} onSelect={() => setConfirm(true)}>
-              Aus Projekt entfernen…
+            {/* Ohne Nachfrage: danach erscheint ein Hinweis mit „Rückgängig“ (auch Strg/⌘+Z). */}
+            <DropdownMenu.Item className={cx(item, "text-bad")} onSelect={() => a.remove(row.id)}>
+              Aus Projekt entfernen
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
-      <Confirm
-        open={confirm}
-        onOpenChange={setConfirm}
-        title={`${row.label} aus dem Projekt entfernen?`}
-        action="Entfernen"
-        onConfirm={() => a.remove(row.id)}
-      >
-        <b>{row.fileName}</b> verschwindet aus diesem Einsatz, mit seinen Zeitbelegen, Ankern und Tagebuch-Rahmen. Die
-        Originaldatei bleibt unverändert, wo sie ist; du kannst sie später wieder einsammeln.
-      </Confirm>
       <NameDialog
         open={naming}
         onOpenChange={setNaming}

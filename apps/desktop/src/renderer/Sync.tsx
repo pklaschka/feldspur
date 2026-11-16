@@ -6,7 +6,6 @@ import { positionText, usePlayback } from "./playback.tsx";
 import {
   Button,
   Choice,
-  ConfirmButton,
   cx,
   FlagMark,
   Glyph,
@@ -521,13 +520,13 @@ function ManualAnchors({
               >
                 fein justieren
               </Button>
-              <ConfirmButton
+              <Button
                 variant="link"
                 className="text-[0.85rem]"
-                onConfirm={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
+                onClick={() => void guard(() => api.rejectAnchor(x.id)).then((v) => v && onView(v))}
               >
                 löschen
-              </ConfirmButton>
+              </Button>
             </li>
           ))}
         </ul>
