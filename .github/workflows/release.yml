@@ -3,7 +3,8 @@ name: Release
 # Neue Version der Feldspur-App veröffentlichen. Start von Hand: Actions → Release → „Run workflow“.
 #
 #   1. vorbereiten   prüfen, testen, Changelog aus den Pull Requests erzeugen, Versionen setzen,
-#                    Commit „Release vX“ auf main und Tag vX pushen
+#                    Commit „Release vX“ anlegen, Tag vX und Branch release/vX pushen (nicht main:
+#                    die Regel für main verlangt Statusprüfungen; die Versionen kommen per PR nach main)
 #   2. pakete        Installer für Windows, macOS (Apple-Chip, Intel) und Linux (package.yml)
 #      handbuch      PDF-Handbuch, von Quarto gerendert (handbook.yml)
 #   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt
@@ -113,9 +114,17 @@ jobs:
             echo "::notice::Probelauf: Commit und Tag v$V bleiben lokal. Gebaut wird $GITHUB_SHA mit Version $V."
             echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           else
-            # Atomar: entweder landen Commit und Tag beide oder keins (z. B. wenn main inzwischen weiter ist).
-            git push --atomic origin "HEAD:refs/heads/main" "refs/tags/v$V"
+            # main ist durch eine Regel geschützt (Statusprüfungen), dorthin darf der Workflow nicht pushen.
+            # Der Tag zeigt auf den Release-Commit; derselbe Commit liegt auf release/vX und kommt per PR nach main.
+            # Atomar: entweder landen Tag und Branch beide oder keins.
+            git push --atomic origin "HEAD:refs/heads/release/v$V" "refs/tags/v$V"
             echo "ref=v$V" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Versionen nach main bringen"
+              echo
+              echo "Commit „Release v$V“ liegt auf \`release/v$V\`. Pull Request öffnen und mergen:"
+              echo "https://github.com/$GITHUB_REPOSITORY/compare/main...release/v$V?expand=1"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - uses: actions/upload-artifact@v4
