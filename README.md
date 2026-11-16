@@ -1,6 +1,7 @@
 # Feldspur
 
 <!-- Erzeugt aus README.qmd und handbuch/ (vp run readme). Bitte dort ändern, nicht hier. -->
+<img src="packaging/icon.svg" alt="" width="96" align="right">
 
 Feldspur legt alle Aufzeichnungen eines ethnografischen Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf
 **eine gemeinsame Uhrzeit-Achse** und macht daraus ein codierbares Quelldokument, zuerst für MAXQDA.

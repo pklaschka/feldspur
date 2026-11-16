@@ -431,13 +431,16 @@ function SessionPane({
                       {s.title}
                       {s.badge && (
                         <>
-                          <span
-                            className={cx(
-                              "sr-only rounded-full px-2 text-[0.8rem] font-normal @min-[50rem]:not-sr-only",
-                              s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
-                            )}
-                          >
-                            {s.badge}
+                          {/* Außen nur sichtbar/unsichtbar (not-sr-only setzt das Padding auf 0), innen die Pille. */}
+                          <span className="sr-only @min-[50rem]:not-sr-only">
+                            <span
+                              className={cx(
+                                "inline-block rounded-full px-2 py-px text-[0.8rem] leading-snug font-normal whitespace-nowrap",
+                                s.warn ? "bg-warn-soft text-warn" : "bg-sunken text-muted",
+                              )}
+                            >
+                              {s.badge}
+                            </span>
                           </span>
                           {s.warn && <span aria-hidden className="size-2 rounded-full bg-warn @min-[50rem]:hidden" />}
                         </>

@@ -56,18 +56,13 @@
 
   // Ab hier zählt der Inhalt: Kopf- und Fußzeile erst danach, auf Vorsatzseiten nichts.
   let body-start = state("fs-body-start", none)
-  // Letzte Seite vor dem Inhalt mit Text; dazwischen liegen nur Leerseiten für den beidseitigen Druck.
-  let front-end = state("fs-front-end", 2)
-  let outer = (left, right) => context if calc.odd(here().page()) { right } else { left }
 
   set page(
     margin: (inside: 27mm, outside: 21mm, top: 26mm, bottom: 24mm),
     binding: left,
     // Randmarke außen: oben ein Stück Terrakotta (die Fahne), darunter Umbra (der Stab).
     background: context {
-      let p = here().page()
-      let start = body-start.final()
-      if start != none and p > front-end.final() and p < start { return }
+      // Auch Leerseiten tragen die Randmarke, damit der gedruckte Block durchgehend gleich aussieht.
       let side = if calc.odd(here().page()) { right } else { left }
       place(side + top, stack(
         rect(width: 3mm, height: 22mm, fill: terrakotta),
@@ -194,7 +189,6 @@
   if toc {
     pagebreak(to: "odd")
     outline(title: toc_title, depth: toc_depth, indent: toc_indent)
-    context front-end.update(here().page())
   }
 
   // Inhalt beginnt auf einer rechten Seite; ab hier Kopf- und Fußzeile.

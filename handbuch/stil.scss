@@ -261,6 +261,9 @@ h2,
 h3 {
   font-weight: 600;
   letter-spacing: -0.005em;
+  line-height: 1.3;
+  // Quarto dimmt Unterüberschriften; mit der Papierfarbe reicht der Kontrast dann nicht mehr.
+  opacity: 1 !important;
 }
 // Mehr Luft über einer Überschrift als darunter.
 h2 {
@@ -282,6 +285,25 @@ main p,
 main li {
   max-width: 68ch;
 }
+// Kästen so breit wie der Text, statt rechts leer zu laufen. Ohne Seitenstreifen: ein feiner Rahmen
+// in der Farbe der Art (wie die Hinweise in der App), der Kopf mit etwas Luft.
+main .callout {
+  max-width: calc(68ch + 1.6rem);
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent) !important;
+  border-left-width: 1px !important;
+  border-radius: 6px;
+}
+main .callout p,
+main .callout li {
+  max-width: none;
+}
+main .callout .callout-header {
+  padding-block: 0.35rem !important;
+}
+// Kopf auch auf schmalen Fenstern mit Rand.
+.quarto-title-banner {
+  padding-inline: 1rem;
+}
 ::selection {
   background: rgba($fs-terrakotta, 0.18);
 }
@@ -302,5 +324,7 @@ a {
   border-top: 1px solid rgba(127, 127, 127, 0.3);
   font-size: 0.85rem;
   text-align: center;
-  opacity: 0.8;
+}
+#TOC {
+  line-height: 1.35;
 }
