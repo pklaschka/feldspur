@@ -51,10 +51,10 @@
     #set text(fill: hell, hyphenate: false)
     #show link: set text(fill: hell)
     #v(10mm)
-    #text(font: sans, size: 10pt, fill: gedaempft, tracking: 0.02em)[Begleittext und Handbuch]
-    #v(3mm)
     #text(font: font, weight: "semibold", size: 30pt)[#title]
-    #v(6mm)
+    #v(1mm)
+    #text(font: font, style: "italic", size: 14pt, fill: gedaempft)[Begleittext und Handbuch]
+    #v(8mm)
     #block(width: 86%, {
       set par(leading: 0.7em, justify: false)
       set text(size: 12pt)
@@ -186,9 +186,8 @@
     set par(justify: false)
     v(14mm)
     image("bilder/logo.svg", width: 20mm)
-    v(4mm)
-    text(font: sans, size: 10pt, fill: tinte-2, tracking: 0.02em)[Begleittext und Handbuch]
-    v(4mm)
+    // Kein Vorspann über dem Titel: „Begleittext und Handbuch“ steht schon im Untertitel.
+    v(6mm)
     text(font: heading-family, weight: "semibold", size: 34pt, fill: heading-color)[#title]
     set text(hyphenate: false)
     if subtitle != none {
