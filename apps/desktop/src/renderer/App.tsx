@@ -192,7 +192,17 @@ export function App() {
             <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
           </nav>
           {sessionId ? (
-            <SessionPane key={sessionId} sessionId={sessionId} guard={guard} error={error} onProject={setProject} />
+            <SessionPane
+              key={sessionId}
+              sessionId={sessionId}
+              guard={guard}
+              error={error}
+              onProject={(p) => {
+                setProject(p);
+                // Rückgängig kann den offenen Einsatz entfernen (Anlegen rückgängig): dann einen anderen zeigen.
+                if (!p.sessions.some((x) => x.id === sessionId)) setSessionId(p.sessions[0]?.id ?? null);
+              }}
+            />
           ) : (
             <main className="col-span-2 p-8">
               {error && <p className="text-bad">{error}</p>}
@@ -289,6 +299,7 @@ function SessionPane({
   const [searching, setSearching] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
   const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
+  const history = useHistory(view, sessionId, guard, setView, onProject);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -407,10 +418,40 @@ function SessionPane({
                 <Button variant="link" size="sm" onClick={() => setEditing(true)}>
                   Einsatzdaten bearbeiten
                 </Button>
+                <span className="ml-auto flex items-center" role="group" aria-label="Verlauf">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Rückgängig"
+                    data-testid="undo"
+                    disabled={!history.state.undo}
+                    title={
+                      history.state.undo
+                        ? `Rückgängig: ${history.state.undo} (${isMac ? "⌘Z" : "Strg+Z"})`
+                        : "Nichts rückgängig zu machen"
+                    }
+                    onClick={() => history.step(false)}
+                  >
+                    <HistoryGlyph />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Wiederholen"
+                    disabled={!history.state.redo}
+                    title={
+                      history.state.redo
+                        ? `Wiederholen: ${history.state.redo} (${isMac ? "⇧⌘Z" : "Strg+Y"})`
+                        : "Nichts zu wiederholen"
+                    }
+                    onClick={() => history.step(true)}
+                  >
+                    <HistoryGlyph redo />
+                  </Button>
+                </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="ml-auto"
                   onClick={() => setSearching(true)}
                   title="Mitschrift, Tagebuch, Quellen und Episoden durchsuchen (Strg/⌘+K)"
                 >
@@ -562,7 +603,145 @@ function SessionPane({
           onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
         <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
+        <UndoToast toast={history.toast} onAction={history.step} onClose={history.dismiss} />
       </SourceActionsProvider>
     </PlaybackProvider>
+  );
+}
+
+/** Schritte, nach denen ein Hinweis mit „Rückgängig“ erscheint: sie ersetzen die frühere Nachfrage. */
+const NOTIFY = new Set([
+  "Quelle entfernt",
+  "Anker entfernt",
+  "Anker gesetzt",
+  "Anker geändert",
+  "Vorschlag übernommen",
+  "Lage bestätigt",
+  "Zeitbeleg gelöscht",
+  "Tagebucheintrag gelöscht",
+  "Notiz gelöscht",
+  "Geräte zusammengeführt",
+]);
+
+interface Toast {
+  text: string;
+  /** Was der Knopf im Hinweis tut: false = rückgängig, true = wiederholen. */
+  redo: boolean;
+  n: number;
+}
+
+/** Textfeld mit eigenem Rückgängig (Strg+Z bleibt dort beim Feld). */
+function isEditable(el: Element | null): boolean {
+  if (!el) return false;
+  if (el instanceof HTMLTextAreaElement || (el as HTMLElement).isContentEditable) return true;
+  return el instanceof HTMLInputElement && !["checkbox", "radio", "button", "submit", "range"].includes(el.type);
+}
+
+/** Verlauf des Projekts: Zustand für die Knöpfe, Strg/⌘+Z, Hinweis nach wichtigen Schritten. */
+function useHistory(
+  view: SessionView | null,
+  sessionId: string,
+  guard: Guard,
+  setView: (v: SessionView) => void,
+  onProject: (p: ProjectInfo) => void,
+) {
+  const [state, setState] = useState({ undo: null as string | null, redo: null as string | null, serial: 0 });
+  const [toast, setToast] = useState<Toast | null>(null);
+  const lastSerial = useRef<number | null>(null);
+  // Nach jeder Änderung der Ansicht nachsehen, ob ein neuer Schritt dazugekommen ist.
+  useEffect(() => {
+    void api.historyState().then((h) => {
+      setState(h);
+      const before = lastSerial.current;
+      lastSerial.current = h.serial;
+      if (before !== null && h.serial > before && h.undo && NOTIFY.has(h.undo))
+        setToast({ text: h.undo, redo: false, n: h.serial });
+    });
+  }, [view]);
+  const step = async (redo: boolean) => {
+    const r = await guard(() => (redo ? api.redo(sessionId) : api.undo(sessionId)));
+    if (!r) return;
+    onProject(r.project);
+    if (r.view) setView(r.view);
+    else setState(await api.historyState());
+    setToast(
+      r.label
+        ? { text: `${redo ? "Wiederholt" : "Rückgängig gemacht"}: ${r.label}`, redo: !redo, n: Date.now() }
+        : null,
+    );
+  };
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  // Strg/⌘+Z, Strg/⌘+Umschalt+Z und Strg+Y. In Textfeldern bleibt es beim Rückgängig des Feldes.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || isEditable(document.activeElement)) return;
+      const key = e.key.toLowerCase();
+      const redo = key === "y" || (key === "z" && e.shiftKey);
+      if (key !== "z" && key !== "y") return;
+      e.preventDefault();
+      void stepRef.current(redo);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  return { state, toast, step: (redo: boolean) => void step(redo), dismiss: () => setToast(null) };
+}
+
+function UndoToast({
+  toast,
+  onAction,
+  onClose,
+}: {
+  toast: Toast | null;
+  onAction: (redo: boolean) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(onClose, 8000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast?.n]);
+  if (!toast) return null;
+  return (
+    <div
+      role="status"
+      data-testid="undo-toast"
+      className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-ink px-4 py-2 text-[0.92rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+    >
+      <span>{toast.text}</span>
+      <button
+        className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
+        onClick={() => {
+          onAction(toast.redo);
+        }}
+      >
+        {toast.redo ? "Wiederholen" : "Rückgängig"}
+      </button>
+      <button className="cursor-pointer opacity-70 hover:opacity-100" aria-label="Hinweis ausblenden" onClick={onClose}>
+        ×
+      </button>
+    </div>
+  );
+}
+
+function HistoryGlyph({ redo = false }: { redo?: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      style={redo ? { transform: "scaleX(-1)" } : undefined}
+    >
+      <path d="M5.5 3 2.5 6l3 3" />
+      <path d="M2.5 6h7a4 4 0 0 1 0 8H7" />
+    </svg>
   );
 }

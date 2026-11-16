@@ -54,6 +54,13 @@ Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau
 Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Tagebuch, Quellen
 und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle.
 
+**Rückgängig** (Strg+Z, auf dem Mac ⌘Z) nimmt den letzten Schritt zurück, etwa eine entfernte Quelle, einen
+gelöschten Anker, einen übernommenen Vorschlag oder "Lage passt". **Wiederholen** geht mit Strg+Y oder
+Strg+Umschalt+Z (⇧⌘Z). Beide Knöpfe stehen auch oben neben **Suchen**. Feldspur fragt deshalb vor dem Löschen nicht
+mehr nach; stattdessen erscheint unten kurz ein Hinweis mit **Rückgängig**. In Textfeldern gilt Strg+Z wie gewohnt
+für den Text im Feld. Der Verlauf gilt, solange das Projekt offen ist. Nach dem Einsammeln oder der Tonspur-Analyse
+beginnt er neu.
+
 Feldspur hat ein helles und ein dunkles Erscheinungsbild und folgt der Einstellung deines Systems.
 
 ![Die Zeitachse im dunklen Erscheinungsbild](bilder/dunkel.png){#fig-dunkel}

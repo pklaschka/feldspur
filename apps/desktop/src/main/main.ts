@@ -27,6 +27,7 @@ import {
   type NewSessionInput,
   type SessionPatch,
   type TranscriptPatch,
+  type HistoryResult,
   type SourceNoteInput,
   type ProjectInfo,
 } from "../shared/api.ts";
@@ -98,7 +99,30 @@ function openStore(path: string, create: boolean): ProjectInfo | null {
 
 type ExportRequest = { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string };
 
+/**
+ * IPC-Aufruf, der Daten ändert, als ein Schritt für Rückgängig. Die Ansicht wird im selben Schritt gebaut; das
+ * stört nicht, weil sie nichts schreibt.
+ */
+function undoable<A extends unknown[], R>(
+  channel: string,
+  label: string,
+  handler: (e: Electron.IpcMainInvokeEvent, ...args: A) => R,
+): void {
+  ipcMain.handle(channel, (e, ...args) => requireStore().history.record(label, () => handler(e, ...(args as A))));
+}
+
+/** Rückgängig/Wiederholen ausführen und das Ergebnis für die Oberfläche zusammenstellen. */
+function historyStep(redo: boolean, sessionId: string | null): HistoryResult {
+  const s = requireStore();
+  const label = redo ? s.history.redo() : s.history.undo();
+  const alive = sessionId && s.listSessions().some((x) => x.id === sessionId);
+  return { label, project: projectInfo()!, view: alive ? buildSessionView(s, sessionId) : null };
+}
+
 function registerIpc(): void {
+  ipcMain.handle(IPC.undo, (_e, sessionId: string | null) => historyStep(false, sessionId));
+  ipcMain.handle(IPC.redo, (_e, sessionId: string | null) => historyStep(true, sessionId));
+  ipcMain.handle(IPC.historyState, () => (store ? store.history.state() : { undo: null, redo: null, serial: 0 }));
   ipcMain.handle(IPC.currentProject, () => projectInfo());
 
   ipcMain.handle(IPC.newProject, async () => {
@@ -129,7 +153,7 @@ function registerIpc(): void {
   });
   ipcMain.handle(IPC.forgetRecent, (_e, path: string) => forgetProject(path));
 
-  ipcMain.handle(IPC.createSession, (_e, input: NewSessionInput) => {
+  undoable(IPC.createSession, "Einsatz angelegt", (_e, input: NewSessionInput) => {
     requireStore().addSession(input);
     return projectInfo();
   });
@@ -157,64 +181,65 @@ function registerIpc(): void {
     };
   });
 
-  ipcMain.handle(IPC.renameDevice, (_e, deviceId: string, label: string) => {
+  undoable(IPC.renameDevice, "Gerät umbenannt", (_e, deviceId: string, label: string) => {
     const s = requireStore();
     const d = s.updateDevice(deviceId, { label: label.trim() || s.getDevice(deviceId).label });
     return buildSessionView(s, d.sessionId);
   });
 
-  ipcMain.handle(IPC.updateSession, (_e, sessionId: string, patch: SessionPatch) => {
+  undoable(IPC.updateSession, "Einsatzdaten geändert", (_e, sessionId: string, patch: SessionPatch) => {
     const s = requireStore();
     updateSessionDetails(s, sessionId, patch);
     return { view: buildSessionView(s, sessionId), project: projectInfo()! };
   });
-  ipcMain.handle(IPC.removeSource, (_e, sourceId: string) => {
+  undoable(IPC.removeSource, "Quelle entfernt", (_e, sourceId: string) => {
     const s = requireStore();
     return buildSessionView(s, removeSource(s, sourceId));
   });
-  ipcMain.handle(IPC.moveSource, (_e, sourceId: string, target: string | { newLabel: string }) => {
+  undoable(IPC.moveSource, "Quelle verschoben", (_e, sourceId: string, target: string | { newLabel: string }) => {
     const s = requireStore();
     return buildSessionView(s, moveSource(s, sourceId, target));
   });
-  ipcMain.handle(IPC.mergeDevices, (_e, fromId: string, intoId: string) => {
+  undoable(IPC.mergeDevices, "Geräte zusammengeführt", (_e, fromId: string, intoId: string) => {
     const s = requireStore();
     return buildSessionView(s, mergeDevices(s, fromId, intoId));
   });
-  ipcMain.handle(IPC.setPartOf, (_e, sourceId: string, mainId: string | null) => {
+  undoable(IPC.setPartOf, "Seite zugeordnet", (_e, sourceId: string, mainId: string | null) => {
     const s = requireStore();
     return buildSessionView(s, setPartOf(s, sourceId, mainId));
   });
-  ipcMain.handle(IPC.setFollows, (_e, sourceId: string, prevId: string | null) => {
+  undoable(IPC.setFollows, "Folgeaufnahme gesetzt", (_e, sourceId: string, prevId: string | null) => {
     const s = requireStore();
     return buildSessionView(s, setFollows(s, sourceId, prevId));
   });
 
-  ipcMain.handle(
+  undoable(
     IPC.addTranscriptLine,
+    "Zeile angelegt",
     (_e, sourceId: string, line: { atMs: number; speaker: string; text: string }) => {
       const s = requireStore();
       const l = addLine(s, sourceId, line);
       return { view: buildSessionView(s, s.getSource(sourceId).sessionId), lineId: l.id };
     },
   );
-  ipcMain.handle(IPC.updateTranscriptLine, (_e, lineId: string, patch: TranscriptPatch) => {
+  undoable(IPC.updateTranscriptLine, "Zeile geändert", (_e, lineId: string, patch: TranscriptPatch) => {
     const s = requireStore();
     return buildSessionView(s, updateLine(s, lineId, patch));
   });
-  ipcMain.handle(IPC.deleteTranscriptLine, (_e, lineId: string) => {
+  undoable(IPC.deleteTranscriptLine, "Zeile gelöscht", (_e, lineId: string) => {
     const s = requireStore();
     return buildSessionView(s, deleteLine(s, lineId));
   });
 
-  ipcMain.handle(IPC.addSourceNote, (_e, sourceId: string, note: SourceNoteInput) => {
+  undoable(IPC.addSourceNote, "Notiz angelegt", (_e, sourceId: string, note: SourceNoteInput) => {
     const s = requireStore();
     return buildSessionView(s, addNote(s, sourceId, note));
   });
-  ipcMain.handle(IPC.updateSourceNote, (_e, noteId: string, patch: SourceNoteInput) => {
+  undoable(IPC.updateSourceNote, "Notiz geändert", (_e, noteId: string, patch: SourceNoteInput) => {
     const s = requireStore();
     return buildSessionView(s, updateNote(s, noteId, patch));
   });
-  ipcMain.handle(IPC.deleteSourceNote, (_e, noteId: string) => {
+  undoable(IPC.deleteSourceNote, "Notiz gelöscht", (_e, noteId: string) => {
     const s = requireStore();
     return buildSessionView(s, deleteNote(s, noteId));
   });
@@ -266,13 +291,13 @@ function registerIpc(): void {
   });
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
-  ipcMain.handle(IPC.setReference, (_e, deviceId: string) => {
+  undoable(IPC.setReference, "Referenzuhr gewählt", (_e, deviceId: string) => {
     const s = requireStore();
     const d = s.setReferenceDevice(deviceId);
     return buildSessionView(s, d.sessionId);
   });
 
-  ipcMain.handle(IPC.setDeviceTimeZone, (_e, deviceId: string, timeZone: string | null) => {
+  undoable(IPC.setDeviceTimeZone, "Zeitzone geändert", (_e, deviceId: string, timeZone: string | null) => {
     const s = requireStore();
     const zone = timeZone?.trim() || null;
     if (zone) {
@@ -285,13 +310,13 @@ function registerIpc(): void {
     const d = s.updateDevice(deviceId, { timeZone: zone });
     return buildSessionView(s, d.sessionId);
   });
-  ipcMain.handle(IPC.setDeviceUtc, (_e, deviceId: string, utc: boolean) => {
+  undoable(IPC.setDeviceUtc, "Zeitangabe UTC/Ortszeit geändert", (_e, deviceId: string, utc: boolean) => {
     const s = requireStore();
     const d = s.updateDevice(deviceId, { timestampsAreUtc: utc });
     return buildSessionView(s, d.sessionId);
   });
 
-  ipcMain.handle(IPC.setDiaryNote, (_e, sourceId: string, clock: string) => {
+  undoable(IPC.setDiaryNote, "Randnotiz eingetragen", (_e, sourceId: string, clock: string) => {
     const s = requireStore();
     return buildSessionView(s, setDiaryNote(s, sourceId, clock));
   });
@@ -308,7 +333,7 @@ function registerIpc(): void {
     };
   });
 
-  ipcMain.handle(IPC.confirmAnchor, (_e, anchorId: string) => {
+  undoable(IPC.confirmAnchor, "Vorschlag übernommen", (_e, anchorId: string) => {
     const s = requireStore();
     const a = s.getAnchor(anchorId);
     s.confirmAnchor(anchorId);
@@ -320,37 +345,37 @@ function registerIpc(): void {
     return buildSessionView(s, a.sessionId);
   });
 
-  ipcMain.handle(IPC.rejectAnchor, (_e, anchorId: string) => {
+  undoable(IPC.rejectAnchor, "Anker entfernt", (_e, anchorId: string) => {
     const s = requireStore();
     const a = s.getAnchor(anchorId);
     s.deleteAnchor(anchorId);
     return buildSessionView(s, a.sessionId);
   });
 
-  ipcMain.handle(IPC.confirmPlacement, (_e, sourceId: string, startMs: number) => {
+  undoable(IPC.confirmPlacement, "Lage bestätigt", (_e, sourceId: string, startMs: number) => {
     const s = requireStore();
     return buildSessionView(s, confirmPlacement(s, sourceId, startMs));
   });
-  ipcMain.handle(IPC.addTime, (_e, input: TimeInput) => {
+  undoable(IPC.addTime, "Uhrzeit eingetragen", (_e, input: TimeInput) => {
     const s = requireStore();
     return buildSessionView(s, addTimeEvidence(s, input));
   });
 
-  ipcMain.handle(IPC.setEvidenceEnabled, (_e, evidenceId: string, enabled: boolean) => {
+  undoable(IPC.setEvidenceEnabled, "Zeitbeleg umgeschaltet", (_e, evidenceId: string, enabled: boolean) => {
     const s = requireStore();
     return buildSessionView(s, toggleEvidence(s, evidenceId, enabled));
   });
 
-  ipcMain.handle(IPC.removeEvidence, (_e, evidenceId: string) => {
+  undoable(IPC.removeEvidence, "Zeitbeleg gelöscht", (_e, evidenceId: string) => {
     const s = requireStore();
     return buildSessionView(s, removeEvidence(s, evidenceId));
   });
 
-  ipcMain.handle(IPC.addAnchor, (_e, input: AnchorInput) => {
+  undoable(IPC.addAnchor, "Anker gesetzt", (_e, input: AnchorInput) => {
     const s = requireStore();
     return buildSessionView(s, addManualAnchor(s, input));
   });
-  ipcMain.handle(IPC.replaceAnchor, (_e, anchorId: string, input: AnchorInput) => {
+  undoable(IPC.replaceAnchor, "Anker geändert", (_e, anchorId: string, input: AnchorInput) => {
     const s = requireStore();
     return buildSessionView(s, replaceAnchor(s, anchorId, input));
   });
@@ -367,11 +392,11 @@ function registerIpc(): void {
       });
     },
   );
-  ipcMain.handle(IPC.setLevel, (_e, sourceId: string, input: LevelInput) => {
+  undoable(IPC.setLevel, "Lautstärke geändert", (_e, sourceId: string, input: LevelInput) => {
     const s = requireStore();
     return buildSessionView(s, setLevel(s, sourceId, input));
   });
-  ipcMain.handle(IPC.setPageNumbering, (_e, items: PageNumberingInput[]) => {
+  undoable(IPC.setPageNumbering, "Seitenzählung geändert", (_e, items: PageNumberingInput[]) => {
     const s = requireStore();
     return buildSessionView(s, setPageNumbering(s, items));
   });
@@ -381,33 +406,37 @@ function registerIpc(): void {
     return buildSessionView(s, s.getSource(sourceId).sessionId);
   });
 
-  ipcMain.handle(IPC.createDiaryEntry, (_e, sourceId: string, region: Region) => {
+  undoable(IPC.createDiaryEntry, "Tagebucheintrag angelegt", (_e, sourceId: string, region: Region) => {
     const s = requireStore();
     const r = createEntry(s, sourceId, region);
     return { view: buildSessionView(s, r.sessionId), entryId: r.entry.id };
   });
-  ipcMain.handle(IPC.addDiaryRegion, (_e, entryId: string, sourceId: string, region: Region) => {
+  undoable(IPC.addDiaryRegion, "Rahmen ergänzt", (_e, entryId: string, sourceId: string, region: Region) => {
     const s = requireStore();
     return buildSessionView(s, addRegion(s, entryId, sourceId, region));
   });
-  ipcMain.handle(IPC.removeDiaryRegion, (_e, entryId: string, index: number) => {
+  undoable(IPC.removeDiaryRegion, "Rahmen entfernt", (_e, entryId: string, index: number) => {
     const s = requireStore();
     return buildSessionView(s, removeRegion(s, entryId, index));
   });
-  ipcMain.handle(IPC.setDiaryRegionPage, (_e, entryId: string, index: number, pageNo: number | null) => {
-    const s = requireStore();
-    return buildSessionView(s, setRegionPage(s, entryId, index, pageNo));
-  });
-  ipcMain.handle(IPC.deleteDiaryEntry, (_e, entryId: string) => {
+  undoable(
+    IPC.setDiaryRegionPage,
+    "Seitenzahl geändert",
+    (_e, entryId: string, index: number, pageNo: number | null) => {
+      const s = requireStore();
+      return buildSessionView(s, setRegionPage(s, entryId, index, pageNo));
+    },
+  );
+  undoable(IPC.deleteDiaryEntry, "Tagebucheintrag gelöscht", (_e, entryId: string) => {
     const s = requireStore();
     return buildSessionView(s, deleteEntry(s, entryId));
   });
-  ipcMain.handle(IPC.patchDiaryEntry, (_e, entryId: string, patch: DiaryPatch) => {
+  undoable(IPC.patchDiaryEntry, "Tagebucheintrag geändert", (_e, entryId: string, patch: DiaryPatch) => {
     const s = requireStore();
     return buildSessionView(s, patchEntry(s, entryId, patch));
   });
 
-  ipcMain.handle(IPC.setDeviceOffset, (_e, deviceId: string, offsetMs: number | null) => {
+  undoable(IPC.setDeviceOffset, "Uhrabweichung geändert", (_e, deviceId: string, offsetMs: number | null) => {
     const s = requireStore();
     const d = s.updateDevice(
       deviceId,

@@ -143,13 +143,19 @@ try {
     .locator("li", { hasText: "Glocke" })
     .getByRole("button", { name: "löschen" })
     .click();
-  // Löschen fragt einmal nach.
+  // Löschen fragt nicht nach; der Hinweis bietet Rückgängig an.
+  await fotoClock.getByText("ohne Abgleich").waitFor();
+  await page.getByTestId("undo-toast").getByText("Anker entfernt").waitFor();
+  await page.getByTestId("undo-toast").getByRole("button", { name: "Rückgängig" }).click();
+  await page.getByTestId("anchor-list").locator("li", { hasText: "Glocke" }).waitFor();
+  await page.getByTestId("undo-toast").getByText("Rückgängig gemacht: Anker entfernt").waitFor();
   await page
     .getByTestId("anchor-list")
     .locator("li", { hasText: "Glocke" })
-    .getByRole("button", { name: "Wirklich löschen?" })
+    .getByRole("button", { name: "löschen" })
     .click();
   await fotoClock.getByText("ohne Abgleich").waitFor();
+  console.log("Rückgängig: Anker gelöscht, zurückgeholt, wieder gelöscht");
 
   // 3 Durchsehen: Episoden gibt es nur auf Wunsch; eingeschaltet erscheinen sie auf der Zeitachse.
   // Kamera liegt jetzt bei 10:16:00.
@@ -372,9 +378,16 @@ try {
     return label;
   };
   await menuFor("Einkaufsliste.txt");
-  await page.getByRole("menuitem", { name: "Aus Projekt entfernen…" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Entfernen" }).click();
+  await page.getByRole("menuitem", { name: "Aus Projekt entfernen" }).click();
   await src("Einkaufsliste.txt").waitFor({ state: "detached" });
+  // Strg+Z holt die Quelle zurück, Strg+Y entfernt sie wieder (nicht in Textfeldern).
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+z");
+  await src("Einkaufsliste.txt").waitFor();
+  await shot("-rueckgaengig");
+  await page.keyboard.press("Control+y");
+  await src("Einkaufsliste.txt").waitFor({ state: "detached" });
+  console.log("Rückgängig: Quelle mit Strg+Z zurück, mit Strg+Y wieder entfernt");
 
   await menuFor("Tagebuch_S02_Rueckseite.jpg");
   await page.getByRole("menuitem", { name: /Als weiteres Bild zu Seite/ }).click();
