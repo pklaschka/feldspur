@@ -1,23 +1,29 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
 cff-version: 1.2.0
+title: >-
+  Feldspur: Multimediale Feldaufzeichnungen auf einer
+  gemeinsamen Zeitachse zusammenführen
 message: >-
-  Wenn du Feldspur in deiner Arbeit verwendest oder darauf verweist, zitiere es bitte
-  mit diesen Angaben und nenne die verwendete Version oder den Commit.
+  Wenn du Feldspur in deiner Arbeit verwendest oder darauf
+  verweist, zitiere es bitte mit diesen Angaben und nenne
+  die verwendete Version oder den Commit.
 type: software
-title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen"
-abstract: >-
-  Forschungswerkzeug für die Ethnografie. Feldspur legt alle Aufzeichnungen eines
-  Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf eine gemeinsame
-  Uhrzeit-Achse und erzeugt daraus ein codierbares Quelldokument, zuerst für MAXQDA.
-  Große Teile des Codes wurden mit generativer KI (Claude, Anthropic) unter der Leitung
-  von Zuri Nimca Klaschka entwickelt.
 authors:
   - given-names: Zuri Nimca
     family-names: Klaschka
     orcid: "https://orcid.org/0009-0005-9995-5687"
-repository-code: "https://github.com/pklaschka/feldspur"
-url: "https://github.com/pklaschka/feldspur"
-version: 0.1.0
-license: EUPL-1.2
+repository-code: "https://purl.archive.org/feldspur/repo"
+url: "https://purl.archive.org/feldspur"
+abstract: >-
+  Forschungswerkzeug für die Ethnografie. Feldspur legt alle
+  Aufzeichnungen eines Feldeinsatzes (Tagebuchscans, Video,
+  Audio, Fotos, Notizen) auf eine gemeinsame Uhrzeit-Achse
+  und erzeugt daraus ein codierbares Quelldokument, zuerst
+  für MAXQDA. Große Teile des Codes wurden mit generativer
+  KI (Claude, Anthropic) unter der Leitung von Zuri Nimca
+  Klaschka entwickelt.
 keywords:
   - Ethnografie
   - Feldforschung
@@ -25,3 +31,5 @@ keywords:
   - MAXQDA
   - Multimedia
   - Zeitachse
+license: EUPL-1.2
+version: 0.1.0
