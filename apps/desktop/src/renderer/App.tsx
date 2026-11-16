@@ -538,6 +538,17 @@ function SessionPane({
                 onSelect={setSelected}
                 onNext={() => setStep("export")}
                 onEpisodes={(on) => void saveDetails({ episodes: on })}
+                onEpisodeEdit={(e) =>
+                  update(
+                    guard(() =>
+                      e.kind === "edge"
+                        ? api.moveEpisodeEdge(sessionId, e.edge, e.fromMs, e.toMs)
+                        : e.kind === "loud"
+                          ? api.addEpisodeAround(sessionId, e.atMs)
+                          : api.resetEpisodes(sessionId),
+                    ),
+                  )
+                }
                 reveal={reveal}
               />
             </Tabs.Content>

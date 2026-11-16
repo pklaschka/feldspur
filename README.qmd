@@ -207,6 +207,5 @@ Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zu
 
 - Ausgabe: Dokumentvariablen im Zeitgerüst; Resolve-Schnittliste in Resolve selbst erproben.
 - Vorschau-Kopien für Formate, die Chromium nicht abspielt (z. B. HEVC, manche WAV-Varianten).
-- Episodengrenzen auf der Zeitachse verschieben, laute Stellen zur Mini-Episode machen, Wellenform in den Spuren.
 - ExifTool statt exifr für RAW/HEIC.
 - Code-Signatur (Windows, macOS-Notarisierung).

@@ -56,6 +56,10 @@ const api: FeldspurApi = {
     return () => ipcRenderer.removeListener(IPC.progress, listener);
   },
   undo: (id) => ipcRenderer.invoke(IPC.undo, id),
+  moveEpisodeEdge: (id, edge, from, to) => ipcRenderer.invoke(IPC.moveEpisodeEdge, id, edge, from, to),
+  addEpisodeAround: (id, at) => ipcRenderer.invoke(IPC.addEpisodeAround, id, at),
+  resetEpisodes: (id) => ipcRenderer.invoke(IPC.resetEpisodes, id),
+  envelopes: (id) => ipcRenderer.invoke(IPC.envelopes, id),
   redo: (id) => ipcRenderer.invoke(IPC.redo, id),
   historyState: () => ipcRenderer.invoke(IPC.historyState),
   pathForFile: (file) => webUtils.getPathForFile(file),

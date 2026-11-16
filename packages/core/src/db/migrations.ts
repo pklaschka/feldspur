@@ -157,4 +157,16 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE sources ADD COLUMN first_page INTEGER;
   ALTER TABLE sources ADD COLUMN page_spread INTEGER NOT NULL DEFAULT 0;
   `,
+  // 11: Episoden von Hand anpassen (Strecken je Aufnahme hinzunehmen oder herausnehmen)
+  `
+  CREATE TABLE episode_edits (
+    id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    from_ms INTEGER NOT NULL,
+    to_ms INTEGER NOT NULL,
+    mode TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX episode_edits_source ON episode_edits(source_id);
+  `,
 ];

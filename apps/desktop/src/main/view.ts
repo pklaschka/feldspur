@@ -190,7 +190,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   let gaps: GapRow[] = [];
   if (input.session.episodes && analyses.length) {
     const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
-    const ep = computeEpisodes(input.sources, res, idle);
+    const ep = computeEpisodes(input.sources, res, idle, { edits: store.listEpisodeEdits(sessionId) });
     const label = (id: Id) => sourceById.get(id)?.label ?? "?";
     episodes = ep.episodes.map((e) => ({
       index: e.index,
@@ -303,6 +303,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     proposals,
     episodes,
     gaps,
+    episodeEdits: input.session.episodes ? store.listEpisodeEdits(sessionId).length : 0,
     analyzedCount: analyses.length,
     avCount,
   };

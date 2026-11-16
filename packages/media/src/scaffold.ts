@@ -107,7 +107,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
   const analyses = store.listAudioAnalyses(sessionId);
   const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
   const loud = new Map(analyses.map((a) => [a.sourceId, a.loudInIdle]));
-  const ep = computeEpisodes(input.sources, res, idle);
+  const ep = computeEpisodes(input.sources, res, idle, { edits: store.listEpisodeEdits(sessionId) });
   const photos = new Set(input.sources.filter((s) => s.kind === "photo" && !s.partOf).map((s) => s.id));
   // In Zwischenzeiten stehen Fotos und Tagebucheinträge; Tagebuchseiten zeigen sich über ihre Einträge.
   const plan = planMontage(

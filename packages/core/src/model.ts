@@ -263,6 +263,21 @@ export const SourceNote = z.object({
 });
 export type SourceNote = z.infer<typeof SourceNote>;
 
+/**
+ * Episode von Hand angepasst: eine Strecke einer Aufnahme (ms ab Dateibeginn) gehört sicher zu einer Episode
+ * („include“, z. B. eine laute Stelle in der Stille) oder nicht („exclude“). Bezogen auf die Aufnahme statt auf die
+ * Uhrzeit, damit die Anpassung beim späteren Abgleich der Uhren mitwandert.
+ */
+export const EpisodeEdit = z.object({
+  id: Id,
+  sourceId: Id,
+  fromMs: z.number().int().nonnegative(),
+  toMs: z.number().int().nonnegative(),
+  mode: z.enum(["include", "exclude"]),
+  createdAt: z.iso.datetime(),
+});
+export type EpisodeEdit = z.infer<typeof EpisodeEdit>;
+
 export const Interval = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 export type Interval = z.infer<typeof Interval>;
 
