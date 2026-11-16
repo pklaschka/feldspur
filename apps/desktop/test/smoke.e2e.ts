@@ -194,6 +194,12 @@ try {
   await editor.getByRole("navigation", { name: "Seiten" }).getByRole("button").nth(1).click();
   const sheet = editor.getByTestId("diary-page");
   await sheet.locator("img").waitFor();
+  // Beim Öffnen „ganz“: die Seite füllt Breite oder Höhe der Fläche, statt winzig zu sein.
+  await page.waitForFunction(() => {
+    const a = document.querySelector("[data-testid=diary-area]")!.getBoundingClientRect();
+    const p = document.querySelector("[data-testid=diary-page]")!.getBoundingClientRect();
+    return p.width > (a.width - 40) * 0.9 || p.height > (a.height - 40) * 0.9;
+  });
   const drag = async (x0: number, y0: number, x1: number, y1: number) => {
     const b = (await sheet.boundingBox())!;
     await page.mouse.move(b.x + b.width * x0, b.y + b.height * y0);
@@ -216,7 +222,13 @@ try {
     await field.fill("");
     await field.pressSequentially(at.replace(":", ""));
     if ((await field.inputValue()) !== at) throw new Error(`Maske: ${await field.inputValue()} statt ${at}`);
+    // Vollständig getippt: weiter ins nächste Feld.
+    await page.waitForFunction(
+      (l) => document.activeElement?.getAttribute("aria-label") === l,
+      `Bezugszeitraum Eintrag ${n}`,
+    );
     // Mitten in der Uhrzeit korrigieren: Stundenziffer löschen und neu tippen, die Maske bleibt stehen.
+    await field.focus();
     await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(2, 2));
     await page.keyboard.press("Backspace");
     await page.keyboard.type("9");
