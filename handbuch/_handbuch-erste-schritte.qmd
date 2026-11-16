@@ -63,6 +63,12 @@ Textfeldern macht Strg+Z zuerst den Text im Feld rückgängig; ist dort nichts m
 Projekt weiter. Der Verlauf gilt, solange das Projekt offen ist. Nach dem Einsammeln oder der Tonspur-Analyse
 beginnt er neu.
 
+Davon unabhängig führt Feldspur ein dauerhaftes **Änderungsprotokoll** in der Projektdatei. Jede gespeicherte
+Änderung steht dort mit Zeit, Aktion und den Werten vorher und nachher, auch Rückgängig und Wiederholen selbst. Du
+öffnest es im Projektmenü oben links über **Änderungsprotokoll…**. Ein Klick auf einen Eintrag zeigt die geänderten
+Felder. **Als CSV speichern…** legt das ganze Protokoll als Tabelle ab, etwa für die Dokumentation des
+Forschungsprozesses. Das Protokoll ist nur zum Nachsehen da; zurücknehmen geht weiter über Rückgängig.
+
 Feldspur hat ein helles und ein dunkles Erscheinungsbild und folgt der Einstellung deines Systems.
 
 ![Die Zeitachse im dunklen Erscheinungsbild](bilder/dunkel.png){#fig-dunkel}

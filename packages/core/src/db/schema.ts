@@ -212,6 +212,27 @@ export const episodeEdits = sqliteTable(
   (t) => [index("episode_edits_source").on(t.sourceId)],
 );
 
+/**
+ * Dauerhaftes Änderungsprotokoll. Schreiben nur Trigger (siehe history.ts); eine Zeile je geänderter Zeile, mit den
+ * Spalten vorher und nachher als JSON. `step` fasst die Zeilen einer Aktion zusammen, `label` ist ihre Beschriftung
+ * (leer bei Änderungen ohne Beschriftung, etwa beim Einsammeln).
+ */
+export const changeLog = sqliteTable(
+  "change_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    at: text("at").notNull(),
+    step: integer("step"),
+    label: text("label"),
+    tbl: text("tbl").notNull(),
+    op: text("op", { enum: ["insert", "update", "delete"] }).notNull(),
+    rowKey: text("row_key").notNull(),
+    before: text("before"),
+    after: text("after"),
+  },
+  (t) => [index("change_log_step").on(t.step)],
+);
+
 export const audioAnalysis = sqliteTable("audio_analysis", {
   sourceId: text("source_id")
     .primaryKey()
