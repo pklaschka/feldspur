@@ -361,3 +361,11 @@ a {
 #TOC {
   line-height: 1.35;
 }
+
+// Lange Adressen (vor allem im Literaturverzeichnis) dürfen auf schmalen Bildschirmen
+// mitten im Wort umbrechen, statt über den Rand zu laufen (#49).
+main a,
+main code,
+.csl-entry {
+  overflow-wrap: anywhere;
+}
