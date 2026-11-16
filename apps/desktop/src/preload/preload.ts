@@ -55,6 +55,9 @@ const api: FeldspurApi = {
     ipcRenderer.on(IPC.progress, listener);
     return () => ipcRenderer.removeListener(IPC.progress, listener);
   },
+  undo: (id) => ipcRenderer.invoke(IPC.undo, id),
+  redo: (id) => ipcRenderer.invoke(IPC.redo, id),
+  historyState: () => ipcRenderer.invoke(IPC.historyState),
   pathForFile: (file) => webUtils.getPathForFile(file),
   importTranscript: (id, opts) => ipcRenderer.invoke(IPC.importTranscript, id, opts),
   previewExport: (id, realtime) => ipcRenderer.invoke(IPC.previewExport, id, realtime),
