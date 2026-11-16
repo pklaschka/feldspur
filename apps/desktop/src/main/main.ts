@@ -619,7 +619,26 @@ app.setAboutPanelOptions({
   iconPath: appIcon(),
 });
 
+// Windows und Linux: Ein Doppelklick auf eine Projektdatei startet das Programm noch einmal, mit dem Pfad als
+// Argument. Läuft Feldspur schon, übernimmt das laufende Fenster die Datei, statt ein zweites zu öffnen.
+// In Tests (eigener Benutzerordner) laufen mehrere Instanzen nebeneinander.
+const primaryInstance = Boolean(process.env.FELDSPUR_USER_DATA) || app.requestSingleInstanceLock();
+if (!primaryInstance) app.quit();
+
+app.on("second-instance", (_e, argv) => {
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+  const path = argv.find((a) => a.endsWith(".feldspur"));
+  // Während einer Ausgabe nicht das Projekt unter ihr wechseln.
+  if (!path || !existsSync(path) || exportRunning()) return;
+  openStore(path, false);
+  win?.webContents.reload();
+});
+
 void app.whenReady().then(() => {
+  if (!primaryInstance) return;
   registerMediaProtocol();
   registerIpc();
   // Für Tests und „Öffnen mit“: Projektpfad als Argument.
