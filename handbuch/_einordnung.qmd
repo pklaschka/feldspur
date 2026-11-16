@@ -1,7 +1,6 @@
 # Einordnung: Werkzeuge und Literatur {#sec-einordnung}
 
-Bevor ich selbst etwas baue, drängt sich natürlich die Frage auf: Gibt es das nicht längst? Die kurze Antwort lautet
-für mich: in Teilen ja, als Ganzes nein.
+Bevor ich selbst etwas baue, drängt sich natürlich die Frage auf: Gibt es das nicht längst? Die kurze Antwort lautet: in Teilen ja, als Ganzes nein.
 
 ## Multimodales Feldmaterial
 
@@ -15,7 +14,7 @@ einen hybriden methodischen Werkzeugkasten zurückgreift [@kirksey2010, S. 564].
      and vision"; S. 564 Fuentes "deploys a hybrid methodological tool kit, using the observational techniques of
      primatology". Geprüft am 15.11.2026. -->
 
-Und die Quellen stehen in sehr unterschiedlichem Verhältnis zur Zeit: Eine Kamera stempelt jede Datei, ein
+Und die Quellen haben ein sehr unterschiedliches Verhältnis zur Zeit: Eine Kamera stempelt jede Datei, ein
 Diktiergerät läuft womöglich mit falsch gestellter Uhr. Meine Feldnotizen wiederum habe ich oft erst nach dem
 Geschehen geschrieben. Feldspur versucht, diese Unterschiede ernst zu nehmen. Jede Lage auf der Zeitachse wird aus
 einem sichtbaren Zeitbeleg berechnet. Tagebucheinträge haben neben ihrer Notierzeit einen Bezugszeitraum, der vor sie
@@ -36,7 +35,7 @@ Tagebuchseiten, Fotos und mehrere Aufnahmen zugleich liegen, habe ich in diesen 
 Feldspur setzt deshalb *vor* dem Codieren an: Es führt das Material eines Feldeinsatzes zusammen und gibt es als ein
 Dokument mit Zeitmarken aus, das MAXQDA einliest. Das Codieren selbst bleibt in der gewohnten Software.
 
-Der Austausch zwischen den Programmen ist noch recht jung: Erst nach einer Konferenz 2016 haben sich
+Der Austausch zwischen den Codier-Programmen ist noch recht jung: Erst nach einer Konferenz 2016 haben sich
 Entwickler\*innen auf ein gemeinsames Austauschformat verständigt [@evers2018, S. 61, 69], aus dem der
 REFI-QDA-Standard hervorging [@refiqda].
 <!-- Nachweis evers2018 (Volltext: https://core.ac.uk/download/215349759.pdf): S. 61 "The 2016 international KWALON
@@ -44,6 +43,7 @@ REFI-QDA-Standard hervorging [@refiqda].
      agreed to work towards the goal of a common exchange format" (Rotterdam Exchange Format Initiative).
      Nachweis refiqda (https://www.qdasoftware.org): "The REFI-QDA Standard enables interoperability between Qualitative
      Data Analysis Software (QDAS or CAQDAS) programmes." Geprüft am 15.11.2026. -->
+Deshalb gibt Feldspur das Transkript als `.docx` aus, das MAXQDA, ATLAS.ti und NVivo einlesen können. Evtl. wird es in Zukunft auch ein REFI-QDA-Exportformat geben, falls das irgendwann sinnvoll erscheint.
 
 ## Annotation und Schnitt
 
@@ -60,7 +60,7 @@ vier Mediendateien gleichzeitig bearbeiten.
      PDF, and Survey Data"; Professional: "Import, transcribe, code and analyze up to 4 simultaneous media files."
      Geprüft am 15.11.2026. -->
 Beide sind also stark, wenn es um die genaue Analyse weniger, gleichzeitig laufender Aufnahmen geht. Viele Geräte mit
-abweichenden Uhren über nachvollziehbare Zeitbelege auf eine Achse zu bringen, ist aber nicht ihr Anliegen.
+abweichenden Uhren über nachvollziehbare Zeitbelege auf eine Achse (mit langer Laufzeit) zu bringen, ist aber nicht ihr Anliegen.
 
 Schnittprogramme wie DaVinci Resolve [@resolve] bringen Aufnahmen automatisch in Gleichlauf und unterstützen den
 Schnitt mit mehreren Kameras – ein Vorbild für Feldspurs Abgleich. Ein Dokument, das sich codieren lässt, liefern sie

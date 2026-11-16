@@ -7,7 +7,7 @@ wie Feldspur entsteht – mit Claude Code [@claudecode] – und wie ich dazu ste
 
 ## Meine Haltung
 
-Ich halte nichts davon, qualitative Forschung so zu betreiben, dass man Ergebnisse veröffentlicht, die ein
+Ich halte nichts davon, qualitative Forschung so zu betreiben, dass man einfach Ergebnisse veröffentlicht, die ein
 generatives Sprachmodell ausspuckt. Da steckt dann effektiv genau das Subjektive, Qualitative nicht mehr drin.
 
 Als Softwareentwicklerin wurde ich durch generative KI beruflich aus einem Feld gedrängt, das ich gern gemacht habe.
