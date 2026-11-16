@@ -19,6 +19,22 @@
 #let moos = rgb("#44692f")
 
 
+// Notizseite zum Auffüllen der Broschüre: wie ein Feldbuch, Punkte im 5-mm-Raster über den Satzspiegel.
+#let notizseite() = {
+  text(font: sans, size: 9pt, weight: "semibold", fill: tinte-2, tracking: 0.04em)[NOTIZEN]
+  v(3mm)
+  layout(size => {
+    let schritt = 5mm
+    let spalten = int(size.width / schritt)
+    let zeilen = int((size.height - 1mm) / schritt)
+    for z in range(zeilen + 1) {
+      for s in range(spalten + 1) {
+        place(dx: s * schritt - 0.5pt, dy: z * schritt - 0.5pt, circle(radius: 0.5pt, fill: sand.darken(12%)))
+      }
+    }
+  })
+}
+
 // Rückumschlag: Umbra wie der Stab der Randmarke, oben die Fahne in Terrakotta, Text hell.
 #let rueckumschlag(title: none, subtitle: none, authors: none, date: none, url: none, doi: none, font: none) = {
   let hell = rgb("#f4efe6")
@@ -65,6 +81,7 @@
       #if date != none [Stand: #date \ ]
       #if doi != none [DOI #link("https://doi.org/" + doi)[#doi] \ ]
       Online: #link("https://purl.archive.org/feldspur")[purl.archive.org/feldspur] \
+      PDF: #link("https://purl.archive.org/feldspur/pdf")[purl.archive.org/feldspur/pdf] \
       Programm: #link("https://purl.archive.org/feldspur/repo")[purl.archive.org/feldspur/repo] \
       Text CC BY 4.0 · Software EUPL-1.2
     ]
@@ -267,8 +284,9 @@
     body-end.update(last)
     // Seiten insgesamt mit Rückumschlag: last + leer + 1, durch vier teilbar.
     let leer = calc.rem(4 - calc.rem(last + 1, 4), 4)
-    // Jede Leerseite als eigene Seite (zwei pagebreak() hintereinander ergäben nur eine).
-    for _ in range(leer) { page[] }
+    // Jede Leerseite als eigene Seite (zwei pagebreak() hintereinander ergäben nur eine). Damit sie nicht wie
+    // ein Fehler aussehen, werden sie Notizseiten: Überschrift klein in Sans, darunter ein feines Punktraster.
+    for _ in range(leer) { page(notizseite()) }
   }
   rueckumschlag(title: title, subtitle: subtitle, authors: authors, date: date, url: url, doi: doi, font: font)
 }
