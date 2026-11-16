@@ -1,6 +1,5 @@
 ---
-# _zitation.yml erzeugt stand.ts vor dem Rendern aus _zitierangaben.yml (Zitierangaben mit Stand).
-metadata-files: [_metadaten.yml, _zitation.yml]
+metadata-files: [_metadaten.yml]
 date: last-modified
 date-format: "D. MMMM YYYY"
 lang: de
@@ -8,6 +7,16 @@ lang: de
 language:
   title-block-published: "Stand"
 bibliography: literatur.bib
+# Zitierangaben für die Webseite (citation_*-Angaben für Zotero und Google Scholar, Abschnitt „Zitat“ am Ende).
+# Den wechselnden Stand ergänzt zitierangaben.ts nach dem Rendern.
+citation:
+  type: article
+  title: "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch"
+  url: https://purl.archive.org/feldspur
+  pdf-url: https://purl.archive.org/feldspur/pdf
+  # Erstveröffentlichung; bleibt fest.
+  issued: 2026-11-16
+  available-date: 2026-11-16
 license: "CC BY 4.0"
 ---
 
