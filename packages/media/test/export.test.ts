@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { analyzeSession } from "../src/analyze.ts";
@@ -101,7 +101,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("schreibt Video, Zeitgerüst und Begleitprotokoll", { timeout: 180_000 }, async () => {
-    const out = process.env.FELDSPUR_EXPORT_KEEP ?? join(dir, "export");
+    const out = join(dir, "export");
     const r = await exportSession(store, sessionId, out);
     expect(r.files).toEqual([
       "Feldtag_2026-09-14_Testmarkt.mp4",
@@ -118,7 +118,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
         "-show_chapters",
         "-of",
         "json",
-        join(out, basename(r.files[0]!)),
+        join(out, r.files[0]!),
       ]).toString(),
     ) as { format: { duration: string }; streams: { codec_type: string; duration: string }[]; chapters: unknown[] };
     const dur = Number(probe.format.duration) * 1000;
@@ -130,12 +130,12 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     expect(Math.abs(v! - a!)).toBeLessThan(80);
     // Echtzeit ohne Episoden: keine Kapitel.
     expect(probe.chapters.length).toBe(0);
-    const docx = readFileSync(join(out, basename(r.files[1]!)));
+    const docx = readFileSync(join(out, r.files[1]!));
     expect(docx.subarray(0, 2).toString()).toBe("PK");
-    const vars = unzip(readFileSync(join(out, basename(r.files[2]!))))["xl/worksheets/sheet1.xml"]!;
+    const vars = unzip(readFileSync(join(out, r.files[2]!)))["xl/worksheets/sheet1.xml"]!;
     expect(vars).toContain(">Dokumentname<");
     expect(vars).toContain(">Feldtag_2026-09-14_Testmarkt<");
-    const csv = readFileSync(join(out, basename(r.files[3]!)), "utf8");
+    const csv = readFileSync(join(out, r.files[3]!), "utf8");
     expect(csv.split("\r\n")[0]).toContain("Kurzzeichen;Art;Datei");
     expect(csv).toContain("ZOOM0001.m4a");
   });
