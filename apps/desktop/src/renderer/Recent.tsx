@@ -95,12 +95,28 @@ export function ProjectMenu({
   const others = list.filter((r) => r.path !== path);
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
+      {/* Als Knopf mit Rahmen und Doppelpfeil erkennbar: hier wechselt man das Projekt (früher nur „Name ▾“). */}
       <DropdownMenu.Trigger
-        className="mt-1 flex w-full cursor-pointer items-center gap-1 rounded px-0 text-left text-[0.85rem] text-rail-muted outline-none hover:text-rail-ink focus-visible:text-rail-ink"
+        data-testid="project-menu"
+        className="mt-2.5 flex w-full cursor-pointer items-center gap-2 rounded-lg border border-rail-muted/35 px-2.5 py-1.5 text-left outline-none hover:border-rail-muted/60 hover:bg-rail-hover focus-visible:border-rail-ink data-[state=open]:bg-rail-hover"
         title={`${path}\nProjekt wechseln (${navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Strg+"}O)`}
       >
-        <span className="truncate">{name}</span>
-        <span aria-hidden>▾</span>
+        <span className="grid min-w-0 flex-1 leading-tight">
+          <span className="text-[0.72rem] tracking-wide text-rail-muted uppercase">Projekt</span>
+          <span className="truncate text-[0.92rem] text-rail-ink">{name}</span>
+        </span>
+        <svg
+          aria-hidden
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          className="flex-none text-rail-muted"
+        >
+          <path d="M3.5 4.5 6 2l2.5 2.5M3.5 7.5 6 10l2.5-2.5" />
+        </svg>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content

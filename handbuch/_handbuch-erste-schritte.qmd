@@ -14,7 +14,8 @@ App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über "Weitere In
 ### Projekt und Einsatz
 
 Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt…** oder
-**Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter.
+**Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter. Später wechselst du das Projekt links
+oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O).
 
 Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
 genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.
@@ -41,7 +42,8 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 ### Die vier Schritte
 
 Oben im Fenster stehen die vier Arbeitsschritte eines Einsatzes. Kleine Hinweise an den Reitern zeigen, wo noch etwas
-offen ist, etwa "2 zu prüfen" oder "3 ohne Zeit".
+offen ist. Die Wörter sind überall dieselben: "zu prüfen" heißt, Feldspur hat einen Vorschlag oder eine unsichere
+Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass noch etwas fehlt.
 
 1. **Einsammeln** (@sec-einsammeln): alle Dateien hineinziehen, Feldspur ordnet sie Geräten zu.
 2. **Abgleichen** (@sec-abgleichen): die Uhren der Geräte aufeinander abstimmen.
@@ -50,7 +52,7 @@ offen ist, etwa "2 zu prüfen" oder "3 ohne Zeit".
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
 Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Tagebuch, Quellen
-und Uhrzeiten.
+und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle.
 
 Feldspur hat ein helles und ein dunkles Erscheinungsbild und folgt der Einstellung deines Systems.
 

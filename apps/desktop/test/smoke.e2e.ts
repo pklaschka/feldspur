@@ -149,7 +149,7 @@ try {
     .locator("li", { hasText: "Glocke" })
     .getByRole("button", { name: "Wirklich löschen?" })
     .click();
-  await fotoClock.getByText("offen").waitFor();
+  await fotoClock.getByText("ohne Abgleich").waitFor();
 
   // 3 Durchsehen: Episoden gibt es nur auf Wunsch; eingeschaltet erscheinen sie auf der Zeitachse.
   // Kamera liegt jetzt bei 10:16:00.
@@ -484,7 +484,20 @@ try {
   await shot("-suche");
   await searchBox.press("Enter");
   await page.getByTestId("search").waitFor({ state: "detached" });
-  await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
+  // Ein Mitschrift-Treffer öffnet das Mitschreiben direkt an der Stelle (0:30).
+  const found = page.getByTestId("transcriber");
+  await found.waitFor();
+  await found
+    .getByTestId("transcriber-position")
+    .getByText(/^0:(29|30|31)/)
+    .waitFor();
+  console.log(
+    `Suche: Mitschreiben offen bei ${(await found.getByTestId("transcriber-position").innerText()).split("\n")[0]}`,
+  );
+  await shot("-suche-mitschreiben");
+  await found.getByRole("button", { name: "Fertig" }).click();
+  await found.waitFor({ state: "detached" });
+  await page.getByRole("tab", { name: /Durchsehen/ }).click();
 
   // Mausrad zoomt an der Mausposition: die Zeit unter dem Zeiger bleibt stehen.
   const tl = page.locator("canvas").first();
