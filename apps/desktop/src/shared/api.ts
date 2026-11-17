@@ -11,7 +11,7 @@ import type {
   PlacementStatus,
   SourceKind,
 } from "@feldspur/core";
-import type { MontagePreview } from "@feldspur/media";
+import type { MontagePreview, ScaffoldKind } from "@feldspur/media";
 
 export interface RecentProject {
   path: string;
@@ -341,12 +341,24 @@ export interface ExportProgress {
 /** Zeitgerüst ohne Video, zur Vorschau im Schritt „Ausgeben“. */
 export type { MontagePreview, PreviewMedia, PreviewPiece } from "@feldspur/media";
 
+/** Eine Zeile der Vorschau, in Teilen, damit sie wie im .docx eingefärbt werden kann. */
+export interface ScaffoldPreviewEntry {
+  kind: ScaffoldKind;
+  /** Zeitmarke, „#00:12:04-0#“. */
+  stamp: string;
+  clock: string;
+  head: string;
+  body: string;
+}
+
 export interface ScaffoldPreview {
   base: string;
   durationMs: number;
   episodes: number;
   cards: number;
+  /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
+  entries: ScaffoldPreviewEntry[];
 }
 
 export interface ImportOutcome {

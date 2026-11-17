@@ -15,6 +15,7 @@ import {
   type OverlayFrame,
   type OverlayRenderer,
   type OverlayHeader,
+  timestamp,
 } from "@feldspur/media";
 import { IPC, type ExportOutcome, type ScaffoldPreview } from "../shared/api.ts";
 
@@ -91,6 +92,13 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
     episodes: sc.episodes ? sc.plan.segments.filter((x) => x.kind === "episode").length : 0,
     cards: sc.episodes ? sc.plan.segments.filter((x) => x.kind === "card").length : 0,
     lines: sc.entries.map(entryText),
+    entries: sc.entries.map((e) => ({
+      kind: e.kind,
+      stamp: timestamp(e.montageMs),
+      clock: e.clock,
+      head: e.head,
+      body: e.body,
+    })),
   };
 }
 

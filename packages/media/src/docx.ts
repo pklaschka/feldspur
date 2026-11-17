@@ -15,7 +15,11 @@ export interface DocxOptions {
   imageWidth?: number;
 }
 
-const KIND_COLOR: Partial<Record<ScaffoldEntry["kind"], string>> = {
+/**
+ * Farben der Überschriften je Art des Eintrags (Hex ohne #). Die Vorschau in der App nimmt dieselben
+ * Werte für das helle Design (styles.css, --sc-*), ein Test prüft, dass beide gleich bleiben.
+ */
+export const SCAFFOLD_KIND_COLOR: Partial<Record<ScaffoldEntry["kind"], string>> = {
   card: "6B7A80",
   episode: "1D2B33",
   start: "2A52BE",
@@ -23,16 +27,18 @@ const KIND_COLOR: Partial<Record<ScaffoldEntry["kind"], string>> = {
   diary: "A8571F",
   sync: "107A5F",
 };
+/** Farbe der Uhrzeit hinter der Zeitmarke und der Kopfzeilen. */
+export const SCAFFOLD_CLOCK_COLOR = "5F6B73";
 
 function entryParagraphs(e: ScaffoldEntry, stills: (Still | null)[], width: number): Paragraph[] {
   const runs: TextRun[] = [new TextRun({ text: `${timestamp(e.montageMs)} ` })];
-  if (e.clock) runs.push(new TextRun({ text: `Uhrzeit ${e.clock} · `, color: "5F6B73" }));
+  if (e.clock) runs.push(new TextRun({ text: `Uhrzeit ${e.clock} · `, color: SCAFFOLD_CLOCK_COLOR }));
   if (e.head) {
     runs.push(
       new TextRun({
         text: e.kind === "line" ? `${e.head} · ` : `${e.head}: `,
         bold: e.kind !== "line",
-        color: KIND_COLOR[e.kind],
+        color: SCAFFOLD_KIND_COLOR[e.kind],
       }),
     );
   }
@@ -96,7 +102,7 @@ export async function scaffoldDocx(sc: Scaffold, opts: DocxOptions): Promise<Buf
           ...meta.map(
             (t) =>
               new Paragraph({
-                children: [new TextRun({ text: t, color: "5F6B73", size: 20 })],
+                children: [new TextRun({ text: t, color: SCAFFOLD_CLOCK_COLOR, size: 20 })],
                 alignment: AlignmentType.LEFT,
               }),
           ),
