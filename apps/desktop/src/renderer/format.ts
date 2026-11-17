@@ -79,6 +79,11 @@ export function hm(ms: number): string {
   return formatClock(ms).slice(0, 5);
 }
 
+/** Verstärkung in dB mit Vorzeichen und deutschem Komma: „+3,5 dB“, „−2,0 dB“, „±0,0 dB“. */
+export function dbText(db: number): string {
+  return `${db > 0 ? "+" : db < 0 ? "−" : "±"}${Math.abs(db).toFixed(1).replace(".", ",")} dB`;
+}
+
 export function bytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;

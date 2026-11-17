@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vite-plus/test";
-import { maskClock, maskClockAt, normalizeClock, offsetText, parseOffset, stepClock } from "../src/renderer/format.ts";
+import {
+  bytes,
+  dbText,
+  maskClock,
+  maskClockAt,
+  normalizeClock,
+  offsetText,
+  parseOffset,
+  stepClock,
+} from "../src/renderer/format.ts";
 
 describe("Uhrabweichung eingeben", () => {
   it("Minuten und Sekunden wie bisher", () => {
@@ -80,5 +89,19 @@ describe("Uhrzeit als Maskenfeld", () => {
     expect(stepClock("10:59", 1)).toBe("11:00");
     expect(stepClock("00:00", -1)).toBe("23:59");
     expect(stepClock("", 1)).toBe("");
+  });
+});
+
+describe("Zahlen als Text", () => {
+  it("dB mit Vorzeichen und Komma", () => {
+    expect(dbText(3.5)).toBe("+3,5 dB");
+    expect(dbText(-2)).toBe("−2,0 dB");
+    expect(dbText(0)).toBe("±0,0 dB");
+  });
+  it("Dateigrößen", () => {
+    expect(bytes(512)).toBe("512 B");
+    expect(bytes(2048)).toBe("2 KB");
+    expect(bytes(5.25 * 1024 ** 2)).toBe("5,3 MB");
+    expect(bytes(3 * 1024 ** 3)).toBe("3,00 GB");
   });
 });
