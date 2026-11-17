@@ -6,6 +6,7 @@ import type { SessionView } from "../shared/api.ts";
 import { highlight, search, searchItems, type Hit } from "./search.ts";
 import { usePlayback } from "./playback.tsx";
 import { cx } from "./ui.tsx";
+import { useDraft } from "./hooks.ts";
 
 const KIND_LABEL: Record<Hit["kind"], string> = {
   line: "Mitschrift",
@@ -27,11 +28,11 @@ export function SearchDialog({
   onPick: (hit: Hit) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
+  // Neue Suche: wieder beim ersten Treffer anfangen.
+  const [active, setActive] = useDraft(0, query);
   const items = useMemo(() => searchItems(view), [view]);
   const hits = useMemo(() => search(items, query), [items, query]);
   const list = useRef<HTMLUListElement>(null);
-  useEffect(() => setActive(0), [query]);
   useEffect(() => {
     list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
   }, [active]);

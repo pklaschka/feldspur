@@ -1,5 +1,5 @@
 import { Tabs } from "radix-ui";
-import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
 import type { HistoryTarget, ProjectInfo, SessionPatch, SessionView } from "../shared/api.ts";
 import { Collect } from "./Collect.tsx";
 import { DiaryEditor } from "./DiaryEditor.tsx";
@@ -52,11 +52,12 @@ export function App() {
   const [changeLog, setChangeLog] = useState(false);
 
   // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
+  const hasProject = useEffectEvent(() => !!project);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "o") return;
       e.preventDefault();
-      if (hasProject.current) setProjectMenu(true);
+      if (hasProject()) setProjectMenu(true);
       else
         void api.openProject().then((p) => {
           if (!p) return;
@@ -67,8 +68,6 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const hasProject = useRef(false);
-  hasProject.current = !!project;
 
   const guard: Guard = useCallback(async (fn) => {
     try {
@@ -708,8 +707,7 @@ function useHistory(
         : null,
     );
   };
-  const stepRef = useRef(step);
-  stepRef.current = step;
+  const stepNow = useEffectEvent((redo: boolean) => step(redo));
   // Strg/⌘+Z, Strg/⌘+Umschalt+Z und Strg+Y. In Textfeldern macht zuerst das Feld rückgängig; hat es nichts
   // mehr, geht es mit dem Projekt weiter. Ob das Feld etwas getan hat, zeigt sein „beforeinput“ (historyUndo).
   useEffect(() => {
@@ -726,12 +724,12 @@ function useHistory(
         fieldActed = false;
         // Kurz warten: Unter macOS kommt das Rückgängig des Feldes über das Menü, also etwas später.
         setTimeout(() => {
-          if (!fieldActed) void stepRef.current(redo);
+          if (!fieldActed) void stepNow(redo);
         }, 60);
         return;
       }
       e.preventDefault();
-      void stepRef.current(redo);
+      void stepNow(redo);
     };
     window.addEventListener("beforeinput", onBeforeInput, true);
     window.addEventListener("keydown", onKey);
@@ -756,12 +754,14 @@ function UndoToast({
   onClose: () => void;
 } & JumpTargets) {
   const jump = useJump(view, targets);
+  // Jeder neue Hinweis steht acht Sekunden, auch wenn die App zwischendurch neu zeichnet.
+  const shown = toast?.n;
+  const close = useEffectEvent(onClose);
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(onClose, 8000);
+    if (shown === undefined) return;
+    const t = setTimeout(close, 8000);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast?.n]);
+  }, [shown]);
   if (!toast) return null;
   return (
     <div

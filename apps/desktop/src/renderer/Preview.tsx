@@ -3,7 +3,7 @@
  * Video und Audio. Bilder lassen sich zwischen „einpassen“ und „Originalgröße“ umschalten.
  */
 import { Dialog, VisuallyHidden } from "radix-ui";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { mediaUrl, type SessionView, type SourceRow } from "../shared/api.ts";
 import { KIND_LABEL } from "./format.ts";
 import { PdfPages } from "./pdf.tsx";
@@ -24,17 +24,19 @@ export function Preview({
   // Bilder einer Seite gemeinsam zeigen: Hauptquelle und weitere Bilder.
   const mainId = row?.partOf ?? row?.id;
   const group = row ? view.rows.filter((r) => r.id === mainId || r.partOf === mainId) : [];
-  const [index, setIndex] = useState(0);
-  const [zoom, setZoom] = useState<"fit" | "full">("fit");
-  useEffect(() => {
-    setIndex(
-      Math.max(
-        0,
-        group.findIndex((r) => r.id === sourceId),
-      ),
+  // Geöffnet wird beim Bild der gewählten Quelle, auch wenn eine andere Quelle geöffnet wird.
+  const startIndex = () =>
+    Math.max(
+      0,
+      group.findIndex((r) => r.id === sourceId),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceId]);
+  const [index, setIndex] = useState(startIndex);
+  const [seen, setSeen] = useState(sourceId);
+  if (seen !== sourceId) {
+    setSeen(sourceId);
+    setIndex(startIndex());
+  }
+  const [zoom, setZoom] = useState<"fit" | "full">("fit");
   const shown = group[index] ?? row;
 
   return (
@@ -143,12 +145,13 @@ function BigPlayer({ row }: { row: SourceRow }) {
   const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
   const start = position?.sourceId === row.id ? position.atMs : 0;
   useLevel(ref, row.level);
+  // Beim Schließen die Stelle an die Detailleiste zurückgeben.
+  const handBack = useEffectEvent((el: HTMLMediaElement) => seek(row.id, Math.round(el.currentTime * 1000)));
   useEffect(() => {
     const el = ref.current;
     return () => {
-      if (el) seek(row.id, Math.round(el.currentTime * 1000));
+      if (el) handBack(el);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.id]);
   const props = {
     ref,

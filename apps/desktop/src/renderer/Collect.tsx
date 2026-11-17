@@ -1,9 +1,10 @@
-import { useEffect, useState, type DragEvent } from "react";
+import { useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
 import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
 import { Button, cx, FlagMark, Glyph, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
+import { useDraft } from "./hooks.ts";
 
 const api = window.feldspur;
 
@@ -310,8 +311,7 @@ function SourceList({
 
 function EditableName({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(value);
-  useEffect(() => setText(value), [value]);
+  const [text, setText] = useDraft(value);
   if (!editing) {
     return (
       <button

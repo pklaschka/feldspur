@@ -4,11 +4,12 @@
  * Geräts fortsetzen (PDFs zählen je Seite weiter).
  */
 import { continuePages, pageRangeText } from "@feldspur/core/pages";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { SessionView, SourceRow } from "../shared/api.ts";
 import type { ApplyView } from "./Notes.tsx";
 import { loadPdf, usePdfPageCount } from "./pdf.tsx";
 import { Button, Eyebrow, Toggle } from "./ui.tsx";
+import { useDraft } from "./hooks.ts";
 
 const api = window.feldspur;
 const byLabel = (a: SourceRow, b: SourceRow) => a.label.localeCompare(b.label, "de", { numeric: true });
@@ -23,8 +24,7 @@ async function pdfPages(row: SourceRow): Promise<number> {
 }
 
 export function PageNumbering({ row, view, apply }: { row: SourceRow; view: SessionView; apply: ApplyView }) {
-  const [text, setText] = useState(row.firstPage === null ? "" : String(row.firstPage));
-  useEffect(() => setText(row.firstPage === null ? "" : String(row.firstPage)), [row.firstPage, row.id]);
+  const [text, setText] = useDraft(row.firstPage === null ? "" : String(row.firstPage), row.id);
   const pdfCount = usePdfPageCount(row.isPdf ? row.id : null);
   const [busy, setBusy] = useState(false);
 

@@ -3,7 +3,7 @@
  * und freie Zusatzfelder für den Quellennachweis (z. B. DOI, Projektnummer).
  */
 import { Dialog } from "radix-ui";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { SessionPatch, SessionView } from "../shared/api.ts";
 import { Button, CloseButton } from "./ui.tsx";
 
@@ -38,16 +38,19 @@ export function SessionDetails({
   const [lookback, setLookback] = useState(String(view.diaryLookbackMin));
   const [extra, setExtra] = useState<[string, string][]>([]);
 
-  useEffect(() => {
-    if (!open) return;
-    setTitle(s.title);
-    setDate(s.date);
-    setPlace(s.place);
-    setTimeZone(s.timeZone);
-    setLookback(String(view.diaryLookbackMin));
-    setExtra(Object.entries(s.extra));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // Beim Öffnen mit den gespeicherten Angaben beginnen; spätere Änderungen von außen nicht ins Formular holen.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setTitle(s.title);
+      setDate(s.date);
+      setPlace(s.place);
+      setTimeZone(s.timeZone);
+      setLookback(String(view.diaryLookbackMin));
+      setExtra(Object.entries(s.extra));
+    }
+  }
 
   const dateMoves = date !== s.date;
   const submit = async (e: FormEvent) => {

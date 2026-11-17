@@ -19,12 +19,19 @@ export function ChangeLog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [saved, setSaved] = useState<string | null>(null);
 
+  // Bei jedem Öffnen frisch: Liste neu laden, Aufgeklapptes und Meldungen vergessen.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setSteps(null);
+      setExpanded(new Set());
+      setSaved(null);
+    }
+  }
   useEffect(() => {
     if (!open) return;
     let live = true;
-    setSteps(null);
-    setExpanded(new Set());
-    setSaved(null);
     void api.changeLog({ limit: PAGE }).then((s) => {
       if (!live) return;
       setSteps(s);

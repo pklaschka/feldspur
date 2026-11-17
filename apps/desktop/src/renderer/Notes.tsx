@@ -3,10 +3,11 @@
  * Mit Strecke in der Aufnahme oder für die ganze Datei. Erscheint in der Detailleiste und beim
  * Mitschreiben (dort auch als Band in der Waveform).
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { SessionView, SourceNoteRow, SourceRow } from "../shared/api.ts";
 import { positionText } from "./playback.tsx";
 import { Button, CloseButton, cx } from "./ui.tsx";
+import { useDraft } from "./hooks.ts";
 
 const api = window.feldspur;
 
@@ -127,8 +128,7 @@ function NoteItem({
   apply: ApplyView;
   onSeek: ((ms: number) => void) | undefined;
 }) {
-  const [text, setText] = useState(note.text);
-  useEffect(() => setText(note.text), [note.text]);
+  const [text, setText] = useDraft(note.text);
   return (
     <li
       className={cx("group flex items-start gap-2 rounded-md px-1 py-0.5", note.done && "opacity-60")}

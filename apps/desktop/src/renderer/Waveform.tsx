@@ -227,6 +227,8 @@ function tickText(ms: number, step: number): string {
 // ── Kacheln laden ─────────────────────────────────────────────────────────
 
 const cache = new Map<string, Peaks | Promise<Peaks | null>>();
+const tileKey = (sourceId: string, tileMs: number, buckets: number, i: number) =>
+  `${sourceId}:${tileMs}:${buckets}:${i}`;
 const CACHE_MAX = 600;
 
 function remember(key: string, value: Peaks | Promise<Peaks | null>): void {
@@ -259,11 +261,11 @@ export function usePeakTiles(
   const first = Math.max(0, Math.floor(fromMs / tileMs) - 1);
   const lastTile = durationMs ? Math.max(0, Math.ceil(durationMs / tileMs) - 1) : Infinity;
   const last = Math.min(lastTile, Math.floor(toMs / tileMs) + 1);
-  const key = (i: number) => `${sourceId}:${tileMs}:${bucketsPerTile}:${i}`;
+  const key = (i: number) => tileKey(sourceId, tileMs, bucketsPerTile, i);
 
   useEffect(() => {
     for (let i = first; i <= last; i++) {
-      const k = key(i);
+      const k = tileKey(sourceId, tileMs, bucketsPerTile, i);
       if (cache.has(k)) continue;
       const p = api
         .waveformPeaks(sourceId, i * tileMs, (i + 1) * tileMs, bucketsPerTile)
@@ -278,7 +280,6 @@ export function usePeakTiles(
         });
       remember(k, p);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceId, first, last, tileMs, bucketsPerTile]);
 
   const out: Peaks[] = [];

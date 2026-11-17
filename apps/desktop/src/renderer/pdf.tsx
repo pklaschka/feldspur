@@ -5,6 +5,7 @@
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useEffect, useRef, useState } from "react";
+import { useLoaded } from "./hooks.ts";
 import { mediaUrl } from "../shared/api.ts";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
@@ -23,20 +24,8 @@ export function loadPdf(sourceId: string): Promise<PDFDocumentProxy> {
 
 /** Seitenzahl eines PDF; null, solange es lädt oder wenn es nicht lesbar ist. */
 export function usePdfPageCount(sourceId: string | null): number | null {
-  const [n, setN] = useState<number | null>(null);
-  useEffect(() => {
-    setN(null);
-    if (!sourceId) return;
-    let alive = true;
-    loadPdf(sourceId).then(
-      (d) => alive && setN(d.numPages),
-      () => alive && setN(0),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [sourceId]);
-  return n;
+  const n = useLoaded(sourceId, async (id) => (await loadPdf(id)).numPages);
+  return n.state === "done" ? n.value : n.state === "failed" ? 0 : null;
 }
 
 /** Obergrenze für die Bildpunkte einer gerenderten PDF-Seite (etwa 4096 × 4096). */
