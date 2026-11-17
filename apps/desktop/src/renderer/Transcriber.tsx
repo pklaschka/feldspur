@@ -7,17 +7,21 @@
  * Bild der Wiedergabe), Textfelder wachsen mit, und die Liste läuft der Wiedergabe nach.
  */
 import { Dialog } from "radix-ui";
-import { memo, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
-import { mediaUrl, type SessionView, type SourceNoteRow, type SourceRow, type TranscriptRow } from "../shared/api.ts";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { mediaUrl, type SessionView, type SourceRow, type TranscriptRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "./transcribe.ts";
-import { Button, Choice, CloseButton, cx, Glyph, Picker, Toggle } from "./ui.tsx";
-import { usePeakTiles, Waveform, type WaveBand, type WaveMarker } from "./Waveform.tsx";
+import { Button, Choice, Glyph, Picker, Toggle } from "./ui.tsx";
+import { usePeakTiles, Waveform, type WaveMarker } from "./Waveform.tsx";
 import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
-import { useDraft, useLatest } from "./hooks.ts";
+import { useLatest } from "./hooks.ts";
+import { type Item, eventsIn, itemRank, lastAtOrBefore, noteBands, sourceOptions } from "./transcriber/items.ts";
+import { At, Line, type LineActions } from "./transcriber/Line.tsx";
+import { OtherLineItem } from "./transcriber/OtherLineItem.tsx";
+import { Scrubber } from "./transcriber/Scrubber.tsx";
 
 const api = window.feldspur;
 
@@ -31,23 +35,6 @@ type Span = (typeof SPANS)[number];
 const SPAN_LABEL: Record<Span, string> = { "10": "10 s", "30": "30 s", "120": "2 min" };
 /** Fächer je Kachel der Waveform; eine Kachel ist so lang wie der Ausschnitt. */
 const WAVE_BUCKETS = 1600;
-
-interface Event {
-  key: string;
-  atMs: number;
-  text: string;
-  /** Zeile aus der Mitschrift einer anderen, gleichzeitig laufenden Spur (nur lesen). */
-  other?: OtherLine;
-}
-
-interface OtherLine {
-  sourceId: string;
-  /** Stelle in der anderen Aufnahme. */
-  atMs: number;
-  label: string;
-  speaker: string;
-  text: string;
-}
 
 export function Transcriber({
   view,
@@ -95,23 +82,6 @@ export function Transcriber({
     </Dialog.Root>
   );
 }
-
-type Item = { kind: "line"; atMs: number; line: TranscriptRow } | { kind: "event"; atMs: number; event: Event };
-
-/** Tonquellen: erst die Dateien desselben Geräts (dieselbe Spur), dann mit Trennlinie die übrigen. */
-function sourceOptions(row: SourceRow, avRows: SourceRow[]) {
-  const byLabel = (a: SourceRow, b: SourceRow) => a.label.localeCompare(b.label, "de", { numeric: true });
-  const same = avRows.filter((r) => r.deviceId === row.deviceId).sort(byLabel);
-  const other = avRows.filter((r) => r.deviceId !== row.deviceId).sort(byLabel);
-  return [...same, ...other].map((r, i) => ({
-    value: r.id,
-    label: `${r.label} · ${r.fileName}`,
-    groupStart: i === same.length && same.length > 0 ? "Andere Geräte" : undefined,
-  }));
-}
-
-/** Bei gleicher Stelle: erst „… beginnt“ und Tagebuch, dann Zeilen anderer Spuren, dann die eigenen. */
-const itemRank = (it: Item) => (it.kind === "line" ? 2 : it.event.other ? 1 : 0);
 
 function Body({
   view,
@@ -648,278 +618,4 @@ function Body({
       </div>
     </div>
   );
-}
-
-/** Zeile aus einer anderen Spur: nur lesen; Klick auf die Zeit spult hier, auf das Kurzzeichen öffnet dort. */
-function OtherLineItem({
-  atMs,
-  line,
-  startMs,
-  onSeek,
-  onOpen,
-}: {
-  atMs: number;
-  line: OtherLine;
-  startMs: number | null;
-  onSeek: (ms: number) => void;
-  onOpen: (line: OtherLine) => void;
-}) {
-  return (
-    <li
-      className="my-0.5 flex items-start gap-3 rounded-md bg-panel-2 px-2 py-0.5 text-ink-2"
-      data-testid="other-line"
-      title={`Aus der Mitschrift von ${line.label}, nur lesen`}
-    >
-      <button
-        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
-        onClick={() => onSeek(atMs)}
-        title="Hierhin springen"
-      >
-        <At ms={atMs} startMs={startMs} />
-      </button>
-      <button
-        className="w-14 flex-none cursor-pointer truncate pt-1 text-left font-mono text-[0.85rem] font-medium hover:text-accent"
-        onClick={() => onOpen(line)}
-        title={`In ${line.label} mitschreiben (an dieser Stelle)`}
-      >
-        {line.label}
-      </button>
-      <span className="min-w-0 flex-1 py-1 text-[0.9rem] break-words">
-        {line.speaker && <span className="mr-1.5 font-mono font-medium">{line.speaker}:</span>}
-        {line.text}
-      </span>
-    </li>
-  );
-}
-
-function At({ ms, startMs }: { ms: number; startMs: number | null }) {
-  return (
-    <>
-      {positionText(ms)}
-      {startMs !== null && <span className="text-muted"> · {clock(startMs + ms)}</span>}
-    </>
-  );
-}
-
-/** Letzte Zeile an oder vor der Stelle (Zeilen sind nach Stelle sortiert). */
-function lastAtOrBefore(lines: TranscriptRow[], pos: number): TranscriptRow | undefined {
-  let lo = 0;
-  let hi = lines.length - 1;
-  let hit = -1;
-  while (lo <= hi) {
-    const m = (lo + hi) >> 1;
-    if (lines[m]!.atMs <= pos) {
-      hit = m;
-      lo = m + 1;
-    } else hi = m - 1;
-  }
-  return hit >= 0 ? lines[hit] : undefined;
-}
-
-function noteBands(notes: SourceNoteRow[]): WaveBand[] {
-  return notes
-    .filter((n) => n.fromMs !== null && n.toMs !== null)
-    .map((n) => ({ fromMs: n.fromMs!, toMs: n.toMs!, tone: n.done ? ("good" as const) : ("warn" as const) }));
-}
-
-interface LineActions {
-  seek: (ms: number) => void;
-  retime: (id: string) => void;
-  patch: (id: string, p: { speaker?: string; text?: string }) => void;
-  remove: (id: string) => void;
-  split: (line: TranscriptRow, cursor: number) => void | Promise<void>;
-}
-
-const Line = memo(function Line({
-  line,
-  current,
-  startMs,
-  actions,
-}: {
-  line: TranscriptRow;
-  current: boolean;
-  startMs: number | null;
-  actions: LineActions;
-}) {
-  const [speaker, setSpeaker] = useDraft(line.speaker);
-  const [text, setText] = useDraft(line.text);
-  /** Beim Teilen springt der Fokus in die neue Zeile; der alte Text darf dabei nicht zurückgeschrieben werden. */
-  const splitting = useRef(false);
-  return (
-    <li
-      className={cx(
-        "group flex items-start gap-3 rounded-md px-2 py-0.5 [contain-intrinsic-size:auto_2rem] [content-visibility:auto]",
-        current ? "bg-accent-soft" : "hover:bg-panel-2",
-      )}
-      data-testid="line"
-      data-line={line.id}
-    >
-      <button
-        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
-        onClick={() => actions.seek(line.atMs)}
-        title="Hierhin springen"
-      >
-        <At ms={line.atMs} startMs={startMs} />
-      </button>
-      <input
-        className="w-14 flex-none border-transparent bg-transparent font-mono font-medium hover:border-line focus:border-line-2"
-        aria-label="Sprecher der Zeile"
-        value={speaker}
-        onChange={(e) => setSpeaker(e.target.value)}
-        onBlur={() => speaker !== line.speaker && actions.patch(line.id, { speaker })}
-      />
-      <textarea
-        rows={1}
-        className="min-w-0 flex-1 resize-none border-transparent bg-transparent [field-sizing:content] hover:border-line focus:border-line-2"
-        aria-label="Text der Zeile"
-        value={text}
-        onChange={(e) => setText(oneParagraph(e.target.value))}
-        onBlur={() => {
-          if (splitting.current) splitting.current = false;
-          else {
-            // „B1: …“ am Anfang einer bestehenden Zeile setzt deren Sprecher.
-            const lead = leadingSpeaker(text);
-            if (lead) {
-              setSpeaker(lead.speaker);
-              setText(lead.rest);
-              actions.patch(line.id, { speaker: lead.speaker, text: lead.rest });
-            } else if (text !== line.text) actions.patch(line.id, { text });
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-          e.preventDefault();
-          const el = e.currentTarget;
-          if (e.metaKey || e.ctrlKey) {
-            // Erst die Änderungen dieser Zeile übernehmen, dann teilen.
-            const cursor = el.selectionStart;
-            const first = text.slice(0, cursor).trim();
-            if (!first || !text.slice(cursor).trim()) return;
-            splitting.current = true;
-            setText(first);
-            void actions.split({ ...line, text }, cursor);
-          } else el.blur();
-        }}
-      />
-      <span className="flex flex-none gap-1 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
-        <Button
-          size="sm"
-          variant="link"
-          onClick={() => actions.retime(line.id)}
-          title="Zeitmarke auf die aktuelle Stelle setzen"
-        >
-          Zeit hierher
-        </Button>
-        <CloseButton label="Zeile löschen" confirm={!!line.text.trim()} onClick={() => actions.remove(line.id)} />
-      </span>
-    </li>
-  );
-});
-
-/**
- * Schmale Leiste über die ganze Aufnahme: Zeilen als Striche, Ereignisse als Punkte, Notizen als
- * Bänder, der Ausschnitt der Waveform als Rahmen. Klick spult.
- */
-function Scrubber({
-  row,
-  pos,
-  lines,
-  events,
-  bands,
-  window: win,
-  onSeek,
-}: {
-  row: SourceRow;
-  pos: number;
-  lines: TranscriptRow[];
-  events: Event[];
-  bands: WaveBand[];
-  window: { fromMs: number; toMs: number };
-  onSeek: (ms: number) => void;
-}) {
-  const dur = row.durationMs ?? 0;
-  if (!dur) return null;
-  const pct = (ms: number) => `${Math.max(0, Math.min(100, (ms / dur) * 100))}%`;
-  const width = (a: number, b: number) => `${Math.max(0.3, Math.min(100, ((b - a) / dur) * 100))}%`;
-  return (
-    <div
-      className="relative mt-2 h-6 cursor-pointer overflow-hidden rounded bg-sunken"
-      onClick={(e) => {
-        const b = e.currentTarget.getBoundingClientRect();
-        onSeek(((e.clientX - b.left) / b.width) * dur);
-      }}
-      role="slider"
-      aria-label="Stelle in der Aufnahme"
-      aria-valuemin={0}
-      aria-valuemax={dur}
-      aria-valuenow={pos}
-      aria-valuetext={positionText(pos)}
-      tabIndex={-1}
-      data-testid="scrubber"
-    >
-      {bands.map((b, i) => (
-        <span
-          key={i}
-          className={cx("absolute inset-y-0", b.tone === "good" ? "bg-good/15" : "bg-warn/25")}
-          style={{ left: pct(b.fromMs), width: width(b.fromMs, b.toMs) }}
-        />
-      ))}
-      <span
-        className="absolute inset-y-0 border-x border-ink-2/40 bg-ink/5"
-        style={{ left: pct(win.fromMs), width: width(win.fromMs, win.toMs) }}
-      />
-      {lines.map((l) => (
-        <span key={l.id} className="absolute top-1 h-4 w-px bg-accent/60" style={{ left: pct(l.atMs) }} />
-      ))}
-      {events.map((e) => (
-        <span
-          key={e.key}
-          className="absolute top-2 size-2 -translate-x-1 rounded-full bg-muted"
-          style={{ left: pct(e.atMs) }}
-        />
-      ))}
-      <span className="absolute top-0 h-6 w-0.5 bg-bad" style={{ left: pct(pos) }} />
-    </div>
-  );
-}
-
-/** Was in anderen Quellen passiert, während diese Aufnahme läuft (als Stelle in dieser Aufnahme). */
-function eventsIn(view: SessionView, row: SourceRow): Event[] {
-  if (row.startMs === null) return [];
-  const start = row.startMs;
-  const end = row.endMs ?? start + (row.durationMs ?? 0);
-  const inside = (ms: number | null) => ms !== null && ms >= start && ms <= end;
-  const out: Event[] = [];
-  for (const r of view.rows) {
-    if (r.id === row.id || r.partOf || r.kind === "diary" || !inside(r.startMs)) continue;
-    const what =
-      r.kind === "video"
-        ? `${r.label} (Video) beginnt`
-        : r.kind === "audio"
-          ? `${r.label} (Audio) beginnt`
-          : `${KIND_LABEL[r.kind]} ${r.label}`;
-    out.push({ key: `r:${r.id}`, atMs: r.startMs! - start, text: `${what} · ${r.fileName}` });
-  }
-  const byId = new Map(view.rows.map((r) => [r.id, r]));
-  for (const l of view.transcript) {
-    if (l.sourceId === row.id || l.clockMs === null || !inside(l.clockMs)) continue;
-    const r = byId.get(l.sourceId);
-    if (!r) continue;
-    out.push({
-      key: `t:${l.id}`,
-      atMs: l.clockMs - start,
-      text: `${r.label}: ${l.speaker ? `${l.speaker}: ` : ""}${l.text}`,
-      other: { sourceId: r.id, atMs: l.atMs, label: r.label, speaker: l.speaker, text: l.text },
-    });
-  }
-  for (const d of view.diary) {
-    if (!d.window || !inside(d.window.toMs)) continue;
-    const short = d.shortText || d.fullText;
-    out.push({
-      key: `d:${d.id}`,
-      atMs: d.window.toMs - start,
-      text: `Tagebuch ${d.regions[0]?.pageLabel ?? ""}, Eintrag ${d.number}${d.notedAt ? ` (notiert ${d.notedAt})` : ""}${short ? `: ${short}` : ""}`,
-    });
-  }
-  return out;
 }

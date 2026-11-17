@@ -7,7 +7,8 @@ import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
-import { todos, TodoList, type Todo } from "./Inspector.tsx";
+import { todos, type Todo } from "./inspector/status.ts";
+import { TodoList } from "./inspector/Summary.tsx";
 import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
