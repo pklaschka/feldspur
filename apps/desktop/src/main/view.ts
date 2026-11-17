@@ -1,5 +1,4 @@
 import {
-  computeEpisodes,
   diaryPageLabel,
   regionPageNo,
   effectiveLocal,
@@ -8,12 +7,11 @@ import {
   formatClock,
   resolveTimeline,
   type Id,
-  type Interval,
   type ProjectStore,
   type Source,
   effectiveGainDb,
 } from "@feldspur/core";
-import { speechLevels } from "@feldspur/media";
+import { sessionEpisodes, speechLevels } from "@feldspur/media";
 import type {
   AnchorRow,
   DeviceRow,
@@ -189,8 +187,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   let episodes: EpisodeRow[] | null = null;
   let gaps: GapRow[] = [];
   if (input.session.episodes && analyses.length) {
-    const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
-    const ep = computeEpisodes(input.sources, res, idle, { edits: store.listEpisodeEdits(sessionId) });
+    const ep = sessionEpisodes(store, sessionId, { input, resolved: res, analyses });
     const label = (id: Id) => sourceById.get(id)?.label ?? "?";
     episodes = ep.episodes.map((e) => ({
       index: e.index,

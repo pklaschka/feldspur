@@ -11,7 +11,7 @@ import {
   type SourceRow,
   type TimeInput,
 } from "../shared/api.ts";
-import { bytes, clock, EVIDENCE_LABEL, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
+import { bytes, clock, EVIDENCE_LABEL, hm, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { NotesPanel, type ApplyView } from "./Notes.tsx";
 import { PageNumbering } from "./PageNumbering.tsx";
 import { PdfPageCanvas } from "./pdf.tsx";
@@ -558,7 +558,7 @@ function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string
       </label>
       <p className="mt-1.5 text-[0.85rem] text-muted">
         {row.diaryWindow
-          ? `Bezieht sich auf ${clock(row.diaryWindow.fromMs).slice(0, 5)}–${clock(row.diaryWindow.toMs).slice(0, 5)}. Notiert wird meist etwas später; der Zeitraum reicht deshalb zurück.`
+          ? `Bezieht sich auf ${hm(row.diaryWindow.fromMs)}–${hm(row.diaryWindow.toMs)}. Notiert wird meist etwas später; der Zeitraum reicht deshalb zurück.`
           : "Uhrzeit, die am Rand der Seite steht. Daraus ergibt sich, auf welchen Zeitraum sich die Seite bezieht."}
       </p>
     </div>

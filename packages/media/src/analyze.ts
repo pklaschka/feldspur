@@ -11,6 +11,8 @@ import {
   type Id,
   type Interval,
   type ProjectStore,
+  type ResolveInput,
+  type ResolveResult,
   speechLevelDb,
 } from "@feldspur/core";
 import {
@@ -101,14 +103,18 @@ export async function analyzeSession(
   return { analyzed, failed, proposals };
 }
 
-/** Episoden eines Einsatzes aus gespeicherter Analyse und aktueller Zeitbestimmung. */
+/**
+ * Episoden eines Einsatzes aus gespeicherter Analyse, Anpassungen von Hand und aktueller Zeitbestimmung.
+ * Wer Zeitbestimmung oder Analysen schon geladen hat, reicht sie mit, damit nichts doppelt gerechnet wird.
+ */
 export function sessionEpisodes(
   store: ProjectStore,
   sessionId: Id,
-  analyses: AudioAnalysis[] = store.listAudioAnalyses(sessionId),
+  known: { input?: ResolveInput; resolved?: ResolveResult; analyses?: AudioAnalysis[] } = {},
 ): EpisodeResult {
-  const input = store.loadResolveInput(sessionId);
-  const resolved = resolveTimeline(input);
+  const input = known.input ?? store.loadResolveInput(sessionId);
+  const resolved = known.resolved ?? resolveTimeline(input);
+  const analyses = known.analyses ?? store.listAudioAnalyses(sessionId);
   const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
   return computeEpisodes(input.sources, resolved, idle, { edits: store.listEpisodeEdits(sessionId) });
 }

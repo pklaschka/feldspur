@@ -37,44 +37,6 @@ export function Button({
   );
 }
 
-/**
- * Löschen in zwei Schritten: Der erste Klick fragt nach („Wirklich löschen?“), erst der zweite löscht.
- * Nach ein paar Sekunden oder beim Verlassen fällt der Knopf von selbst zurück.
- */
-export function ConfirmButton({
-  onConfirm,
-  children,
-  confirmLabel = "Wirklich löschen?",
-  className,
-  ...rest
-}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
-  onConfirm: () => void;
-  confirmLabel?: string;
-  variant?: Variant;
-  size?: "sm" | "md";
-}) {
-  const [asking, setAsking] = useState(false);
-  useEffect(() => {
-    if (!asking) return;
-    const t = setTimeout(() => setAsking(false), 4000);
-    return () => clearTimeout(t);
-  }, [asking]);
-  return (
-    <Button
-      {...rest}
-      className={cx(className, asking && "font-semibold !text-bad")}
-      onBlur={() => setAsking(false)}
-      onClick={() => {
-        if (!asking) return setAsking(true);
-        setAsking(false);
-        onConfirm();
-      }}
-    >
-      {asking ? confirmLabel : children}
-    </Button>
-  );
-}
-
 export function Pill({ tone = "plain", children }: { tone?: "plain" | "accent" | "warn"; children: ReactNode }) {
   const t = {
     plain: "bg-sunken text-ink-2",

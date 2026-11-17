@@ -4,17 +4,9 @@
  * Zahlen als Zahl.
  */
 import { crc32, deflateRawSync } from "node:zlib";
+import { xmlEscape } from "./xml.ts";
 
 export type Cell = string | number | null;
-
-const esc = (s: string) =>
-  s
-    // eslint-disable-next-line no-control-regex -- in XML 1.0 unzulässige Steuerzeichen entfernen
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 
 /** Spaltenname wie in Excel: 0 → A, 25 → Z, 26 → AA. */
 export function columnName(i: number): string {
@@ -31,7 +23,7 @@ function sheetXml(rows: Cell[][]): string {
           const ref = `${columnName(c)}${r + 1}`;
           if (v === null || v === "") return "";
           if (typeof v === "number") return `<c r="${ref}"><v>${v}</v></c>`;
-          return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+          return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(v)}</t></is></c>`;
         })
         .join("");
       return `<row r="${r + 1}">${cells}</row>`;
@@ -57,7 +49,7 @@ export function xlsx(rows: Cell[][], sheetName = "Tabelle1"): Buffer {
     [
       "xl/workbook.xml",
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${esc(sheetName.slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEscape(sheetName.slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
     ],
     [
       "xl/_rels/workbook.xml.rels",

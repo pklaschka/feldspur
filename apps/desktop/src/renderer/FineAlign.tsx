@@ -11,7 +11,7 @@ import { Dialog } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mediaUrl, type AlignResult, type SessionView, type SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { prepareCanvas } from "./canvas.ts";
+import { prepareCanvas, useElementWidth } from "./canvas.ts";
 import { Button, Choice, CloseButton, cx, Picker } from "./ui.tsx";
 import { usePeakTiles } from "./Waveform.tsx";
 import { applyLevel, LEVEL_MEDIA_PROPS, resumeAudio, setPan } from "./level.ts";
@@ -373,21 +373,13 @@ function Overlay({
   listen: "both" | "a" | "b";
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [width, setWidth] = useState(0);
+  const width = useElementWidth(canvas);
   const from = aAt - span / 2;
   const to = aAt + span / 2;
   const aTiles = usePeakTiles(a.id, from, to, span, BUCKETS, a.durationMs);
   const bTiles = usePeakTiles(b.id, from + delta, to + delta, span, BUCKETS, b.durationMs);
   const player = useDuet(a, b, listen);
   const cursor = player.atMs;
-
-  useEffect(() => {
-    const el = canvas.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e!.contentRect.width)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   useEffect(() => {
     const el = canvas.current;

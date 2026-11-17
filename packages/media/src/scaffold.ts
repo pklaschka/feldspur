@@ -4,13 +4,11 @@
  */
 import { createHash } from "node:crypto";
 import {
-  computeEpisodes,
   formatClock,
   formatDuration,
   planMontage,
   resolveTimeline,
   type Id,
-  type Interval,
   type MontageMode,
   type MontagePlan,
   type ProjectStore,
@@ -19,6 +17,7 @@ import {
   type Source,
   diaryPageLabel,
 } from "@feldspur/core";
+import { sessionEpisodes } from "./analyze.ts";
 
 export type ScaffoldKind = "card" | "episode" | "start" | "photo" | "diary" | "line" | "sync" | "end";
 
@@ -105,9 +104,8 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
   const input = store.loadResolveInput(sessionId);
   const res = resolveTimeline(input);
   const analyses = store.listAudioAnalyses(sessionId);
-  const idle = new Map<Id, Interval[]>(analyses.map((a) => [a.sourceId, a.idle]));
   const loud = new Map(analyses.map((a) => [a.sourceId, a.loudInIdle]));
-  const ep = computeEpisodes(input.sources, res, idle, { edits: store.listEpisodeEdits(sessionId) });
+  const ep = sessionEpisodes(store, sessionId, { input, resolved: res, analyses });
   const photos = new Set(input.sources.filter((s) => s.kind === "photo" && !s.partOf).map((s) => s.id));
   // In Zwischenzeiten stehen Fotos und Tagebucheinträge; Tagebuchseiten zeigen sich über ihre Einträge.
   const plan = planMontage(
