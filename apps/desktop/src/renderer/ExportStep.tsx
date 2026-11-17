@@ -7,6 +7,7 @@ import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
+import { ScaffoldLine } from "./ScaffoldLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
 import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
@@ -277,10 +278,8 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
               className="max-h-[calc(100vh-16rem)] overflow-y-auto font-serif text-[0.92rem] leading-relaxed text-ink-2"
               data-testid="scaffold-preview"
             >
-              {preview?.lines.map((l, i) => (
-                <li key={i} className="border-b border-line/60 py-1 break-words text-pretty">
-                  {l}
-                </li>
+              {preview?.entries.map((e, i) => (
+                <ScaffoldLine key={i} entry={e} />
               ))}
             </ol>
           </Panel>
