@@ -4,7 +4,16 @@
  */
 import { diaryPageLabel, suggestPageNo } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import {
   mediaUrl,
   type DiaryEntryRow,
@@ -18,6 +27,7 @@ import type { Guard } from "./App.tsx";
 import { hm, maskClockAt, normalizeClock, stepClock } from "./format.ts";
 import { loadPdf, PdfPageCanvas } from "./pdf.tsx";
 import { Button, Choice, cx, Notice } from "./ui.tsx";
+import { useDraft, useLatest, useLoaded } from "./hooks.ts";
 
 const api = window.feldspur;
 
@@ -102,12 +112,17 @@ export function DiaryEditor({
   guard: Guard;
   onView: (v: SessionView) => void;
 }) {
-  const pdfIds = view.rows.filter((r) => r.kind === "diary" && r.isPdf).map((r) => r.id);
+  // Seitenzahlen der PDF-Scans; nachgeladen, sobald ein neues PDF dazukommt.
+  const pdfKey = view.rows
+    .filter((r) => r.kind === "diary" && r.isPdf)
+    .map((r) => r.id)
+    .join(",");
   const [pdfPages, setPdfPages] = useState(new Map<string, number>());
+  const knownPdf = useEffectEvent((id: string) => pdfPages.has(id));
   useEffect(() => {
     let alive = true;
-    for (const id of pdfIds) {
-      if (pdfPages.has(id)) continue;
+    for (const id of pdfKey ? pdfKey.split(",") : []) {
+      if (knownPdf(id)) continue;
       loadPdf(id).then(
         (d) => alive && setPdfPages((m) => new Map(m).set(id, d.numPages)),
         () => alive && setPdfPages((m) => new Map(m).set(id, 1)),
@@ -116,18 +131,18 @@ export function DiaryEditor({
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pdfIds.join(",")]);
+  }, [pdfKey]);
 
   const pages = navPages(view.rows, pdfPages);
-  const [navKey, setNavKey] = useState<string | null>(null);
-  // Von außen geöffnete Quelle: ihre (erste) Seite zeigen.
-  useEffect(() => {
-    if (!pageId) return setNavKey(null);
-    const hit = pages.find((p) => p.surfaces.some((sf) => sf.sourceId === pageId));
-    setNavKey(hit?.key ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId]);
+  // Von außen geöffnete Quelle: ihre (erste) Seite zeigen. Blättern ändert nur navKey, nicht pageId.
+  const firstPageOf = (id: string | null) =>
+    id ? (pages.find((p) => p.surfaces.some((sf) => sf.sourceId === id))?.key ?? null) : null;
+  const [navKey, setNavKey] = useState<string | null>(() => firstPageOf(pageId));
+  const [openedId, setOpenedId] = useState(pageId);
+  if (openedId !== pageId) {
+    setOpenedId(pageId);
+    setNavKey(firstPageOf(pageId));
+  }
   const page = pageId ? (pages.find((p) => p.key === navKey) ?? pages.find((p) => p.mainId === pageId) ?? null) : null;
   const [selected, setSelected] = useState<string | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -189,13 +204,17 @@ export function DiaryEditor({
     el.scrollTop = p.fy * el.scrollHeight - p.py;
   });
   // Neue Seite: wieder ganz zeigen und oben anfangen.
-  useEffect(() => {
+  const pageKey = page?.key;
+  const [zoomedPage, setZoomedPage] = useState(pageKey);
+  if (zoomedPage !== pageKey) {
+    setZoomedPage(pageKey);
     setZoomState(1);
+  }
+  useEffect(() => {
     area.current?.scrollTo({ top: 0, left: 0 });
-  }, [page?.key]);
+  }, [pageKey]);
   // Strg/⌘ + Mausrad zoomt an der Maus (auch Touchpad-Spreizen), ohne Strg wird wie gewohnt gescrollt.
-  const wheel = useRef<(e: WheelEvent) => void>(() => {});
-  wheel.current = (e) => {
+  const wheel = useLatest((e: WheelEvent) => {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
     const r = area.current!.getBoundingClientRect();
@@ -203,7 +222,8 @@ export function DiaryEditor({
       x: e.clientX - r.left,
       y: e.clientY - r.top,
     });
-  };
+  });
+
   const areaRef = (el: HTMLDivElement | null) => {
     area.current = el;
     observeArea(el);
@@ -214,8 +234,7 @@ export function DiaryEditor({
 
   // Tastenkürzel: Bild auf/ab blättert (auch beim Tippen), +/−/0 zoomen außerhalb von Textfeldern.
   const pageIndex = page ? pages.findIndex((p) => p.key === page.key) : -1;
-  const keys = useRef<(e: KeyboardEvent) => void>(() => {});
-  keys.current = (e) => {
+  const onKey = useEffectEvent((e: KeyboardEvent) => {
     if (!page || e.altKey) return;
     if (e.key === "PageDown" || e.key === "PageUp") {
       const next = pages[pageIndex + (e.key === "PageDown" ? 1 : -1)];
@@ -230,13 +249,14 @@ export function DiaryEditor({
     else if (e.key === "0") setZoom(1);
     else return;
     e.preventDefault();
-  };
+  });
+  const hasPage = !!page;
   useEffect(() => {
-    if (!page) return;
-    const on = (e: KeyboardEvent) => keys.current(e);
+    if (!hasPage) return;
+    const on = (e: KeyboardEvent) => onKey(e);
     window.addEventListener("keydown", on, true);
     return () => window.removeEventListener("keydown", on, true);
-  }, [!!page]);
+  }, [hasPage]);
 
   const draw = async (sf: Surface, region: Region) => {
     const r = { ...region, page: sf.page };
@@ -587,8 +607,7 @@ function PageField({
   suggestion: number | null;
   onCommit: (pageNo: number | null) => void;
 }) {
-  const [text, setText] = useState(own && pageNo !== null ? String(pageNo) : "");
-  useEffect(() => setText(own && pageNo !== null ? String(pageNo) : ""), [own, pageNo]);
+  const [text, setText] = useDraft(own && pageNo !== null ? String(pageNo) : "");
   const hint = pageNo ?? suggestion;
   const commit = () => {
     const t = text.trim();
@@ -652,15 +671,11 @@ function EntryCard({
   onDelete: () => void;
   onGoto: (r: { sourceId: string; page?: number }) => void;
 }) {
-  const [noted, setNoted] = useState(entry.notedAt ?? "");
-  const [back, setBack] = useState(entry.lookbackMin === null ? "" : String(entry.lookbackMin));
-  const [short, setShort] = useState(entry.shortText);
-  const [full, setFull] = useState(entry.fullText);
+  const [noted, setNoted] = useDraft(entry.notedAt ?? "");
+  const [back, setBack] = useDraft(entry.lookbackMin === null ? "" : String(entry.lookbackMin));
+  const [short, setShort] = useDraft(entry.shortText);
+  const [full, setFull] = useDraft(entry.fullText);
   const card = useRef<HTMLDivElement>(null);
-  useEffect(() => setNoted(entry.notedAt ?? ""), [entry.notedAt]);
-  useEffect(() => setBack(entry.lookbackMin === null ? "" : String(entry.lookbackMin)), [entry.lookbackMin]);
-  useEffect(() => setShort(entry.shortText), [entry.shortText]);
-  useEffect(() => setFull(entry.fullText), [entry.fullText]);
   useEffect(() => {
     if (active) card.current?.scrollIntoView({ block: "nearest" });
   }, [active]);
@@ -827,39 +842,33 @@ const naturalSizes = new Map<string, { w: number; h: number }>();
 
 function useNaturalSize(surface: Surface): { w: number; h: number } | null {
   const key = `${surface.sourceId}#${surface.page}`;
-  const [size, setSizeState] = useState<{ w: number; h: number } | null>(() => naturalSizes.get(key) ?? null);
-  const setSize = (s: { w: number; h: number }) => {
-    naturalSizes.set(key, s);
-    setSizeState(s);
-  };
-  useEffect(() => {
-    let alive = true;
-    const known = naturalSizes.get(key);
-    setSizeState(known ?? null);
-    if (known) return;
-    if (surface.isPdf) {
-      loadPdf(surface.sourceId)
-        .then((d) => d.getPage(surface.page + 1))
-        .then(
-          (p) => {
-            const v = p.getViewport({ scale: 1 });
-            // Breite Seiten nicht über 900 px aufblasen: daran misst sich „ganz zeigen“ bei PDF.
-            const k = Math.min(1, 900 / v.width) * 4;
-            if (alive) setSize({ w: v.width * k, h: v.height * k });
-          },
-          () => alive && setSize({ w: 900, h: 1270 }),
-        );
-    } else {
-      const img = new Image();
-      img.onload = () => alive && setSize({ w: img.naturalWidth, h: img.naturalHeight });
-      img.onerror = () => alive && setSize({ w: 800, h: 1100 });
-      img.src = mediaUrl(surface.sourceId);
+  const known = naturalSizes.get(key);
+  const loaded = useLoaded(known ? null : key, async () => {
+    const size = await measureSurface(surface);
+    naturalSizes.set(key, size);
+    return size;
+  });
+  return known ?? (loaded.state === "done" ? loaded.value : null);
+}
+
+async function measureSurface(surface: Surface): Promise<{ w: number; h: number }> {
+  if (surface.isPdf) {
+    try {
+      const p = await (await loadPdf(surface.sourceId)).getPage(surface.page + 1);
+      const v = p.getViewport({ scale: 1 });
+      // Breite Seiten nicht über 900 px aufblasen: daran misst sich „ganz zeigen“ bei PDF.
+      const k = Math.min(1, 900 / v.width) * 4;
+      return { w: v.width * k, h: v.height * k };
+    } catch {
+      return { w: 900, h: 1270 };
     }
-    return () => {
-      alive = false;
-    };
-  }, [surface.sourceId, surface.page, surface.isPdf]);
-  return size;
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 800, h: 1100 });
+    img.src = mediaUrl(surface.sourceId);
+  });
 }
 
 /** Uhrzeit „hh:mm“ als Maskenfeld: nur Ziffern, Doppelpunkt von selbst, ↑/↓ verschieben um eine Minute. */

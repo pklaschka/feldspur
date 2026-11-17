@@ -7,7 +7,7 @@
  * Bild der Wiedergabe), Textfelder wachsen mit, und die Liste läuft der Wiedergabe nach.
  */
 import { Dialog } from "radix-ui";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { mediaUrl, type SessionView, type SourceNoteRow, type SourceRow, type TranscriptRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
@@ -17,6 +17,7 @@ import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } f
 import { Button, Choice, CloseButton, cx, Glyph, Picker, Toggle } from "./ui.tsx";
 import { usePeakTiles, Waveform, type WaveBand, type WaveMarker } from "./Waveform.tsx";
 import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
+import { useDraft, useLatest } from "./hooks.ts";
 
 const api = window.feldspur;
 
@@ -134,8 +135,12 @@ function Body({
   useLevel(media, row.level);
   const input = useRef<HTMLTextAreaElement>(null);
   const [pos, setPos] = useState(position?.sourceId === row.id ? position.atMs : 0);
+  // Stelle auch zwischen zwei Renderdurchläufen (Tastenkürzel, „Zeit hierher“); wird mit setPos zusammen gesetzt.
   const posRef = useRef(pos);
-  posRef.current = pos;
+  const updatePos = (ms: number) => {
+    posRef.current = ms;
+    setPos(ms);
+  };
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<Speed>("1");
   const [span, setSpan] = useState<Span>("30");
@@ -173,11 +178,12 @@ function Body({
   }, [lines]);
   const current = lastAtOrBefore(lines, pos)?.id;
 
+  const handBack = useEffectEvent((el: HTMLMediaElement) => seek(row.id, Math.round(el.currentTime * 1000)));
   // Stelle flüssig nachführen.
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      if (media.current) setPos(Math.round(media.current.currentTime * 1000));
+      if (media.current) updatePos(Math.round(media.current.currentTime * 1000));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -185,15 +191,9 @@ function Body({
     return () => {
       cancelAnimationFrame(raf);
       // Stelle an die Detailleiste zurückgeben.
-      if (el) seek(row.id, Math.round(el.currentTime * 1000));
+      if (el) handBack(el);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.id]);
-  // Sprung von außen (Suche, während Mitschreiben offen ist) an eine andere Stelle derselben Aufnahme.
-  useEffect(() => {
-    if (position?.sourceId === row.id && Math.abs(position.atMs - posRef.current) > 1000) seekTo(position.atMs);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [position]);
   useEffect(() => {
     if (media.current) media.current.playbackRate = Number(speed);
   }, [speed]);
@@ -210,8 +210,13 @@ function Body({
     const el = media.current;
     if (!el) return;
     el.currentTime = Math.max(0, ms) / 1000;
-    setPos(Math.round(el.currentTime * 1000));
+    posRef.current = Math.round(el.currentTime * 1000);
+    setPos(posRef.current);
   }, []);
+  // Sprung von außen (Suche, während Mitschreiben offen ist) an eine andere Stelle derselben Aufnahme.
+  useEffect(() => {
+    if (position?.sourceId === row.id && Math.abs(position.atMs - posRef.current) > 1000) seekTo(position.atMs);
+  }, [position, row.id, seekTo]);
   const toggle = () => {
     const el = media.current;
     if (!el) return;
@@ -228,8 +233,7 @@ function Body({
 
   // Tastenkürzel gelten im ganzen Dialog, egal wo der Fokus gerade ist (auch nach einem Klick auf
   // Video, Waveform oder eine freie Fläche). Deshalb am Fenster statt am Eingabefeld.
-  const shortcut = useRef<(e: globalThis.KeyboardEvent) => void>(() => {});
-  shortcut.current = (e) => {
+  const shortcut = useEffectEvent((e: globalThis.KeyboardEvent) => {
     const target = e.target instanceof Element ? e.target : null;
     switch (transcriberKey(e, target, input.current)) {
       case "toggle":
@@ -271,9 +275,9 @@ function Body({
         input.current?.focus();
         break;
     }
-  };
+  });
   useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => shortcut.current(e);
+    const onKey = (e: globalThis.KeyboardEvent) => shortcut(e);
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
@@ -298,8 +302,7 @@ function Body({
   };
 
   // Stabile Handlungen für die Zeilen, damit sie beim Mitlaufen nicht neu zeichnen.
-  const latest = useRef({ guard, onView, row, nextAt });
-  latest.current = { guard, onView, row, nextAt };
+  const latest = useLatest({ guard, onView, row, nextAt });
   const lineActions = useMemo<LineActions>(() => {
     const patch = (id: string, p: Partial<Pick<TranscriptRow, "atMs" | "speaker" | "text">>) =>
       void latest.current.guard(() => api.updateTranscriptLine(id, p)).then((v) => v && latest.current.onView(v));
@@ -333,7 +336,7 @@ function Body({
           });
       },
     };
-  }, [seekTo]);
+  }, [seekTo, latest]);
 
   const apply = (fn: () => Promise<SessionView>) => void guard(fn).then((v) => v && onView(v));
 
@@ -738,10 +741,8 @@ const Line = memo(function Line({
   startMs: number | null;
   actions: LineActions;
 }) {
-  const [speaker, setSpeaker] = useState(line.speaker);
-  const [text, setText] = useState(line.text);
-  useEffect(() => setSpeaker(line.speaker), [line.speaker]);
-  useEffect(() => setText(line.text), [line.text]);
+  const [speaker, setSpeaker] = useDraft(line.speaker);
+  const [text, setText] = useDraft(line.text);
   /** Beim Teilen springt der Fokus in die neue Zeile; der alte Text darf dabei nicht zurückgeschrieben werden. */
   const splitting = useRef(false);
   return (

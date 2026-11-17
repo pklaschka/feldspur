@@ -1,5 +1,6 @@
 import { Slider, VisuallyHidden } from "radix-ui";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useLoaded } from "./hooks.ts";
 import { createPortal } from "react-dom";
 import type { SessionView, SourceRow, TranscriptRow } from "../shared/api.ts";
 import { clock, hm, lage, STATUS_TEXT } from "./format.ts";
@@ -234,7 +235,7 @@ function Timeline({
   // Solange die Achse noch nie sichtbar war, stimmt die Breite nicht: dann warten, bis sie gemessen ist.
   const measured = width > 0 && !!scroller.current?.clientWidth;
   const doneReveal = useRef(0);
-  useEffect(() => {
+  const applyReveal = useEffectEvent(() => {
     if (!reveal || !measured || doneReveal.current === reveal.n) return;
     doneReveal.current = reveal.n;
     const { fromMs, toMs } = reveal;
@@ -245,10 +246,14 @@ function Timeline({
     }
     const px = xOf(scale, fromMs);
     if (px < 0 || px > width) centerOn(fromMs);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reveal?.n, measured, width]);
+  });
+  const revealN = reveal?.n;
+  useEffect(() => applyReveal(), [revealN, measured, width]);
 
-  // Neue Scrollposition anwenden, sobald die Breite zum neuen Zoom passt.
+  // Neue Scrollposition anwenden, sobald die Breite zum neuen Zoom passt. Ohne Abhängigkeiten, also nach jedem
+  // Rendern: Eine Position steht an, wann immer live.current.pendingScroll gesetzt ist, und das passiert neben
+  // mehreren Zustandsänderungen (Zoom, Breite, Wiedereinblenden). setState nur, wenn der Browser begrenzt hat.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- bewusst nach jedem Rendern, siehe oben
   useLayoutEffect(() => {
     const target = live.current.pendingScroll;
     if (target === undefined || !scroller.current) return;
@@ -281,7 +286,7 @@ function Timeline({
 
   // Beim Abspielen mitlaufen, solange die Abspielposition vorher zu sehen war.
   const lastPlayX = useRef<number | null>(null);
-  useEffect(() => {
+  const followPlayhead = useEffectEvent(() => {
     if (playheadMs === null) {
       lastPlayX.current = null;
       return;
@@ -296,7 +301,8 @@ function Timeline({
       setScrollX(target);
       lastPlayX.current = width * 0.15;
     }
-  }, [playheadMs]);
+  });
+  useEffect(() => followPlayhead(), [playheadMs]);
 
   // Mittlere Maustaste (Mausrad drücken) und ziehen verschiebt die Zeitachse.
   const [panning, setPanning] = useState(false);
@@ -765,22 +771,14 @@ export type EpisodeEdit =
  * Tonspuren oder deren Leerlauf), nicht bei jeder anderen Änderung.
  */
 function useEnvelopes(view: SessionView): Map<string, Envelope> {
-  const [map, setMap] = useState(new Map<string, Envelope>());
   const key = `${view.session.id}|${view.analyzedCount}|${view.rows.map((r) => `${r.id}:${r.idle.length}`).join(",")}`;
-  useEffect(() => {
-    let alive = true;
-    if (!view.analyzedCount) {
-      setMap(new Map());
-      return;
-    }
-    void window.feldspur.envelopes(view.session.id).then(
-      (r) => alive && setMap(new Map(Object.entries(r))),
-      () => {},
-    );
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  return map;
+  const sessionId = view.session.id;
+  // Beim Nachladen die bisherigen Hüllkurven stehen lassen, damit die Wellenform nicht kurz verschwindet.
+  const loaded = useLoaded(
+    view.analyzedCount ? key : null,
+    async () => new Map(Object.entries(await window.feldspur.envelopes(sessionId))),
+    { keep: true },
+  );
+  return (view.analyzedCount && loaded.value) || NO_ENVELOPES;
 }
+const NO_ENVELOPES = new Map<string, Envelope>();

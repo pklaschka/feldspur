@@ -3,9 +3,10 @@
  * als Folgeaufnahme markieren, aus dem Projekt nehmen, Geräte zusammenlegen.
  */
 import { AlertDialog, DropdownMenu } from "radix-ui";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import { Button, cx } from "./ui.tsx";
+import { useDraft } from "./hooks.ts";
 
 export interface SourceActions {
   remove(sourceId: string): void;
@@ -350,10 +351,8 @@ function ZoneDialog({
   initial: string;
   onSubmit: (zone: string) => void;
 }) {
-  const [zone, setZone] = useState(initial);
-  useEffect(() => {
-    if (open) setZone(initial);
-  }, [open, initial]);
+  // Beim Öffnen mit dem aktuellen Wert beginnen.
+  const [zone, setZone] = useDraft(initial, open);
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>

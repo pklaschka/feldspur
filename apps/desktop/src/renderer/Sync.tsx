@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { offsetText, parseOffset } from "./format.ts";
@@ -18,6 +18,7 @@ import {
   Tip,
 } from "./ui.tsx";
 import { FineAlign, guessB, type FineAlignStart } from "./FineAlign.tsx";
+import { useDraft } from "./hooks.ts";
 
 const api = window.feldspur;
 
@@ -319,8 +320,7 @@ function ClockRow({
 
 function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: number | null) => void }) {
   const show = (ms: number | null) => (ms === null ? "" : offsetText(ms));
-  const [text, setText] = useState(show(device.offsetMs));
-  useEffect(() => setText(show(device.offsetMs)), [device.offsetMs]);
+  const [text, setText] = useDraft(show(device.offsetMs));
   const commit = () => {
     const ms = parseOffset(text);
     if (ms !== device.offsetMs) onOffset(ms);

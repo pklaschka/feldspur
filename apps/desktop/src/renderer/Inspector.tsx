@@ -1,6 +1,6 @@
 import { formatDuration } from "@feldspur/core/time";
 import { DropdownMenu } from "radix-ui";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import {
   mediaUrl,
   type DiaryEntryRow,
@@ -33,6 +33,7 @@ import {
 } from "./ui.tsx";
 import { LEVEL_MANUAL_RANGE_DB } from "@feldspur/core/level";
 import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
+import { useDraft } from "./hooks.ts";
 
 export interface InspectorActions {
   diaryNote: (sourceId: string, clock: string) => void;
@@ -539,8 +540,7 @@ function checkReason(note: string, deviceLabel: string | undefined): string {
 }
 
 function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
-  const [text, setText] = useState(row.diaryNote ?? "");
-  useEffect(() => setText(row.diaryNote ?? ""), [row.diaryNote, row.id]);
+  const [text, setText] = useDraft(row.diaryNote ?? "", row.id);
   const commit = () => text !== (row.diaryNote ?? "") && onCommit(text);
   return (
     <div className="mt-3.5 rounded-lg bg-k-diary/10 p-3">
@@ -766,8 +766,7 @@ const dbText = (db: number) => `${db > 0 ? "+" : db < 0 ? "−" : "±"}${Math.ab
  */
 function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; actions: InspectorActions }) {
   const [measuring, setMeasuring] = useState(false);
-  const [manual, setManual] = useState(level.manualGainDb);
-  useEffect(() => setManual(level.manualGainDb), [level.manualGainDb]);
+  const [manual, setManual] = useDraft(level.manualGainDb);
   const set = (patch: Partial<LevelInput>) =>
     actions.setLevel(row.id, { mode: level.mode, manualGainDb: manual, compress: level.compress, ...patch });
   const [lo, hi] = LEVEL_MANUAL_RANGE_DB;
@@ -864,21 +863,21 @@ function Player({ row }: { row: SourceRow }) {
     send();
     if (ref.current && !ref.current.paused) raf.current = requestAnimationFrame(loop);
   };
+  const sendNow = useEffectEvent(send);
   useEffect(() => {
     const el = ref.current;
     if (el && seekRequest?.sourceId === row.id) {
       el.currentTime = seekRequest.atMs / 1000;
-      send();
+      sendNow();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seekRequest, row.id]);
+  // Beim Wechsel der Quelle oder Schließen: Nachführen beenden, Stelle abmelden.
   useEffect(
     () => () => {
       cancelAnimationFrame(raf.current);
       report(null);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [row.id],
+    [row.id, report],
   );
 
   const here = position?.sourceId === row.id ? position.atMs : null;
@@ -970,8 +969,8 @@ function TranscriptImport({
   row: SourceRow;
   onImport: InspectorActions["importTranscript"];
 }) {
-  const [done, setDone] = useState<string | null>(null);
-  useEffect(() => setDone(null), [row.id]);
+  // Meldung „übernommen“ gilt nur für die Quelle, bei der importiert wurde.
+  const [done, setDone] = useDraft<string | null>(null, row.id);
   const has = view.transcript.some((l) => l.sourceId === row.id);
   const run = async (mode: "append" | "replace") => {
     const n = await onImport(row.id, mode);

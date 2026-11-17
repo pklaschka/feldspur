@@ -8,7 +8,7 @@
 import { formatDuration } from "@feldspur/core/time";
 import { peakLevel, type Peaks, type WaveformScale } from "@feldspur/core/waveform";
 import { Dialog } from "radix-ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { mediaUrl, type AlignResult, type SessionView, type SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { prepareCanvas, useElementWidth } from "./canvas.ts";
@@ -119,7 +119,7 @@ function Editor({
   const [aAt, setAAt] = useState(start.aAtMs);
   // B relativ zu A: Stelle in B = Stelle in A + delta.
   const [delta, setDelta] = useState(start.bAtMs - start.aAtMs);
-  const startDelta = useRef(start.bAtMs - start.aAtMs);
+  const [startDelta, setStartDelta] = useState(start.bAtMs - start.aAtMs);
   const [zoom, setZoom] = useState(2);
   const [scale, setScale] = useState<WaveformScale>("log");
   const [listen, setListen] = useState<"both" | "a" | "b">("both");
@@ -149,7 +149,7 @@ function Editor({
         ) - aAt,
       );
     }
-    startDelta.current = delta;
+    setStartDelta(delta);
     setSnap(null);
   };
 
@@ -277,7 +277,7 @@ function Editor({
             <span className="font-mono text-[0.9rem]" data-testid="fine-result">
               {a.label} bei {msText(aAt)} = {b.label} bei {msText(bAt)}
             </span>
-            <span className="text-[0.85rem] text-muted">{shiftText(delta - startDelta.current)} gegenüber vorher</span>
+            <span className="text-[0.85rem] text-muted">{shiftText(delta - startDelta)} gegenüber vorher</span>
             {outOfB && <span className="text-[0.85rem] text-warn">liegt außerhalb der zweiten Aufnahme</span>}
             <input
               className="min-w-40 flex-1"
@@ -546,6 +546,14 @@ function useDuet(a: SourceRow, b: SourceRow, listen: "both" | "a" | "b") {
     if (bEl.current) bEl.current.muted = listen === "a";
   }, [a.level, b.level, listen]);
 
+  const stop = () => {
+    aEl.current?.pause();
+    bEl.current?.pause();
+    setPlaying(false);
+    setAtMs(null);
+  };
+  const stopNow = useEffectEvent(stop);
+
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -555,22 +563,14 @@ function useDuet(a: SourceRow, b: SourceRow, listen: "both" | "a" | "b") {
       const t = el.currentTime * 1000;
       setAtMs(t);
       if (t >= stopAt.current || el.paused) {
-        stop();
+        stopNow();
         return;
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);
-
-  const stop = () => {
-    aEl.current?.pause();
-    bEl.current?.pause();
-    setPlaying(false);
-    setAtMs(null);
-  };
 
   const toggle = (aAt: number, delta: number) => {
     const ae = aEl.current;

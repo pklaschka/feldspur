@@ -5,7 +5,8 @@
 import { formatClock, formatDuration } from "@feldspur/core/time";
 import { H, LAYOUT, MAX_TILES, videoTiles, W } from "@feldspur/media/layout";
 import { Dialog } from "radix-ui";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useLoaded } from "./hooks.ts";
 import { mediaUrl, type LevelRow, type MontagePreview, type PreviewPiece } from "../shared/api.ts";
 import { applyLevel, LEVEL_MEDIA_PROPS } from "./level.ts";
 
@@ -33,21 +34,11 @@ export function MontageView({
   /** Lautstärke-Angleichung je Quelle, wie im Montagevideo. */
   levels?: Map<string, LevelRow | null>;
 }) {
-  const [plan, setPlan] = useState<MontagePreview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    let live = true;
-    setPlan(null);
-    setError(null);
-    api.montagePreview(sessionId, realtime).then(
-      (p) => live && setPlan(p),
-      (e: unknown) => live && setError(e instanceof Error ? e.message : String(e)),
-    );
-    return () => {
-      live = false;
-    };
-  }, [open, sessionId, realtime]);
+  // Bei jedem Öffnen neu holen: Die Montage hängt an allem, was sich im Projekt seitdem geändert hat.
+  const loaded = useLoaded(open ? `${sessionId}|${realtime}` : null, () => api.montagePreview(sessionId, realtime));
+  const plan = loaded.state === "done" ? loaded.value : null;
+  const error =
+    loaded.state === "failed" ? (loaded.error instanceof Error ? loaded.error.message : String(loaded.error)) : null;
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -135,9 +126,9 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
   }, [playing, durationMs]);
 
   // Bild und Ton an die Uhr anlegen (beim Stückwechsel, Springen und gelegentlich zum Nachstellen).
-  useEffect(() => {
+  const follow = useEffectEvent(() => {
     const at = (m: { fromMs: number }) => (m.fromMs + (t - piece.fromMs)) / 1000;
-    const follow = (el: HTMLMediaElement | null, m: { sourceId: string; fromMs: number } | null, muted: boolean) => {
+    const place = (el: HTMLMediaElement | null, m: { sourceId: string; fromMs: number } | null, muted: boolean) => {
       if (!el) return;
       if (!m) {
         el.pause();
@@ -153,11 +144,11 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
     };
     for (let k = 0; k < MAX_TILES; k++) {
       const v = piece.videos[k] ?? null;
-      follow(videoEls.current[k] ?? null, v, !v || !audible.has(v.sourceId));
+      place(videoEls.current[k] ?? null, v, !v || !audible.has(v.sourceId));
     }
-    for (let k = 0; k < MAX_SOUNDS; k++) follow(audioEls.current[k] ?? null, extraSounds[k] ?? null, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, piece, playing, mixAll]);
+    for (let k = 0; k < MAX_SOUNDS; k++) place(audioEls.current[k] ?? null, extraSounds[k] ?? null, false);
+  });
+  useEffect(() => follow(), [t, piece, playing, mixAll]);
 
   // Einblendungen: einmal je Sekunde neu, wie im Video.
   const second = Math.floor((t - piece.fromMs) / 1000);
@@ -166,22 +157,22 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
     if (ctx) drawOverlay(ctx, header, previewFrame(piece, piece.fromMs + second * 1000));
   }, [piece, second, header]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement && e.target.type !== "range") return;
-      if (e.key === " ") {
-        e.preventDefault();
-        setPlaying((p) => !p);
-      } else if (e.key === "ArrowRight") seekTo(tRef.current + 10_000);
-      else if (e.key === "Home") seekTo(0);
-      else if (e.key === "End") seekTo(durationMs - 1);
-      else if (e.key === "ArrowLeft") seekTo(tRef.current - 10_000);
-      else return;
+  const onKey = useEffectEvent((e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement && e.target.type !== "range") return;
+    if (e.key === " ") {
       e.preventDefault();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      setPlaying((p) => !p);
+    } else if (e.key === "ArrowRight") seekTo(tRef.current + 10_000);
+    else if (e.key === "Home") seekTo(0);
+    else if (e.key === "End") seekTo(durationMs - 1);
+    else if (e.key === "ArrowLeft") seekTo(tRef.current - 10_000);
+    else return;
+    e.preventDefault();
+  });
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => onKey(e);
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
   }, []);
 
   const tiles = videoTiles(piece.videos.length);

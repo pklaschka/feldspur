@@ -8,7 +8,7 @@
  * `{...LEVEL_MEDIA_PROPS}`.
  */
 import { COMPRESSOR, dbToGain, LIMIT_DB } from "@feldspur/core/level";
-import { useEffect, type RefObject } from "react";
+import { useEffect, useEffectEvent, type RefObject } from "react";
 import type { LevelRow } from "../shared/api.ts";
 
 /** Auf jedes <audio>/<video>, das über applyLevel laufen soll. */
@@ -83,9 +83,8 @@ export function applyLevel(el: HTMLMediaElement | null, level: LevelRow | null |
 
 /** Für Player mit eigenem Element: wendet die Einstellung an, sobald es da ist und wenn sie sich ändert. */
 export function useLevel(ref: RefObject<HTMLMediaElement | null>, level: LevelRow | null | undefined): void {
+  // Nur bei geänderter Einstellung anwenden, nicht bei jedem neuen (inhaltsgleichen) Objekt aus der Ansicht.
   const key = level ? `${level.mode}|${level.gainDb}|${level.compress}` : "";
-  useEffect(() => {
-    applyLevel(ref.current, level);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ref.current, key]);
+  const apply = useEffectEvent(() => applyLevel(ref.current, level));
+  useEffect(() => apply(), [key]);
 }
