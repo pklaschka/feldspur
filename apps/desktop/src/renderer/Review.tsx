@@ -1,12 +1,9 @@
 import { Slider, VisuallyHidden } from "radix-ui";
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { useLoaded } from "./hooks.ts";
-import { createPortal } from "react-dom";
-import type { SessionView, SourceRow, TranscriptRow } from "../shared/api.ts";
-import { clock, hm, lage, STATUS_TEXT } from "./format.ts";
+import type { SessionView, SourceRow } from "../shared/api.ts";
+import { clock, hm, lage } from "./format.ts";
 import {
   buildItems,
-  diaryPreview,
   draw,
   edgeAt,
   EPISODE_H,
@@ -21,18 +18,18 @@ import {
   tOf,
   TRACK_H,
   xOf,
-  type Envelope,
   type Item,
-  type Track,
 } from "./timeline.ts";
 import { prepareCanvas } from "./canvas.ts";
 import { usePlayback } from "./playback.tsx";
 import type { Reveal } from "./SearchDialog.tsx";
 import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
+import { axisRange, fitPpm, MAX_PPM, revealPpm, scrollFor, wheelFactor, zoomAround } from "./review/viewport.ts";
+import { buildTracks, rowStart, trackHeightFor, trackSub } from "./review/tracks.ts";
+import { HoverCard, Legend, Tray, ZoomGlyph } from "./review/parts.tsx";
+import { useEnvelopes } from "./review/envelopes.ts";
 
 const LABEL_W = 180;
-const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
-const MAX_PPM = 240;
 
 export function Review({
   view,
@@ -122,24 +119,13 @@ function Timeline({
   const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
   const playheadMs = position && playRow?.startMs != null ? playRow.startMs + position.atMs : null;
 
-  const starts = placed.map((r) => r.startMs ?? r.diaryWindow!.toMs);
-  const ends = placed.map((r) => Math.max(r.endMs ?? r.startMs ?? 0, r.diaryWindow?.toMs ?? 0));
-  const t0 = Math.floor((Math.min(...starts) - 2 * MIN) / (5 * MIN)) * 5 * MIN;
-  const t1 = Math.ceil((Math.max(...ends) + 2 * MIN) / (5 * MIN)) * 5 * MIN;
-  const fit = Math.max(0.2, (width - 2) / ((t1 - t0) / MIN));
+  const { t0, t1 } = axisRange(placed);
+  const axis = { t0, t1, width };
+  const fit = fitPpm(width, t0, t1);
   const ppm = zoom ?? fit;
   const innerW = Math.max(width, ((t1 - t0) / MIN) * ppm);
 
-  const tracks: Track[] = useMemo(() => {
-    const devices = [...view.allDevices].sort(
-      (a, b) =>
-        Number(b.isReference) - Number(a.isReference) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
-    );
-    const list: Track[] = devices.map((d) => ({ device: d, rows: placed.filter((r) => r.deviceId === d.id) }));
-    const loose = placed.filter((r) => !r.deviceId);
-    if (loose.length) list.push({ device: null, rows: loose });
-    return list;
-  }, [view, placed]);
+  const tracks = useMemo(() => buildTracks(view.allDevices, placed), [view.allDevices, placed]);
   const items = useMemo(
     () => buildItems(tracks, view.episodes, view.gaps, view.diary),
     [tracks, view.episodes, view.gaps, view.diary],
@@ -148,7 +134,7 @@ function Timeline({
   // Die Spuren teilen sich die freie Höhe (Kopf, Legende und „Ohne Uhrzeit“ abgezogen), statt unten Platz frei
   // zu lassen; zwischen 52 und 88 px, damit wenige Spuren nicht zu Balken aufquellen.
   const free = window.innerHeight - 340 - (unplaced.length ? 56 : 0) - RULER_H - EPISODE_H;
-  setTrackHeight(Math.max(52, Math.min(88, Math.floor(free / Math.max(1, tracks.length)))));
+  setTrackHeight(trackHeightFor(free, tracks.length));
   const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
   const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
 
@@ -202,16 +188,13 @@ function Timeline({
   // Aktueller Ausschnitt, auch zwischen zwei Renderdurchläufen (mehrere Mausrad-Ereignisse pro Bild).
   const live = useRef<{ ppm: number; scrollX: number; pendingScroll?: number }>({ ppm, scrollX });
   live.current = { ppm, scrollX: live.current.pendingScroll ?? scrollX, pendingScroll: live.current.pendingScroll };
-  const maxScroll = (p: number) => Math.max(0, ((t1 - t0) / MIN) * p - width);
 
   /** Zoomen und dabei die Zeit `t` an der Bildschirmstelle `x` festhalten. */
   const zoomTo = (next: number, anchor?: { t: number; x: number }) => {
-    const clamped = Math.min(MAX_PPM, Math.max(fit, next));
-    const a = anchor ?? defaultAnchor();
-    const newScroll = Math.min(maxScroll(clamped), Math.max(0, ((a.t - t0) / MIN) * clamped - a.x));
-    setZoom(clamped <= fit * 1.001 ? null : clamped);
-    live.current = { ppm: clamped, scrollX: newScroll, pendingScroll: newScroll };
-    setScrollX(newScroll);
+    const z = zoomAround(next, anchor ?? defaultAnchor(), axis);
+    setZoom(z.zoom);
+    live.current = { ppm: z.ppm, scrollX: z.scrollX, pendingScroll: z.scrollX };
+    setScrollX(z.scrollX);
   };
   /** Ohne Mauszeiger wird um die Abspielposition gezoomt, sonst um die Mitte des Ausschnitts. */
   const defaultAnchor = () => {
@@ -226,7 +209,7 @@ function Timeline({
   /** Zeitpunkt in die Mitte holen, ohne den Zoom zu ändern. */
   const centerOn = (t: number) => {
     const { ppm: p } = live.current;
-    const target = Math.min(maxScroll(p), Math.max(0, ((t - t0) / MIN) * p - width / 2));
+    const target = scrollFor(t, width / 2, p, axis);
     live.current = { ...live.current, scrollX: target, pendingScroll: target };
     setScrollX(target);
   };
@@ -240,8 +223,7 @@ function Timeline({
     doneReveal.current = reveal.n;
     const { fromMs, toMs } = reveal;
     if (toMs !== undefined && toMs > fromMs) {
-      const p = Math.min(MAX_PPM, Math.max(fit, (width * 0.8) / ((toMs - fromMs) / MIN)));
-      zoomTo(p, { t: (fromMs + toMs) / 2, x: width / 2 });
+      zoomTo(revealPpm(fromMs, toMs, axis), { t: (fromMs + toMs) / 2, x: width / 2 });
       return;
     }
     const px = xOf(scale, fromMs);
@@ -268,9 +250,7 @@ function Timeline({
   wheel.current = (e) => {
     if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     e.preventDefault();
-    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? width : 1;
-    // Touchpad-Spreizen kommt als Strg + Rad mit kleinen Schritten.
-    const factor = Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.01 : 0.0015));
+    const factor = wheelFactor(e.deltaY, e.deltaMode, e.ctrlKey, width);
     const r = canvas.current!.getBoundingClientRect();
     const x = e.clientX - r.left;
     const { ppm: p, scrollX: sx } = live.current;
@@ -296,7 +276,7 @@ function Timeline({
     lastPlayX.current = px;
     if (zoom === null || before === null || before < 0 || before > width) return;
     if (px > width - 24 || px < 0) {
-      const target = Math.min(maxScroll(ppm), Math.max(0, ((playheadMs - t0) / MIN) * ppm - width * 0.15));
+      const target = scrollFor(playheadMs, width * 0.15, ppm, axis);
       live.current = { ...live.current, scrollX: target, pendingScroll: target };
       setScrollX(target);
       lastPlayX.current = width * 0.15;
@@ -613,172 +593,7 @@ function Timeline({
     </div>
   );
 }
-
-const rowStart = (r: SourceRow) => r.startMs ?? r.diaryWindow?.toMs ?? 0;
-
-/** Untertitel einer Spur: Referenz, Person oder Anzahl, dazu was noch ohne Zeit ist. */
-function trackSub(t: Track, rows: SourceRow[]): string {
-  if (!t.device) return `${t.rows.length} ${t.rows.length === 1 ? "Datei" : "Dateien"}`;
-  const all = rows.filter((r) => r.deviceId === t.device!.id && !r.partOf);
-  const open = all.filter((r) => r.startMs === null && !r.diaryWindow).length;
-  const base = t.device.isReference
-    ? "Referenzuhr"
-    : t.device.personName || `${all.length} ${all.length === 1 ? "Datei" : "Dateien"}`;
-  return open ? `${base} · ${open} ohne Zeit` : base;
-}
-
-function ZoomGlyph({ minus = false }: { minus?: boolean }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <circle cx="7" cy="7" r="4.5" />
-      <path d="M10.5 10.5 14 14M5 7h4" />
-      {!minus && <path d="M7 5v4" />}
-    </svg>
-  );
-}
-
-function Legend({ swatch, children }: { swatch: string; children: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <i className={cx("inline-block", swatch)} />
-      {children}
-    </span>
-  );
-}
-
-function HoverCard({
-  item,
-  line,
-  x,
-  y,
-}: {
-  item: Item;
-  /** Zeile der Mitschrift unter dem Zeiger. */
-  line: TranscriptRow | null;
-  /** Mauszeiger im Fenster. */
-  x: number;
-  y: number;
-}) {
-  const card = useRef<HTMLDivElement>(null);
-  // Die Karte liegt über allem (Portal, fest positioniert), damit Achse und Rahmen sie nicht abschneiden. Passt
-  // sie rechts oder unten nicht mehr ins Fenster, klappt sie auf die andere Seite des Zeigers.
-  useLayoutEffect(() => {
-    const el = card.current;
-    if (!el) return;
-    const { width: w, height: h } = el.getBoundingClientRect();
-    const gap = 14;
-    const left = x + gap + w > window.innerWidth - 8 ? Math.max(8, x - gap - w) : x + gap;
-    const top = y + gap + h > window.innerHeight - 8 ? Math.max(8, y - gap - h) : y + gap;
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
-    el.style.visibility = "visible";
-  });
-  let title: string;
-  let lines: string[];
-  if (item.type === "episode") {
-    title = `Episode E${item.ep.index}`;
-    lines = [
-      `${clock(item.ep.startMs)} – ${clock(item.ep.endMs)}`,
-      item.ep.sourceLabels.join(", "),
-      "Ränder ziehen, um die Episode zu ändern",
-    ];
-  } else if (item.type === "gap") {
-    title = "Zwischenzeit";
-    lines = [`${clock(item.gap.startMs)} – ${clock(item.gap.endMs)}`];
-    if (item.gap.itemLabels.length) lines.push(item.gap.itemLabels.join(", "));
-    if (item.gap.loudAtMs.length) {
-      lines.push(`laut: ${item.gap.loudAtMs.slice(0, 4).map(clock).join(", ")}`);
-      lines.push("Klick auf eine laute Stelle macht sie zur Mini-Episode");
-    }
-  } else if (item.type === "diary") {
-    const e = item.entry;
-    title = `Tagebuch ${item.row.label} · Eintrag ${e.number}`;
-    lines = [`notiert ${e.notedAt ?? "?"}, bezieht sich auf ${hm(item.t0)}–${hm(item.t1)}`];
-    const text = diaryPreview(e);
-    if (text) lines.push(text.length > 120 ? `${text.slice(0, 117)}…` : text);
-  } else {
-    const r = item.row;
-    title = `${r.label} · ${r.fileName}`;
-    lines = [lage(r.startMs, r.endMs), [STATUS_TEXT[r.status], ...r.notes].join(" · ")];
-    if (r.status === "check") lines.push("Anklicken und rechts prüfen");
-    if (line) {
-      const t = (line.speaker ? `${line.speaker}: ` : "") + line.text;
-      lines.push(`${line.clockMs !== null ? clock(line.clockMs) : ""} „${t.length > 140 ? `${t.slice(0, 137)}…` : t}“`);
-    }
-  }
-  return createPortal(
-    <div
-      ref={card}
-      data-testid="timeline-hover"
-      className="pointer-events-none fixed z-50 w-max max-w-72 rounded-md bg-ink px-2.5 py-1.5 text-[0.82rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
-      style={{ left: x + 14, top: y + 14, visibility: "hidden" }}
-    >
-      <b className="block font-semibold">{title}</b>
-      {lines.map((l) => (
-        <div key={l} className="opacity-85">
-          {l}
-        </div>
-      ))}
-    </div>,
-    document.body,
-  );
-}
-
-function Tray({
-  rows,
-  selected,
-  onSelect,
-}: {
-  rows: SourceRow[];
-  selected: string | null;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <section className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-bad/6 px-3 py-2">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <h3 className="text-[0.95rem] font-semibold text-bad">Ohne Uhrzeit ({rows.length})</h3>
-        <span className="text-[0.85rem] text-muted">
-          Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein.
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {rows.map((r) => (
-          <button
-            key={r.id}
-            data-testid="tray-item"
-            className={cx(
-              "inline-flex cursor-pointer items-center gap-2 rounded-lg border py-1 pr-2.5 pl-1",
-              selected === r.id ? "border-accent bg-accent-soft" : "border-line bg-panel hover:border-line-2",
-            )}
-            onClick={() => onSelect(r.id)}
-          >
-            <Glyph kind={r.kind} size="sm" />
-            <b className="font-mono">{r.label}</b> {r.fileName}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export type EpisodeEdit =
   | { kind: "edge"; edge: "start" | "end"; fromMs: number; toMs: number }
   | { kind: "loud"; atMs: number }
   | { kind: "reset" };
-
-/**
- * Hüllkurven für die Wellenform in den Clips. Neu geholt, wenn sich die Analyse ändert (Anzahl analysierter
- * Tonspuren oder deren Leerlauf), nicht bei jeder anderen Änderung.
- */
-function useEnvelopes(view: SessionView): Map<string, Envelope> {
-  const key = `${view.session.id}|${view.analyzedCount}|${view.rows.map((r) => `${r.id}:${r.idle.length}`).join(",")}`;
-  const sessionId = view.session.id;
-  // Beim Nachladen die bisherigen Hüllkurven stehen lassen, damit die Wellenform nicht kurz verschwindet.
-  const loaded = useLoaded(
-    view.analyzedCount ? key : null,
-    async () => new Map(Object.entries(await window.feldspur.envelopes(sessionId))),
-    { keep: true },
-  );
-  return (view.analyzedCount && loaded.value) || NO_ENVELOPES;
-}
-const NO_ENVELOPES = new Map<string, Envelope>();
