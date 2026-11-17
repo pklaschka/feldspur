@@ -25,3 +25,13 @@
 #show outline.entry.where(level: 1): set text(fill: umbra, weight: "semibold")
 #show figure.caption: set text(font: sans, size: 9pt, fill: tinte-2)
 #show heading.where(level: 2): set block(above: 1.5em, below: 0.65em)
+// Begriff und Erklärung im Glossar nie getrennt: Begriff nie allein unten auf der Seite. Gleiche Darstellung
+// wie Quartos Vorgabe (definitions.typ), aber jeder Eintrag als ein Block, der nicht umbrochen wird.
+#show terms: it => {
+  it.children
+    .map(child => block(breakable: false, width: 100%)[
+      #strong[#child.term]
+      #block(inset: (left: 1.5em, top: -0.4em))[#child.description]
+    ])
+    .join()
+}
