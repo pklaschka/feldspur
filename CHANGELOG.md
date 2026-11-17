@@ -4,6 +4,16 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.1.2 – 2026-11-17
+
+<!-- Release notes generated using configuration in .github/release.yml at f5d3adf9bccaff8437a9a335d51395911779119e -->
+
+### Behoben
+
+- Handbuch-PDF: Glossarbegriffe nie allein, Abstand über „Literatur“ ([#59](https://github.com/pklaschka/feldspur/pull/59), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.1.1...v0.1.2
+
 ## 0.1.1 – 2026-11-17
 
 <!-- Release notes generated using configuration in .github/release.yml at f6cf8cec147890bb6b2c9039987be8804c0bd856 -->
