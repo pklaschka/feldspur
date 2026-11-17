@@ -4,6 +4,24 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.1.1 – 2026-11-17
+
+<!-- Release notes generated using configuration in .github/release.yml at f6cf8cec147890bb6b2c9039987be8804c0bd856 -->
+
+### Dokumentation
+
+- Zenodo-DOI in Zitierangaben, Handbuch und README ([#52](https://github.com/pklaschka/feldspur/pull/52), @pklaschka)
+- Handbuch: Druckfassung mit 3 mm Beschnitt (216 × 303 mm) ([#57](https://github.com/pklaschka/feldspur/pull/57), @pklaschka)
+
+### Weitere Änderungen
+
+- Handbuch: lange Links auf dem Handy umbrechen ([#51](https://github.com/pklaschka/feldspur/pull/51), @pklaschka)
+- DOI im Handbuch als Software-DOI ausweisen ([#53](https://github.com/pklaschka/feldspur/pull/53), @pklaschka)
+- Handbuch-Webseite: README-Vorlage nicht mehr als Notebook verlinken ([#55](https://github.com/pklaschka/feldspur/pull/55), @pklaschka)
+- Handbuch: Montagevideo nicht mehr „nur zum Zuordnen“ ([#58](https://github.com/pklaschka/feldspur/pull/58), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.1.0...v0.1.1
+
 ## 0.1.0 – 2026-11-16
 
 <!-- Release notes generated using configuration in .github/release.yml at c2dc50091180240e9ecb272e8df982af3746e64f -->
