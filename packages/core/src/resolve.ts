@@ -153,7 +153,6 @@ export function effectiveLocal(ev: TimeEvidence, device: Device | undefined, tz:
 }
 
 function candidatesFor(
-  source: Source,
   evidence: TimeEvidence[],
   device: Device | undefined,
   clock: DeviceClock | undefined,
@@ -256,7 +255,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
       const device = src.deviceId ? deviceById.get(src.deviceId) : undefined;
       const clock = src.deviceId ? clocks.get(src.deviceId) : undefined;
       const evs = [...(evidenceBySource.get(src.id) ?? []), ...derived.filter((d) => d.sourceId === src.id)];
-      const cands = candidatesFor(src, evs, device, clock, session.timeZone);
+      const cands = candidatesFor(evs, device, clock, session.timeZone);
       candidates.set(src.id, cands);
       const best = pickBest(cands);
       if (!best) continue;
@@ -345,7 +344,6 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     const device = deviceById.get(src.deviceId!);
     const deviceEv = pickBest(
       candidatesFor(
-        src,
         evs.filter((e) => e.clock === "device"),
         device,
         clock,
@@ -396,7 +394,6 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         const device = otherSrc.deviceId ? deviceById.get(otherSrc.deviceId) : undefined;
         const deviceEv = pickBest(
           candidatesFor(
-            otherSrc,
             (evidenceBySource.get(otherSrc.id) ?? []).filter((e) => e.clock === "device"),
             device,
             clock,

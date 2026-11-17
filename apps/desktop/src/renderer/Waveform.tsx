@@ -5,7 +5,7 @@
  */
 import { peakLevel, type Peaks, type WaveformScale } from "@feldspur/core/waveform";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { prepareCanvas } from "./canvas.ts";
+import { prepareCanvas, useElementWidth } from "./canvas.ts";
 
 const api = window.feldspur;
 
@@ -68,15 +68,7 @@ export function Waveform({
   label?: string;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const el = canvas.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e!.contentRect.width)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const width = useElementWidth(canvas);
 
   useEffect(() => {
     const el = canvas.current;

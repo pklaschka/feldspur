@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./csv": "./src/csv.ts",
     "./layout": "./src/layout.ts"
   },
   "dependencies": {

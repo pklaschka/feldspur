@@ -97,17 +97,6 @@ export const EVIDENCE_LABEL: Record<string, string> = {
   checked: "geprüft",
 };
 
-/** Kurzes Kürzel als Symbol je Quellenart. */
-export const KIND_GLYPH: Record<SourceKind, string> = {
-  video: "▶",
-  audio: "◖",
-  photo: "◼",
-  diary: "✎",
-  note: "≡",
-  gps: "⌖",
-  other: "·",
-};
-
 /** „B1: Text“ → Sprecher B1. */
 export function splitSpeaker(input: string): { speaker: string | null; text: string } {
   const m = /^\s*([\p{L}\d]{1,6}):\s+(.*)$/su.exec(input);

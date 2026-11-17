@@ -8,9 +8,8 @@ import { pathToFileURL } from "node:url";
 import { FPS, H, videoTiles, W, type Box } from "./layout.ts";
 import type { Piece } from "./montage-video.ts";
 import { entryText, type Scaffold } from "./scaffold.ts";
+import { xmlEscape } from "./xml.ts";
 
-const esc = (s: string) =>
-  s.replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]!);
 /** Rationale Zeit in Bildern der Sequenz. */
 const t = (frames: number) => (frames === 0 ? "0s" : `${frames}/${FPS}s`);
 const msFrames = (ms: number) => Math.round((ms * FPS) / 1000);
@@ -43,7 +42,7 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
         : `hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2"`;
     assets.set(path, {
       id,
-      xml: `    <asset id="${id}" name="${esc(name)}" start="0s" duration="${dur}" ${flags}>\n      <media-rep kind="original-media" src="${esc(pathToFileURL(path).href)}"/>\n    </asset>`,
+      xml: `    <asset id="${id}" name="${xmlEscape(name)}" start="0s" duration="${dur}" ${flags}>\n      <media-rep kind="original-media" src="${xmlEscape(pathToFileURL(path).href)}"/>\n    </asset>`,
     });
     return id;
   };
@@ -55,7 +54,7 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
       .map((e) => {
         const at = localStart + msFrames(e.montageMs) - p.f0;
         const kind = e.kind === "episode" || e.kind === "card" ? "chapter-marker" : "marker";
-        return `          <${kind} start="${t(at)}" duration="${t(1)}" value="${esc(entryText(e).slice(0, 250))}"/>`;
+        return `          <${kind} start="${t(at)}" duration="${t(1)}" value="${xmlEscape(entryText(e).slice(0, 250))}"/>`;
       });
 
   const spine: string[] = [];
@@ -69,7 +68,7 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
     more.forEach((v, k) => {
       const id = asset(v.source.originalPath, v.source.fileName, "av", v.source.durationMs);
       children.push(
-        `          <asset-clip ref="${id}" lane="${k + 1}" offset="${t(base)}" start="${t(msFrames(v.fromMs))}" duration="${t(len)}" srcEnable="video" name="${esc(v.label)}">\n            ${transform(tiles[k + 1]!)}\n          </asset-clip>`,
+        `          <asset-clip ref="${id}" lane="${k + 1}" offset="${t(base)}" start="${t(msFrames(v.fromMs))}" duration="${t(len)}" srcEnable="video" name="${xmlEscape(v.label)}">\n            ${transform(tiles[k + 1]!)}\n          </asset-clip>`,
       );
     });
     // Ton jeder laufenden Quelle auf eigener Spur, damit er sich in Resolve einzeln regeln lässt.
@@ -78,7 +77,7 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
       const s = a.source;
       const id = asset(s.originalPath, s.fileName, s.kind === "video" ? "av" : "audio", s.durationMs);
       children.push(
-        `          <asset-clip ref="${id}" lane="${-(k + 1)}" offset="${t(base)}" start="${t(msFrames(a.fromMs))}" duration="${t(len)}" srcEnable="audio" name="${esc(a.label)}"/>`,
+        `          <asset-clip ref="${id}" lane="${-(k + 1)}" offset="${t(base)}" start="${t(msFrames(a.fromMs))}" duration="${t(len)}" srcEnable="audio" name="${xmlEscape(a.label)}"/>`,
       );
     });
     children.push(...markersIn(p, base));
@@ -86,11 +85,11 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
       const id = asset(main.source.originalPath, main.source.fileName, "av", main.source.durationMs);
       const own = more.length ? [`          ${transform(tiles[0]!)}`] : [];
       spine.push(
-        `        <asset-clip ref="${id}" offset="${t(p.f0)}" start="${t(base)}" duration="${t(len)}" name="${esc(p.title ? `${p.title} · ${main.label}` : main.label)}" srcEnable="video">\n${[...own, ...children].join("\n")}\n        </asset-clip>`,
+        `        <asset-clip ref="${id}" offset="${t(p.f0)}" start="${t(base)}" duration="${t(len)}" name="${xmlEscape(p.title ? `${p.title} · ${main.label}` : main.label)}" srcEnable="video">\n${[...own, ...children].join("\n")}\n        </asset-clip>`,
       );
     } else {
       spine.push(
-        `        <gap name="${esc(p.title)}" offset="${t(p.f0)}" start="0s" duration="${t(len)}">\n${children.join("\n")}\n        </gap>`,
+        `        <gap name="${xmlEscape(p.title)}" offset="${t(p.f0)}" start="0s" duration="${t(len)}">\n${children.join("\n")}\n        </gap>`,
       );
     }
   }
@@ -105,7 +104,7 @@ ${[...assets.values()].map((a) => a.xml).join("\n")}
   </resources>
   <library>
     <event name="Feldspur">
-      <project name="${esc(opts.projectName)}">
+      <project name="${xmlEscape(opts.projectName)}">
         <sequence format="r1" duration="${t(total)}" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k">
           <spine>
 ${spine.join("\n")}

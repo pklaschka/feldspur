@@ -12,6 +12,7 @@ import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
 import { buildScaffold, type ImageRef, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
+import { excelCsv } from "./csv.ts";
 import { xlsx, type Cell } from "./xlsx.ts";
 
 export interface ExportOptions {
@@ -99,11 +100,6 @@ export function baseName(sc: Scaffold): string {
   return sc.plan.mode === "episodes" ? `${base}_Episoden` : base;
 }
 
-const csvCell = (v: string | number | null | undefined) => {
-  const s = v === null || v === undefined ? "" : String(v);
-  return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
 /** Begleitprotokoll: Nachweis je Quelle (Semikolon, UTF-8 mit BOM für Excel). */
 export function protocolCsv(store: ProjectStore, sc: Scaffold, levels: Map<Id, AudioLevel | null> = new Map()): string {
   const { input, resolved } = sc;
@@ -151,7 +147,7 @@ export function protocolCsv(store: ProjectStore, sc: Scaffold, levels: Map<Id, A
       s.kind === "audio" || s.kind === "video" ? levelText(levels.get(s.id)) : "",
     ];
   });
-  return `﻿${[head, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n`;
+  return excelCsv([head, ...rows]);
 }
 
 /** Standbild: Rasterbilder über ffmpeg, PDF-Seiten über die Oberfläche (falls verfügbar). */

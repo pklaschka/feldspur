@@ -1,3 +1,5 @@
+import { useEffect, useState, type RefObject } from "react";
+
 /**
  * Gemeinsame Hilfen fürs Zeichnen auf Canvas.
  *
@@ -15,4 +17,17 @@ export function prepareCanvas(el: HTMLCanvasElement, width: number, height: numb
   if (!ctx) return null;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return ctx;
+}
+
+/** Breite eines Elements in CSS-Pixeln, aktuell gehalten über einen ResizeObserver (0, solange nicht gemessen). */
+export function useElementWidth(ref: RefObject<Element | null>): number {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e!.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return width;
 }

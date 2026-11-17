@@ -3,12 +3,8 @@
  * damit Excel und LibreOffice Umlaute richtig lesen. Ohne Electron, damit es sich direkt testen lässt.
  */
 import type { ChangeStep, History } from "@feldspur/core";
+import { excelCsv } from "@feldspur/media/csv";
 import { fieldChanges, OP_LABEL, TABLE_LABEL } from "../shared/changelog.ts";
-
-const cell = (v: unknown) => {
-  const s = v === null || v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
-  return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
 
 export function changeLogRows(steps: ChangeStep[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -40,5 +36,5 @@ export function changeLogCsv(history: History): string {
     before = page.at(-1)!.step;
   }
   const head = ["Zeit (UTC)", "Schritt", "Aktion", "Bereich", "Art", "Zeile", "Feld", "vorher", "nachher"];
-  return `﻿${[head, ...changeLogRows(steps)].map((r) => r.map(cell).join(";")).join("\r\n")}\r\n`;
+  return excelCsv([head, ...changeLogRows(steps)]);
 }

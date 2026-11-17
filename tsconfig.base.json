@@ -8,6 +8,8 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
