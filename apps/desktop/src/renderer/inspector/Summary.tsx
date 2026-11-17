@@ -1,5 +1,5 @@
 /** Detailleiste ohne gewählte Quelle: Stand des Einsatzes und was als Nächstes zu tun ist. */
-import { type SessionView, type SourceRow } from "../../shared/api.ts";
+import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { STATUS_TEXT } from "../format.ts";
 import { Button, Eyebrow, STATUS_TEXT_CLASS } from "../ui.tsx";
 import { type Todo, todos } from "./status.ts";

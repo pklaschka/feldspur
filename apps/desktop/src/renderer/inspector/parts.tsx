@@ -1,5 +1,5 @@
 /** Kleine Bausteine der Detailleiste. */
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { cx } from "../ui.tsx";
 
 export function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: boolean }) {

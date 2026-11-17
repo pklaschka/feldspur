@@ -1,6 +1,6 @@
-import { type SessionView, type SourceRow } from "../../shared/api.ts";
+import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { Button } from "../ui.tsx";
-import { type InspectorActions } from "./actions.ts";
+import type { InspectorActions } from "./actions.ts";
 import { checkReason } from "./status.ts";
 
 /**

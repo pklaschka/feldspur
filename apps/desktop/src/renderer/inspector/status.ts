@@ -1,5 +1,5 @@
 /** Stand eines Einsatzes in Worten: offene Punkte und Gründe für „prüfen“. */
-import { type SessionView } from "../../shared/api.ts";
+import type { SessionView } from "../../shared/api.ts";
 import type { Step } from "../App.tsx";
 
 /** Was als Nächstes zu tun ist, mit Sprungziel (Schritt und ggf. Quelle). */

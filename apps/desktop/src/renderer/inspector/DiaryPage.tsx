@@ -1,4 +1,4 @@
-import { type DiaryEntryRow, type SourceRow } from "../../shared/api.ts";
+import type { DiaryEntryRow, SourceRow } from "../../shared/api.ts";
 import { hm } from "../format.ts";
 import { Button, Eyebrow } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";

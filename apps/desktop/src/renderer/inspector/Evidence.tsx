@@ -1,10 +1,10 @@
 /** Zeitbelege einer Quelle und Uhrzeit von Hand. */
 import { useState } from "react";
-import { type Precision, type SourceRow, type TimeInput } from "../../shared/api.ts";
+import type { Precision, SourceRow, TimeInput } from "../../shared/api.ts";
 import { EVIDENCE_LABEL } from "../format.ts";
 import { positionText, usePlayback } from "../playback.tsx";
 import { Button, Choice, cx, Pill, PRECISION_OPTIONS, Toggle } from "../ui.tsx";
-import { type InspectorActions } from "./actions.ts";
+import type { InspectorActions } from "./actions.ts";
 
 export function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActions }) {
   if (!row.evidence.length) {

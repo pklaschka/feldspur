@@ -1,6 +1,6 @@
 /** Was die Detailleiste in der App auslösen kann. */
-import { type LevelInput, type TimeInput } from "../../shared/api.ts";
-import { type ApplyView } from "../Notes.tsx";
+import type { LevelInput, TimeInput } from "../../shared/api.ts";
+import type { ApplyView } from "../Notes.tsx";
 
 export interface InspectorActions {
   diaryNote: (sourceId: string, clock: string) => void;

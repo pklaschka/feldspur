@@ -1,5 +1,5 @@
 import { formatDuration } from "@feldspur/core/time";
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { mediaUrl, type SessionView, type SourceRow } from "../shared/api.ts";
 import { bytes, clock, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
@@ -9,8 +9,8 @@ import { usePlayback } from "./playback.tsx";
 import { SourceMenu, useActions } from "./SourceMenu.tsx";
 import type { Step } from "./App.tsx";
 import { Button, CloseButton, cx, Eyebrow, Glyph, StatusDot, STATUS_TEXT_CLASS } from "./ui.tsx";
-import { type InspectorActions } from "./inspector/actions.ts";
-import { type Todo } from "./inspector/status.ts";
+import type { InspectorActions } from "./inspector/actions.ts";
+import type { Todo } from "./inspector/status.ts";
 import { Summary } from "./inspector/Summary.tsx";
 import { Fold, KV } from "./inspector/parts.tsx";
 import { CheckPanel } from "./inspector/CheckPanel.tsx";

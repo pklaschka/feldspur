@@ -1,10 +1,10 @@
 /** Mitschrift in der Detailleiste: Stand und Import fertiger Transkripte. */
 import { DropdownMenu } from "radix-ui";
-import { type SessionView, type SourceRow } from "../../shared/api.ts";
+import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { positionText } from "../playback.tsx";
 import { Button } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
-import { type InspectorActions } from "./actions.ts";
+import type { InspectorActions } from "./actions.ts";
 
 /** Fertiges Transkript (Whisper u. a.) übernehmen; gibt es schon Zeilen, ergänzen oder ersetzen. */
 export function TranscriptImport({

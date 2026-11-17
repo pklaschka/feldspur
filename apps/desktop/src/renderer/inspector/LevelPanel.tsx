@@ -1,10 +1,10 @@
 import { dbText } from "../format.ts";
 import { useState } from "react";
-import { type LevelInput, type LevelRow, type SourceRow } from "../../shared/api.ts";
+import type { LevelInput, LevelRow, SourceRow } from "../../shared/api.ts";
 import { Button, Choice, Toggle } from "../ui.tsx";
 import { LEVEL_MANUAL_RANGE_DB } from "@feldspur/core/level";
 import { useDraft } from "../hooks.ts";
-import { type InspectorActions } from "./actions.ts";
+import type { InspectorActions } from "./actions.ts";
 
 /**
  * Lautstärke angleichen: automatisch auf gleichen Sprachpegel, von Hand oder unverändert, dazu
