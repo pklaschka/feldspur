@@ -65,14 +65,20 @@ export function Player({ row }: { row: SourceRow }) {
           Abhören und Mitschreiben wandle sie in MP4 (H.264) bzw. WAV oder M4A um; siehe Handbuch, „Formate“.
         </p>
       ) : row.kind === "video" ? (
-        <video {...props} className="block max-h-56 w-full rounded-lg bg-black" />
+        // Feste Fläche (16:9, höchstens 14rem), damit der Inspektor nicht springt, sobald das Video geladen ist.
+        <video {...props} className="block aspect-video max-h-56 w-full rounded-lg bg-black object-contain" />
       ) : (
         <audio {...props} className="block w-full" />
       )}
-      {here !== null && (
-        <div className="mt-1 flex justify-between font-mono text-[0.82rem] text-ink-2" data-testid="player-position">
-          <span>{positionText(here)}</span>
-          {row.startMs !== null && <span>{clock(row.startMs + here)}</span>}
+      {/* Zeile immer freihalten: Die Stelle kommt erst mit den Metadaten, sonst rutscht alles darunter nach unten. */}
+      {!failed && (
+        <div className="mt-1 h-5 font-mono text-[0.82rem] leading-5 text-ink-2">
+          {here !== null && (
+            <div className="flex justify-between" data-testid="player-position">
+              <span>{positionText(here)}</span>
+              {row.startMs !== null && <span>{clock(row.startMs + here)}</span>}
+            </div>
+          )}
         </div>
       )}
     </div>
