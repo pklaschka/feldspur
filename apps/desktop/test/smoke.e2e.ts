@@ -497,8 +497,35 @@ try {
   console.log(`Folgeaufnahme ${zoomLabel} beginnt 10:25:00`);
   await shot("-quellen");
 
-  // Im parallel laufenden Video eine Zeile mitschreiben; sie erscheint dann beim Mitschreiben von A-01 (nur lesen).
+  // Der Inspektor darf nicht springen, sobald das Video geladen ist (#64): Lage der Knöpfe
+  // unter dem Player gleich beim Erscheinen merken und nach dem Laden vergleichen.
+  await page.evaluate(() => {
+    const w = window as unknown as { firstTop?: number };
+    const mo = new MutationObserver(() => {
+      const b = [...document.querySelectorAll("[data-testid=inspector] button")].find(
+        (e) => e.textContent === "Groß ansehen",
+      );
+      if (b && document.querySelector("[data-testid=inspector] video")) {
+        w.firstTop = b.getBoundingClientRect().top;
+        mo.disconnect();
+      }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+  });
   await src("C0001.MP4").click();
+  await page.waitForFunction(() => {
+    const v = document.querySelector<HTMLVideoElement>("[data-testid=inspector] video");
+    return !!v && v.readyState >= 1 && !!document.querySelector("[data-testid=player-position]");
+  });
+  const shift = await page.evaluate(() => {
+    const b = [...document.querySelectorAll("[data-testid=inspector] button")].find(
+      (e) => e.textContent === "Groß ansehen",
+    )!;
+    return b.getBoundingClientRect().top - (window as unknown as { firstTop: number }).firstTop;
+  });
+  if (Math.abs(shift) > 0.5) throw new Error(`Inspektor springt beim Laden des Videos um ${shift}px`);
+  console.log("Video geladen: Inspektor springt nicht");
+  // Im parallel laufenden Video eine Zeile mitschreiben; sie erscheint dann beim Mitschreiben von A-01 (nur lesen).
   await page.getByTestId("inspector").getByRole("button", { name: "Mitschreiben…" }).click();
   await page.getByTestId("transcriber").getByLabel("Neue Zeile").fill("B2: Das hört man auch im Video.");
   await page.getByTestId("transcriber").getByLabel("Neue Zeile").press("Enter");
