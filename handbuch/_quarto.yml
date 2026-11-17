@@ -75,3 +75,6 @@ format:
     filters:
       - at: pre-ast
         path: kaesten.lua
+      # Überschriften ohne Nummer ohne Quartos Hülle setzen, siehe ueberschriften.lua.
+      - at: pre-ast
+        path: ueberschriften.lua
