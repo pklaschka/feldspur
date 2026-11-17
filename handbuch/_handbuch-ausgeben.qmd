@@ -15,9 +15,15 @@ Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdat
 
 ### Montagevideo (.mp4)
 
-Das **Montagevideo** dient nur zum **Zuordnen**: Es zeigt die Uhrzeit, die gerade laufenden Videos (bis zu vier
-nebeneinander) mit Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und die Montage-ID. Fotos und
-Tagebuch stehen schon im Zeitgerüst und fehlen deshalb im Video.
+Das **Montagevideo** legt Bild und Ton aller Aufnahmen des Einsatzes auf die gemeinsame Zeitachse. Es zeigt die
+Uhrzeit, die gerade laufenden Videos (bis zu vier nebeneinander) mit Kurzzeichen, Datei und Stelle im Original, die
+laufenden Tonquellen und die Montage-ID. Fotos und Tagebuch stehen schon im Zeitgerüst und fehlen deshalb im Video.
+
+Zeitgerüst und Montagevideo gehören zusammen: **Erst beide zusammen** geben das Material eines Einsatzes vollständig
+und zeitlich zugeordnet wieder. Das Zeitgerüst enthält, was als Text vorliegt, dazu Fotos und Tagebuchausschnitte. Das
+Montagevideo enthält Bild und Ton auch dort, wo nichts mitgeschrieben ist. Oft wird der Großteil im Zeitgerüst
+codiert. Was sich sehen oder hören, aber schwer in Worte fassen lässt, codierst du direkt im Video. In der
+Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlicher Tiere.
 
 Optionen:
 
@@ -50,7 +56,8 @@ beruht, und das Material lässt sich sauber archivieren.
 ### In MAXQDA
 
 Lies das Zeitgerüst in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
-Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA.
+Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA,
+im Text des Zeitgerüsts und, wo nichts verschriftlicht ist, direkt in Abschnitten des Videos.
 Ein Einsatz ergibt genau ein MAXQDA-Dokument. Die Dokumentvariablen liest du danach über **Variablen ›
 Dokumentvariablen importieren** aus der .xlsx-Datei ein; mehrere Einsätze kannst du dafür auch in einer Tabelle
 untereinander kopieren.

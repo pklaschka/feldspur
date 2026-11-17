@@ -183,7 +183,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
 - **Ausgabe**: ein Ordner pro Einsatz. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins
   Montagevideo und die Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten (auch aus PDFs). Das
-  **Montagevideo** zeigt nur, was zum Zuordnen nötig ist: Uhrzeit, die laufenden Videos (bis zu vier nebeneinander) mit
+  **Montagevideo** enthält Bild und Ton aller Aufnahmen auf der gemeinsamen Zeitachse (auch, was nicht mitgeschrieben ist; das lässt sich
+  in MAXQDA direkt im Video codieren) und blendet ein: Uhrzeit, die laufenden Videos (bis zu vier nebeneinander) mit
   Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und eine **Montage-ID**, die auch im Kopf des
   Zeitgerüsts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
   nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
