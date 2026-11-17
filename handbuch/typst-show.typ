@@ -86,6 +86,9 @@ $if(toc-indent)$
   toc_indent: $toc-indent$,
 $endif$
   toc_depth: $toc-depth$,
+$if(beschnitt)$
+  beschnitt: $beschnitt$,
+$endif$
   cols: $if(columns)$$columns$$else$1$endif$,
   doc,
 )

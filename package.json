@@ -13,6 +13,7 @@
     "desktop": "vp run @feldspur/desktop#build && vp run @feldspur/desktop#start",
     "e2e": "vp run @feldspur/desktop#e2e",
     "handbook": "quarto render handbuch",
+    "handbook:druck": "quarto render handbuch --profile druck --to typst",
     "readme": "quarto render README.qmd && vp fmt README.md"
   },
   "devDependencies": {

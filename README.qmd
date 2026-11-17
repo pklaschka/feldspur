@@ -198,7 +198,8 @@ Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANG
 Zitierbeispielen (`handbuch/_zitieren.qmd`) und im README-Kopf (`date` in `README.qmd`, `README.md` gleich mit)
 nach, committet "Release vX" auf `main`, taggt, baut die Installer für alle Plattformen und legt die GitHub-Release
 mit Installern, `SHA256SUMS.txt` und dem PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
-und hängt es als `Feldspur-Handbuch-<version>.pdf` an.
+und hängt es als `Feldspur-Handbuch-<version>.pdf` an, dazu eine Druckfassung mit 3 mm Beschnitt rundum
+(`Feldspur-Handbuch-<version>-Druck.pdf`, 216 × 303 mm, Endformat A4; lokal: `vp run handbook:druck`).
 
 **Einmalig einrichten:** Der Workflow pusht den Commit "Release vX" mit einem Deploy-Schlüssel auf `main`, weil die
 Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.

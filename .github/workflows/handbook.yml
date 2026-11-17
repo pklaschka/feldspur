@@ -6,6 +6,8 @@ name: Handbuch
 #   - Quarto rendert das Manuskript in handbuch/ (Webseite und PDF, gesetzt mit dem in Quarto enthaltenen Typst).
 #   - Das PDF wird als dist/handbuch/Feldspur-Handbuch-<version>.pdf abgelegt (Version aus dem Aufruf,
 #     sonst aus package.json) und landet als Artefakt „handbuch“ in der Release.
+#   - Dazu die Druckfassung mit 3 mm Beschnitt rundum (216 × 303 mm, Profil „druck“, siehe
+#     handbuch/_quarto-druck.yml) als dist/handbuch/Feldspur-Handbuch-<version>-Druck.pdf.
 on:
   workflow_dispatch:
   workflow_call:
@@ -31,6 +33,8 @@ jobs:
       - uses: ./.github/actions/quarto
       - name: Handbuch bauen
         run: quarto render handbuch
+      - name: Druckfassung mit Beschnitt bauen
+        run: quarto render handbuch --profile druck --to typst
       - name: PDF mit Version ablegen
         env:
           V: ${{ inputs.version }}
@@ -39,6 +43,7 @@ jobs:
           [ -n "$V" ] || V=$(node -p "require('./package.json').version")
           mkdir -p dist/handbuch
           cp handbuch/_site/Feldspur-Handbuch.pdf "dist/handbuch/Feldspur-Handbuch-$V.pdf"
+          cp handbuch/_druck/Feldspur-Handbuch-Druck.pdf "dist/handbuch/Feldspur-Handbuch-$V-Druck.pdf"
       - uses: actions/upload-artifact@v4
         with:
           name: handbuch

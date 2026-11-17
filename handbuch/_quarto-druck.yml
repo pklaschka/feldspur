@@ -1,0 +1,10 @@
+# Profil „druck“: Druckfassung des PDFs mit 3 mm Beschnittzugabe rundum (Datenformat 216 × 303 mm, Endformat A4).
+# Bauen mit `quarto render handbuch --profile druck --to typst` (oder `vp run handbook:druck`).
+# Eigener Ausgabeordner, damit die Webseite in _site unberührt bleibt. Den Beschnitt setzt typst-template.typ um.
+project:
+  output-dir: _druck
+
+format:
+  typst:
+    output-file: Feldspur-Handbuch-Druck.pdf
+    beschnitt: 3mm
