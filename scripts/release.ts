@@ -160,7 +160,7 @@ ${notes}
 
 Die Pakete sind noch nicht signiert: macOS fragt beim ersten Start nach („Rechtsklick → Öffnen“), Windows zeigt
 eine SmartScreen-Warnung. Prüfsummen stehen in \`SHA256SUMS.txt\`. Liegt ein \`Feldspur-Handbuch-*.pdf\` bei, ist
-es das Handbuch zu genau dieser Version.
+es das Handbuch zu genau dieser Version; die Fassung \`…-Druck.pdf\` hat 3 mm Beschnitt für die Druckerei.
 
 Lizenz: [EUPL-1.2](https://github.com/${repo}/blob/v${version}/LICENSE). Zitieren: siehe
 [CITATION.cff](https://github.com/${repo}/blob/v${version}/CITATION.cff) bzw. den Zenodo-Datensatz dieser Version.

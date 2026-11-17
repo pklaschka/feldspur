@@ -3,6 +3,9 @@
 // auf rechten Seiten. Vorne: Titelseite, Rückseite mit Angaben (Zitieren, Lizenz, Interessenkonflikte),
 // Inhaltsverzeichnis auf eigener Seite. Hinten: Leerseiten bis zu einem Vielfachen von vier Seiten (Broschüre)
 // und ein Rückumschlag. Farben und Schriften kommen aus kopf.typ.
+// Druckfassung (Profil „druck“, _quarto-druck.yml): `beschnitt` legt rundum eine Beschnittzugabe an. Die Seite
+// wächst um zweimal den Beschnitt, alle Ränder um einmal, sodass der Inhalt nach dem Schneiden genau wie in der
+// normalen Fassung steht. Randabfallendes (Randmarke, Rückumschlag) läuft in den Beschnitt hinein.
 // Farben aus der App, auch für kopf.typ und kaesten.lua.
 #let terrakotta = rgb("#a4441f")
 #let umbra = rgb("#3a281d")
@@ -36,16 +39,16 @@
 }
 
 // Rückumschlag: Umbra wie der Stab der Randmarke, oben die Fahne in Terrakotta, Text hell.
-#let rueckumschlag(title: none, subtitle: none, authors: none, date: none, url: none, doi: none, font: none) = {
+#let rueckumschlag(title: none, subtitle: none, authors: none, date: none, url: none, doi: none, font: none, beschnitt: 0mm) = {
   let hell = rgb("#f4efe6")
   let gedaempft = sand
   page(
     fill: umbra,
-    margin: (x: 24mm, top: 30mm, bottom: 26mm),
+    margin: (x: 24mm + beschnitt, top: 30mm + beschnitt, bottom: 26mm + beschnitt),
     header: none,
     footer: none,
     // Die Randmarke läuft hier über die ganze Breite: oben Terrakotta, dann Umbra (die Seitenfarbe).
-    background: place(top, rect(width: 100%, height: 22mm, fill: terrakotta)),
+    background: place(top, rect(width: 100%, height: 22mm + beschnitt, fill: terrakotta)),
   )[
     #set par(justify: false)
     #set text(fill: hell, hyphenate: false)
@@ -118,6 +121,7 @@
   toc_title: none,
   toc_depth: none,
   toc_indent: 1.5em,
+  beschnitt: 0mm,
   doc,
 ) = {
   set par(justify: true)
@@ -131,16 +135,23 @@
   // Ab hier nur noch Leerseiten und Rückumschlag: wieder ohne Kopf- und Fußzeile.
   let body-end = state("fs-body-end", none)
 
+  let b = beschnitt
+  // Endformat A4; mit Beschnitt entsprechend größer (bei 3 mm: 216 × 303 mm).
+  set page(width: 210mm + 2 * b, height: 297mm + 2 * b)
   set page(
-    margin: (inside: 27mm, outside: 21mm, top: 26mm, bottom: 24mm),
+    margin: (inside: 27mm + b, outside: 21mm + b, top: 26mm + b, bottom: 24mm + b),
+    // Kopf- und Fußzeile fest vom Seitenrand aus (Typsts Vorgabe: 30 % des Rands), damit sie mit Beschnitt
+    // nicht wandern.
+    header-ascent: 7.8mm,
+    footer-descent: 7.2mm,
     binding: left,
     // Randmarke außen: oben ein Stück Terrakotta (die Fahne), darunter Umbra (der Stab).
     background: context {
       // Auch Leerseiten tragen die Randmarke, damit der gedruckte Block durchgehend gleich aussieht.
       let side = if calc.odd(here().page()) { right } else { left }
       place(side + top, stack(
-        rect(width: 3mm, height: 22mm, fill: terrakotta),
-        rect(width: 3mm, height: 100%, fill: umbra),
+        rect(width: 3mm + b, height: 22mm + b, fill: terrakotta),
+        rect(width: 3mm + b, height: 100%, fill: umbra),
       ))
     },
     header: context {
@@ -150,7 +161,7 @@
       if end != none and here().page() > end { return }
       let p = here().page()
       // Beginnt oben auf der Seite ein Kapitel, steht sein Titel schon groß da: keine Kopfzeile.
-      if query(heading.where(level: 1)).any(k => k.location().page() == p and k.location().position().y < 45mm) { return }
+      if query(heading.where(level: 1)).any(k => k.location().page() == p and k.location().position().y < 45mm + b) { return }
       set text(font: sans, size: 8.5pt, fill: tinte-2)
       if calc.odd(p) {
         // Rechte Seite: das laufende Kapitel, außen.
@@ -290,5 +301,5 @@
     // ein Fehler aussehen, werden sie Notizseiten: Überschrift klein in Sans, darunter ein feines Punktraster.
     for _ in range(leer) { page(notizseite()) }
   }
-  rueckumschlag(title: title, subtitle: subtitle, authors: authors, date: date, url: url, doi: doi, font: font)
+  rueckumschlag(title: title, subtitle: subtitle, authors: authors, date: date, url: url, doi: doi, font: font, beschnitt: b)
 }
