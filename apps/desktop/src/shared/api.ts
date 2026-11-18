@@ -579,6 +579,8 @@ export interface FeldspurApi {
   /** Tonspuren analysieren (Hüllkurve, Leerlauf) und Anker vorschlagen. */
   analyze(sessionId: string): Promise<{ view: SessionView; analyzed: number; failed: string[] }>;
   confirmAnchor(anchorId: string): Promise<SessionView>;
+  /** Mehrere Vorschläge in einem Schritt übernehmen, je Gerät den sichersten; gelöschte werden übersprungen. */
+  confirmAnchors(sessionId: string, anchorIds: string[]): Promise<SessionView>;
   /** Vorschlag verwerfen oder Anker löschen. */
   rejectAnchor(anchorId: string): Promise<SessionView>;
   addTime(input: TimeInput): Promise<SessionView>;
@@ -750,6 +752,7 @@ export const IPC = {
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",
   confirmAnchor: "anchor:confirm",
+  confirmAnchors: "anchor:confirm-many",
   rejectAnchor: "anchor:reject",
   addTime: "evidence:add",
   confirmPlacement: "evidence:confirm",

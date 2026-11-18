@@ -67,8 +67,8 @@ export function Sync({
   const [progress, setProgress] = useState<string | null>(null);
   /** Ergebnis der letzten Tonspur-Analyse; was davon noch offen ist, steht in `view`. */
   const [analysis, setAnalysis] = useState<{ analyzed: number; failed: number } | null>(null);
-  /** Fortschritt der Sammelübernahme: [erledigt, gesamt]. */
-  const [accepting, setAccepting] = useState<[number, number] | null>(null);
+  /** Sammelübernahme läuft. */
+  const [accepting, setAccepting] = useState(false);
   const [fine, setFine] = useState<FineAlignStart | null>(null);
   const hasReference = view.devices.some((d) => d.isReference);
 
@@ -92,15 +92,17 @@ export function Sync({
   };
 
   const sure = view.proposals.filter(isSure);
-  /** Alle eindeutigen Vorschläge nacheinander übernehmen (unsichere bleiben zum Anhören stehen). */
+  /** Alle eindeutigen Vorschläge in einem Schritt übernehmen (unsichere bleiben zum Anhören stehen). */
   const acceptSure = async () => {
-    let last: SessionView | undefined;
-    for (const [i, p] of sure.entries()) {
-      setAccepting([i, sure.length]);
-      last = (await guard(() => api.confirmAnchor(p.anchorId))) ?? last;
-    }
-    setAccepting(null);
-    if (last) onView(last);
+    setAccepting(true);
+    const v = await guard(() =>
+      api.confirmAnchors(
+        view.session.id,
+        sure.map((p) => p.anchorId),
+      ),
+    );
+    setAccepting(false);
+    if (v) onView(v);
   };
   const openClocks = view.devices.filter((d) => !d.isReference && d.offsetMs === null);
   const done = hasReference && !openClocks.length && !view.proposals.length;
@@ -173,10 +175,8 @@ export function Sync({
                 {analysis && `${analysis.analyzed} ${analysis.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert. `}
                 {view.proposals.length} Vorschläge, davon {sure.length} eindeutig. Unsichere bleiben zum Anhören stehen.
               </span>
-              <Button variant="primary" size="sm" disabled={!!accepting} onClick={() => void acceptSure()}>
-                {accepting
-                  ? `Übernehme ${accepting[0] + 1} von ${accepting[1]}…`
-                  : `Alle eindeutigen übernehmen (${sure.length})`}
+              <Button variant="primary" size="sm" disabled={accepting} onClick={() => void acceptSure()}>
+                {accepting ? "Übernehme…" : `Alle eindeutigen übernehmen (${sure.length})`}
               </Button>
             </div>
           )}
