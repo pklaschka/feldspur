@@ -11,6 +11,7 @@ setzt die Zeitmarken für dich.
 
 - Tippe los. **Enter** legt die Zeile an und beginnt die nächste. Die Zeitmarke ist die Stelle, an der du angefangen
   hast zu tippen.
+  Eine angefangene Zeile wird beim Schließen angelegt.
 - Beginnt eine Zeile mit einem Kürzel wie `B1:` und einem Leerzeichen, wechselt der **Sprecher** sofort: Das Kürzel
   wandert ins Sprecherfeld. In einer bestehenden Zeile geht das genauso.
 - Eine Zeitmarke lässt sich nachträglich auf die aktuelle Stelle setzen; **Hierhin springen** spielt eine Zeile ab.
