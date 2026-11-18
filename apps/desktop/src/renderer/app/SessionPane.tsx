@@ -346,7 +346,7 @@ export function SessionPane({
               const r = await guard(() => api.importTranscript(id, { mode }));
               if (!r) return null;
               setView(r.view);
-              return r.count;
+              return { count: r.count, dropped: r.dropped };
             },
           }}
         />
