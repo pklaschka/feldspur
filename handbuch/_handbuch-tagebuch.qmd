@@ -24,6 +24,9 @@ auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
   - **Kurzform**: Stichworte, worum es geht,
   - **Nur Scan**: nicht abtippen, der Scan steht für sich.
 
+  Ein neuer Eintrag beginnt in der Form, in der du den letzten Eintrag des Einsatzes abgetippt hast (Kurzform oder
+  Volltext); der erste beginnt mit Kurzform.
+
 Ein Eintrag kann auf einer anderen Seite weitergehen; dann ziehst du dort einen weiteren Rahmen für denselben Eintrag.
 Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
 

@@ -128,4 +128,28 @@ describe("Tagebuch abtippen", () => {
     deleteEntry(store, e.id);
     expect(buildSessionView(store, session.id).diary).toHaveLength(0);
   });
+
+  it("neuer Eintrag übernimmt die Form des zuletzt angelegten, „Nur Scan“ nicht", () => {
+    const { session, p1, p2 } = seed();
+    const a = createEntry(store, p1.id, { x: 0, y: 0, w: 1, h: 0.3 }).entry;
+    expect(a.mode).toBe("short");
+    patchEntry(store, a.id, { mode: "full" });
+    const b = createEntry(store, p1.id, { x: 0, y: 0.4, w: 1, h: 0.3 }).entry;
+    expect(b.mode).toBe("full");
+    patchEntry(store, b.id, { mode: "scan" });
+    // Über die Seite hinweg, am Scan-Eintrag vorbei: der letzte abgetippte war Volltext.
+    expect(createEntry(store, p2.id, { x: 0, y: 0, w: 1, h: 0.3 }).entry.mode).toBe("full");
+    // Anderer Einsatz fängt wieder mit Kurzform an.
+    const other = store.addSession({ title: "Zweiter Tag", date: "2026-09-15", place: "", extra: {} });
+    const dev = store.addDevice({ sessionId: other.id, label: "Tagebuch" });
+    const p3 = store.addSource({
+      ...store.getSource(p1.id),
+      id: undefined,
+      sessionId: other.id,
+      deviceId: dev.id,
+      sha256: "3".padStart(64, "0"),
+    });
+    expect(createEntry(store, p3.id, { x: 0, y: 0, w: 1, h: 0.3 }).entry.mode).toBe("short");
+    expect(buildSessionView(store, session.id).diary).toHaveLength(3);
+  });
 });
