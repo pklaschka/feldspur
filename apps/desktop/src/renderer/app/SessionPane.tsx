@@ -18,7 +18,7 @@ import { SessionDetails } from "../SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "../SourceMenu.tsx";
 import { Transcriber } from "../Transcriber.tsx";
 import { Sync } from "../Sync.tsx";
-import { Button, cx } from "../ui.tsx";
+import { Button, cx, ErrorBanner } from "../ui.tsx";
 import { HistoryGlyph, UndoToast, useHistory } from "./history.tsx";
 import type { Guard, Step } from "../App.tsx";
 
@@ -29,12 +29,10 @@ export const isMac = navigator.platform.toLowerCase().includes("mac");
 export function SessionPane({
   sessionId,
   guard,
-  error,
   onProject,
 }: {
   sessionId: string;
   guard: Guard;
-  error: string | null;
   onProject: (p: ProjectInfo) => void;
 }) {
   const [view, setView] = useState<SessionView | null>(null);
@@ -256,7 +254,7 @@ export function SessionPane({
               </Tabs.List>
             </header>
             <OriginalsBanner view={view} onOpen={() => setOriginals(true)} />
-            {error && <p className="mx-6 mt-2 text-bad">{error}</p>}
+            <ErrorBanner className="mx-6 mt-2" />
             <Tabs.Content value="collect" className={tabContent}>
               <Collect
                 view={view}
