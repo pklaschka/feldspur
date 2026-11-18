@@ -345,30 +345,26 @@ function ExportResult({
   const present = record.files.find((f) => !gone.has(f));
   return (
     <div data-testid="export-result" data-state={stale ? "stale" : "current"}>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p className="font-serif text-[1.1rem]">
-          {stale ? (
-            <span className="text-warn">Veraltet.</span>
-          ) : (
-            <span className="text-good">{fresh ? "Fertig." : "Aktuell."}</span>
-          )}{" "}
-          {record.files.length} Dateien im Ordner „{fileName(record.dir)}“
-        </p>
-        <span className="text-[0.85rem] text-muted">ausgegeben {when(record.exportedAt)}</span>
-        <span className="flex-1" />
-        <Button size="sm" onClick={() => void api.showInFolder(present ? inDir(record.dir, present) : record.dir)}>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-serif text-[1.1rem] leading-snug">
+            {stale ? (
+              <span className="text-warn">Veraltet.</span>
+            ) : (
+              <span className="text-good">{fresh ? "Fertig." : "Aktuell."}</span>
+            )}{" "}
+            {record.files.length} Dateien im Ordner „{fileName(record.dir)}“
+          </p>
+          <p className="text-[0.85rem] text-muted">Ausgegeben am {when(record.exportedAt)}</p>
+        </div>
+        <Button
+          size="sm"
+          className="shrink-0"
+          onClick={() => void api.showInFolder(present ? inDir(record.dir, present) : record.dir)}
+        >
           Im Ordner zeigen
         </Button>
       </div>
-      <ul className="mt-2 grid gap-1.5">
-        {record.files.map((f) => (
-          <li key={f} className="text-[0.9rem]">
-            <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
-            {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
-            <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
-          </li>
-        ))}
-      </ul>
       {stale ? (
         <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-stale">
           <b className="block text-[0.9rem] font-semibold text-warn">Passt nicht mehr zum Einsatz</b>
@@ -377,7 +373,7 @@ function ExportResult({
               <li key={d.kind}>
                 {d.text}
                 {d.labels?.length ? (
-                  <span className="ml-1 font-mono text-[0.82rem] text-muted">{d.labels.join(", ")}</span>
+                  <span className="ml-1.5 font-mono text-[0.82rem] text-muted">{d.labels.join(", ")}</span>
                 ) : null}
               </li>
             ))}
@@ -389,19 +385,33 @@ function ExportResult({
             <span className="text-[0.85rem] text-muted">Nur Geändertes wird neu gerechnet.</span>
           </div>
         </div>
-      ) : missingFiles.length > 0 ? (
-        <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-incomplete">
-          <b className="block text-[0.9rem] font-semibold text-warn">
-            {missingFiles.length === 1
-              ? "Eine Datei fehlt im Ausgabeordner"
-              : `${missingFiles.length} Dateien fehlen im Ausgabeordner`}
-          </b>
-          <p className="text-[0.88rem]">Verschoben oder gelöscht? Erneut ausgeben legt sie wieder an.</p>
-          <Button size="sm" className="mt-2" disabled={disabled} onClick={onRerun}>
-            Erneut ausgeben…
-          </Button>
-        </div>
       ) : (
+        missingFiles.length > 0 && (
+          <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-incomplete">
+            <b className="block text-[0.9rem] font-semibold text-warn">
+              {missingFiles.length === 1
+                ? "Eine Datei fehlt im Ausgabeordner"
+                : `${missingFiles.length} Dateien fehlen im Ausgabeordner`}
+            </b>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <Button size="sm" disabled={disabled} onClick={onRerun}>
+                Erneut ausgeben…
+              </Button>
+              <span className="text-[0.85rem] text-muted">Verschoben oder gelöscht? Das legt sie wieder an.</span>
+            </div>
+          </div>
+        )
+      )}
+      <ul className="mt-3 grid gap-1.5">
+        {record.files.map((f) => (
+          <li key={f} className="text-[0.9rem]">
+            <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
+            {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
+            <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
+          </li>
+        ))}
+      </ul>
+      {!stale && !missingFiles.length && (
         <p className="mt-2 text-[0.85rem] text-muted">
           Änderst du danach noch etwas, steht hier „Veraltet“, auch nach einem Neustart. Erneut ausgeben rechnet nur
           Geändertes neu.

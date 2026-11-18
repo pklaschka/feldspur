@@ -94,11 +94,11 @@ const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
   realtime: ["in Echtzeit", "nach Episoden geschnitten"],
 };
 
-/** Die Einstellungen, die sich unterscheiden, als „damals → jetzt“. */
+/** Die Einstellungen, die sich unterscheiden, als „damals …, jetzt …“. */
 export function settingsDifference(was: ExportSettings, now: ExportSettings): string[] {
   return (Object.keys(SETTING_TEXT) as (keyof ExportSettings)[])
     .filter((k) => was[k] !== now[k])
-    .map((k) => `${SETTING_TEXT[k][was[k] ? 0 : 1]} statt jetzt ${SETTING_TEXT[k][now[k] ? 0 : 1]}`);
+    .map((k) => `damals ${SETTING_TEXT[k][was[k] ? 0 : 1]}, jetzt ${SETTING_TEXT[k][now[k] ? 0 : 1]}`);
 }
 
 /**
@@ -126,7 +126,8 @@ export function compareExport(
   }
   const settingsDiff = settingsDifference(record.options, settings);
   if (settingsDiff.length) {
-    differences.push({ kind: "settings", text: `Ausgegeben ${settingsDiff.join(", ")}.` });
+    const head = settingsDiff.length === 1 ? "Einstellung anders" : "Einstellungen anders";
+    differences.push({ kind: "settings", text: `${head}: ${settingsDiff.join("; ")}.` });
   }
   const sources = new Map<Id, Source>(store.listSources(record.sessionId).map((s) => [s.id, s]));
   const label = (id: Id) => sources.get(id)?.label ?? "?";

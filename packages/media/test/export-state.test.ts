@@ -13,7 +13,7 @@ describe("Einstellungen im Vergleich", () => {
   it("nennt nur, was sich unterscheidet", () => {
     expect(settingsDifference(SETTINGS, SETTINGS)).toEqual([]);
     expect(settingsDifference(SETTINGS, { ...SETTINGS, video: false })).toEqual([
-      "mit Montagevideo statt jetzt ohne Montagevideo",
+      "damals mit Montagevideo, jetzt ohne Montagevideo",
     ]);
   });
 });
@@ -89,7 +89,7 @@ describe.skipIf(!hasFfmpeg())("Stand der Ausgabe über Neustarts", () => {
     record();
     const st = status({ ...SETTINGS, video: false });
     expect(st.differences.map((d) => d.kind)).toEqual(["settings"]);
-    expect(st.differences[0]!.text).toContain("mit Montagevideo statt jetzt ohne Montagevideo");
+    expect(st.differences[0]!.text).toBe("Einstellung anders: damals mit Montagevideo, jetzt ohne Montagevideo.");
   });
 
   it("nennt veränderte und fehlende Originale mit Kurzzeichen", () => {
