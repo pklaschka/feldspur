@@ -76,7 +76,7 @@ export function compared(row: SourceRow): Compared[] {
 export function EvidenceStrip({ items }: { items: Compared[] }) {
   const pts = items.filter((e) => e.enabled).toSorted((a, b) => a.compare.startMs - b.compare.startMs);
   if (pts.length < 2) return null;
-  const W = 240;
+  const W = 228;
   const PAD = 30;
   const ts = pts.map((p) => p.compare.startMs);
   const lo = ts[0]!;
@@ -113,7 +113,7 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
   return (
     <svg
       viewBox={`0 0 ${W} ${twoLevel ? 98 : 78}`}
-      className="mt-2 w-full text-warn"
+      className="mt-2.5 mb-0.5 w-full text-warn"
       aria-hidden
       data-testid="evidence-strip"
     >
@@ -158,10 +158,10 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
               className={used ? "fill-accent stroke-panel" : "fill-panel stroke-warn"}
               strokeWidth={used ? 2 : 2}
             />
-            <text x={px} y={ly} textAnchor={anchor} className="fill-ink font-mono text-[12px] font-semibold">
+            <text x={px} y={ly} textAnchor={anchor} className="fill-ink font-mono text-[12.5px] font-semibold">
               {startText(p.compare)}
             </text>
-            <text x={px} y={ly + 13} textAnchor={anchor} className="fill-muted text-[11px]">
+            <text x={px} y={ly + 14} textAnchor={anchor} className="fill-muted text-[11.5px]">
               {kindName(p.kind)}
             </text>
           </g>
@@ -190,9 +190,9 @@ export function EvidenceFacts({ e, reason, decided }: { e: Compared; reason?: st
           {verdictBadge(c, decided)}
         </span>
       </span>
-      <span>
-        Beginn <b className="font-mono font-semibold tabular-nums">{startText(c)}</b>
-        <span className="text-muted"> · {precisionText(c.uncertaintyMs)}</span>
+      <span className="mt-0.5 text-[0.93rem]">
+        Beginn <b className="font-mono font-semibold tabular-nums">{startText(c)}</b>{" "}
+        <span className="text-[0.8rem] whitespace-nowrap text-muted">· {precisionText(c.uncertaintyMs)}</span>
       </span>
       {(e.raw || e.detail) && (
         <span className="text-[0.82rem] [overflow-wrap:anywhere] text-muted">
@@ -204,7 +204,9 @@ export function EvidenceFacts({ e, reason, decided }: { e: Compared; reason?: st
         <span className="text-[0.82rem] text-muted">Uhr korrigiert {offsetText(c.correctionMs)}</span>
       )}
       {reason && (
-        <span className="text-[0.82rem] text-ink-2">Warum dieser? {reason[0]!.toUpperCase() + reason.slice(1)}.</span>
+        <span className="mt-0.5 text-[0.82rem] text-ink-2">
+          Warum dieser? {reason[0]!.toUpperCase() + reason.slice(1)}.
+        </span>
       )}
     </span>
   );
@@ -415,34 +417,38 @@ function Open({
       reason,
     });
   };
+  // Der Grad steht als Wort im Satz; das Zeichen davor zeigt ihn zusätzlich (gefüllt = stark).
+  const severity = conflict.severity && !decided && (
+    <span className="font-semibold text-warn"> ({SEVERITY_TEXT[conflict.severity]})</span>
+  );
   const sentence =
     conflicts.length <= 1 ? (
       <>
-        Die Angaben liegen <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b> auseinander.
+        Die Angaben liegen <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b> auseinander
+        {severity}.
       </>
     ) : (
       <>
         {conflicts.length} Angaben weichen von der verwendeten ab, am weitesten um{" "}
-        <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b>.
+        <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b>
+        {severity}.
       </>
     );
   return (
     <section
       className={cx(
-        "mt-3.5 rounded-lg border px-3 py-2.5 text-[0.88rem]",
+        "mt-3.5 rounded-lg border px-3.5 pt-3 pb-3.5 text-[0.86rem] leading-snug",
         decided ? "border-line bg-panel-2" : "border-warn/40 bg-warn-soft",
       )}
       data-testid="conflict-panel"
       aria-label="Zeitbelege widersprechen sich"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <ConflictMark severity={conflict.severity} decided={decided} />
-        <b className={cx("flex-1 font-semibold", !decided && "text-warn")}>
+        <b className={cx("flex-1 font-semibold whitespace-nowrap", !decided && "text-warn")}>
           {stale ? "Entscheidung neu prüfen" : decided ? "Entschieden: Vergleich" : "Zeitbelege widersprechen sich"}
         </b>
-        {conflict.severity && !decided && (
-          <span className="text-[0.82rem] font-semibold text-warn">{SEVERITY_TEXT[conflict.severity]}</span>
-        )}
+
         {onHide && (
           <Button variant="link" className="inline-flex min-h-7 items-center text-[0.82rem]" onClick={onHide}>
             schließen
@@ -470,7 +476,7 @@ function Open({
           </ul>
         </div>
       ) : (
-        <p className="mt-1">
+        <p className="mt-1.5">
           {sentence}
           {others > 0 && (
             <>
@@ -498,19 +504,19 @@ function Open({
         </div>
       )}
 
-      <fieldset className="mt-2.5 border-t border-warn/30 pt-2" disabled={decided}>
+      <fieldset className="mt-3" disabled={decided}>
         <legend className="sr-only">Welche Zeit gilt?</legend>
-        <b className="block pt-2 font-semibold" aria-hidden>
+        <b className="block border-b border-warn/30 pb-1.5 font-semibold" aria-hidden>
           Welche Zeit gilt?
         </b>
-        <ul className="mt-1 divide-y divide-warn/25">
+        <ul className="divide-y divide-warn/25">
           {options.map((e) => (
             <li key={e.id}>
-              <label className="flex cursor-pointer items-start gap-2.5 py-2">
+              <label className="flex cursor-pointer items-start gap-2.5 py-2.5">
                 <input
                   type="radio"
                   name={name}
-                  className="mt-1 accent-[var(--accent)]"
+                  className="mt-[0.2rem] size-4 flex-none accent-[var(--accent)]"
                   checked={pick === e.id}
                   onChange={() => setPick(e.id)}
                 />
@@ -543,26 +549,26 @@ function Open({
                 ` Die Lage gilt dann als geprüft, bleibt aber ${precisionText(picked.compare.uncertaintyMs).replace("nur Minute", "nur auf die Minute genau")}.`}
             </p>
           )}
-          <input
-            className="mt-2 w-full min-w-0"
-            placeholder="Begründung (optional)"
+          <textarea
+            className="mt-2.5 block w-full min-w-0 resize-none"
+            rows={2}
+            placeholder="Begründung (optional), z. B. „umbenannt“"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && decide()}
             aria-label="Begründung"
           />
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button variant="primary" size="sm" onClick={decide} disabled={!picked} data-testid="decide">
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <Button variant="primary" onClick={decide} disabled={!picked} data-testid="decide">
               {group && others > 0 ? "Nur für diese Datei festhalten" : "Entscheidung festhalten"}
             </Button>
           </div>
           <p className="mt-2 text-[0.84rem]">
-            <Button variant="link" className="min-h-7 !whitespace-normal text-left text-[0.84rem]" onClick={onManual}>
+            <Button variant="link" className="min-h-7 !whitespace-normal text-left text-[0.86rem]" onClick={onManual}>
               {options.length === 2 ? "Keine der beiden" : "Keine davon"}: Uhrzeit von Hand eintragen
             </Button>
           </p>
           <p className="mt-0.5 text-[0.82rem] text-ink-2">
-            Ist ein Beleg schlicht falsch (z. B. Dateiname vom Kopieren), schalte ihn unten bei Zeitbelege ab.
+            Ist ein Beleg schlicht falsch, schalte ihn unten bei Zeitbelege ab.
           </p>
         </>
       )}

@@ -31,5 +31,7 @@ export function trackSub(t: Track, rows: SourceRow[]): string {
   const base = t.device.isReference
     ? "Referenzuhr"
     : t.device.personName || `${all.length} ${all.length === 1 ? "Datei" : "Dateien"}`;
-  return open ? `${base} · ${open} ohne Zeit` : base;
+  // Offene Widersprüche zählen mit, damit man sie auch bei weggezoomter Achse findet.
+  const conflicts = all.filter((r) => r.conflict.state === "open" || r.conflict.state === "stale").length;
+  return [base, open ? `${open} ohne Zeit` : "", conflicts ? `${conflicts} ≠` : ""].filter(Boolean).join(" · ");
 }

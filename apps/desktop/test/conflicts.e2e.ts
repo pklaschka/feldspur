@@ -85,7 +85,7 @@ try {
   await shot("ueberblick");
 
   // Starker Widerspruch: Kasten mit Vergleich, Vergleichslage auf der Zeitachse.
-  await list.getByTestId("check-row").first().click();
+  await list.getByTestId("check-row").filter({ hasText: "F-003" }).first().click();
   const panel = page.getByTestId("conflict-panel");
   await panel.waitFor();
   await panel.getByTestId("evidence-strip").waitFor();

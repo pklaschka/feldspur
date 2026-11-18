@@ -642,7 +642,7 @@ function Timeline({
           + Mausrad oder Mausrad gedrückt ziehen verschiebt
         </span>
       </div>
-      <CheckList view={view} selected={selected} onSelect={selectFromList} />
+      <CheckList view={view} selected={selected} onSelect={selectFromList} onNext={nextCheck} />
       {/* Direkt unter Achse und Legende: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
