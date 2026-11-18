@@ -32,7 +32,7 @@ Tastenkürzel:
 
 Die Tasten gelten überall im Dialog, auch wenn du vorher auf das Video, die Waveform oder eine freie Fläche geklickt
 hast. Tippst du, während kein Textfeld ausgewählt ist, geht es in der neuen Zeile weiter. Zum Danebenlegen gibt es sie
-auch auf dem [Spickblatt](https://pklaschka.github.io/feldspur/Feldspur-Tastenkuerzel.pdf) (A4 quer).
+auch auf dem [Spickblatt](https://purl.archive.org/feldspur/tastenkuerzel) (A4 quer).
 
 ### Andere Spuren zur selben Zeit
 

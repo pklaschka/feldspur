@@ -480,6 +480,6 @@
 #grid(
   columns: (1fr, auto),
   align: (left + bottom, right + bottom),
-  text(size: 7pt, fill: grau)[Mehr im Handbuch: pklaschka.github.io/feldspur],
+  text(size: 7pt, fill: grau)[Mehr im Handbuch: purl.archive.org/feldspur],
   text(size: 7pt, fill: grau)[CC BY 4.0 · Zuri Nimca Klaschka],
 )
