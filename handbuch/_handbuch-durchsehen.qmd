@@ -21,6 +21,8 @@ Die Legende unter der Zeitachse erklärt die Zeichen:
   Wichtiges im Leerlauf untergeht.
 - **Tagebuch**: der Verlauf zeigt den Bezugszeitraum, die Kante die Notierzeit.
 - **Lage prüfen** (gestrichelt): Die Lage dieser Quelle ist unsicher.
+- **≠** am Balken: Die Zeitbelege dieser Quelle widersprechen sich (@sec-widersprueche).
+- **Vergleichslage** (gestrichelter Umriss): Wo die Quelle stünde, wenn der abweichende Beleg gälte.
 
 ### Lagen prüfen
 
@@ -28,6 +30,46 @@ Ist die Lage einer Quelle unsicher, zeigt die Zeitachse oben einen Knopf wie **3
 der Reihe nach zu diesen Quellen. Passt die Lage, bestätigst du das rechts in der Detailleiste: **Von Hand geprüft:
 Die Lage passt.** Die Bestätigung ist ein eigener Zeitbeleg und lässt sich wieder löschen. Ist die Uhr des ganzen
 Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt.
+
+### Wenn Zeitbelege sich widersprechen {#sec-widersprueche}
+
+Oft hat eine Datei mehrere Zeitbelege, etwa die Aufnahmezeit in den Metadaten und eine Uhrzeit im Dateinamen. Feldspur
+vergleicht sie. Liegen sie weiter auseinander, als ihre Genauigkeit erklärt, ist das ein **Widerspruch**:
+
+- **deutlich** (umrandetes ≠): unter 5 Minuten Unterschied,
+- **stark** (gefülltes ≠): 5 Minuten oder mehr.
+
+Harmlose Unterschiede meldet Feldspur nicht: Ein Dateiname wie `IMG_20260914_1018` kennt nur die Minute, eine Minute
+Rundung ist dann in Ordnung. Ganze Stunden Unterschied deutet Feldspur als Zeitzone oder Sommerzeit, und ob Metadaten
+als UTC oder Ortszeit gemeint sind, probiert es selbst aus. Hängen Belege an verschiedenen Uhren, die noch nicht
+abgeglichen sind, steht dort nur **Uhr nicht abgeglichen** statt eines Widerspruchs.
+
+![Ein starker Widerspruch: rechts der Vergleich der Belege, auf der Zeitachse die Vergleichslage](bilder/widerspruch.png){#fig-widerspruch}
+
+Unter der Zeitachse sammelt die Liste **Zu prüfen** alles, was Aufmerksamkeit braucht, die starken Widersprüche
+zuerst. Filter zeigen nur starke, nur deutliche, nur unsichere Lagen oder das bereits **Entschiedene**. Haben mehrere
+Dateien eines Geräts denselben Widerspruch, etwa weil die Kamera zwei Stunden falsch ging, stehen sie als eine Zeile
+da.
+
+Wählst du eine Quelle mit Widerspruch, zeigt die Detailleiste:
+
+1. **Die Belege im Vergleich**: jeden Wert mit Herkunft, Genauigkeit und Abstand zum verwendeten Beleg, darüber
+   ein kleines Zeitband.
+2. **Wahrscheinliche Ursache**, wenn Feldspur eine erkennt, mit dem passenden Knopf, zum Beispiel **Als Ortszeit lesen**
+   für alle Dateien des Geräts oder **Uhr in Abgleichen ansehen**.
+3. **Welche Zeit gilt?** Feldspur schlägt den genauesten Beleg vor und sagt, warum. Wählst du einen anderen, steht
+   vor dem Speichern da, wohin die Quelle rückt.
+4. Eine optionale **Begründung** und **Entscheidung festhalten**. Bei einer Gruppe entscheidest du mit
+   **Für alle 3: Dateiname gilt** (oder dem anderen Beleg) für alle Dateien auf einmal; jede Datei behält dabei ihren
+   eigenen Wert dieser Art.
+
+Passt keiner der Belege, trägst du die Uhrzeit von Hand ein (@sec-abgleichen). Einen einzelnen Beleg kannst du auch
+abschalten, dann zählt er nicht mehr.
+
+Die Entscheidung wird im Projekt gespeichert, mit Datum, gewähltem Beleg, Begründung und dem Stand der Belege zu
+diesem Zeitpunkt. Sie bleibt nach dem Wiederöffnen sichtbar, steht im Änderungsprotokoll und lässt sich mit
+**Rückgängig** (auch direkt in der Meldung nach dem Entscheiden) oder **Zurücknehmen** aufheben. Ändern sich die Belege später so, dass die Entscheidung
+nicht mehr zum Stand passt, etwa durch einen neuen Abgleich, meldet Feldspur **Entscheidung neu prüfen**.
 
 ### Ohne Uhrzeit
 

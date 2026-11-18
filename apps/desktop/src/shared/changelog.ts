@@ -11,11 +11,30 @@ export const TABLE_LABEL: Record<string, string> = {
   devices: "Gerät",
   sources: "Quelle",
   evidence: "Zeitbeleg",
+  time_evidence: "Zeitbeleg",
   anchors: "Anker",
   diary_entries: "Tagebucheintrag",
   transcript_lines: "Mitschrift",
   source_notes: "Notiz",
   episode_edits: "Episoden-Anpassung",
+};
+
+/** Feldnamen, die im Protokoll häufig vorkommen, lesbar; unbekannte bleiben wie in der Datenbank. */
+export const FIELD_LABEL: Record<string, string> = {
+  kind: "Art",
+  clock: "Uhr",
+  local_ms: "Zeit (Geräteuhr)",
+  utc_ms: "Zeit (UTC)",
+  at_media_ms: "Stelle in der Datei",
+  uncertainty_ms: "Genauigkeit",
+  detail: "Angabe",
+  raw: "Rohwert",
+  enabled: "eingeschaltet",
+  decision: "Entscheidung",
+  source_id: "Quelle",
+  label: "Beschriftung",
+  offset_ms: "Uhrabweichung",
+  timestamps_are_utc: "Zeitstempel in UTC",
 };
 
 export const OP_LABEL: Record<ChangeEntry["op"], string> = {
@@ -42,9 +61,53 @@ export function fieldChanges(c: ChangeEntry): FieldChange[] {
     );
 }
 
-/** Wert für die Anzeige: lange Texte gekürzt, leer als „—“. */
-export function showValue(v: unknown, max = 80): string {
+const KIND_TEXT: Record<string, string> = {
+  metadata: "Metadaten",
+  filename: "Dateiname",
+  spoken: "angesagt",
+  anchor: "Anker",
+  manual: "von Hand",
+  checked: "geprüft",
+};
+
+/** Gespeicherte Entscheidung (Spalte `decision` eines Zeitbelegs) lesbar: „Stand beim Entscheiden: …“. */
+export function decisionText(v: unknown): string | null {
+  let d: unknown = v;
+  if (typeof v === "string") {
+    try {
+      d = JSON.parse(v);
+    } catch {
+      return null;
+    }
+  }
+  if (!d || typeof d !== "object" || !("seen" in d) || !Array.isArray(d.seen)) return null;
+  const sign = (ms: number) => {
+    const s = Math.round(Math.abs(ms) / 1000);
+    const t =
+      s >= 3600
+        ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+        : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    return ms === 0 ? "±0" : `${ms < 0 ? "−" : "+"}${t}`;
+  };
+  const seen = (d.seen as { kind: string; differenceMs: number }[])
+    .map((x) => `${KIND_TEXT[x.kind] ?? x.kind} ${sign(x.differenceMs)}`)
+    .join(" · ");
+  const reason = "reason" in d && typeof d.reason === "string" && d.reason ? `; Begründung: ${d.reason}` : "";
+  return `Stand beim Entscheiden: ${seen || "keine weiteren Belege"}${reason}`;
+}
+
+/** Wert für die Anzeige: lange Texte gekürzt, leer als „—“. Entscheidungen lesbar statt als JSON. */
+export function showValue(v: unknown, max = 80, field?: string): string {
   if (v === null || v === undefined || v === "") return "—";
+  if (field === "decision") return decisionText(v) ?? "—";
+  if (typeof v === "number") {
+    // Zeiten als Uhrzeit, Spannen in Sekunden; der Rohwert steht in der CSV-Ausgabe.
+    const iso = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
+    if (field === "local_ms") return iso(v);
+    if (field === "utc_ms") return `${iso(v)} UTC`;
+    if (field === "uncertainty_ms") return `± ${(v / 1000).toLocaleString("de-DE")} s`;
+    if (field === "at_media_ms") return `${(v / 1000).toLocaleString("de-DE")} s`;
+  }
   const s = typeof v === "string" ? v : JSON.stringify(v);
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }

@@ -7,13 +7,16 @@ import {
   combineUncertainty,
   effectiveLocal,
   formatClock,
+  formatDuration,
   LEVEL_MANUAL_RANGE_DB,
   localMs,
   resolveTimeline,
+  type Decision,
   type Id,
   type ProjectStore,
 } from "@feldspur/core";
-import type { AnchorInput, LevelInput, PageNumberingInput, TimeInput } from "../shared/api.ts";
+import { kindHolds, kindName, kindVerb } from "../shared/conflict-text.ts";
+import type { AnchorInput, DecideInput, LevelInput, PageNumberingInput, TimeInput } from "../shared/api.ts";
 
 /** ± je Genauigkeitsstufe. */
 export const PRECISION_MS = { exact: 1_000, approx: 60_000, rough: 15 * 60_000 } as const;
@@ -103,13 +106,59 @@ function dropChecks(s: ProjectStore, sessionId: Id, sourceId: Id): void {
  * wird nichts bestätigt.
  */
 export function confirmPlacement(s: ProjectStore, sourceId: Id, startMs: number): Id {
-  const src = s.getSource(sourceId);
+  return decidePlacement(s, { sourceId, evidenceId: null, expectedStartMs: startMs, reason: "" });
+}
+
+export type { DecideInput };
+export { kindHolds, kindName };
+
+/**
+ * Bei widersprüchlichen Zeitbelegen bewusst entscheiden, welche Zeit gilt (oder eine unsichere Lage bestätigen).
+ * Legt einen Beleg „geprüft“ am Beginn des gewählten Belegs an, mit dessen Genauigkeit, einem lesbaren Satz und
+ * dem Stand beim Entscheiden. Eine frühere Entscheidung derselben Quelle wird ersetzt.
+ */
+export function decidePlacement(s: ProjectStore, input: DecideInput): Id {
+  const src = s.getSource(input.sourceId);
   if (src.kind === "diary") throw new Error("Tagebuchseiten bekommen ihre Zeit über die Randnotiz");
   if (src.partOf) throw new Error("Die Zeit kommt von der Hauptseite");
   const session = s.getSession(src.sessionId);
   const current = resolveTimeline(s.loadResolveInput(session.id)).placements.get(src.id);
   if (!current) throw new Error("Die Quelle liegt noch nicht auf der Zeitachse");
-  if (current.startMs !== startMs) throw new Error("Die Lage hat sich inzwischen geändert. Bitte noch einmal ansehen.");
+  if (current.startMs !== input.expectedStartMs)
+    throw new Error("Die Lage hat sich inzwischen geändert. Bitte noch einmal ansehen.");
+  const chosen = input.evidenceId
+    ? current.comparison.find((c) => c.evidenceId === input.evidenceId)
+    : current.comparison.find((c) => c.verdict === "chosen");
+  if (input.evidenceId && !chosen) throw new Error("Diesen Zeitbeleg gibt es bei der Quelle nicht");
+  const startMs = chosen?.startMs ?? current.startMs;
+  const uncertaintyMs = chosen?.uncertaintyMs ?? current.uncertaintyMs;
+  // Eine frühere Entscheidung zählt nicht als eigener Beleg: Verglichen wird mit dem, was sie verdrängt hat.
+  const others = current.comparison.filter((c) => c.kind !== "checked" && c.enabled);
+  const seen = others.map((c) => ({ id: c.evidenceId, kind: c.kind, differenceMs: c.startMs - startMs }));
+  // Die Art des gewählten Belegs; bei einer früheren Entscheidung die des Belegs, dem sie folgte.
+  const prior = current.basis.kind === "checked" ? s.getEvidence(current.basis.evidenceId!).decision : null;
+  const basisKind = chosen?.kind === "checked" ? (prior?.basisKind ?? "checked") : (chosen?.kind ?? current.basis.kind);
+  const basisId = chosen?.kind === "checked" ? (prior?.basisId ?? null) : (chosen?.evidenceId ?? null);
+  const reason = input.reason.trim();
+  const conflicting = new Set(
+    current.comparison.filter((c) => c.verdict === "conflict" && c.enabled).map((c) => c.evidenceId),
+  );
+  // Im Satz stehen die Belege, die der gewählten Zeit widersprechen (Rundung bleibt draußen).
+  const against = seen.filter((x) => x.id !== basisId && (conflicting.has(x.id) || Math.abs(x.differenceMs) > 60_000));
+  const hasConflict = conflicting.size > 0 || current.conflict.state !== "none";
+  const decision: Decision = { at: new Date().toISOString(), basisId, basisKind, reason, seen };
+  const sentence = hasConflict
+    ? [
+        `Entschieden: ${kindHolds(basisKind)} (${formatClock(startMs)}).`,
+        ...against.map(
+          (x) =>
+            `${kindName(x.kind)} ${kindVerb(x.kind, "weicht", "weichen")} ab (${formatDuration(x.differenceMs, { sign: true })}).`,
+        ),
+        reason ? `Begründung: ${reason}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : `Geprüft: Lage passt (vorher ${current.basis.detail || current.basis.kind})${reason ? `. Begründung: ${reason}` : ""}`;
   dropChecks(s, session.id, src.id);
   s.addEvidence({
     sourceId: src.id,
@@ -117,11 +166,30 @@ export function confirmPlacement(s: ProjectStore, sourceId: Id, startMs: number)
     clock: "true",
     atMediaMs: 0,
     localMs: startMs,
-    uncertaintyMs: current.uncertaintyMs,
-    detail: `Geprüft: Lage passt (vorher ${current.basis.detail || current.basis.kind})`,
+    uncertaintyMs,
+    detail: sentence,
     raw: formatClock(startMs),
+    decision,
   });
   return session.id;
+}
+
+/**
+ * Dieselbe Entscheidung für mehrere Quellen (z. B. alle Dateien einer Kamera): je Quelle gilt der eingeschaltete
+ * Beleg der Art `kind`. Quellen ohne solchen Beleg bleiben unverändert. Gibt die Einsatz-Id zurück.
+ */
+export function decideMany(s: ProjectStore, input: { sourceIds: Id[]; kind: string; reason: string }): Id {
+  let sessionId: Id | null = null;
+  for (const id of input.sourceIds) {
+    const src = s.getSource(id);
+    sessionId = src.sessionId;
+    const p = resolveTimeline(s.loadResolveInput(src.sessionId)).placements.get(id);
+    const ev = p?.comparison.find((c) => c.kind === input.kind && c.enabled);
+    if (!p || !ev) continue;
+    decidePlacement(s, { sourceId: id, evidenceId: ev.evidenceId, expectedStartMs: p.startMs, reason: input.reason });
+  }
+  if (!sessionId) throw new Error("Keine Quellen gewählt");
+  return sessionId;
 }
 
 /** Nur selbst eingetragene Belege dürfen gelöscht werden; gelesene lassen sich nur abschalten. */

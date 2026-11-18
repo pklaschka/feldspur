@@ -205,7 +205,26 @@ export interface DrawState {
   envelopes?: Map<string, Envelope>;
   /** Gerade gezogene Episodengrenze: neue Lage als Vorschau. */
   dragEdge?: { t: number } | null;
+  /** Vergleichslage der gewählten Quelle: wo sie laut widersprechendem Beleg läge. */
+  compare?: CompareGhost | null;
 }
+
+export interface CompareGhost {
+  track: number;
+  /** Lage jetzt und laut anderem Beleg (Beginn; t1 = Ende bei Clips). */
+  from: number;
+  t0: number;
+  t1: number;
+  point: boolean;
+  /** „+13:23“ */
+  label: string;
+  /** „10:45“ für den Pfeil am Rand, wenn die Vergleichslage außerhalb liegt. */
+  at: string;
+}
+
+/** Ob eine Quelle das Zeichen ≠ trägt: offener oder neu zu prüfender Widerspruch. */
+const conflictMark = (r: SourceRow) =>
+  r.conflict.state === "open" || r.conflict.state === "stale" ? r.conflict.severity : null;
 
 export interface Envelope {
   /** Werte je Sekunde. */
@@ -453,6 +472,8 @@ export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): 
   }
 
   diaryTexts(ctx, p, st, x);
+  conflictMarks(ctx, p, st, x);
+  if (st.compare) compareGhost(ctx, p, st.compare, x, W);
 
   if (st.playheadMs !== null) {
     const px = Math.round(x(st.playheadMs)) + 0.5;
@@ -697,4 +718,108 @@ function outline(
     ctx.stroke();
     ctx.restore();
   }
+}
+
+/** Zeichen ≠ an Quellen mit Widerspruch: Umriss = deutlich, gefüllt = stark. Über allem anderen gezeichnet. */
+function conflictMarks(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState, x: (t: number) => number) {
+  for (const it of st.items) {
+    if (it.type !== "clip" && it.type !== "point") continue;
+    const sev = conflictMark(it.row);
+    if (!sev) continue;
+    const top = trackTop(it.track);
+    const cx = it.type === "point" ? x(it.t0) + 10 : Math.max(x(it.t0) + 8, Math.min(x(it.t1) - 2, st.width - 10));
+    const cy = it.type === "point" ? top + TRACK_H / 2 - 11 : top + BAR_Y;
+    if (cx < -10 || cx > st.width + 10) continue;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7.5, 0, Math.PI * 2);
+    ctx.fillStyle = sev === "strong" ? p.warn : p.panel;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = p.warn;
+    ctx.stroke();
+    ctx.fillStyle = sev === "strong" ? p.panel : p.warn;
+    ctx.font = `700 11px ${p.sans}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("≠", cx, cy + 0.5);
+    ctx.restore();
+  }
+}
+
+/**
+ * Vergleichslage: hohler, gestrichelter Umriss dort, wo die gewählte Quelle laut widersprechendem Beleg läge,
+ * mit gestrichelter Verbindung und dem Abstand. Liegt sie außerhalb des Ausschnitts, zeigt ein Pfeil am Rand hin.
+ */
+function compareGhost(ctx: CanvasRenderingContext2D, p: Palette, g: CompareGhost, x: (t: number) => number, W: number) {
+  const top = trackTop(g.track);
+  const cy = top + TRACK_H / 2;
+  const xFrom = x(g.from);
+  const gx0 = x(g.t0);
+  const gx1 = g.point ? gx0 : Math.max(gx0 + MIN_CLIP_W, x(g.t1));
+  ctx.save();
+  ctx.strokeStyle = p.warn;
+  ctx.fillStyle = p.warn;
+  ctx.lineWidth = 1.5;
+  // Verbindung
+  const later = g.t0 > g.from;
+  const a = later ? xFrom + (g.point ? 12 : 0) : xFrom;
+  const b = later ? gx0 - (g.point ? 10 : 2) : g.point ? gx0 + 10 : gx1 + 2;
+  const ca = Math.max(-5, Math.min(W + 5, a));
+  const cb = Math.max(-5, Math.min(W + 5, b));
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(ca, cy);
+  ctx.lineTo(cb, cy);
+  ctx.stroke();
+  ctx.setLineDash([4, 3]);
+  if (g.point) {
+    ctx.save();
+    ctx.translate(gx0, cy);
+    ctx.rotate(Math.PI / 4);
+    roundRect(ctx, -8, -8, 16, 16, 3);
+    ctx.fillStyle = p.panel;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    roundRect(ctx, gx0, top + BAR_Y, gx1 - gx0, BAR_H, 4);
+    ctx.fillStyle = alpha(p.warn, 0.06);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  // Abstand als Pille in der Mitte der Verbindung (im sichtbaren Teil)
+  ctx.font = `600 11px ${p.mono}`;
+  const label = g.label;
+  const tw = ctx.measureText(label).width + 12;
+  const mid = Math.max(tw / 2 + 4, Math.min(W - tw / 2 - 4, (ca + cb) / 2));
+  if (Math.abs(cb - ca) > tw + 8) {
+    roundRect(ctx, mid - tw / 2, cy - 9, tw, 18, 9);
+    ctx.fillStyle = p.panel;
+    ctx.fill();
+    ctx.strokeStyle = p.warn;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = p.warn;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, mid, cy + 0.5);
+  }
+  // Pfeil am Rand, wenn die Vergleichslage nicht zu sehen ist
+  const out = gx1 < 0 ? "left" : gx0 > W ? "right" : null;
+  if (out) {
+    const text = out === "right" ? `${g.at} →` : `← ${g.at}`;
+    ctx.font = `600 11px ${p.sans}`;
+    const w = ctx.measureText(text).width + 12;
+    const bx = out === "right" ? W - w - 4 : 4;
+    roundRect(ctx, bx, cy - 9, w, 18, 9);
+    ctx.fillStyle = p.warn;
+    ctx.fill();
+    ctx.fillStyle = p.panel;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, bx + w / 2, cy + 0.5);
+  }
+  ctx.restore();
 }

@@ -5,7 +5,7 @@
 import type { ChangeStep } from "@feldspur/core";
 import { Dialog } from "radix-ui";
 import { useEffect, useState } from "react";
-import { OP_LABEL, TABLE_LABEL, fieldChanges, showValue } from "../shared/changelog.ts";
+import { FIELD_LABEL, OP_LABEL, TABLE_LABEL, fieldChanges, showValue } from "../shared/changelog.ts";
 import { Button, CloseButton, cx } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -90,7 +90,13 @@ export function ChangeLog({ open, onOpenChange }: { open: boolean; onOpenChange:
                       {isOpen ? "▾" : "▸"}
                     </span>
                     <span className="w-40 flex-none text-[0.84rem] text-muted tabular-nums">{when(s.at)}</span>
-                    <span className={cx("min-w-0 flex-1 truncate", !s.label && "text-muted italic")}>
+                    <span
+                      className={cx(
+                        "min-w-0 flex-1",
+                        isOpen ? "[overflow-wrap:anywhere]" : "truncate",
+                        !s.label && "text-muted italic",
+                      )}
+                    >
                       {s.label ?? "Ohne Beschriftung (z. B. Einsammeln)"}
                     </span>
                     <span className="flex-none text-[0.82rem] text-muted">
@@ -112,15 +118,17 @@ export function ChangeLog({ open, onOpenChange }: { open: boolean; onOpenChange:
                                 <tbody>
                                   {fields.map((f) => (
                                     <tr key={f.field} className="align-top">
-                                      <td className="w-36 truncate pr-2 text-muted" title={f.field}>
-                                        {f.field}
+                                      <td className="w-36 pr-2 text-muted [overflow-wrap:anywhere]" title={f.field}>
+                                        {FIELD_LABEL[f.field] ?? f.field}
                                       </td>
                                       {c.op !== "insert" && (
                                         <td className="pr-2 break-words line-through decoration-muted/60">
-                                          {showValue(f.before)}
+                                          {showValue(f.before, 80, f.field)}
                                         </td>
                                       )}
-                                      {c.op !== "delete" && <td className="break-words">{showValue(f.after)}</td>}
+                                      {c.op !== "delete" && (
+                                        <td className="break-words">{showValue(f.after, 80, f.field)}</td>
+                                      )}
                                     </tr>
                                   ))}
                                 </tbody>

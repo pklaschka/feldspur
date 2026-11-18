@@ -1,10 +1,12 @@
 /** Kleine Bausteine der Zeitachse: Zoom-Zeichen, Legende, Hover-Karte und die Ablage „Ohne Uhrzeit“. */
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { SourceRow, TranscriptRow } from "../../shared/api.ts";
 import { clock, hm, lage, STATUS_TEXT } from "../format.ts";
 import { diaryPreview, type Item } from "../timeline.ts";
 import { cx, Glyph } from "../ui.tsx";
+import { kindHolds, kindName, signed } from "../../shared/conflict-text.ts";
+import { startText } from "../inspector/ConflictPanel.tsx";
 
 export function ZoomGlyph({ minus = false }: { minus?: boolean }) {
   return (
@@ -16,10 +18,10 @@ export function ZoomGlyph({ minus = false }: { minus?: boolean }) {
   );
 }
 
-export function Legend({ swatch, children }: { swatch: string; children: string }) {
+export function Legend({ swatch, children }: { swatch: string | ReactNode; children: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <i className={cx("inline-block", swatch)} />
+      {typeof swatch === "string" ? <i className={cx("inline-block", swatch)} /> : swatch}
       {children}
     </span>
   );
@@ -78,7 +80,9 @@ export function HoverCard({
   } else {
     const r = item.row;
     title = `${r.label} · ${r.fileName}`;
-    lines = [lage(r.startMs, r.endMs), [STATUS_TEXT[r.status], ...r.notes].join(" · ")];
+    const notes = r.notes.filter((n) => !n.startsWith("Widerspruch") && n !== "Entscheidung neu prüfen");
+    lines = [lage(r.startMs, r.endMs), [STATUS_TEXT[r.status], ...notes].join(" · ")];
+    lines.push(...conflictLines(r));
     if (r.status === "check") lines.push("Anklicken und rechts prüfen");
     if (line) {
       const t = (line.speaker ? `${line.speaker}: ` : "") + line.text;
@@ -101,6 +105,21 @@ export function HoverCard({
     </div>,
     document.body,
   );
+}
+
+/** Widerspruch in Worten für die Hover-Karte. */
+function conflictLines(r: SourceRow): string[] {
+  const c = r.conflict;
+  if (c.state === "none") return [];
+  if (c.state === "decided")
+    return [
+      r.decision?.basisKind ? `Widerspruch entschieden: ${kindHolds(r.decision.basisKind)}` : "Widerspruch geprüft",
+    ];
+  const worst = r.evidence.find((e) => e.compare && e.enabled && e.compare.differenceMs === c.worstMs);
+  const what = worst?.compare
+    ? `${kindName(worst.kind)} sagt ${startText(worst.compare)} (${signed(worst.compare.differenceMs)})`
+    : signed(c.worstMs);
+  return [c.state === "stale" ? "Entscheidung neu prüfen" : `Zeitbelege widersprechen sich: ${what}`];
 }
 
 export function Tray({

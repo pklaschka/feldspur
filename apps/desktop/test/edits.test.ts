@@ -7,6 +7,8 @@ import {
   addManualAnchor,
   addTimeEvidence,
   confirmPlacement,
+  decideMany,
+  decidePlacement,
   parseMediaPos,
   removeEvidence,
   replaceAnchor,
@@ -376,5 +378,130 @@ describe("Lautstärke", () => {
     expect(level.measuredDb).toBeCloseTo(-38, 0);
     expect(level.gainDb).toBeCloseTo(18, 0);
     expect(store.listAudioAnalyses(session.id)[0]!.speechLevelDb).toBeCloseTo(-38, 0);
+  });
+});
+
+describe("Widerspruch entscheiden", () => {
+  const at = (h: number, m: number, s = 0) => Date.UTC(2026, 8, 14, h, m, s);
+  /** Foto auf dem Rekorder-Gerät (Referenz): EXIF 10:32:07, Dateiname 10:45 (minutengenau). */
+  function conflicted() {
+    const seeded = seed();
+    const rec = store.listDevices(seeded.session.id).find((d) => d.isReference)!;
+    const mk = (n: number) => {
+      const src = store.addSource({
+        sessionId: seeded.session.id,
+        deviceId: rec.id,
+        kind: "photo",
+        fileName: `IMG_${n}.jpg`,
+        sha256: sha(100 + n),
+        durationMs: null,
+        originalPath: "/x",
+        sizeBytes: 1,
+        metadata: {},
+      });
+      const exif = store.addEvidence({
+        sourceId: src.id,
+        kind: "metadata",
+        clock: "device",
+        localMs: at(10, 32, 7 + n),
+        uncertaintyMs: 1000,
+        detail: "EXIF DateTimeOriginal",
+      });
+      const name = store.addEvidence({
+        sourceId: src.id,
+        kind: "filename",
+        clock: "device",
+        localMs: at(10, 45, 30),
+        uncertaintyMs: 30_000,
+        detail: "Dateiname",
+      });
+      return { src, exif, name };
+    };
+    return { ...seeded, mk };
+  }
+
+  it("verwendeten Beleg bestätigen: sicher, nachvollziehbar, auch nach dem Wiederöffnen", () => {
+    const { session, mk } = conflicted();
+    const { src, exif } = mk(0);
+    const before = row(session.id, src.id);
+    expect(before.status).toBe("check");
+    expect(before.conflict).toMatchObject({ state: "open", severity: "strong" });
+    decidePlacement(store, {
+      sourceId: src.id,
+      evidenceId: exif.id,
+      expectedStartMs: before.startMs!,
+      reason: "umbenannt",
+    });
+    const after = row(session.id, src.id);
+    expect(after.status).toBe("ok");
+    expect(after.conflict.state).toBe("decided");
+    expect(after.decision).toMatchObject({ reason: "umbenannt", basisKind: "metadata", basisId: exif.id });
+    expect(after.decision!.detail).toBe(
+      "Entschieden: Metadaten gelten (10:32:07). Dateiname weicht ab (+13:23). Begründung: umbenannt",
+    );
+
+    const path = store.path;
+    store.close();
+    store = ProjectStore.open(path);
+    const reopened = row(session.id, src.id);
+    expect(reopened.conflict.state).toBe("decided");
+    expect(reopened.decision?.reason).toBe("umbenannt");
+  });
+
+  it("anderen Beleg wählen: die Quelle rückt und übernimmt dessen Genauigkeit", () => {
+    const { session, mk } = conflicted();
+    const { src, name } = mk(0);
+    const before = row(session.id, src.id);
+    decidePlacement(store, { sourceId: src.id, evidenceId: name.id, expectedStartMs: before.startMs!, reason: "" });
+    const after = row(session.id, src.id);
+    expect(formatClock(after.startMs!)).toBe("10:45:30");
+    expect(after.uncertaintyMs).toBe(30_000);
+    expect(after.status).toBe("ok");
+    expect(after.decision!.detail).toContain("Dateiname gilt");
+  });
+
+  it("neuer widersprechender Beleg: Entscheidung neu prüfen", () => {
+    const { session, mk } = conflicted();
+    const { src, exif } = mk(0);
+    decidePlacement(store, {
+      sourceId: src.id,
+      evidenceId: exif.id,
+      expectedStartMs: row(session.id, src.id).startMs!,
+      reason: "",
+    });
+    store.addEvidence({
+      sourceId: src.id,
+      kind: "spoken",
+      clock: "true",
+      localMs: at(10, 31, 10),
+      uncertaintyMs: 1000,
+      detail: "angesagt",
+    });
+    const r = row(session.id, src.id);
+    expect(r.status).toBe("check");
+    expect(r.conflict.state).toBe("stale");
+    expect(r.notes).toContain("Entscheidung neu prüfen");
+  });
+
+  it("verschobene Lage wird nicht entschieden", () => {
+    const { session, mk } = conflicted();
+    const { src, exif } = mk(0);
+    const start = row(session.id, src.id).startMs!;
+    expect(() =>
+      decidePlacement(store, { sourceId: src.id, evidenceId: exif.id, expectedStartMs: start + 1, reason: "" }),
+    ).toThrow(/geändert/);
+    expect(row(session.id, src.id).decision).toBeNull();
+  });
+
+  it("gleichartige Widersprüche eines Geräts bilden eine Gruppe und lassen sich auf einmal entscheiden", () => {
+    const { session, mk } = conflicted();
+    const ids = [0, 1, 2].map((n) => mk(n).src.id);
+    const view = buildSessionView(store, session.id);
+    expect(view.conflictGroups).toHaveLength(1);
+    expect(view.conflictGroups[0]).toMatchObject({ usedKind: "metadata", otherKind: "filename", sourceIds: ids });
+    decideMany(store, { sourceIds: ids, kind: "metadata", reason: "Kamera benennt beim Kopieren um" });
+    const after = buildSessionView(store, session.id);
+    expect(after.conflictGroups).toHaveLength(0);
+    for (const id of ids) expect(row(session.id, id).conflict.state).toBe("decided");
   });
 });

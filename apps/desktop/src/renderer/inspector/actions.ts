@@ -1,5 +1,5 @@
 /** Was die Detailleiste in der App auslösen kann. */
-import type { LevelInput, TimeInput } from "../../shared/api.ts";
+import type { DecideInput, LevelInput, TimeInput } from "../../shared/api.ts";
 import type { ApplyView } from "../Notes.tsx";
 
 export interface InspectorActions {
@@ -7,6 +7,16 @@ export interface InspectorActions {
   addTime: (input: TimeInput) => Promise<boolean>;
   /** Unsichere Lage so bestätigen, wie sie gerade steht. */
   confirm: (sourceId: string, startMs: number) => void;
+  /** Bei widersprüchlichen Zeitbelegen entscheiden, welche Zeit gilt. */
+  decide: (input: DecideInput) => void;
+  /** Dieselbe Entscheidung für mehrere Quellen (je Quelle gilt ihr Beleg der Art `kind`). */
+  decideMany: (sourceIds: string[], kind: string, reason: string) => void;
+  /** Lesart der als UTC markierten Zeitstempel eines Geräts umstellen. */
+  setDeviceUtc: (deviceId: string, utc: boolean) => void;
+  /** Abweichung der Geräteuhr setzen (Uhr nach einer Angabe richten). */
+  setDeviceOffset: (deviceId: string, offsetMs: number) => void;
+  /** Zum Schritt „Abgleichen“ wechseln. */
+  goSync: () => void;
   /** Uhr eines Geräts als richtig gehend festlegen (Abweichung 0). */
   trustDeviceClock: (deviceId: string) => void;
   /** Gerät als Referenzuhr wählen. */

@@ -34,6 +34,10 @@ Quelle
 Referenzuhr
 : Das Gerät, dessen Uhr als richtig gilt. Genau eins pro Einsatz.
 
+Widerspruch
+: Zwei Zeitbelege einer Quelle liegen weiter auseinander, als ihre Genauigkeit erklärt. Deutlich unter, stark ab
+  5 Minuten. Du entscheidest bewusst, welcher gilt (@sec-widersprueche).
+
 Zeitbeleg
 : Eine Angabe, wann eine Stelle einer Quelle war: Metadaten, Dateiname, angesagte Uhrzeit, Anker oder von Hand.
 

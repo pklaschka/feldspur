@@ -3,6 +3,7 @@
  * Änderungen hier brauchen immer eine neue Migration in migrations.ts.
  */
 import { sql } from "drizzle-orm";
+import type { Decision } from "../model.ts";
 import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 
 const json = <T>(name: string) => text(name, { mode: "json" }).$type<T>();
@@ -108,6 +109,7 @@ export const evidence = sqliteTable(
     detail: text("detail").notNull(),
     raw: text("raw").notNull().default(""),
     enabled: bool("enabled").notNull().default(true),
+    decision: json<Decision>("decision"),
   },
   (t) => [index("evidence_source").on(t.sourceId)],
 );

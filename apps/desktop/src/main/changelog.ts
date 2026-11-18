@@ -4,7 +4,7 @@
  */
 import type { ChangeStep, History } from "@feldspur/core";
 import { excelCsv } from "@feldspur/media/csv";
-import { fieldChanges, OP_LABEL, TABLE_LABEL } from "../shared/changelog.ts";
+import { decisionText, fieldChanges, OP_LABEL, TABLE_LABEL } from "../shared/changelog.ts";
 
 export function changeLogRows(steps: ChangeStep[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -21,7 +21,9 @@ export function changeLogRows(steps: ChangeStep[]): unknown[][] {
         c.rowKey,
       ];
       if (!fields.length) rows.push([...base, "", "", ""]);
-      for (const f of fields) rows.push([...base, f.field, f.before, f.after]);
+      // Entscheidungen lesbar statt als JSON (der Rohwert steht in der Projektdatei).
+      const show = (field: string, v: unknown) => (field === "decision" && v !== null ? decisionText(v) : v);
+      for (const f of fields) rows.push([...base, f.field, show(f.field, f.before), show(f.field, f.after)]);
     }
   }
   return rows;

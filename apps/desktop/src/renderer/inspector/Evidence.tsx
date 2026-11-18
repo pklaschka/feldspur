@@ -5,8 +5,13 @@ import { EVIDENCE_LABEL } from "../format.ts";
 import { positionText, usePlayback } from "../playback.tsx";
 import { Button, Choice, cx, Pill, PRECISION_OPTIONS, Toggle } from "../ui.tsx";
 import type { InspectorActions } from "./actions.ts";
+import { precisionText } from "@feldspur/core/resolve";
+import { formatDuration } from "@feldspur/core/time";
+import { verdictBadge, verdictHelp } from "../../shared/conflict-text.ts";
+import { startText } from "./ConflictPanel.tsx";
 
 export function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActions }) {
+  const decided = row.conflict.state === "decided";
   if (!row.evidence.length) {
     return (
       <p className="text-[0.85rem] text-muted">
@@ -16,56 +21,102 @@ export function EvidenceList({ row, actions }: { row: SourceRow; actions: Inspec
       </p>
     );
   }
+  // Echte Zeit gegen unabgeglichene Geräteuhr: kein Widerspruch, aber ein Angebot, die Uhr danach zu richten.
+  const unsynced = row.evidence.find((e) => e.enabled && e.compare?.verdict === "unsynced");
+  const deviceSide = (k: string) => k === "metadata" || k === "filename";
+  const offset = unsynced?.compare
+    ? deviceSide(unsynced.kind)
+      ? unsynced.compare.differenceMs
+      : -unsynced.compare.differenceMs
+    : 0;
   return (
-    <ul className="grid gap-1.5" data-testid="evidence-list">
-      {row.evidence.map((e) => (
-        <li
-          key={e.id}
-          className={cx(
-            "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-lg border px-2.5 py-1.5",
-            e.chosen ? "border-accent/40 bg-accent-soft/40" : "border-line",
-          )}
-        >
-          <span className="text-[0.78rem] font-semibold text-muted">
-            {EVIDENCE_LABEL[e.kind] ?? e.kind}
-            {e.chosen && (
-              <span className="ml-1.5 normal-case">
-                <Pill tone="accent">verwendet</Pill>
+    <>
+      <ul className="grid gap-1.5" data-testid="evidence-list">
+        {row.evidence.map((e) => (
+          <li
+            key={e.id}
+            className={cx(
+              "grid grid-cols-[1fr_auto] items-center gap-x-2 rounded-lg border px-2.5 py-1.5",
+              e.chosen ? "border-accent/40 bg-accent-soft/40" : "border-line",
+            )}
+          >
+            <span className="flex flex-wrap items-center gap-1.5 text-[0.78rem] font-semibold text-muted">
+              {EVIDENCE_LABEL[e.kind] ?? e.kind}
+              {e.compare && !e.chosen ? (
+                <span
+                  className={cx(
+                    "rounded-full px-2 text-[0.8rem] font-normal whitespace-nowrap",
+                    e.compare.enabled && e.compare.verdict === "conflict" && !decided
+                      ? "border border-warn/50 text-warn"
+                      : "bg-sunken text-ink-2",
+                  )}
+                  title={verdictHelp(e.compare)}
+                >
+                  {verdictBadge(e.compare, decided)}
+                </span>
+              ) : (
+                e.chosen && <Pill tone="accent">verwendet</Pill>
+              )}
+            </span>
+            <span className="flex items-center gap-2">
+              {e.own && (
+                <Button variant="link" className="text-[0.8rem]" onClick={() => actions.removeEvidence(e.id)}>
+                  löschen
+                </Button>
+              )}
+              {!e.derived && (
+                <Toggle
+                  checked={e.enabled}
+                  onChange={(v) => actions.toggleEvidence(e.id, v)}
+                  label={`${e.detail} ${e.enabled ? "abschalten" : "einschalten"}`}
+                />
+              )}
+            </span>
+            {e.compare && (
+              <span className={cx("col-span-2", !e.enabled && "text-muted")}>
+                Beginn <b className="font-mono font-semibold tabular-nums">{startText(e.compare)}</b>
+                <span className="text-muted"> · {precisionText(e.compare.uncertaintyMs)}</span>
               </span>
             )}
-          </span>
-          <span className="flex items-center gap-2">
-            {e.own && (
-              <Button variant="link" className="text-[0.8rem]" onClick={() => actions.removeEvidence(e.id)}>
-                löschen
-              </Button>
+            <span className={cx("col-span-2 [overflow-wrap:anywhere]", !e.enabled && "text-muted line-through")}>
+              {e.detail}
+            </span>
+            {e.raw && (
+              <span className="col-span-2 font-mono text-[0.85rem] [overflow-wrap:anywhere] text-muted">{e.raw}</span>
             )}
-            {!e.derived && (
-              <Toggle
-                checked={e.enabled}
-                onChange={(v) => actions.toggleEvidence(e.id, v)}
-                label={`${e.detail} ${e.enabled ? "abschalten" : "einschalten"}`}
-              />
-            )}
-          </span>
-          <span className={cx("col-span-2 [overflow-wrap:anywhere]", !e.enabled && "text-muted line-through")}>
-            {e.detail}
-          </span>
-          {e.raw && (
-            <span className="col-span-2 font-mono text-[0.85rem] [overflow-wrap:anywhere] text-muted">{e.raw}</span>
-          )}
-        </li>
-      ))}
-    </ul>
+          </li>
+        ))}
+      </ul>
+      {unsynced && row.deviceId && (
+        <div className="mt-2 rounded-lg bg-panel-2 px-3 py-2 text-[0.86rem]" data-testid="unsynced-hint">
+          <p>
+            Die Uhr von {row.deviceLabel || "diesem Gerät"} ist noch nicht abgeglichen. Sie ginge demnach{" "}
+            <b className="font-mono">{formatDuration(Math.abs(offset))}</b> {offset >= 0 ? "vor" : "nach"}.
+          </p>
+          <Button size="sm" className="mt-1.5" onClick={() => actions.setDeviceOffset(row.deviceId!, offset)}>
+            Uhr danach richten
+          </Button>
+        </div>
+      )}
+    </>
   );
 }
 
 /** Uhrzeit von Hand eintragen oder angesagte Uhrzeit markieren. */
-export function TimeForm({ row, onAdd }: { row: SourceRow; onAdd: (input: TimeInput) => Promise<boolean> }) {
+export function TimeForm({
+  row,
+  onAdd,
+  initialOpen,
+}: {
+  row: SourceRow;
+  onAdd: (input: TimeInput) => Promise<boolean>;
+  /** Gleich offen zeigen (aus „Keine der beiden: Uhrzeit von Hand eintragen“). */
+  initialOpen?: boolean;
+}) {
   const av = row.kind === "audio" || row.kind === "video";
   const { position } = usePlayback();
   const here = position?.sourceId === row.id ? position.atMs : null;
-  const [open, setOpen] = useState(row.status === "unplaced");
+  const [open, setOpen] = useState(initialOpen || row.status === "unplaced");
   const [kind, setKind] = useState<"manual" | "spoken">("manual");
   const [time, setTime] = useState("");
   const [at, setAt] = useState("");

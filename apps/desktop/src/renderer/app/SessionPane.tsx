@@ -9,7 +9,7 @@ import { percent, useExport } from "../exportState.tsx";
 import { formatDay } from "../format.ts";
 import { Inspector } from "../Inspector.tsx";
 import { OriginalsBanner, OriginalsDialog } from "../Originals.tsx";
-import type { Todo } from "../inspector/status.ts";
+import { asPlaces, checkQueue, type Todo } from "../inspector/status.ts";
 import { Review } from "../Review.tsx";
 import { PlaybackProvider } from "../playback.tsx";
 import { Preview } from "../Preview.tsx";
@@ -97,7 +97,7 @@ export function SessionPane({
   const unsynced = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
   const hasRef = view.devices.some((d) => d.isReference);
   const unplaced = view.rows.filter((r) => r.status === "unplaced").length;
-  const toCheck = view.rows.filter((r) => r.status === "check" && !r.partOf).length;
+  const toCheck = asPlaces(checkQueue(view.rows), view.conflictGroups).length;
   const steps: { id: Step; n: number; title: string; badge: string | null; warn?: boolean }[] = [
     { id: "collect", n: 1, title: "Einsammeln", badge: view.rows.length ? `${view.rows.length}` : null },
     {
@@ -323,6 +323,11 @@ export function SessionPane({
               return !!v;
             },
             confirm: (id, startMs) => update(guard(() => api.confirmPlacement(id, startMs))),
+            decide: (input) => update(guard(() => api.decidePlacement(input))),
+            decideMany: (sourceIds, kind, reason) => update(guard(() => api.decideMany({ sourceIds, kind, reason }))),
+            setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),
+            setDeviceOffset: (id, ms) => update(guard(() => api.setDeviceOffset(id, ms))),
+            goSync: () => go({ text: "", step: "sync", action: "" }),
             trustDeviceClock: (id) => update(guard(() => api.setDeviceOffset(id, 0))),
             setReference: (id) => update(guard(() => api.setReference(id))),
             toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
