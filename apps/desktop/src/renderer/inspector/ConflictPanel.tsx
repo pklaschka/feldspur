@@ -2,7 +2,8 @@
  * Widersprüchliche Zeitbelege: vergleichen und bewusst entscheiden, welche Zeit gilt.
  * Ein Kasten in drei Zuständen: offen, entschieden, neu prüfen (siehe Konzept zu Issue #75).
  */
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useElementWidth } from "../canvas.ts";
 import type { EvidenceComparison } from "@feldspur/core/resolve";
 import { precisionText } from "@feldspur/core/resolve";
 import type { ConflictGroupRow, DeviceRow, EvidenceRow, SessionView, SourceRow } from "../../shared/api.ts";
@@ -74,9 +75,12 @@ export function compared(row: SourceRow): Compared[] {
 
 /** Belegstrahl: ein Punkt je Beleg, Unsicherheit als Balken, Abstand als Klammer; große Lücken unterbrochen. */
 export function EvidenceStrip({ items }: { items: Compared[] }) {
+  // In Pixeln der Leiste zeichnen, nicht skalieren: Sonst wächst die Schrift mit einer breiten Detailleiste.
+  const box = useRef<HTMLDivElement>(null);
+  const measured = useElementWidth(box);
   const pts = items.filter((e) => e.enabled).toSorted((a, b) => a.compare.startMs - b.compare.startMs);
   if (pts.length < 2) return null;
-  const W = 228;
+  const W = measured || 228;
   const PAD = 30;
   const ts = pts.map((p) => p.compare.startMs);
   const lo = ts[0]!;
@@ -113,63 +117,71 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
   const y = 40;
   const midGap = broken ? (x(ts[gapAt - 1]!) + x(ts[gapAt]!)) / 2 : null;
   return (
-    <svg
-      viewBox={`0 0 ${W} ${twoLevel ? 98 : 78}`}
-      className="mt-2.5 mb-0.5 w-full text-warn"
-      aria-hidden
-      data-testid="evidence-strip"
-    >
-      <line x1={8} x2={W - 8} y1={y} y2={y} className="stroke-line-2" strokeWidth={1.5} />
-      {midGap !== null && (
-        <g className="stroke-muted" strokeWidth={1.5}>
-          <rect x={midGap - 8} y={y - 4} width={16} height={8} className="fill-warn-soft stroke-none" />
-          <line x1={midGap - 7} x2={midGap - 3} y1={y + 5} y2={y - 5} />
-          <line x1={midGap + 3} x2={midGap + 7} y1={y + 5} y2={y - 5} />
-        </g>
-      )}
-      {Math.abs(far.compare.differenceMs) > 0 && (
-        <g>
-          <path d={`M${xa} 21 V15 H${xb} V21`} fill="none" stroke="currentColor" strokeWidth={1.2} />
-          <rect
-            x={(xa + xb) / 2 - 30}
-            y={5}
-            width={60}
-            height={18}
-            rx={9}
-            className="fill-panel stroke-warn"
-            strokeWidth={1}
-          />
-          <text x={(xa + xb) / 2} y={18} textAnchor="middle" className="fill-warn font-mono text-[12px] font-semibold">
-            {plain(far.compare.differenceMs)}
-          </text>
-        </g>
-      )}
-      {pts.map((p, i) => {
-        const px = x(p.compare.startMs);
-        const unc = Math.min(40, p.compare.uncertaintyMs * scaleOf);
-        const used = p.compare.verdict === "chosen";
-        const ly = y + 18 + (twoLevel && i % 2 ? 20 : 0);
-        const anchor = px < 28 ? "start" : px > W - 28 ? "end" : "middle";
-        return (
-          <g key={p.id}>
-            {unc > 2 && <rect x={px - unc} y={y - 3} width={2 * unc} height={6} rx={3} className="fill-warn/25" />}
-            <circle
-              cx={px}
-              cy={y}
-              r={5.5}
-              className={used ? "fill-accent stroke-panel" : "fill-panel stroke-warn"}
-              strokeWidth={used ? 2 : 2}
+    <div ref={box} className="mt-2.5 mb-0.5" data-testid="evidence-strip">
+      <svg
+        width={W}
+        height={twoLevel ? 98 : 78}
+        viewBox={`0 0 ${W} ${twoLevel ? 98 : 78}`}
+        className="block text-warn"
+        aria-hidden
+      >
+        <line x1={8} x2={W - 8} y1={y} y2={y} className="stroke-line-2" strokeWidth={1.5} />
+        {midGap !== null && (
+          <g className="stroke-muted" strokeWidth={1.5}>
+            <rect x={midGap - 8} y={y - 4} width={16} height={8} className="fill-warn-soft stroke-none" />
+            <line x1={midGap - 7} x2={midGap - 3} y1={y + 5} y2={y - 5} />
+            <line x1={midGap + 3} x2={midGap + 7} y1={y + 5} y2={y - 5} />
+          </g>
+        )}
+        {Math.abs(far.compare.differenceMs) > 0 && (
+          <g>
+            <path d={`M${xa} 21 V15 H${xb} V21`} fill="none" stroke="currentColor" strokeWidth={1.2} />
+            <rect
+              x={(xa + xb) / 2 - 30}
+              y={5}
+              width={60}
+              height={18}
+              rx={9}
+              className="fill-panel stroke-warn"
+              strokeWidth={1}
             />
-            <text x={px} y={ly} textAnchor={anchor} className="fill-ink font-mono text-[13px] font-semibold">
-              {startText(p.compare)}
-            </text>
-            <text x={px} y={ly + 14.5} textAnchor={anchor} className="fill-muted text-[12px]">
-              {kindName(p.kind)}
+            <text
+              x={(xa + xb) / 2}
+              y={18}
+              textAnchor="middle"
+              className="fill-warn font-mono text-[12px] font-semibold"
+            >
+              {plain(far.compare.differenceMs)}
             </text>
           </g>
-        );
-      })}
-    </svg>
+        )}
+        {pts.map((p, i) => {
+          const px = x(p.compare.startMs);
+          const unc = Math.min(40, p.compare.uncertaintyMs * scaleOf);
+          const used = p.compare.verdict === "chosen";
+          const ly = y + 18 + (twoLevel && i % 2 ? 20 : 0);
+          const anchor = px < 28 ? "start" : px > W - 28 ? "end" : "middle";
+          return (
+            <g key={p.id}>
+              {unc > 2 && <rect x={px - unc} y={y - 3} width={2 * unc} height={6} rx={3} className="fill-warn/25" />}
+              <circle
+                cx={px}
+                cy={y}
+                r={5.5}
+                className={used ? "fill-accent stroke-panel" : "fill-panel stroke-warn"}
+                strokeWidth={used ? 2 : 2}
+              />
+              <text x={px} y={ly} textAnchor={anchor} className="fill-ink font-mono text-[13px] font-semibold">
+                {startText(p.compare)}
+              </text>
+              <text x={px} y={ly + 14.5} textAnchor={anchor} className="fill-muted text-[12px]">
+                {kindName(p.kind)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 

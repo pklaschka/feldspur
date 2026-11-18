@@ -213,8 +213,10 @@ export function precisionText(uncertaintyMs: number): string {
   if (uncertaintyMs < 1_500) return "sekundengenau";
   if (uncertaintyMs === 30_000) return "nur Minute";
   if (uncertaintyMs < 60_000) return `auf ${Math.round(uncertaintyMs / 1000)} Sekunden genau`;
-  if (uncertaintyMs === 60_000) return "auf 1 Minute genau";
-  if (uncertaintyMs < 3_600_000) return `auf ${Math.round(uncertaintyMs / 60_000)} Minuten genau`;
+  if (uncertaintyMs < 3_600_000) {
+    const min = Math.round(uncertaintyMs / 60_000);
+    return min === 1 ? "auf 1 Minute genau" : `auf ${min} Minuten genau`;
+  }
   return `auf ${formatDuration(uncertaintyMs)} genau`;
 }
 
