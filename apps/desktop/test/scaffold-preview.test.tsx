@@ -45,4 +45,8 @@ describe("ScaffoldLine", () => {
     expect(li.querySelector(".text-sc-clock")).toBeNull();
     expect(li.querySelector(".italic")?.textContent).toBe("10:20–10:40");
   });
+  it("Zeilenumbrüche im Text bleiben sichtbar", () => {
+    const li = render({ ...base, kind: "diary", head: "Tagebuch", body: "a\nb" });
+    expect(li.querySelector(".whitespace-pre-line")?.textContent).toBe("a\nb");
+  });
 });
