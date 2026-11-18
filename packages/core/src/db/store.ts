@@ -6,6 +6,7 @@
  * gespeichert werden.
  */
 import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
 import Database from "better-sqlite3";
 import { and, asc, eq } from "drizzle-orm";
 import type { z } from "zod";
@@ -26,6 +27,7 @@ import {
   type SourceKind,
 } from "../model.ts";
 import type { ResolveInput } from "../resolve.ts";
+import { nextBackupPath, rotateBackups, vacuumInto } from "./backup.ts";
 import { History } from "./history.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import * as schema from "./schema.ts";
@@ -52,6 +54,11 @@ export interface OpenOptions {
    * eine eigene Bauart (andere ABI) als Node, in dem die Tests laufen.
    */
   nativeBinding?: string;
+  /**
+   * Vor dem Aktualisieren einer älteren Projektdatei (Migration) eine Sicherung im Sicherungsordner anlegen. Lässt
+   * sie sich nicht anlegen, wird die Datei nicht angefasst und das Öffnen schlägt fehl.
+   */
+  backupBeforeMigration?: boolean;
 }
 
 export class ProjectStore {
@@ -90,6 +97,18 @@ export class ProjectStore {
         `Die Projektdatei stammt aus einer neueren Feldspur-Version (Schema ${version}, unterstützt bis ${SCHEMA_VERSION}).`,
       );
     }
+    if (opts.backupBeforeMigration && version > 0 && version < SCHEMA_VERSION) {
+      const dest = nextBackupPath(path, "vor-Aktualisierung");
+      try {
+        vacuumInto(sqlite, dest);
+      } catch (e) {
+        sqlite.close();
+        throw new Error(
+          `Die Projektdatei muss für diese Feldspur-Version aktualisiert werden. Vorher ließ sich keine Sicherung anlegen (${(e as Error).message}); die Datei bleibt deshalb unverändert.`,
+        );
+      }
+      rotateBackups(path, "vor-Aktualisierung");
+    }
     sqlite.transaction(() => {
       for (let v = version; v < SCHEMA_VERSION; v++) sqlite.exec(MIGRATIONS[v]!);
       sqlite.pragma(`user_version = ${SCHEMA_VERSION}`);
@@ -101,6 +120,17 @@ export class ProjectStore {
 
   close(): void {
     this.sqlite.close();
+  }
+
+  /** Vollständige Kopie der Projektdatei nach `dest` schreiben (auch während sie offen ist). */
+  backupTo(dest: string): void {
+    if (resolve(dest) === resolve(this.path)) throw new Error("Eine Sicherung kann die Projektdatei nicht ersetzen.");
+    vacuumInto(this.sqlite, dest);
+  }
+
+  /** Zahl der Änderungen seit dem Öffnen (zählt nur hoch); so erkennt die App, ob es Neues zu sichern gibt. */
+  changeCount(): number {
+    return (this.sqlite.prepare("SELECT total_changes() AS n").get() as { n: number }).n;
   }
 
   transaction<T>(fn: () => T): T {

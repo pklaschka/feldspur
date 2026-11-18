@@ -939,6 +939,36 @@ try {
     await pre.waitFor({ state: "detached" });
     console.log(`Originale: ${bannerText} → ${found.split("\n")[0]}`);
   }
+  // Sicherungen: Nach dem erneuten Öffnen liegt eine automatische Sicherung; sie öffnet sich als Kopie.
+  {
+    await page.getByTestId("project-menu").click();
+    await page.getByTestId("menu-backups").click();
+    const dlg = page.getByTestId("backups");
+    await dlg.getByTestId("backup-row").first().waitFor();
+    const rows = await dlg.getByTestId("backup-row").count();
+    await shot("-sicherungen");
+    const copy = join(dir, "Wiederhergestellt.feldspur");
+    await app.evaluate(({ dialog }, file) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as typeof dialog.showSaveDialog;
+    }, copy);
+    await dlg.getByRole("button", { name: "Als Kopie öffnen…" }).first().click();
+    await dlg.waitFor({ state: "detached" });
+    const opened = await page.evaluate(async () => (await window.feldspur.currentProject())!.path);
+    if (opened !== copy) throw new Error(`Kopie nicht geöffnet: ${opened}`);
+    await page.getByRole("heading", { name: "Testmarkt" }).waitFor();
+    // Eine kaputte Datei wird vor dem Öffnen erkannt; das offene Projekt bleibt.
+    const broken = join(dir, "Kaputt.feldspur");
+    writeFileSync(broken, "Das ist kein Projekt. ".repeat(20));
+    await app.evaluate(({ dialog }, file) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [file] })) as typeof dialog.showOpenDialog;
+    }, broken);
+    await page.getByTestId("project-menu").click();
+    await page.getByRole("menuitem", { name: "Anderes Projekt öffnen…" }).click();
+    await page.getByText(/Kaputt\.feldspur“ lässt sich nicht öffnen/).waitFor();
+    const still = await page.evaluate(async () => (await window.feldspur.currentProject())!.path);
+    if (still !== copy) throw new Error(`Offenes Projekt gewechselt: ${still}`);
+    console.log(`Sicherungen: ${rows} im Dialog, Kopie geöffnet, kaputte Datei abgewiesen`);
+  }
   console.log("Rauchtest ok");
 } catch (e) {
   failed = true;

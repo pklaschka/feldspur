@@ -73,7 +73,7 @@ export function RecentList({ onOpen }: { onOpen: (path: string) => void }) {
 const ITEM =
   "flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-[0.9rem] outline-none data-[disabled]:cursor-default data-[disabled]:text-muted data-[highlighted]:bg-accent-soft";
 
-/** Projektname in der Seitenleiste als Menü: anderes Projekt öffnen, zuletzt geöffnete, neues, Änderungsprotokoll. */
+/** Projektname in der Seitenleiste als Menü: anderes Projekt öffnen, zuletzt geöffnete, neues, Änderungsprotokoll, Sicherungen. */
 export function ProjectMenu({
   name,
   path,
@@ -83,6 +83,7 @@ export function ProjectMenu({
   onOpenOther,
   onNew,
   onChangeLog,
+  onBackups,
 }: {
   name: string;
   path: string;
@@ -92,6 +93,7 @@ export function ProjectMenu({
   onOpenOther: () => void;
   onNew: () => void;
   onChangeLog: () => void;
+  onBackups: () => void;
 }) {
   const [list] = useRecent(open);
   const others = list.filter((r) => r.path !== path);
@@ -156,6 +158,9 @@ export function ProjectMenu({
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           <DropdownMenu.Item className={ITEM} onSelect={onChangeLog}>
             Änderungsprotokoll…
+          </DropdownMenu.Item>
+          <DropdownMenu.Item className={ITEM} onSelect={onBackups} data-testid="menu-backups">
+            Sicherungen…
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

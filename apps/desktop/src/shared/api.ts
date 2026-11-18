@@ -3,6 +3,7 @@
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
  */
 import type {
+  BackupInfo,
   ChangeStep,
   FieldSession,
   LevelMode,
@@ -12,6 +13,19 @@ import type {
   SourceKind,
 } from "@feldspur/core";
 import type { FileCheck, FileState, MontagePreview, ScaffoldKind } from "@feldspur/media";
+
+/** Sicherungen des offenen Projekts (Dialog „Sicherungen“). */
+export interface BackupOverview {
+  /** Ordner neben der Projektdatei. */
+  dir: string;
+  /** Neueste zuerst. */
+  backups: BackupInfo[];
+  /** So viele automatische Sicherungen bleiben liegen. */
+  keepAutomatic: number;
+  lastAutomaticAt: string | null;
+  /** Meldung, wenn die letzte automatische Sicherung fehlgeschlagen ist. */
+  lastError: string | null;
+}
 
 export interface RecentProject {
   path: string;
@@ -444,6 +458,17 @@ export interface FeldspurApi {
   recentProjects(): Promise<RecentProject[]>;
   openRecent(path: string): Promise<ProjectInfo | null>;
   forgetRecent(path: string): Promise<RecentProject[]>;
+  /** Sicherungen des offenen Projekts; null ohne Projekt. */
+  backups(): Promise<BackupOverview | null>;
+  /** „Sicherung erstellen…“: Speichern-Dialog, gibt den Pfad zurück (null bei Abbruch). */
+  createBackup(): Promise<string | null>;
+  /**
+   * Sicherung als neues, eigenständiges Projekt öffnen: Datei prüfen, Ziel wählen lassen, kopieren, öffnen. Ohne
+   * `path` erst eine Datei wählen. Das Original wird nie überschrieben.
+   */
+  openBackupCopy(path?: string): Promise<ProjectInfo | null>;
+  /** Sicherungsordner im Dateimanager zeigen. */
+  showBackupFolder(): Promise<void>;
   currentProject(): Promise<ProjectInfo | null>;
   createSession(input: NewSessionInput): Promise<ProjectInfo>;
   getSession(sessionId: string): Promise<SessionView>;
@@ -592,6 +617,10 @@ export const IPC = {
   recentProjects: "project:recent",
   openRecent: "project:open-recent",
   forgetRecent: "project:forget-recent",
+  backups: "backup:list",
+  createBackup: "backup:create",
+  openBackupCopy: "backup:open-copy",
+  showBackupFolder: "backup:show-folder",
   currentProject: "project:current",
   createSession: "session:create",
   getSession: "session:get",

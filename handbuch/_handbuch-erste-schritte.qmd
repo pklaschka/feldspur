@@ -71,6 +71,38 @@ Davon unabhängig führt Feldspur ein dauerhaftes **Änderungsprotokoll** in der
 Felder. **Als CSV speichern…** legt das ganze Protokoll als Tabelle ab, etwa für die Dokumentation des
 Forschungsprozesses. Das Protokoll ist nur zum Nachsehen da; zurücknehmen geht weiter über Rückgängig.
 
+### Sicherungen {#sec-sicherungen}
+
+Die Projektdatei hält deine Entscheidungen, Zeitbelege und das Änderungsprotokoll. Damit davon nichts verloren geht,
+sichert Feldspur sie selbst: **beim Öffnen** (wenn die letzte Sicherung mehr als eine halbe Stunde her ist), **während
+der Arbeit** höchstens alle 30 Minuten und **beim Schließen**, jeweils nur, wenn sich etwas geändert hat. Bevor eine
+neue Feldspur-Version eine ältere Projektdatei aktualisiert, legt sie ebenfalls eine Sicherung an; gelingt das nicht,
+bleibt die Datei unverändert.
+
+Die Sicherungen liegen in einem Ordner neben der Projektdatei, z. B. `Feldforschung-Sicherungen`. Jede ist eine
+vollständige Projektdatei mit Datum, Uhrzeit und Anlass im Namen, etwa
+`Feldforschung_2026-11-18_16-47-05_automatisch.feldspur`. Von den automatischen bleiben die letzten zehn liegen, von
+denen vor einer Aktualisierung die letzten fünf. Eigene Sicherungen löscht Feldspur nie.
+
+Im Projektmenü oben links öffnet **Sicherungen…** die Liste, die neueste oben. **Sicherung erstellen…** legt eine
+eigene an, etwa vor einem größeren Umbau oder zum Ende eines Projektabschnitts. **Als Kopie öffnen…** macht aus einer
+Sicherung ein eigenständiges Projekt: Du wählst einen neuen Dateinamen, Feldspur kopiert die Sicherung dorthin und
+öffnet die Kopie. Die ursprüngliche Projektdatei und die Sicherung bleiben, wie sie sind. Im Änderungsprotokoll der
+Kopie steht „Aus Sicherung wiederhergestellt“.
+
+Vor dem Öffnen prüft Feldspur jede Projektdatei: Ist sie vollständig, nicht beschädigt und ein Feldspur-Projekt? Wenn
+nicht, sagt eine Meldung, was nicht stimmt (z. B. „unvollständig: Vermutlich wurde eine Kopie abgebrochen“), und das
+bisher offene Projekt bleibt offen. Auf dem Startbildschirm steht dann **Sicherung als Kopie öffnen…** bereit.
+
+::: {.callout-tip}
+### Sicherungsstrategie
+Der Sicherungsordner liegt auf demselben Laufwerk wie das Projekt. Gegen einen Laptopverlust oder ein defektes
+Laufwerk hilft er nicht. Sichere den Projektordner deshalb zusätzlich wie deine Aufnahmen, etwa mit der Datensicherung
+deiner Hochschule oder auf einer zweiten Festplatte. Kopiere eine Projektdatei nur, wenn Feldspur sie nicht offen hat,
+oder nimm dafür **Sicherung erstellen…**. Fürs Archiv gehören Projektdatei und Originaldateien zusammen; die
+automatischen Sicherungen brauchst du dort nicht.
+:::
+
 Feldspur hat ein helles und ein dunkles Erscheinungsbild und folgt der Einstellung deines Systems.
 
 ![Die Zeitachse im dunklen Erscheinungsbild](bilder/dunkel.png){#fig-dunkel}

@@ -3,6 +3,7 @@ import type { ProjectInfo } from "../shared/api.ts";
 import { ExportProvider } from "./exportState.tsx";
 import { formatDay } from "./format.ts";
 import { renderOverlays } from "./overlay.ts";
+import { Backups } from "./Backups.tsx";
 import { ChangeLog } from "./ChangeLog.tsx";
 import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
@@ -25,6 +26,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [projectMenu, setProjectMenu] = useState(false);
   const [changeLog, setChangeLog] = useState(false);
+  const [backups, setBackups] = useState(false);
 
   // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
   const hasProject = useEffectEvent(() => !!project);
@@ -115,7 +117,14 @@ export function App() {
             <Button onClick={() => void guard(api.openProject).then(adopt)}>Projekt öffnen…</Button>
           </div>
           <RecentList onOpen={(path) => void guard(() => api.openRecent(path)).then(adopt)} />
-          {error && <p className="mt-3 text-bad">{error}</p>}
+          {error && (
+            <div className="mt-3" role="alert">
+              <p className="text-bad">{error}</p>
+              <Button className="mt-2" size="sm" onClick={() => void guard(() => api.openBackupCopy()).then(adopt)}>
+                Sicherung als Kopie öffnen…
+              </Button>
+            </div>
+          )}
         </Panel>
       </main>
     );
@@ -147,8 +156,10 @@ export function App() {
                 onOpenOther={() => void guard(api.openProject).then(adopt)}
                 onNew={() => void guard(api.newProject).then(adopt)}
                 onChangeLog={() => setChangeLog(true)}
+                onBackups={() => setBackups(true)}
               />
               <ChangeLog open={changeLog} onOpenChange={setChangeLog} />
+              <Backups open={backups} onOpenChange={setBackups} onOpened={adopt} guard={guard} />
             </div>
             <h2 className="mx-2 mt-7 mb-1.5 text-[1rem] font-semibold text-rail-ink">Einsätze</h2>
             {project.sessions.map((s) => (
