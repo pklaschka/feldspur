@@ -245,6 +245,9 @@ export async function exportSession(
     opts.onProgress?.("Fertig", 1, 1);
     return { dir: outDir, files, durationMs: sc.plan.durationMs };
   } finally {
-    await rm(work, { recursive: true, force: true });
+    // Nach einem Abbruch hält ffmpeg unter Windows Dateien im Arbeitsordner noch kurz offen (EBUSY). Mehrmals
+    // versuchen; scheitert das Aufräumen trotzdem, bleibt der Ordner im Temp-Verzeichnis, statt den eigentlichen
+    // Fehler oder Abbruch zu verdecken.
+    await rm(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {});
   }
 }
