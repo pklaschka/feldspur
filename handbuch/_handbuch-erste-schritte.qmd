@@ -65,6 +65,10 @@ Textfeldern macht Strg+Z zuerst den Text im Feld rückgängig; ist dort nichts m
 Projekt weiter. Der Verlauf gilt, solange das Projekt offen ist. Nach dem Einsammeln oder der Tonspur-Analyse
 beginnt er neu.
 
+Alle Tastenkürzel stehen auch auf einem
+[Spickblatt zum Ausdrucken](https://pklaschka.github.io/feldspur/Feldspur-Tastenkuerzel.pdf) (eine Seite A4 quer).
+Die Tasten sind dort so angeordnet wie auf der Tastatur, damit du sie beim Arbeiten schnell wiederfindest.
+
 Davon unabhängig führt Feldspur ein dauerhaftes **Änderungsprotokoll** in der Projektdatei. Jede gespeicherte
 Änderung steht dort mit Zeit, Aktion und den Werten vorher und nachher, auch Rückgängig und Wiederholen selbst. Du
 öffnest es im Projektmenü oben links über **Änderungsprotokoll…**. Ein Klick auf einen Eintrag zeigt die geänderten

@@ -8,6 +8,8 @@ name: Handbuch
 #     sonst aus package.json) und landet als Artefakt „handbuch“ in der Release.
 #   - Dazu die Druckfassung mit 3 mm Beschnitt rundum (216 × 303 mm, Profil „druck“, siehe
 #     handbuch/_quarto-druck.yml) als dist/handbuch/Feldspur-Handbuch-<version>-Druck.pdf.
+#   - Dazu das Tastenkürzel-Spickblatt (A4 quer, handbuch/spickblatt/) als
+#     dist/handbuch/Feldspur-Tastenkuerzel-<version>.pdf.
 on:
   workflow_dispatch:
   workflow_call:
@@ -44,6 +46,7 @@ jobs:
           mkdir -p dist/handbuch
           cp handbuch/_site/Feldspur-Handbuch.pdf "dist/handbuch/Feldspur-Handbuch-$V.pdf"
           cp handbuch/_druck/Feldspur-Handbuch-Druck.pdf "dist/handbuch/Feldspur-Handbuch-$V-Druck.pdf"
+          cp handbuch/_site/Feldspur-Tastenkuerzel.pdf "dist/handbuch/Feldspur-Tastenkuerzel-$V.pdf"
       - uses: actions/upload-artifact@v4
         with:
           name: handbuch

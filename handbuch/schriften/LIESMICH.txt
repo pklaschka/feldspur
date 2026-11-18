@@ -4,3 +4,4 @@ Source Sans 3 und Source Serif 4 von Adobe, SIL Open Font License 1.1 (siehe OFL
   eingebunden in ../stil.scss.
 - *.otf: statische Schnitte für das PDF (Typst liest kein woff2), aus den Releases von
   github.com/adobe-fonts/source-sans und github.com/adobe-fonts/source-serif.
+- SourceSans3-BoldIt.otf: nur für die Titel des Tastenkürzel-Spickblatts (../spickblatt/), gleiche Quelle.
