@@ -505,7 +505,9 @@ function registerIpc(): void {
         path = r.filePaths[0];
       }
       const lines = parseTranscript(await readFile(path, "utf8"), basename(path));
-      const r = importLines(s, sourceId, lines, opts.mode);
+      // Nur der schreibende Teil ist ein Schritt für Rückgängig; Dateidialog und Parsen liegen davor.
+      const label = opts.mode === "replace" ? "Mitschrift ersetzt" : "Transkript importiert";
+      const r = s.history.record(label, () => importLines(s, sourceId, lines, opts.mode));
       return { view: buildSessionView(s, r.sessionId), count: r.count, dropped: r.dropped };
     },
   );
