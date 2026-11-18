@@ -5,6 +5,7 @@ import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
 import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
 import { Button, cx, FlagMark, Glyph, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
+import { isEnter } from "./keys.js";
 
 const api = window.feldspur;
 
@@ -338,7 +339,7 @@ function EditableName({ value, onCommit }: { value: string; onCommit: (v: string
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
+        if (isEnter(e)) commit();
         if (e.key === "Escape") {
           setText(value);
           setEditing(false);

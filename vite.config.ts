@@ -3,10 +3,10 @@ import { defineConfig } from "vite-plus";
 export default defineConfig({
   fmt: {
     printWidth: 120,
-    ignorePatterns: ["dist/**", "out/**"],
+    ignorePatterns: ["dist/**", "out/**", ".agents/**"],
   },
   lint: {
-    ignorePatterns: ["dist/**", "out/**"],
+    ignorePatterns: ["dist/**", "out/**", ".agents/**"],
     // Standard-Plugins plus React: Hook-Regeln prüfen, ob Effekte alle Werte kennen, die sie lesen.
     plugins: ["eslint", "typescript", "unicorn", "oxc", "react"],
     rules: {

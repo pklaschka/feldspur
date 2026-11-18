@@ -22,6 +22,7 @@ import { type Item, eventsIn, itemRank, lastAtOrBefore, noteBands, sourceOptions
 import { At, Line, type LineActions } from "./transcriber/Line.tsx";
 import { OtherLineItem } from "./transcriber/OtherLineItem.tsx";
 import { Scrubber } from "./transcriber/Scrubber.tsx";
+import { isEnter } from "./keys.js";
 
 const api = window.feldspur;
 
@@ -477,7 +478,7 @@ function Body({
               placeholder="Mittippen, Enter für die nächste Zeile. „B1: …“ wechselt den Sprecher."
               value={draft}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                if (isEnter(e)) {
                   e.preventDefault();
                   void commit();
                 }

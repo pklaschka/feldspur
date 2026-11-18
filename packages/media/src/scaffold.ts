@@ -206,7 +206,7 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
   }
 
   // Tagebuch: am Beginn des Bezugszeitraums.
-  const numbered = [...input.diaryEntries].sort((a, b) => {
+  const numbered = input.diaryEntries.toSorted((a, b) => {
     const pa = res.diary.get(a.id)?.notedAtMs ?? Infinity;
     const pb = res.diary.get(b.id)?.notedAtMs ?? Infinity;
     return pa - pb;

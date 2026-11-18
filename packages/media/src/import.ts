@@ -200,7 +200,7 @@ export function applyImport(
     const result: ApplyImportResult = { sources: [], devicesCreated: [], duplicates: [] };
     const seen = new Map<string, Source>();
     // Chronologisch nach bestem Beleg, damit die Kurzzeichen der Reihenfolge im Feld folgen.
-    const ordered = [...candidates].sort(
+    const ordered = candidates.toSorted(
       (a, b) =>
         (a.evidence[0]?.localMs ?? Infinity) - (b.evidence[0]?.localMs ?? Infinity) ||
         a.fileName.localeCompare(b.fileName),

@@ -19,6 +19,7 @@ import {
 } from "./ui.tsx";
 import { FineAlign, guessB, type FineAlignStart } from "./FineAlign.tsx";
 import { useDraft } from "./hooks.ts";
+import { isEnter } from "./keys.js";
 
 const api = window.feldspur;
 
@@ -118,7 +119,7 @@ export function Sync({
     ...view.devices.map((d) => Math.abs(d.offsetMs ?? 0) * 1.25),
     ...view.proposals.map((p) => Math.abs(p.impliedOffsetMs ?? 0) * 1.25),
   );
-  const ordered = [...view.devices].sort((a, b) => Number(b.isReference) - Number(a.isReference));
+  const ordered = view.devices.toSorted((a, b) => Number(b.isReference) - Number(a.isReference));
 
   return (
     <div>
@@ -336,7 +337,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
         disabled={device.offsetBasis === "anchor" || device.offsetBasis === "spoken"}
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && commit()}
+        onKeyDown={(e) => isEnter(e) && commit()}
       />
       <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
         {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
