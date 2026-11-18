@@ -151,7 +151,8 @@ export function compareExport(
   if (missing.length) {
     differences.push({
       kind: "originals-missing",
-      text: missing.length === 1 ? "Eine Originaldatei fehlt jetzt." : `${missing.length} Originaldateien fehlen jetzt.`,
+      text:
+        missing.length === 1 ? "Eine Originaldatei fehlt jetzt." : `${missing.length} Originaldateien fehlen jetzt.`,
       labels: missing.map(label),
     });
   }

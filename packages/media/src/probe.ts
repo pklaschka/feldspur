@@ -25,11 +25,11 @@ interface FfprobeJson {
   streams?: { codec_type?: string; width?: number; height?: number; tags?: Record<string, string> }[];
 }
 
-export async function probeMedia(path: string): Promise<MediaProbe> {
+export async function probeMedia(path: string, opts: { signal?: AbortSignal } = {}): Promise<MediaProbe> {
   const { stdout } = await run(
     toolPaths().ffprobe,
     ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", path],
-    { maxBuffer: 16 << 20 },
+    { maxBuffer: 16 << 20, signal: opts.signal },
   );
   const j = JSON.parse(stdout) as FfprobeJson;
   const tags: Record<string, string> = {};

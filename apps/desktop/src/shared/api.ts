@@ -16,7 +16,7 @@ import type {
   PlacementStatus,
   SourceKind,
 } from "@feldspur/core";
-import type { ExportStatus, FileCheck, FileState, MontagePreview, ScaffoldKind } from "@feldspur/media";
+import type { ExportStatus, FileCheck, FileState, MontagePreview, ScaffoldKind, ScanProgress } from "@feldspur/media";
 
 /** Sicherungen des offenen Projekts (Dialog „Sicherungen“). */
 export interface BackupOverview {
@@ -438,6 +438,18 @@ export interface ScaffoldPreview {
   entries: ScaffoldPreviewEntry[];
 }
 
+/** Einsammeln abgebrochen: Nichts wurde übernommen. */
+export interface ImportCancelled {
+  cancelled: { read: number; total: number };
+}
+
+export type ImportResult = ImportOutcome | ImportCancelled;
+
+/** Fortschritt beim Einsammeln (siehe ScanProgress in @feldspur/media). */
+export interface ImportProgress extends ScanProgress {
+  sessionId: string;
+}
+
 export interface ImportOutcome {
   added: number;
   duplicates: number;
@@ -532,7 +544,10 @@ export interface FeldspurApi {
   createSession(input: NewSessionInput): Promise<ProjectInfo>;
   getSession(sessionId: string): Promise<SessionView>;
   pickFiles(): Promise<string[]>;
-  importPaths(sessionId: string, paths: string[]): Promise<ImportOutcome>;
+  importPaths(sessionId: string, paths: string[]): Promise<ImportResult>;
+  /** Laufendes Einsammeln abbrechen; es wird nichts übernommen. */
+  cancelImport(sessionId: string): Promise<void>;
+  onImportProgress(cb: (p: ImportProgress) => void): () => void;
   setReference(deviceId: string): Promise<SessionView>;
   renameDevice(deviceId: string, label: string): Promise<SessionView>;
   setDeviceUtc(deviceId: string, utc: boolean): Promise<SessionView>;
@@ -691,6 +706,8 @@ export const IPC = {
   getSession: "session:get",
   pickFiles: "import:pick",
   importPaths: "import:paths",
+  cancelImport: "import:cancel",
+  importProgress: "import:progress",
   setReference: "device:set-reference",
   setDeviceUtc: "device:set-utc",
   setDeviceTimeZone: "device:set-timezone",

@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { effectiveLocal, formatClock, ProjectStore, resolveTimeline } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
-import { applyImport, scanPaths, type ImportCandidate } from "../src/import.ts";
+import { applyImport, ScanCache, scanPaths, type ImportCandidate, type ScanProgress } from "../src/import.ts";
 import { hasFfmpeg, makeAudio, makeFieldDay, makeVideo } from "./fixtures.ts";
 
 describe.skipIf(!hasFfmpeg())("Einsammeln eines Feldtags", () => {
@@ -122,5 +122,71 @@ describe.skipIf(!hasFfmpeg())("Einsammeln eines Feldtags", () => {
     const meta = input.evidence.find((e) => e.sourceId === first.id && e.kind === "metadata")!;
     expect(formatClock(effectiveLocal(meta, input.devices[0], input.session.timeZone))).toBe("14:00:00");
     store.close();
+  });
+});
+
+describe("Großer Ordner: Fortschritt, Abbrechen, zweiter Versuch", () => {
+  let dir: string;
+  const FILES = 6;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "feldspur-ordner-"));
+    // Notizen brauchen kein ffmpeg; je 256 KB, damit es etwas zu lesen gibt.
+    for (let i = 1; i <= FILES; i++) writeFileSync(join(dir, `Notiz_${i}.txt`), Buffer.alloc(256 * 1024, i));
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("meldet Anzahl, aktuelle Datei und gelesene Bytes bis zum Ende", async () => {
+    const seen: ScanProgress[] = [];
+    await scanPaths([dir], { onProgress: (p) => seen.push(p) });
+    const reading = seen.filter((p) => p.phase === "reading");
+    expect(reading.length).toBeGreaterThan(0);
+    expect(reading.some((p) => p.path.endsWith("Notiz_1.txt"))).toBe(true);
+    expect(reading.at(-1)).toMatchObject({ done: FILES, total: FILES, bytesDone: FILES * 256 * 1024, path: "" });
+    expect(reading.at(-1)!.bytesTotal).toBe(FILES * 256 * 1024);
+  });
+
+  it("ein Abbruch beendet den Scan, schreibt nichts, und ein neuer Versuch übernimmt Gelesenes", async () => {
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Beispiel", date: "2026-09-07" });
+    const cache = new ScanCache();
+    const ctrl = new AbortController();
+    const scan = scanPaths([dir], {
+      cache,
+      signal: ctrl.signal,
+      onProgress: (p) => p.phase === "reading" && p.done >= 2 && ctrl.abort(),
+    });
+    await expect(scan).rejects.toMatchObject({ name: "AbortError" });
+    expect(store.listSources(session.id)).toEqual([]);
+    expect(cache.size).toBeGreaterThanOrEqual(2);
+    expect(cache.size).toBeLessThan(FILES);
+
+    let last: ScanProgress | undefined;
+    const again = await scanPaths([dir], { cache, onProgress: (p) => (last = p) });
+    expect(again).toHaveLength(FILES);
+    expect(last!.reused).toBeGreaterThanOrEqual(2);
+    expect(again).toEqual(await scanPaths([dir]));
+    store.close();
+  });
+
+  it("eine veränderte Datei wird beim zweiten Versuch neu gelesen", async () => {
+    const cache = new ScanCache();
+    const first = await scanPaths([join(dir, "Notiz_1.txt")], { cache });
+    writeFileSync(join(dir, "Notiz_1.txt"), "anders");
+    const second = await scanPaths([join(dir, "Notiz_1.txt")], { cache });
+    expect(second[0]!.sha256).not.toBe(first[0]!.sha256);
+    writeFileSync(join(dir, "Notiz_1.txt"), Buffer.alloc(256 * 1024, 1));
+  });
+
+  it("überspringt Unlesbares mit Hinweis statt alles abzubrechen", async () => {
+    const sub = join(dir, "mit-defekt");
+    mkdirSync(sub);
+    writeFileSync(join(sub, "gut.txt"), "ok");
+    symlinkSync(join(sub, "gibt-es-nicht.mp4"), join(sub, "kaputt.mp4"));
+    const skipped: string[] = [];
+    const found = await scanPaths([sub], { onSkipped: (p, m) => skipped.push(`${basename(p)}: ${m}`) });
+    expect(found.map((c) => c.fileName)).toEqual(["gut.txt"]);
+    expect(skipped).toEqual(["kaputt.mp4: übersprungen: nicht gefunden"]);
+    rmSync(sub, { recursive: true, force: true });
   });
 });

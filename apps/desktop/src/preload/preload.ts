@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import { IPC, type ExportProgress, type FeldspurApi, type OriginalsProgress } from "../shared/api.ts";
+import {
+  IPC,
+  type ExportProgress,
+  type FeldspurApi,
+  type ImportProgress,
+  type OriginalsProgress,
+} from "../shared/api.ts";
 
 const api: FeldspurApi = {
   newProject: () => ipcRenderer.invoke(IPC.newProject),
@@ -16,6 +22,12 @@ const api: FeldspurApi = {
   getSession: (id) => ipcRenderer.invoke(IPC.getSession, id),
   pickFiles: () => ipcRenderer.invoke(IPC.pickFiles),
   importPaths: (id, paths) => ipcRenderer.invoke(IPC.importPaths, id, paths),
+  cancelImport: (id) => ipcRenderer.invoke(IPC.cancelImport, id),
+  onImportProgress: (cb) => {
+    const listener = (_e: unknown, p: ImportProgress) => cb(p);
+    ipcRenderer.on(IPC.importProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.importProgress, listener);
+  },
   setReference: (id) => ipcRenderer.invoke(IPC.setReference, id),
   setDeviceUtc: (id, utc) => ipcRenderer.invoke(IPC.setDeviceUtc, id, utc),
   setDeviceTimeZone: (id, tz) => ipcRenderer.invoke(IPC.setDeviceTimeZone, id, tz),

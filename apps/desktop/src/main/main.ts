@@ -20,9 +20,11 @@ import {
   refineAlignment,
   parseTranscript,
   readPeaks,
+  ScanCache,
   scanPaths,
   setToolPaths,
   TRANSCRIPT_EXTENSIONS,
+  type ScanProgress,
 } from "@feldspur/media";
 import {
   IPC,
@@ -32,7 +34,7 @@ import {
   type PageNumberingInput,
   type DiaryPatch,
   type Region,
-  type ImportOutcome,
+  type ImportResult,
   type TimeInput,
   type NewSessionInput,
   type SessionPatch,
@@ -60,14 +62,7 @@ import {
   setPageNumbering,
   toggleEvidence,
 } from "./edits.ts";
-import {
-  exportRunning,
-  exportStatus,
-  montagePlan,
-  previewExport,
-  registerOverlayBridge,
-  runExport,
-} from "./export.ts";
+import { exportRunning, exportStatus, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
@@ -81,6 +76,10 @@ import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 import { AUTO_BACKUP_CHECK_MS, AutoBackup } from "./backup.ts";
 
 let store: ProjectStore | null = null;
+/** Laufendes Einsammeln je Einsatz, zum Abbrechen. */
+const importing = new Map<string, AbortController>();
+/** Schon vollständig gelesene Dateien: Ein zweiter Versuch nach einem Abbruch muss sie nicht erneut lesen. */
+const scanCache = new ScanCache();
 let win: BrowserWindow | null = null;
 const autoBackup = new AutoBackup();
 /** Zuletzt gescheitertes Öffnen: dort sucht „Sicherung als Kopie öffnen…“ zuerst nach Sicherungen. */
@@ -374,9 +373,38 @@ function registerIpc(): void {
     return r.canceled ? [] : r.filePaths;
   });
 
-  ipcMain.handle(IPC.importPaths, async (_e, sessionId: string, paths: string[]): Promise<ImportOutcome> => {
+  ipcMain.handle(IPC.cancelImport, (_e, sessionId: string) => {
+    importing.get(sessionId)?.abort();
+  });
+  ipcMain.handle(IPC.importPaths, async (e, sessionId: string, paths: string[]): Promise<ImportResult> => {
     const s = requireStore();
-    const plan = await scanPaths(paths);
+    if (importing.has(sessionId)) throw new Error("In diesen Einsatz wird schon eingesammelt.");
+    const ctrl = new AbortController();
+    importing.set(sessionId, ctrl);
+    const skipped: { fileName: string; message: string }[] = [];
+    let last: ScanProgress | null = null;
+    let plan;
+    try {
+      plan = await scanPaths(paths, {
+        signal: ctrl.signal,
+        cache: scanCache,
+        onSkipped: (path, message) => skipped.push({ fileName: basename(path), message }),
+        onProgress: (p) => {
+          last = p;
+          if (!e.sender.isDestroyed()) e.sender.send(IPC.importProgress, { sessionId, ...p });
+        },
+      });
+    } catch (err) {
+      // Abgebrochen: Es wurde nichts ins Projekt geschrieben; Gelesenes merkt sich scanCache für den nächsten Versuch.
+      if (ctrl.signal.aborted) {
+        const p = last as ScanProgress | null;
+        return { cancelled: { read: p?.phase === "reading" ? p.done : 0, total: p?.total ?? 0 } };
+      }
+      throw err;
+    } finally {
+      importing.delete(sessionId);
+    }
+    if (store !== s) throw new Error("Das Projekt wurde während des Einsammelns gewechselt. Nichts übernommen.");
     const res = applyImport(s, sessionId, plan);
     linkFollowUps(s, sessionId);
     // Wer verschobene Originale erneut einsammelt, verknüpft sie damit neu (gleiche Prüfsumme = gleiche Datei).
@@ -388,7 +416,7 @@ function registerIpc(): void {
       added: res.sources.length,
       duplicates: res.duplicates.length - relinked,
       relinked,
-      warnings: plan.flatMap((c) => c.warnings.map((message) => ({ fileName: c.fileName, message }))),
+      warnings: [...skipped, ...plan.flatMap((c) => c.warnings.map((message) => ({ fileName: c.fileName, message })))],
       view: buildSessionView(s, sessionId),
     };
   });

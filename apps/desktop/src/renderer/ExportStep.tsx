@@ -3,13 +3,7 @@
  * Begleitprotokoll.
  */
 import { useEffect, useState } from "react";
-import type {
-  ExportStatus,
-  OriginalsCheck,
-  OriginalsProgress,
-  ScaffoldPreview,
-  SessionView,
-} from "../shared/api.ts";
+import type { ExportStatus, OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";

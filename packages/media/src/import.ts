@@ -32,24 +32,121 @@ export interface ImportCandidate {
   warnings: string[];
 }
 
-export interface ScanOptions {
-  onProgress?: (done: number, total: number, path: string) => void;
+/** Stand beim Einsammeln, für Fortschrittsbalken und Restzeit. */
+export interface ScanProgress {
+  /** Erst Dateien suchen (Anzahl wächst), dann jede lesen und prüfen. */
+  phase: "listing" | "reading";
+  /** Fertig gelesene Dateien. */
+  done: number;
+  /** Beim Suchen: bisher gefunden. Beim Lesen: alle. */
+  total: number;
+  /** Gelesene Bytes aller Dateien (Prüfsummen dominieren die Dauer). */
+  bytesDone: number;
+  bytesTotal: number;
+  /** Datei, die gerade gelesen wird (leer, wenn fertig). */
+  path: string;
+  /** Davon aus einem früheren, abgebrochenen Versuch übernommen, ohne neu zu lesen. */
+  reused: number;
+  /** Bytes dieser übernommenen Dateien (zählen für die Restzeit nicht als gelesen). */
+  bytesReused: number;
 }
 
-async function walk(path: string, out: string[]): Promise<void> {
-  const st = await stat(path);
-  if (st.isDirectory()) {
-    const entries = (await readdir(path)).sort((a, b) => a.localeCompare(b));
-    for (const e of entries) if (!isIgnored(e)) await walk(join(path, e), out);
-  } else if (st.isFile() && !isIgnored(basename(path))) {
-    out.push(resolve(path));
+export interface ScanOptions {
+  onProgress?: (p: ScanProgress) => void;
+  /** Abbrechen: scanPaths wirft dann einen AbortError und gibt nichts zurück. */
+  signal?: AbortSignal;
+  /** Schon vollständig gelesene Dateien; ein zweiter Versuch übernimmt sie, solange sie unverändert sind. */
+  cache?: ScanCache;
+  /**
+   * Eine Datei oder ein Ordner ließ sich nicht lesen. Ohne diesen Rückruf bricht das ganze Einsammeln ab; mit ihm
+   * wird die Datei übersprungen und der Grund gemeldet.
+   */
+  onSkipped?: (path: string, message: string) => void;
+}
+
+interface Listed {
+  path: string;
+  size: number;
+  mtimeMs: number;
+}
+
+const stampKey = (f: Listed) => `${f.path}|${f.size}|${f.mtimeMs}`;
+
+/**
+ * Ergebnisse vollständig gelesener Dateien, je Pfad, Größe und Änderungszeit. Ändert sich die Datei, passt der
+ * Schlüssel nicht mehr und sie wird neu gelesen. Liegt im Speicher, nicht im Projekt.
+ */
+export class ScanCache {
+  private readonly known = new Map<string, ImportCandidate>();
+  get(f: Listed): ImportCandidate | undefined {
+    return this.known.get(stampKey(f));
+  }
+  set(f: Listed, c: ImportCandidate): void {
+    this.known.set(stampKey(f), c);
+  }
+  get size(): number {
+    return this.known.size;
   }
 }
 
+const errText = (e: unknown) => {
+  const code = (e as NodeJS.ErrnoException).code;
+  if (code === "ENOENT") return "nicht gefunden";
+  if (code === "EACCES" || code === "EPERM") return "keine Leserechte";
+  return (e as Error).message.split("\n")[0] ?? String(e);
+};
+
+async function walk(path: string, out: Listed[], opts: ScanOptions, found: () => void): Promise<void> {
+  opts.signal?.throwIfAborted();
+  let st;
+  try {
+    st = await stat(path);
+  } catch (e) {
+    if (!opts.onSkipped) throw e;
+    opts.onSkipped(path, `übersprungen: ${errText(e)}`);
+    return;
+  }
+  if (st.isDirectory()) {
+    let entries: string[];
+    try {
+      entries = (await readdir(path)).sort((a, b) => a.localeCompare(b));
+    } catch (e) {
+      if (!opts.onSkipped) throw e;
+      opts.onSkipped(path, `Ordner übersprungen: ${errText(e)}`);
+      return;
+    }
+    for (const e of entries) if (!isIgnored(e)) await walk(join(path, e), out, opts, found);
+  } else if (st.isFile() && !isIgnored(basename(path))) {
+    out.push({ path: resolve(path), size: st.size, mtimeMs: st.mtimeMs });
+    found();
+  }
+}
+
+async function listWithStats(paths: string[], opts: ScanOptions = {}): Promise<Listed[]> {
+  const out: Listed[] = [];
+  let last = 0;
+  const found = () => {
+    const now = Date.now();
+    if (now - last < 150) return;
+    last = now;
+    opts.onProgress?.({
+      phase: "listing",
+      done: 0,
+      total: out.length,
+      bytesDone: 0,
+      bytesTotal: 0,
+      path: out.at(-1)?.path ?? "",
+      reused: 0,
+      bytesReused: 0,
+    });
+  };
+  for (const p of paths) await walk(p, out, opts, found);
+  const seen = new Set<string>();
+  return out.filter((f) => !seen.has(f.path) && !!seen.add(f.path));
+}
+
 export async function listFiles(paths: string[]): Promise<string[]> {
-  const out: string[] = [];
-  for (const p of paths) await walk(p, out);
-  return [...new Set(out)];
+  return (await listWithStats(paths)).map((f) => f.path);
 }
 
 const KIND_DEVICE: Partial<Record<SourceKind, string>> = {
@@ -91,7 +188,10 @@ function deviceGuess(
   return { key: `family:${family.toLowerCase()}`, label: prefix ? `${base} ${prefix}` : base };
 }
 
-export async function inspectFile(path: string): Promise<ImportCandidate> {
+export async function inspectFile(
+  path: string,
+  opts: { signal?: AbortSignal; onBytes?: (bytes: number) => void } = {},
+): Promise<ImportCandidate> {
   const fileName = basename(path);
   const st = await stat(path);
   const warnings: string[] = [];
@@ -101,10 +201,11 @@ export async function inspectFile(path: string): Promise<ImportCandidate> {
 
   if (kind === "video" || kind === "audio") {
     try {
-      probe = await probeMedia(path);
+      probe = await probeMedia(path, { signal: opts.signal });
       if (kind === "video" && !probe.hasVideo && probe.hasAudio) kind = "audio";
       if (probe.durationMs === null) warnings.push("Länge nicht lesbar");
     } catch (e) {
+      opts.signal?.throwIfAborted();
       warnings.push(`ffprobe: ${(e as Error).message.split("\n")[0]}`);
     }
   } else if (kind === "photo" || kind === "diary") {
@@ -129,7 +230,7 @@ export async function inspectFile(path: string): Promise<ImportCandidate> {
     path,
     fileName,
     sizeBytes: st.size,
-    sha256: await sha256File(path),
+    sha256: await sha256File(path, opts),
     kind,
     durationMs: kind === "video" || kind === "audio" ? (probe?.durationMs ?? null) : null,
     metadata,
@@ -140,15 +241,57 @@ export async function inspectFile(path: string): Promise<ImportCandidate> {
   };
 }
 
-/** Dateien und Ordner einsammeln. Liest nur, verändert nichts. */
+/**
+ * Dateien und Ordner einsammeln. Liest nur, verändert nichts: Ein Abbruch (signal) hinterlässt nichts, und erst
+ * applyImport schreibt ins Projekt, in einem Rutsch.
+ */
 export async function scanPaths(paths: string[], opts: ScanOptions = {}): Promise<ImportCandidate[]> {
-  const files = await listFiles(paths);
+  const files = await listWithStats(paths, opts);
+  const bytesTotal = files.reduce((n, f) => n + f.size, 0);
   const out: ImportCandidate[] = [];
+  let bytesDone = 0;
+  let reused = 0;
+  let bytesReused = 0;
+  let last = 0;
+  const report = (done: number, path: string, extra = 0, force = false) => {
+    const now = Date.now();
+    if (!force && now - last < 150) return;
+    last = now;
+    opts.onProgress?.({
+      phase: "reading",
+      done,
+      total: files.length,
+      bytesDone: bytesDone + extra,
+      bytesTotal,
+      path,
+      reused,
+      bytesReused,
+    });
+  };
   for (const [i, f] of files.entries()) {
-    opts.onProgress?.(i, files.length, f);
-    out.push(await inspectFile(f));
+    opts.signal?.throwIfAborted();
+    const known = opts.cache?.get(f);
+    if (known) {
+      out.push(known);
+      reused++;
+      bytesReused += f.size;
+      bytesDone += f.size;
+      report(i + 1, f.path);
+      continue;
+    }
+    report(i, f.path, 0, true);
+    try {
+      const c = await inspectFile(f.path, { signal: opts.signal, onBytes: (b) => report(i, f.path, b) });
+      opts.cache?.set(f, c);
+      out.push(c);
+    } catch (e) {
+      opts.signal?.throwIfAborted();
+      if (!opts.onSkipped) throw e;
+      opts.onSkipped(f.path, `übersprungen: ${errText(e)}`);
+    }
+    bytesDone += f.size;
   }
-  opts.onProgress?.(files.length, files.length, "");
+  report(files.length, "", 0, true);
   return out;
 }
 
