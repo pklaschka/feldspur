@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { isEnter } from "../src/renderer/keys.js";
 
 const key = (k: string, isComposing = false) => ({ key: k, nativeEvent: { isComposing } }) as unknown as KeyboardEvent;
