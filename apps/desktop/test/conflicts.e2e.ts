@@ -113,6 +113,8 @@ try {
   await panel.getByText(/Dasselbe bei 2 weiteren Dateien/).waitFor();
   await panel.getByTestId("conflict-cause").waitFor();
   await shot("gruppe");
+  await panel.getByRole("button", { name: /Für alle 3 gleich entscheiden/ }).click();
+  await shot("gruppe-alle");
   await panel.getByTestId("group-decide").getByRole("button").first().click();
   await page.getByTestId("conflict-decided").waitFor();
   // Rückgängig wird angeboten.
