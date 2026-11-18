@@ -1,4 +1,5 @@
 import type { SourceKind } from "@feldspur/core/model";
+import type { SourceRow } from "../shared/api.ts";
 import { formatClock, formatDuration } from "@feldspur/core/time";
 
 export const KIND_LABEL: Record<SourceKind, string> = {
@@ -72,6 +73,45 @@ export function clock(ms: number): string {
 export function formatDay(date: string): string {
   const [, m, d] = date.split("-");
   return `${d}.${m}.`;
+}
+
+/** „2026-09-14“ → „14.09.2026“. */
+export function formatDate(date: string): string {
+  return date.split("-").reverse().join(".");
+}
+
+/** Heutiges Datum am Rechner („JJJJ-MM-TT“), nach der lokalen Uhr; `toISOString()` gäbe nach Mitternacht den Vortag. */
+export function localDate(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+type DayRow = Pick<SourceRow, "startMs" | "evidence" | "decision">;
+
+/** Stammt die Lage aus Datei-Metadaten oder Dateiname (nicht von Hand, nicht angesagt, nicht abgeleitet)? */
+function fromFile(r: DayRow): boolean {
+  if (r.startMs === null) return false;
+  const chosen = r.evidence.find((e) => e.chosen && !e.derived);
+  if (!chosen) return false;
+  const kind = chosen.kind === "checked" ? (r.decision?.basisKind ?? "") : chosen.kind;
+  return kind === "metadata" || kind === "filename";
+}
+
+/**
+ * Häufigster Kalendertag der Startzeiten von Quellen, deren Zeit aus Metadaten oder Dateiname stammt. Die Zeiten
+ * sind schon Ortszeit des Einsatzes, der Tag ist also ihr Datum. Bei Gleichstand gewinnt der frühere Tag.
+ * `days` zählt die verschiedenen Tage; null, wenn keine Quelle in Frage kommt.
+ */
+export function dominantDay(rows: DayRow[]): { day: string; count: number; days: number } | null {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    if (!fromFile(r)) continue;
+    const day = new Date(r.startMs!).toISOString().slice(0, 10);
+    counts.set(day, (counts.get(day) ?? 0) + 1);
+  }
+  let best: [string, number] | null = null;
+  for (const e of counts) if (!best || e[1] > best[1] || (e[1] === best[1] && e[0] < best[0])) best = e;
+  return best ? { day: best[0], count: best[1], days: counts.size } : null;
 }
 
 /** "10:15" */

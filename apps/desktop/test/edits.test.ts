@@ -9,6 +9,8 @@ import {
   confirmPlacement,
   decideMany,
   decidePlacement,
+  parseClock,
+  parseClockOnDate,
   parseMediaPos,
   removeEvidence,
   replaceAnchor,
@@ -503,5 +505,29 @@ describe("Widerspruch entscheiden", () => {
     const after = buildSessionView(store, session.id);
     expect(after.conflictGroups).toHaveLength(0);
     for (const id of ids) expect(row(session.id, id).conflict.state).toBe("decided");
+  });
+});
+
+describe("Uhrzeiten prüfen", () => {
+  it("zerlegt gültige Eingaben", () => {
+    expect(parseClock("9:05")).toEqual({ h: 9, mi: 5, se: 0 });
+    expect(parseClock(" 23.59.59 ")).toEqual({ h: 23, mi: 59, se: 59 });
+    expect(parseClock("00:00")).toEqual({ h: 0, mi: 0, se: 0 });
+  });
+
+  it("weist Werte außerhalb des Bereichs mit verständlichem Fehler ab", () => {
+    expect(() => parseClock("99:99")).toThrow("„99:99“ ist keine gültige Uhrzeit (hh:mm oder hh:mm:ss).");
+    expect(() => parseClock("24:00")).toThrow("keine gültige Uhrzeit");
+    expect(() => parseClock("12:60")).toThrow("keine gültige Uhrzeit");
+    expect(() => parseClock("12:30:60")).toThrow("keine gültige Uhrzeit");
+    expect(() => parseClock("abc")).toThrow("„abc“ ist keine gültige Uhrzeit");
+  });
+
+  it("erlaubt für Randnotizen keine Sekunden", () => {
+    expect(parseClock("10:15", { seconds: false })).toEqual({ h: 10, mi: 15, se: 0 });
+    expect(() => parseClock("10:15:30", { seconds: false })).toThrow("„10:15:30“ ist keine gültige Uhrzeit (hh:mm).");
+    expect(() => parseClockOnDate("2024-05-01", "99:99", { seconds: false })).toThrow(
+      "„99:99“ ist keine gültige Uhrzeit (hh:mm).",
+    );
   });
 });

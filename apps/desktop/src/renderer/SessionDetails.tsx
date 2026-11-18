@@ -5,7 +5,7 @@
 import { Dialog } from "radix-ui";
 import { useState, type FormEvent } from "react";
 import type { SessionPatch, SessionView } from "../shared/api.ts";
-import { Button, CloseButton } from "./ui.tsx";
+import { Button, CloseButton, ErrorBanner } from "./ui.tsx";
 
 const ZONES: string[] = (() => {
   try {
@@ -80,6 +80,7 @@ export function SessionDetails({
             <span className="flex-1" />
             <CloseButton onClick={() => onOpenChange(false)} />
           </div>
+          <ErrorBanner dialog className="mb-3" />
           <form className="grid gap-3.5" onSubmit={(e) => void submit(e)}>
             <label className={label}>
               Titel

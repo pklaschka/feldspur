@@ -82,17 +82,22 @@ export function searchItems(view: SessionView): Hit[] {
   return items.sort((a, b) => (a.clockMs ?? Infinity) - (b.clockMs ?? Infinity));
 }
 
+/** Höchstzahl der angezeigten Treffer. */
+export const SEARCH_LIMIT = 60;
+
 /** Treffer für eine Anfrage; Uhrzeiten wie „10:15“ finden auch alles, was um diese Zeit liegt. */
-export function search(items: Hit[], query: string, limit = 60): Hit[] {
+export function search(items: Hit[], query: string, limit = SEARCH_LIMIT): { hits: Hit[]; total: number } {
   const terms = fold(query).split(/\s+/).filter(Boolean);
-  if (!terms.length) return [];
-  const out: Hit[] = [];
+  if (!terms.length) return { hits: [], total: 0 };
+  const hits: Hit[] = [];
+  let total = 0;
   for (const it of items) {
     const hay = fold(`${it.title} ${it.text} ${it.clockMs === null ? "" : formatClock(it.clockMs)}`);
-    if (terms.every((t) => hay.includes(t))) out.push(it);
-    if (out.length >= limit) break;
+    if (!terms.every((t) => hay.includes(t))) continue;
+    total++;
+    if (hits.length < limit) hits.push(it);
   }
-  return out;
+  return { hits, total };
 }
 
 /** Text in Stücke teilen, Treffer markiert (für die Anzeige). */

@@ -7,7 +7,6 @@ import {
   checkProjectFile,
   copyProjectFile,
   listBackups,
-  localMs,
   nextBackupPath,
   ProjectStore,
   fileStamp,
@@ -53,6 +52,7 @@ import {
   confirmPlacement,
   decideMany,
   decidePlacement,
+  parseClockOnDate,
   kindHolds,
   kindName,
   type DecideInput,
@@ -513,7 +513,9 @@ function registerIpc(): void {
         path = r.filePaths[0];
       }
       const lines = parseTranscript(await readFile(path, "utf8"), basename(path));
-      const r = importLines(s, sourceId, lines, opts.mode);
+      // Nur der schreibende Teil ist ein Schritt für Rückgängig; Dateidialog und Parsen liegen davor.
+      const label = opts.mode === "replace" ? "Mitschrift ersetzt" : "Transkript importiert";
+      const r = s.history.record(label, () => importLines(s, sourceId, lines, opts.mode));
       return { view: buildSessionView(s, r.sessionId), count: r.count, dropped: r.dropped };
     },
   );
@@ -797,13 +799,7 @@ function setDiaryNote(s: ProjectStore, sourceId: string, clock: string): string 
   if (src.kind !== "diary") throw new Error("Keine Tagebuchseite");
   const session = s.getSession(src.sessionId);
   const entries = s.listDiaryEntries(session.id).filter((e) => e.regions.some((r) => r.sourceId === sourceId));
-  const m = /^(\d{1,2})[:.](\d{2})$/.exec(clock.trim());
-  let notedAtMs: number | null = null;
-  if (clock.trim()) {
-    if (!m) throw new Error(`Uhrzeit bitte als hh:mm, nicht „${clock}“`);
-    const [y, mo, d] = session.date.split("-").map(Number) as [number, number, number];
-    notedAtMs = localMs(y, mo, d, Number(m[1]), Number(m[2]));
-  }
+  const notedAtMs = clock.trim() ? parseClockOnDate(session.date, clock, { seconds: false }) : null;
   const first = entries[0];
   if (first) s.updateDiaryEntry(first.id, { notedAtMs });
   else if (notedAtMs !== null) s.addDiaryEntry({ sessionId: session.id, regions: [{ sourceId }], notedAtMs });
