@@ -18,6 +18,7 @@ import {
   timestamp,
 } from "@feldspur/media";
 import { IPC, type ExportOutcome, type ScaffoldPreview } from "../shared/api.ts";
+import { exportBlocker } from "./originals.ts";
 
 const CHUNK = 60;
 let running: string | null = null;
@@ -111,6 +112,8 @@ export async function runExport(
 ): Promise<ExportOutcome> {
   // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
+  const blocked = exportBlocker(s, sessionId, opts.video);
+  if (blocked) throw new Error(blocked);
   running = sessionId;
   try {
     const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(s, sessionId, opts.realtime))));

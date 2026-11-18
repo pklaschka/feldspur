@@ -289,6 +289,7 @@ export class ProjectStore {
         | "levelCompress"
         | "firstPage"
         | "pageSpread"
+        | "originalPath"
       >
     >,
   ): Source {

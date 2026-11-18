@@ -3,13 +3,14 @@
  * Begleitprotokoll.
  */
 import { useEffect, useState } from "react";
-import type { ScaffoldPreview, SessionView } from "../shared/api.ts";
+import type { OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
 import { ScaffoldLine } from "./ScaffoldLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
+import { FILE_STATE_TEXT, progressText } from "./Originals.tsx";
 import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -46,7 +47,22 @@ function loadOptions(): Options {
  */
 const exportedWith = new Map<string, string>();
 
-export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) => void }) {
+/** Prüfung der Originale vor einer Ausgabe: läuft, oder hat etwas gefunden (dann entscheidet die Person). */
+type PreCheck =
+  | { phase: "running"; progress: OriginalsProgress | null }
+  | { phase: "found"; result: OriginalsCheck; video: boolean; paths: string };
+
+export function ExportStep({
+  view,
+  onGo,
+  onView,
+  onOriginals,
+}: {
+  view: SessionView;
+  onGo: (t: Todo) => void;
+  onView: (v: SessionView) => void;
+  onOriginals: () => void;
+}) {
   const [preview, setPreview] = useState<ScaffoldPreview | null>(null);
   const [opts, setOpts] = useState(loadOptions);
   const set = (patch: Partial<Options>) =>
@@ -81,9 +97,36 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
       live = false;
     };
   }, [view, sessionId, realtime]);
-  const run = () => {
+  const [pre, setPre] = useState<PreCheck | null>(null);
+  useEffect(
+    () =>
+      api.onOriginalsProgress(
+        (p) => p.sessionId === sessionId && setPre((old) => (old?.phase === "running" ? { ...old, progress: p } : old)),
+      ),
+    [sessionId],
+  );
+  // Ein Ergebnis gilt nur für die Einstellung (mit/ohne Video) und die Pfade, mit denen geprüft wurde.
+  const paths = view.rows.map((r) => r.originalPath).join("\n");
+  const found = pre?.phase === "found" && pre.video === video && pre.paths === paths ? pre : null;
+  const running = pre?.phase === "running" ? pre : null;
+  const start = () => {
+    setPre(null);
     if (preview) exportedWith.set(sessionId, preview.lines.join("\n"));
     ex.start(sessionId, { video, resolve, mixAudio, realtime });
+  };
+  /** Erst die Originale prüfen (Prüfsummen schon geprüfter Dateien merkt sich die App), dann ausgeben. */
+  const run = async () => {
+    setPre({ phase: "running", progress: null });
+    let result: OriginalsCheck;
+    try {
+      result = await api.checkOriginals(sessionId, video);
+    } catch {
+      setPre(null);
+      return start(); // Prüfen ging nicht: die Ausgabe meldet selbst, was fehlt.
+    }
+    void api.getSession(sessionId).then(onView, () => {});
+    if (!result.blocking.length && !result.warnings.length) return start();
+    setPre({ phase: "found", result, video, paths });
   };
   const before = exportedWith.get(sessionId);
   const stale = !!result && !!preview && before !== undefined && before !== preview.lines.join("\n");
@@ -170,7 +213,7 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
                   <p className="text-[0.9rem] text-warn">
                     Seit dieser Ausgabe hat sich etwas geändert. Nur Geändertes wird neu gerechnet.
                   </p>
-                  <Button size="sm" disabled={!!ex.job} onClick={run}>
+                  <Button size="sm" disabled={!!ex.job || !!running || !!found} onClick={() => void run()}>
                     Erneut ausgeben…
                   </Button>
                 </div>
@@ -262,10 +305,24 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
                 <TodoList items={open} onGo={onGo} />
               </section>
             )}
+            {found && (
+              <PreCheckResult
+                view={view}
+                result={found.result}
+                onOriginals={onOriginals}
+                onContinue={start}
+                onCancel={() => setPre(null)}
+              />
+            )}
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <Button variant="primary" disabled={!!ex.job || empty} onClick={run}>
-                {busy ? "Gibt aus…" : open.length ? "Trotzdem ausgeben…" : "Ausgeben…"}
+              <Button variant="primary" disabled={!!ex.job || empty || !!running || !!found} onClick={() => void run()}>
+                {busy ? "Gibt aus…" : running ? "Prüft Originale…" : open.length ? "Trotzdem ausgeben…" : "Ausgeben…"}
               </Button>
+              {running && (
+                <span className="text-[0.85rem] text-muted tabular-nums" data-testid="export-precheck">
+                  {progressText(running.progress)}
+                </span>
+              )}
               {empty && <span className="text-[0.9rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
               {elsewhere && (
                 <span className="text-[0.9rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>
@@ -286,6 +343,81 @@ export function ExportStep({ view, onGo }: { view: SessionView; onGo: (t: Todo) 
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Was die Prüfung der Originale gefunden hat. Fehlt eine Datei, die die Ausgabe braucht, geht es nicht weiter;
+ * Veränderungen und fehlende, aber nicht gebrauchte Dateien lassen sich bewusst übergehen.
+ */
+function PreCheckResult({
+  view,
+  result,
+  onOriginals,
+  onContinue,
+  onCancel,
+}: {
+  view: SessionView;
+  result: OriginalsCheck;
+  onOriginals: () => void;
+  onContinue: () => void;
+  onCancel: () => void;
+}) {
+  const byId = new Map(view.rows.map((r) => [r.id, r]));
+  const detail = new Map(result.checks.map((c) => [c.sourceId, c]));
+  const line = (id: string) => {
+    const r = byId.get(id);
+    const c = detail.get(id);
+    return (
+      <li key={id}>
+        <b className="font-mono font-semibold">{r?.label ?? "?"}</b> {r?.fileName}:{" "}
+        {c ? `${FILE_STATE_TEXT[c.state]} (${c.detail})` : ""}
+      </li>
+    );
+  };
+  const blocked = result.blocking.length > 0;
+  return (
+    <section
+      className="mt-5 rounded-lg bg-warn-soft px-3 py-2.5 text-[0.9rem]"
+      role="alert"
+      data-testid="export-originals"
+    >
+      {blocked ? (
+        <>
+          <b className="block font-semibold text-bad">
+            {result.blocking.length === 1
+              ? "Eine Originaldatei fehlt, ohne sie geht die Ausgabe nicht"
+              : `${result.blocking.length} Originaldateien fehlen, ohne sie geht die Ausgabe nicht`}
+          </b>
+          <ul className="my-1 grid gap-0.5 text-[0.86rem]">{result.blocking.map(line)}</ul>
+        </>
+      ) : null}
+      {result.warnings.length > 0 && (
+        <>
+          <b className={`block font-semibold text-warn ${blocked ? "mt-2" : ""}`}>
+            {blocked ? "Außerdem" : "Auffällig, die Ausgabe geht trotzdem"}
+          </b>
+          <ul className="my-1 grid gap-0.5 text-[0.86rem]">{result.warnings.map(line)}</ul>
+          <p className="text-[0.84rem] text-muted">
+            Verändert heißt: Die Datei ist nicht mehr die beim Einsammeln. Das Begleitprotokoll nennt die Prüfsumme vom
+            Einsammeln.
+          </p>
+        </>
+      )}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button size="sm" variant={blocked ? "primary" : "default"} onClick={onOriginals}>
+          Originale suchen…
+        </Button>
+        {!blocked && (
+          <Button size="sm" onClick={onContinue} data-testid="export-anyway">
+            Trotzdem ausgeben
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          Abbrechen
+        </Button>
+      </div>
+    </section>
   );
 }
 

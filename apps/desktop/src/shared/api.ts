@@ -11,7 +11,7 @@ import type {
   PlacementStatus,
   SourceKind,
 } from "@feldspur/core";
-import type { MontagePreview, ScaffoldKind } from "@feldspur/media";
+import type { FileCheck, FileState, MontagePreview, ScaffoldKind } from "@feldspur/media";
 
 export interface RecentProject {
   path: string;
@@ -56,6 +56,10 @@ export interface SourceRow {
   sizeBytes: number;
   sha256: string;
   originalPath: string;
+  /** Zustand der Originaldatei (schnell geprüft: da, Größe, schon gerechnete Prüfsumme). */
+  file: FileState;
+  /** Zustand in Worten, z. B. „Datei nicht gefunden“. */
+  fileDetail: string;
   /** ± Unsicherheit der Lage in ms. */
   uncertaintyMs: number | null;
   /** Alle Zeitbelege, der gewählte zuerst. */
@@ -364,6 +368,8 @@ export interface ScaffoldPreview {
 export interface ImportOutcome {
   added: number;
   duplicates: number;
+  /** Davon: schon vorhanden, Original fehlte, jetzt mit der neuen Datei verknüpft. */
+  relinked: number;
   warnings: { fileName: string; message: string }[];
   view: SessionView;
 }
@@ -393,6 +399,35 @@ export interface HistoryTarget {
   sourceId: string;
   /** Stelle in der Datei (Mitschrift, Notiz). */
   atMs?: number;
+}
+
+/** Ergebnis einer vollständigen Prüfung der Originale (Existenz, Größe, SHA-256). */
+export interface OriginalsCheck {
+  checks: FileCheck[];
+  /** Quellen-Ids, ohne die die Ausgabe nicht geht (fehlt, nicht lesbar). */
+  blocking: string[];
+  /** Quellen-Ids mit Auffälligkeiten, die die Ausgabe nicht verhindern (verändert, fehlt, wird aber nicht gebraucht). */
+  warnings: string[];
+}
+
+/** Ergebnis der Suche nach fehlenden Originalen in einem Ordner. */
+export interface OriginalsSearch {
+  relinked: { label: string; path: string }[];
+  /** Gleichnamige Dateien, die nicht passen. */
+  rejected: { label: string; path: string; reason: string }[];
+  /** Kurzzeichen der Quellen, die weiter fehlen. */
+  stillOpen: string[];
+  scanned: number;
+  truncated: boolean;
+}
+
+export interface OriginalsProgress {
+  sessionId: string;
+  phase: "prüfen" | "suchen";
+  done: number;
+  /** 0 = unbekannt (beim Durchsuchen eines Ordners). */
+  total: number;
+  fileName: string;
 }
 
 export interface HistoryResult {
@@ -535,6 +570,16 @@ export interface FeldspurApi {
   exportChangeLog(): Promise<string | null>;
   /** Pfad einer per Drag & Drop abgelegten Datei. */
   pathForFile(file: File): string;
+  /**
+   * Alle Originale eines Einsatzes prüfen: da, Größe und SHA-256 wie beim Einsammeln. video = mit Montagevideo
+   * (dann sperren auch fehlende Ton- und Videodateien die Ausgabe).
+   */
+  checkOriginals(sessionId: string, video: boolean): Promise<OriginalsCheck>;
+  /** Ordner wählen und dort fehlende Originale suchen; nur mit passender Prüfsumme verknüpft. null = abgebrochen. */
+  searchOriginals(sessionId: string): Promise<{ view: SessionView; result: OriginalsSearch } | null>;
+  /** Datei für eine Quelle wählen; nur mit passender Prüfsumme verknüpft, sonst Fehler. null = abgebrochen. */
+  relinkOriginal(sourceId: string): Promise<SessionView | null>;
+  onOriginalsProgress(cb: (p: OriginalsProgress) => void): () => void;
 }
 
 /** Eigenes Protokoll, über das die Oberfläche Originalbilder anzeigen darf (nur lesend, nur Fotos/Scans). */
@@ -610,4 +655,8 @@ export const IPC = {
   stillRequest: "still:request",
   stillReply: "still:reply",
   showInFolder: "shell:show-in-folder",
+  checkOriginals: "originals:check",
+  searchOriginals: "originals:search",
+  relinkOriginal: "originals:relink",
+  originalsProgress: "originals:progress",
 } as const;

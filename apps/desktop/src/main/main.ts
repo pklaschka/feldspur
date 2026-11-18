@@ -54,6 +54,7 @@ import { addNote, deleteNote, updateNote } from "./notes.ts";
 import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
 import { addEpisodeAround, moveEpisodeEdge, timelineEnvelopes } from "./episodes.ts";
 import { buildSessionView } from "./view.ts";
+import { checkOriginals, relinkDuplicates, relinkFile, searchOriginals, unreachableForAnalysis } from "./originals.ts";
 import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 
 let store: ProjectStore | null = null;
@@ -247,9 +248,15 @@ function registerIpc(): void {
     const plan = await scanPaths(paths);
     const res = applyImport(s, sessionId, plan);
     linkFollowUps(s, sessionId);
+    // Wer verschobene Originale erneut einsammelt, verknüpft sie damit neu (gleiche Prüfsumme = gleiche Datei).
+    const relinked = relinkDuplicates(
+      s,
+      res.duplicates.map((d) => ({ path: d.candidate.path, existing: d.existing })),
+    );
     return {
       added: res.sources.length,
-      duplicates: res.duplicates.length,
+      duplicates: res.duplicates.length - relinked,
+      relinked,
       warnings: plan.flatMap((c) => c.warnings.map((message) => ({ fileName: c.fileName, message }))),
       view: buildSessionView(s, sessionId),
     };
@@ -363,6 +370,39 @@ function registerIpc(): void {
     }
     return runExport(s, e.sender, sessionId, parent, opts);
   });
+  ipcMain.handle(IPC.checkOriginals, (e, sessionId: string, video: boolean) =>
+    checkOriginals(requireStore(), sessionId, {
+      video,
+      onProgress: (done, total, fileName) =>
+        e.sender.send(IPC.originalsProgress, { sessionId, phase: "prüfen", done, total, fileName }),
+    }),
+  );
+  ipcMain.handle(IPC.searchOriginals, async (e, sessionId: string) => {
+    const s = requireStore();
+    const r = await dialog.showOpenDialog(win!, {
+      title: "Ordner mit den Originalen wählen",
+      buttonLabel: "Hier suchen",
+      properties: ["openDirectory"],
+    });
+    const dir = r.filePaths[0];
+    if (r.canceled || !dir) return null;
+    const result = await searchOriginals(s, sessionId, dir, (done, phase, fileName) =>
+      e.sender.send(IPC.originalsProgress, { sessionId, phase, done, total: 0, fileName }),
+    );
+    return { view: buildSessionView(s, sessionId), result };
+  });
+  ipcMain.handle(IPC.relinkOriginal, async (_e, sourceId: string) => {
+    const s = requireStore();
+    const src = s.getSource(sourceId);
+    const r = await dialog.showOpenDialog(win!, {
+      title: `Originaldatei für ${src.label} (${src.fileName}) wählen`,
+      defaultPath: existsSync(dirname(src.originalPath)) ? dirname(src.originalPath) : undefined,
+      properties: ["openFile"],
+    });
+    const path = r.filePaths[0];
+    if (r.canceled || !path) return null;
+    return buildSessionView(s, await relinkFile(s, sourceId, path));
+  });
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
   undoable(IPC.setReference, "Referenzuhr gewählt", (_e, deviceId: string) => {
@@ -398,6 +438,7 @@ function registerIpc(): void {
   ipcMain.handle(IPC.analyze, async (e, sessionId: string) => {
     const s = requireStore();
     const r = await analyzeSession(s, sessionId, {
+      skip: unreachableForAnalysis(s, sessionId),
       onProgress: (done, total, fileName) => e.sender.send(IPC.progress, { done, total, fileName }),
     });
     return {

@@ -12,6 +12,7 @@ import { Button, CloseButton, cx, Eyebrow, Glyph, StatusDot, STATUS_TEXT_CLASS }
 import type { InspectorActions } from "./inspector/actions.ts";
 import type { Todo } from "./inspector/status.ts";
 import { Summary } from "./inspector/Summary.tsx";
+import { FILE_STATE_TEXT, needsRelink } from "./Originals.tsx";
 import { Fold, KV } from "./inspector/parts.tsx";
 import { CheckPanel } from "./inspector/CheckPanel.tsx";
 import { DiaryPage } from "./inspector/DiaryPage.tsx";
@@ -135,6 +136,25 @@ function SourceDetails({
           <CloseButton onClick={onClose} />
         </span>
       </div>
+      {needsRelink(row) && (
+        <div
+          className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-[0.86rem]"
+          role="status"
+          data-testid="original-missing"
+        >
+          <p className="text-warn">
+            <b className="font-semibold">Originaldatei {FILE_STATE_TEXT[row.file]}.</b> {row.fileDetail}.
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Button size="sm" onClick={() => actions.relinkOriginal(row.id)}>
+              Datei wählen…
+            </Button>
+            <Button size="sm" variant="ghost" onClick={actions.openOriginals}>
+              Alle Originale…
+            </Button>
+          </div>
+        </div>
+      )}
       {checkFirst && <CheckPanel row={row} view={view} actions={actions} />}
       {(row.kind === "audio" || row.kind === "video") && (
         <>
@@ -242,6 +262,7 @@ function SourceDetails({
               </span>,
               "font-mono",
             ],
+            ["Zustand", FILE_STATE_TEXT[row.file]],
             [
               "Original",
               <span key="p" title={row.originalPath} className="block truncate text-left [direction:rtl]">

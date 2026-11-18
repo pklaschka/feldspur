@@ -5,6 +5,15 @@ eine Uhr ohne Abgleich, steht das unter **Noch offen** mit Links dorthin; der Kn
 Änderst du nach der Ausgabe noch etwas, ist sie als **Veraltet** markiert; **Erneut ausgeben…** rechnet nur das
 Geänderte neu.
 
+Vor jeder Ausgabe prüft Feldspur die Originale mit ihrer Prüfsumme (@sec-originale). Ist alles da und unverändert,
+geht es gleich weiter. Sonst steht da, was auffällt:
+
+- **Fehlt** eine Datei, die die Ausgabe braucht, geht es erst nach dem Neu-Verknüpfen weiter. Gebraucht werden Fotos
+  und Tagebuchseiten (für das Zeitgerüst) und, mit Montagevideo, alle Ton- und Videoaufnahmen.
+- **Verändert** ist eine Datei, wenn sie nicht mehr dieselbe ist wie beim Einsammeln. Mit **Trotzdem ausgeben**
+  geht es bewusst weiter; das Begleitprotokoll nennt weiter die Prüfsumme vom Einsammeln. Ebenso bei fehlenden
+  Dateien, die diese Ausgabe nicht braucht (z. B. Ton ohne Montagevideo).
+
 ![Ausgabe mit Vorschau des Zeitgerüsts](bilder/ausgeben.png){#fig-ausgeben}
 
 ### Zeitgerüst (.docx)

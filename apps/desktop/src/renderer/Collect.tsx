@@ -45,6 +45,8 @@ export function Collect({
     onView(r.view);
     const parts = [`${r.added} ${r.added === 1 ? "Quelle" : "Quellen"} übernommen`];
     if (r.duplicates) parts.push(`${r.duplicates} schon vorhanden`);
+    if (r.relinked)
+      parts.push(`${r.relinked} fehlende ${r.relinked === 1 ? "Originaldatei" : "Originaldateien"} neu verknüpft`);
     setNotice({ text: parts.join(" · "), warnings: r.warnings });
   };
   const onDrop = (e: DragEvent) => {
