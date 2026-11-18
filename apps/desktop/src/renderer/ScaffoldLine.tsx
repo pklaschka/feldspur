@@ -29,7 +29,7 @@ export function ScaffoldLine({ entry: e }: { entry: ScaffoldPreviewEntry }) {
           {line ? " · " : ": "}
         </span>
       )}
-      <span className={e.kind === "card" ? "italic" : ""}>{e.body}</span>
+      <span className={`whitespace-pre-line ${e.kind === "card" ? "italic" : ""}`}>{e.body}</span>
     </li>
   );
 }
