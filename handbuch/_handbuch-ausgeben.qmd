@@ -2,8 +2,21 @@
 
 Im letzten Schritt schreibt Feldspur einen **Ordner pro Einsatz** mit drei Teilen. Ist vorher noch etwas offen, etwa
 eine Uhr ohne Abgleich, steht das unter **Noch offen** mit Links dorthin; der Knopf heißt dann **Trotzdem ausgeben…**.
-Änderst du nach der Ausgabe noch etwas, ist sie als **Veraltet** markiert; **Erneut ausgeben…** rechnet nur das
-Geänderte neu.
+
+Den Stand der letzten Ausgabe merkt sich Feldspur in der Projektdatei, auch über einen Neustart hinweg. Oben im Schritt
+steht dann, wann und wohin ausgegeben wurde, und ob die Ausgabe noch passt:
+
+- **Aktuell**: Einsatz, Originale und Einstellungen sind genau wie bei der Ausgabe.
+- **Veraltet**: Seitdem hat sich etwas geändert. Darunter steht, was: der Einsatz selbst (Zeiten, Mitschrift, Tagebuch,
+  Episoden, Angaben), neue oder entfernte Quellen, veränderte oder fehlende Originale (mit Kurzzeichen) oder andere
+  Einstellungen als damals, z. B. jetzt mit Montagevideo. Machst du eine Änderung rückgängig, ist die Ausgabe wieder
+  aktuell.
+- Fehlen Dateien im **Ausgabeordner**, sind sie durchgestrichen.
+
+![Veraltete Ausgabe nach einem Neustart, mit den Gründen](bilder/ausgeben-veraltet.png){#fig-ausgeben-veraltet}
+
+**Erneut ausgeben…** rechnet nur das Geänderte neu. Feldspur ist dabei vorsichtig: Lieber einmal zu oft „Veraltet“ als
+eine alte Ausgabe, die als aktuell gilt.
 
 Vor jeder Ausgabe prüft Feldspur die Originale mit ihrer Prüfsumme (@sec-originale). Ist alles da und unverändert,
 geht es gleich weiter. Sonst steht da, was auffällt:

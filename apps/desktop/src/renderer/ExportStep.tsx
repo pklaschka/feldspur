@@ -3,7 +3,7 @@
  * Begleitprotokoll.
  */
 import { useEffect, useState } from "react";
-import type { OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
+import type { ExportStatus, OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
@@ -41,11 +41,9 @@ function loadOptions(): Options {
   }
 }
 
-/**
- * Stand des Zeitgerüsts beim Start der letzten Ausgabe je Einsatz. Weicht die Vorschau danach ab, ist das
- * Ergebnis veraltet. Gilt bis zum Neustart; danach fehlt der Vergleich und es gibt keinen Hinweis.
- */
-const exportedWith = new Map<string, string>();
+/** Pfad einer Datei im Ausgabeordner, mit dem Trenner, den der Ordner schon hat (Windows oder sonst). */
+const inDir = (dir: string, name: string) => `${dir}${dir.includes("\\") ? "\\" : "/"}${name}`;
+const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
 /** Prüfung der Originale vor einer Ausgabe: läuft, oder hat etwas gefunden (dann entscheidet die Person). */
 type PreCheck =
@@ -84,8 +82,23 @@ export function ExportStep({
   const busy = ex.job?.sessionId === sessionId;
   const elsewhere = !!ex.job && !busy;
   const progress = busy ? ex.job!.progress : null;
-  const result = busy ? null : (ex.results[sessionId] ?? null);
+  const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
+  const settings = { video, resolve, mixAudio, realtime };
+  // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
+  const [status, setStatus] = useState<ExportStatus | null>(null);
+  useEffect(() => {
+    if (busy) return;
+    let live = true;
+    void api.exportStatus(sessionId, { video, resolve, mixAudio, realtime }).then(
+      (st) => live && setStatus(st),
+      () => live && setStatus(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [view, sessionId, video, resolve, mixAudio, realtime, busy, justDone]);
+  const result = busy || status?.record.sessionId !== sessionId ? null : status;
 
   useEffect(() => {
     let live = true;
@@ -111,8 +124,7 @@ export function ExportStep({
   const running = pre?.phase === "running" ? pre : null;
   const start = () => {
     setPre(null);
-    if (preview) exportedWith.set(sessionId, preview.lines.join("\n"));
-    ex.start(sessionId, { video, resolve, mixAudio, realtime });
+    ex.start(sessionId, settings);
   };
   /** Erst die Originale prüfen (Prüfsummen schon geprüfter Dateien merkt sich die App), dann ausgeben. */
   const run = async () => {
@@ -128,8 +140,7 @@ export function ExportStep({
     if (!result.blocking.length && !result.warnings.length) return start();
     setPre({ phase: "found", result, video, paths });
   };
-  const before = exportedWith.get(sessionId);
-  const stale = !!result && !!preview && before !== undefined && before !== preview.lines.join("\n");
+  const stale = !!result && result.differences.length > 0;
 
   const empty = !preview || preview.durationMs <= 0;
   const pct = percent(progress);
@@ -184,45 +195,12 @@ export function ExportStep({
           )}
           {error && <Notice>Ausgabe fehlgeschlagen: {error}</Notice>}
           {result && (
-            <div data-testid="export-result">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="font-serif text-[1.1rem]">
-                  {stale ? <span className="text-warn">Veraltet.</span> : <span className="text-good">Fertig.</span>}{" "}
-                  {result.files.length} Dateien im Ordner „{fileName(result.dir)}“.
-                </p>
-                <Button size="sm" onClick={() => void api.showInFolder(result.files[0] ?? result.dir)}>
-                  Im Ordner zeigen
-                </Button>
-              </div>
-              <ul className="mt-2 grid gap-1.5">
-                {result.files.map((f) => (
-                  <li key={f} className="text-[0.9rem]">
-                    <span className="font-medium break-all">{fileName(f)}</span>
-                    <span className="block text-[0.85rem] text-muted">
-                      {FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {stale ? (
-                <div
-                  className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-warn/8 px-3 py-2"
-                  role="status"
-                  data-testid="export-stale"
-                >
-                  <p className="text-[0.9rem] text-warn">
-                    Seit dieser Ausgabe hat sich etwas geändert. Nur Geändertes wird neu gerechnet.
-                  </p>
-                  <Button size="sm" disabled={!!ex.job || !!running || !!found} onClick={() => void run()}>
-                    Erneut ausgeben…
-                  </Button>
-                </div>
-              ) : (
-                <p className="mt-2 text-[0.85rem] text-muted">
-                  Änderst du danach noch etwas, gib den Einsatz einfach erneut aus; nur Geändertes wird neu gerechnet.
-                </p>
-              )}
-            </div>
+            <ExportResult
+              status={result}
+              fresh={!!justDone && !stale}
+              disabled={!!ex.job || !!running || !!found}
+              onRerun={() => void run()}
+            />
           )}
         </Panel>
       )}
@@ -343,6 +321,103 @@ export function ExportStep({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Letzte Ausgabe: wann, wohin, welche Dateien, und ob sie noch zum Einsatz passt. Passt sie nicht, steht dabei,
+ * was sich geändert hat, damit niemand eine veraltete Fassung in MAXQDA weiterverwendet.
+ */
+function ExportResult({
+  status,
+  fresh,
+  disabled,
+  onRerun,
+}: {
+  status: ExportStatus;
+  fresh: boolean;
+  disabled: boolean;
+  onRerun: () => void;
+}) {
+  const { record, differences, missingFiles } = status;
+  const stale = differences.length > 0;
+  const gone = new Set(missingFiles);
+  const present = record.files.find((f) => !gone.has(f));
+  return (
+    <div data-testid="export-result" data-state={stale ? "stale" : "current"}>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-serif text-[1.1rem] leading-snug">
+            {stale ? (
+              <span className="text-warn">Veraltet.</span>
+            ) : (
+              <span className="text-good">{fresh ? "Fertig." : "Aktuell."}</span>
+            )}{" "}
+            {record.files.length} Dateien im Ordner „{fileName(record.dir)}“
+          </p>
+          <p className="text-[0.85rem] text-muted">Ausgegeben am {when(record.exportedAt)}</p>
+        </div>
+        <Button
+          size="sm"
+          className="shrink-0"
+          onClick={() => void api.showInFolder(present ? inDir(record.dir, present) : record.dir)}
+        >
+          Im Ordner zeigen
+        </Button>
+      </div>
+      {stale ? (
+        <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-stale">
+          <b className="block text-[0.9rem] font-semibold text-warn">Passt nicht mehr zum Einsatz</b>
+          <ul className="mt-1 grid list-disc gap-0.5 pl-5 text-[0.88rem]" data-testid="export-differences">
+            {differences.map((d) => (
+              <li key={d.kind}>
+                {d.text}
+                {d.labels?.length ? (
+                  <span className="ml-1.5 font-mono text-[0.82rem] text-muted">{d.labels.join(", ")}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Button size="sm" disabled={disabled} onClick={onRerun}>
+              Erneut ausgeben…
+            </Button>
+            <span className="text-[0.85rem] text-muted">Nur Geändertes wird neu gerechnet.</span>
+          </div>
+        </div>
+      ) : (
+        missingFiles.length > 0 && (
+          <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-incomplete">
+            <b className="block text-[0.9rem] font-semibold text-warn">
+              {missingFiles.length === 1
+                ? "Eine Datei fehlt im Ausgabeordner"
+                : `${missingFiles.length} Dateien fehlen im Ausgabeordner`}
+            </b>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <Button size="sm" disabled={disabled} onClick={onRerun}>
+                Erneut ausgeben…
+              </Button>
+              <span className="text-[0.85rem] text-muted">Verschoben oder gelöscht? Das legt sie wieder an.</span>
+            </div>
+          </div>
+        )
+      )}
+      <ul className="mt-3 grid gap-1.5">
+        {record.files.map((f) => (
+          <li key={f} className="text-[0.9rem]">
+            <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
+            {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
+            <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
+          </li>
+        ))}
+      </ul>
+      {!stale && !missingFiles.length && (
+        <p className="mt-2 text-[0.85rem] text-muted">
+          Änderst du danach noch etwas, steht hier „Veraltet“, auch nach einem Neustart. Erneut ausgeben rechnet nur
+          Geändertes neu.
+        </p>
+      )}
+    </div>
   );
 }
 

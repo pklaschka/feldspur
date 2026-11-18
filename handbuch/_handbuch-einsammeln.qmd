@@ -12,6 +12,26 @@ jede Datei
 Begleitdateien, die Kameras neben die Aufnahmen legen, überspringt Feldspur. Dateien, die schon im Einsatz sind,
 werden nicht doppelt übernommen.
 
+### Große Ordner
+
+Die meiste Zeit kostet die Prüfsumme: Feldspur muss dafür jede Datei einmal ganz lesen. Bei einer vollen Speicherkarte
+mit stundenlangen Videos kann das dauern, von einer externen Festplatte oder einem Netzlaufwerk deutlich länger als von
+der internen SSD. Während des Einsammelns siehst du daher, wie viele Dateien und Gigabyte schon gelesen sind, welche
+Datei gerade dran ist und, nach ein paar Sekunden, eine geschätzte Restzeit. Du kannst dabei in andere Schritte oder
+Einsätze wechseln; das Einsammeln läuft weiter.
+
+![Einsammeln einer großen Speicherkarte: Fortschritt, Restzeit und Abbrechen](bilder/einsammeln-gross.png){#fig-einsammeln-gross}
+
+- **Abbrechen** beendet das Lesen sofort. In den Einsatz kommt dann **nichts**: Feldspur übernimmt Dateien erst, wenn
+  alle gelesen sind, und dann auf einmal. Was vorher schon im Einsatz war, bleibt unverändert.
+- **Ein neuer Versuch** mit demselben Ordner übernimmt die schon gelesenen Dateien sofort, solange Feldspur offen
+  bleibt und die Dateien unverändert sind. Nach einem Neustart liest Feldspur sie erneut.
+- **Unlesbare Dateien** (fehlende Leserechte, defekte Verknüpfungen) überspringt Feldspur und nennt sie danach unter
+  den Hinweisen; der Rest wird trotzdem eingesammelt.
+
+Tipp: Sehr große Bestände lieber in Etappen einsammeln, etwa eine Speicherkarte nach der anderen. Doppelte Dateien
+erkennt Feldspur an der Prüfsumme und übernimmt sie nicht zweimal.
+
 ![Eingesammelte Quellen, nach Geräten gruppiert](bilder/einsammeln.png){#fig-einsammeln}
 
 ### Geräte

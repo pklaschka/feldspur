@@ -16,7 +16,7 @@ import type {
   PlacementStatus,
   SourceKind,
 } from "@feldspur/core";
-import type { FileCheck, FileState, MontagePreview, ScaffoldKind } from "@feldspur/media";
+import type { ExportStatus, FileCheck, FileState, MontagePreview, ScaffoldKind, ScanProgress } from "@feldspur/media";
 
 /** Sicherungen des offenen Projekts (Dialog „Sicherungen“). */
 export interface BackupOverview {
@@ -399,6 +399,15 @@ export interface ExportOutcome {
   durationMs: number;
 }
 
+export interface ExportRequestOptions {
+  video: boolean;
+  resolve: boolean;
+  mixAudio: boolean;
+  realtime: boolean;
+}
+
+export type { ExportStatus, ExportDifference } from "@feldspur/media";
+
 export interface ExportProgress {
   sessionId: string;
   step: string;
@@ -427,6 +436,18 @@ export interface ScaffoldPreview {
   /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
   entries: ScaffoldPreviewEntry[];
+}
+
+/** Einsammeln abgebrochen: Nichts wurde übernommen. */
+export interface ImportCancelled {
+  cancelled: { read: number; total: number };
+}
+
+export type ImportResult = ImportOutcome | ImportCancelled;
+
+/** Fortschritt beim Einsammeln (siehe ScanProgress in @feldspur/media). */
+export interface ImportProgress extends ScanProgress {
+  sessionId: string;
 }
 
 export interface ImportOutcome {
@@ -523,7 +544,10 @@ export interface FeldspurApi {
   createSession(input: NewSessionInput): Promise<ProjectInfo>;
   getSession(sessionId: string): Promise<SessionView>;
   pickFiles(): Promise<string[]>;
-  importPaths(sessionId: string, paths: string[]): Promise<ImportOutcome>;
+  importPaths(sessionId: string, paths: string[]): Promise<ImportResult>;
+  /** Laufendes Einsammeln abbrechen; es wird nichts übernommen. */
+  cancelImport(sessionId: string): Promise<void>;
+  onImportProgress(cb: (p: ImportProgress) => void): () => void;
   setReference(deviceId: string): Promise<SessionView>;
   renameDevice(deviceId: string, label: string): Promise<SessionView>;
   setDeviceUtc(deviceId: string, utc: boolean): Promise<SessionView>;
@@ -608,6 +632,8 @@ export interface FeldspurApi {
   /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
   /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
   previewExport(sessionId: string, realtime?: boolean): Promise<ScaffoldPreview>;
+  /** Letzte Ausgabe im Vergleich zum jetzigen Stand und den gewählten Einstellungen; null = noch nie ausgegeben. */
+  exportStatus(sessionId: string, opts: ExportRequestOptions): Promise<ExportStatus | null>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
@@ -680,6 +706,8 @@ export const IPC = {
   getSession: "session:get",
   pickFiles: "import:pick",
   importPaths: "import:paths",
+  cancelImport: "import:cancel",
+  importProgress: "import:progress",
   setReference: "device:set-reference",
   setDeviceUtc: "device:set-utc",
   setDeviceTimeZone: "device:set-timezone",
@@ -732,6 +760,7 @@ export const IPC = {
   changeLog: "history:change-log",
   exportChangeLog: "history:export-change-log",
   previewExport: "export:preview",
+  exportStatus: "export:status",
   montagePreview: "export:montage",
   exportSession: "export:run",
   exportProgress: "export:progress",

@@ -3,7 +3,7 @@
  * Änderungen hier brauchen immer eine neue Migration in migrations.ts.
  */
 import { sql } from "drizzle-orm";
-import type { Decision } from "../model.ts";
+import type { Decision, ExportFingerprint, ExportSettings } from "../model.ts";
 import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 
 const json = <T>(name: string) => text(name, { mode: "json" }).$type<T>();
@@ -251,4 +251,19 @@ export const audioAnalysis = sqliteTable("audio_analysis", {
   speechLevelDb: real("speech_level_db"),
   version: integer("version").notNull(),
   analyzedAt: text("analyzed_at").notNull(),
+});
+
+/** Letzte Ausgabe je Einsatz: wohin, welche Dateien, mit welchen Einstellungen und mit welchem Fingerabdruck. */
+export const exportRecords = sqliteTable("export_records", {
+  sessionId: text("session_id")
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: "cascade" }),
+  exportedAt: text("exported_at").notNull(),
+  dir: text("dir").notNull(),
+  files: json<string[]>("files")
+    .notNull()
+    .default(sql`'[]'`),
+  durationMs: integer("duration_ms").notNull(),
+  options: json<ExportSettings>("options").notNull(),
+  fingerprint: json<ExportFingerprint>("fingerprint").notNull(),
 });

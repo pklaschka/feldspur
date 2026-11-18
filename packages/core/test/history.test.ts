@@ -101,6 +101,25 @@ describe("Rückgängig und Wiederholen", () => {
     expect(store.getDevice(device.id).label).toBe("von woanders");
   });
 
+  it("der Stand der letzten Ausgabe leert den Verlauf nicht und landet nicht im Protokoll", () => {
+    const { store, device, session } = setup();
+    store.history.record("A", () => store.updateDevice(device.id, { label: "A" }));
+    const before = store.history.changeLog().length;
+    store.saveExportRecord({
+      sessionId: session.id,
+      exportedAt: new Date().toISOString(),
+      dir: "/aus",
+      files: ["a.docx"],
+      durationMs: 1000,
+      options: { video: false, resolve: false, mixAudio: true, realtime: true },
+      fingerprint: { version: 1, content: "x", originals: {} },
+    });
+    expect(store.history.state().undo).toBe("A");
+    expect(store.history.changeLog()).toHaveLength(before);
+    expect(store.history.undo()).toBe("A");
+    expect(store.getExportRecord(session.id)?.files).toEqual(["a.docx"]);
+  });
+
   it("ein Fehler in der Aktion hinterlässt keinen Schritt", () => {
     const { store, device } = setup();
     expect(() =>

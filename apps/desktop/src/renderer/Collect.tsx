@@ -1,7 +1,18 @@
-import { useState, type DragEvent } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { bytes, hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { remainingText } from "./exportState.tsx";
+import {
+  cancelImport,
+  dismissImportNotice,
+  importPercent,
+  importRemainingMs,
+  registerImportView,
+  startImport,
+  useImport,
+  type ImportJob,
+} from "./importState.ts";
 import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
 import { Button, cx, FlagMark, Glyph, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
@@ -30,29 +41,21 @@ export function Collect({
   onOpenDiary: (pageId: string) => void;
   onTranscribe: (sourceId: string) => void;
 }) {
-  const [busy, setBusy] = useState(false);
   const [hover, setHover] = useState(false);
-  const [notice, setNotice] = useState<{ text: string; warnings: { fileName: string; message: string }[] } | null>(
-    null,
-  );
+  const sessionId = view.session.id;
+  const imp = useImport();
+  const job = imp.job?.sessionId === sessionId ? imp.job : null;
+  // Einsammeln läuft im Hintergrund weiter, auch wenn diese Ansicht kurz verschwindet; nur eins zur Zeit.
+  const busy = !!imp.job;
+  const notice = imp.notices[sessionId] ?? null;
+  useEffect(() => registerImportView(sessionId, onView), [sessionId, onView]);
 
-  const importPaths = async (paths: string[]) => {
-    if (!paths.length) return;
-    setBusy(true);
-    const r = await guard(() => api.importPaths(view.session.id, paths));
-    setBusy(false);
-    if (!r) return;
-    onView(r.view);
-    const parts = [`${r.added} ${r.added === 1 ? "Quelle" : "Quellen"} übernommen`];
-    if (r.duplicates) parts.push(`${r.duplicates} schon vorhanden`);
-    if (r.relinked)
-      parts.push(`${r.relinked} fehlende ${r.relinked === 1 ? "Originaldatei" : "Originaldateien"} neu verknüpft`);
-    setNotice({ text: parts.join(" · "), warnings: r.warnings });
-  };
+  const importPaths = (paths: string[]) => void startImport(sessionId, paths, guard);
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setHover(false);
-    void importPaths([...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean));
+    if (busy) return;
+    importPaths([...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean));
   };
   const empty = view.rows.length === 0;
   const unassigned = view.rows.filter((r) => !r.deviceId);
@@ -80,24 +83,47 @@ export function Collect({
           </Button>
         )}
       </StepHeader>
-      <div
-        className={cx(
-          "mb-5 flex items-center gap-4 rounded-xl border-[1.5px] border-dashed px-4 py-3",
-          hover ? "border-accent bg-accent-soft" : "border-line-2 bg-panel-2",
-          empty && "flex-col px-8 py-16 text-center",
-        )}
-      >
-        <div className="flex-1">
-          <b>{busy ? "Lese Dateien, Metadaten und Prüfsummen…" : "Dateien oder ganze Ordner hier ablegen"}</b>
-          <div className="text-[0.85rem] text-muted">
-            Video, Audio, Fotos, Tagebuchscans (JPG/PDF), Notizen (TXT/MD). Originale bleiben, wo sie sind.
+      {job ? (
+        <ImportRunning job={job} big={empty} />
+      ) : (
+        <div
+          className={cx(
+            "mb-5 flex items-center gap-4 rounded-xl border-[1.5px] border-dashed px-4 py-3",
+            hover && !busy ? "border-accent bg-accent-soft" : "border-line-2 bg-panel-2",
+            empty && "flex-col px-8 py-16 text-center",
+          )}
+        >
+          <div className="flex-1">
+            <b>{busy ? "Ein anderer Einsatz sammelt gerade ein" : "Dateien oder ganze Ordner hier ablegen"}</b>
+            <div className="text-[0.85rem] text-muted">
+              {busy
+                ? "Sobald das fertig ist, geht es hier weiter."
+                : "Video, Audio, Fotos, Tagebuchscans (JPG/PDF), Notizen (TXT/MD). Originale bleiben, wo sie sind."}
+            </div>
           </div>
+          <Button disabled={busy} onClick={() => void api.pickFiles().then(importPaths)}>
+            Dateien wählen…
+          </Button>
         </div>
-        <Button disabled={busy} onClick={() => void api.pickFiles().then(importPaths)}>
-          Dateien wählen…
-        </Button>
-      </div>
-      {notice && (
+      )}
+      {notice?.kind === "cancelled" && (
+        <div
+          className="my-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg bg-sunken px-3 py-2 text-[0.9rem]"
+          role="status"
+          data-testid="import-cancelled"
+        >
+          <span>
+            <b className="font-semibold">Einsammeln abgebrochen.</b> Nichts übernommen, der Einsatz ist unverändert.
+            {notice.read > 0 &&
+              ` ${notice.read} von ${notice.total} Dateien waren schon gelesen; ein neuer Versuch übernimmt sie sofort, solange Feldspur offen bleibt.`}
+          </span>
+          <span className="flex-1" />
+          <Button variant="link" className="text-[0.85rem] text-muted" onClick={() => dismissImportNotice(sessionId)}>
+            Ausblenden
+          </Button>
+        </div>
+      )}
+      {notice?.kind === "done" && (
         <div
           className="my-2 rounded-lg bg-accent-soft px-3 py-2 text-[0.9rem]"
           role="status"
@@ -112,7 +138,7 @@ export function Collect({
               </Button>
             )}
             <span className="flex-1" />
-            <Button variant="link" className="text-[0.85rem] text-muted" onClick={() => setNotice(null)}>
+            <Button variant="link" className="text-[0.85rem] text-muted" onClick={() => dismissImportNotice(sessionId)}>
               Ausblenden
             </Button>
           </div>
@@ -169,6 +195,78 @@ export function Collect({
         </>
       )}
     </div>
+  );
+}
+
+const fileOf = (p: string) => p.split(/[\\/]/).pop() ?? p;
+const n = (x: number) => x.toLocaleString("de-DE");
+
+/**
+ * Fortschritt beim Einsammeln: erst Dateien suchen (Anzahl wächst), dann jede lesen und prüfen. Der Balken folgt den
+ * gelesenen Bytes, weil die Prüfsummen großer Videos die Dauer bestimmen, nicht die Zahl der Dateien.
+ */
+function ImportRunning({ job, big }: { job: ImportJob; big: boolean }) {
+  // Restzeit sekündlich auffrischen, auch wenn gerade eine große Datei ohne neue Meldung gelesen wird.
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const p = job.progress;
+  const reading = p?.phase === "reading";
+  const pct = importPercent(p);
+  const current = p?.path ? fileOf(p.path) : "";
+  return (
+    <section
+      className={cx("mb-5 rounded-xl border border-line bg-panel px-4 py-3 shadow-xs", big && "px-8 py-10")}
+      role="status"
+      aria-live="polite"
+      data-testid="import-progress"
+    >
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <b className="font-semibold">
+          {job.cancelling
+            ? "Bricht ab…"
+            : reading
+              ? "Lese Dateien, Metadaten und Prüfsummen"
+              : `Suche Dateien${p ? ` · ${n(p.total)} gefunden` : "…"}`}
+        </b>
+        {reading && (
+          <span className="text-[0.88rem] text-muted tabular-nums" data-testid="import-count">
+            {n(p.done)} von {n(p.total)} Dateien · {bytes(p.bytesDone)} von {bytes(p.bytesTotal)}
+          </span>
+        )}
+        <span className="flex-1" />
+        {reading && (
+          <span className="text-[0.88rem] text-muted tabular-nums">{remainingText(importRemainingMs(job, now))}</span>
+        )}
+        <Button size="sm" disabled={job.cancelling} onClick={cancelImport} data-testid="import-cancel">
+          Abbrechen
+        </Button>
+      </div>
+      <div
+        className="mt-2 h-1.5 overflow-hidden rounded-full bg-sunken"
+        role="progressbar"
+        aria-label="Einsammeln"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={reading ? pct : undefined}
+      >
+        <div
+          className={cx("h-full rounded-full bg-accent transition-[width]", !reading && "w-1/4 animate-pulse")}
+          style={reading ? { width: `${pct}%` } : undefined}
+        />
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 text-[0.85rem] text-muted">
+        <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem]" title={p?.path}>
+          {current}
+        </span>
+        {reading && p.reused > 0 && <span>{n(p.reused)} aus dem letzten Versuch übernommen</span>}
+      </div>
+      <p className="mt-1 text-[0.85rem] text-muted">
+        Erst wenn alles gelesen ist, kommt es in den Einsatz, auf einmal. Abbrechen hinterlässt nichts.
+      </p>
+    </section>
   );
 }
 

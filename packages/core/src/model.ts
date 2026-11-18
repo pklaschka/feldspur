@@ -319,3 +319,38 @@ export const AudioAnalysis = z.object({
   analyzedAt: z.iso.datetime(),
 });
 export type AudioAnalysis = z.infer<typeof AudioAnalysis>;
+
+/** Einstellungen einer Ausgabe, soweit sie das Ergebnis verändern. */
+export const ExportSettings = z.object({
+  video: z.boolean(),
+  resolve: z.boolean(),
+  mixAudio: z.boolean(),
+  realtime: z.boolean(),
+});
+export type ExportSettings = z.infer<typeof ExportSettings>;
+
+/**
+ * Fingerabdruck einer Ausgabe, in Teilen, damit sich sagen lässt, was sich seitdem geändert hat:
+ * - content: SHA-256 über alles aus der Projektdatei, was in Zeitgerüst, Variablen, Protokoll und Video eingeht
+ * - originals: je Quelle Größe und Änderungszeit der Originaldatei beim Ausgeben („missing“, wenn sie fehlte)
+ * - version: Verfahren des Fingerabdrucks; ein anderes zählt immer als veraltet
+ */
+export const ExportFingerprint = z.object({
+  version: z.number().int(),
+  content: z.string(),
+  originals: z.record(z.string(), z.string()),
+});
+export type ExportFingerprint = z.infer<typeof ExportFingerprint>;
+
+/** Was von der letzten Ausgabe eines Einsatzes in der Projektdatei steht. */
+export const ExportRecord = z.object({
+  sessionId: Id,
+  exportedAt: z.iso.datetime(),
+  dir: z.string(),
+  /** Dateinamen im Ordner, ohne Pfad. */
+  files: z.array(z.string()),
+  durationMs: z.number().int().nonnegative(),
+  options: ExportSettings,
+  fingerprint: ExportFingerprint,
+});
+export type ExportRecord = z.infer<typeof ExportRecord>;
