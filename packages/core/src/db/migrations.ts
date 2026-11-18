@@ -188,4 +188,16 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE time_evidence ADD COLUMN decision TEXT;
   `,
+  // 14: Stand der letzten Ausgabe je Einsatz (Fingerabdruck), damit „Veraltet“ einen Neustart übersteht
+  `
+  CREATE TABLE export_records (
+    session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    exported_at TEXT NOT NULL,
+    dir TEXT NOT NULL,
+    files TEXT NOT NULL DEFAULT '[]',
+    duration_ms INTEGER NOT NULL,
+    options TEXT NOT NULL DEFAULT '{}',
+    fingerprint TEXT NOT NULL DEFAULT '{}'
+  );
+  `,
 ];

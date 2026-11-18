@@ -12,8 +12,11 @@
  */
 import type Database from "better-sqlite3";
 
-/** Tabellen, die nur Zwischenergebnisse halten. Sie werden mitprotokolliert, leeren aber den Verlauf nicht. */
-const CACHE_TABLES = new Set(["audio_analysis"]);
+/**
+ * Tabellen, die nur Zwischenergebnisse oder den Stand der letzten Ausgabe halten. Sie werden mitprotokolliert, leeren
+ * aber den Verlauf nicht und stehen nicht im Änderungsprotokoll.
+ */
+const CACHE_TABLES = new Set(["audio_analysis", "export_records"]);
 /** Das dauerhafte Änderungsprotokoll selbst: nie rückgängig, nie protokolliert. */
 const LOG_TABLE = "change_log";
 /** Höchstens so viele Schritte behalten. */

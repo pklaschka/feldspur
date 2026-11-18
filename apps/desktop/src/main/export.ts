@@ -3,10 +3,13 @@
  */
 import { join } from "node:path";
 import { app, ipcMain, type WebContents } from "electron";
-import type { ProjectStore } from "@feldspur/core";
+import type { ExportSettings, ProjectStore } from "@feldspur/core";
 import {
   baseName,
   buildScaffold,
+  compareExport,
+  exportFingerprint,
+  type ExportStatus,
   entryText,
   exportSession,
   type ImageRef,
@@ -103,6 +106,30 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
   };
 }
 
+/** Einstellungen so, wie sie das Ergebnis bestimmen (Episodenschnitt nur, wenn der Einsatz Episoden bildet). */
+export function exportSettings(
+  s: ProjectStore,
+  sessionId: string,
+  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
+): ExportSettings {
+  return {
+    video: opts.video,
+    resolve: opts.resolve === true,
+    mixAudio: opts.mixAudio !== false,
+    realtime: modeOf(s, sessionId, opts.realtime).mode === "realtime",
+  };
+}
+
+/** Letzte Ausgabe des Einsatzes im Vergleich zum jetzigen Stand; null, wenn er noch nie ausgegeben wurde. */
+export function exportStatus(
+  s: ProjectStore,
+  sessionId: string,
+  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
+): ExportStatus | null {
+  const record = s.getExportRecord(sessionId);
+  return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
+}
+
 export async function runExport(
   s: ProjectStore,
   wc: WebContents,
@@ -116,7 +143,11 @@ export async function runExport(
   if (blocked) throw new Error(blocked);
   running = sessionId;
   try {
+    // Stand beim Start: Was sich während der Ausgabe ändert, kommt in die nächste (und macht diese veraltet).
+    const settings = exportSettings(s, sessionId, opts);
+    const fingerprint = exportFingerprint(s, sessionId, settings);
     const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(s, sessionId, opts.realtime))));
+    // Schlägt die Ausgabe in denselben Ordner fehl, liegen dort womöglich halbe Dateien: dann gilt der alte Stand nicht.
     const r = await exportSession(s, sessionId, dir, {
       video: opts.video,
       resolve: opts.resolve,
@@ -126,6 +157,19 @@ export async function runExport(
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
+    }).catch((e: unknown) => {
+      if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);
+      throw e;
+    });
+    // Nicht rückgängig zu machen und kein Forschungsdatum: steht außerhalb des Verlaufs in der Projektdatei.
+    s.saveExportRecord({
+      sessionId,
+      exportedAt: new Date().toISOString(),
+      dir: r.dir,
+      files: r.files,
+      durationMs: r.durationMs,
+      options: settings,
+      fingerprint,
     });
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
   } finally {

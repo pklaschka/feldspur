@@ -13,6 +13,7 @@ import type { z } from "zod";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
   AudioAnalysis,
+  ExportRecord,
   Device,
   DiaryEntry,
   FieldSession,
@@ -487,6 +488,30 @@ export class ProjectStore {
       .where(eq(schema.sources.sessionId, sessionId))
       .all()
       .map(({ a }) => AudioAnalysis.parse({ ...a, envelope: new Uint8Array(a.envelope) }));
+  }
+
+  // ── Letzte Ausgabe ───────────────────────────────────────────────────────
+
+  /** Stand der letzten Ausgabe speichern (ersetzt den vorigen dieses Einsatzes). */
+  saveExportRecord(input: In<typeof ExportRecord>): ExportRecord {
+    const r = ExportRecord.parse(input);
+    this.db
+      .insert(schema.exportRecords)
+      .values(r)
+      .onConflictDoUpdate({ target: schema.exportRecords.sessionId, set: r })
+      .run();
+    return r;
+  }
+
+  deleteExportRecord(sessionId: Id): void {
+    this.db.delete(schema.exportRecords).where(eq(schema.exportRecords.sessionId, sessionId)).run();
+  }
+
+  getExportRecord(sessionId: Id): ExportRecord | null {
+    const r = this.db.select().from(schema.exportRecords).where(eq(schema.exportRecords.sessionId, sessionId)).get();
+    if (!r) return null;
+    const parsed = ExportRecord.safeParse(r);
+    return parsed.success ? parsed.data : null;
   }
 
   // ── Tagebuch ─────────────────────────────────────────────────────────────
