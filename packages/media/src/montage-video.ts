@@ -595,7 +595,9 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
     ],
     signal,
   ).catch(async (e: unknown) => {
-    await rm(outFile, { force: true });
+    // Unter Windows hält der eben beendete ffmpeg-Prozess die Datei noch kurz offen: mehrmals versuchen,
+    // und ein Aufräumfehler darf den eigentlichen Fehler (z. B. den Abbruch) nicht verdecken.
+    await rm(outFile, { force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {});
     throw e;
   });
   // Zwischenspeicher aufräumen: nur behalten, was diese Ausgabe gebraucht hat.
