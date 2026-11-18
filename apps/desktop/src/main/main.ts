@@ -163,7 +163,14 @@ function openStore(path: string, create: boolean, fresh = create): ProjectInfo |
   return info;
 }
 
-type ExportRequest = { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string };
+type ExportRequest = {
+  video: boolean;
+  resolve?: boolean;
+  mixAudio?: boolean;
+  realtime?: boolean;
+  dir?: string;
+  reuseDir?: boolean;
+};
 
 /**
  * IPC-Aufruf, der Daten ändert, als ein Schritt für Rückgängig. Die Ansicht wird im selben Schritt gebaut; das
@@ -529,10 +536,15 @@ function registerIpc(): void {
   ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: ExportRequest) => {
     const s = requireStore();
     let parent = opts.dir;
+    // Der Ordner der letzten Ausgabe (darin liegt der Unterordner des Einsatzes) dient als Vorgabe.
+    const lastDir = s.getExportRecord(sessionId)?.dir;
+    const lastParent = lastDir && existsSync(dirname(lastDir)) ? dirname(lastDir) : undefined;
+    if (!parent && opts.reuseDir) parent = lastParent;
     if (!parent) {
       const r = await dialog.showOpenDialog(win!, {
         title: "Wohin ausgeben?",
         buttonLabel: "Hier ausgeben",
+        defaultPath: lastParent,
         properties: ["openDirectory", "createDirectory"],
       });
       if (r.canceled || !r.filePaths[0]) return null;

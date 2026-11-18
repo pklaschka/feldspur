@@ -411,6 +411,8 @@ export interface ExportRequestOptions {
   resolve: boolean;
   mixAudio: boolean;
   realtime: boolean;
+  /** Ohne Ordnerdialog in den Ordner der letzten Ausgabe. */
+  reuseDir?: boolean;
 }
 
 export type { ExportStatus, ExportDifference } from "@feldspur/media";
@@ -646,11 +648,19 @@ export interface FeldspurApi {
   /**
    * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = kein Ordner gewählt; { cancelled } = mit
-   * cancelExport abgebrochen.
+   * cancelExport abgebrochen. Mit reuseDir ohne Dialog in den Ordner der letzten Ausgabe, falls er noch
+   * existiert; der Dialog beginnt sonst dort.
    */
   exportSession(
     sessionId: string,
-    opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string },
+    opts: {
+      video: boolean;
+      resolve?: boolean;
+      mixAudio?: boolean;
+      realtime?: boolean;
+      dir?: string;
+      reuseDir?: boolean;
+    },
   ): Promise<ExportRunResult | null>;
   /** Laufende Ausgabe abbrechen; ffmpeg wird beendet, die Ausgabe gilt nicht als fertig. */
   cancelExport(sessionId: string): Promise<void>;
