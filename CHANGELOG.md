@@ -4,6 +4,35 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.2.0 – 2026-11-18
+
+<!-- Release notes generated using configuration in .github/release.yml at 199a118a1475fd5b6fec304ab47d2d5e1f6076a2 -->
+
+### Neu
+
+- Projektdateien automatisch sichern und als Kopie wiederherstellen ([#78](https://github.com/pklaschka/feldspur/pull/78), @pklaschka)
+- Widersprüche zwischen Zeitbelegen sehen und bewusst entscheiden ([#79](https://github.com/pklaschka/feldspur/pull/79), @pklaschka)
+
+### Verbessert
+
+- Fehlende oder veränderte Originaldateien erkennen und neu verknüpfen ([#77](https://github.com/pklaschka/feldspur/pull/77), @pklaschka)
+- Widersprüche: Oberfläche näher an die Skizze ([#80](https://github.com/pklaschka/feldspur/pull/80), @pklaschka)
+- Ausgabestand übersteht Neustarts, große Ordner mit Fortschritt und Abbrechen einsammeln ([#81](https://github.com/pklaschka/feldspur/pull/81), @pklaschka)
+
+### Hinter den Kulissen
+
+- Aufräumen: ungenutzter Code und doppelte Logik ([#60](https://github.com/pklaschka/feldspur/pull/60), @pklaschka)
+- Hook-Regeln einschalten und alle Meldungen beheben ([#61](https://github.com/pklaschka/feldspur/pull/61), @pklaschka)
+- Große Komponenten aufteilen, Logik mit Tests absichern ([#62](https://github.com/pklaschka/feldspur/pull/62), @pklaschka)
+- Modern Web Guidance einbinden und Altlasten im Code aufräumen ([#76](https://github.com/pklaschka/feldspur/pull/76), @pklaschka)
+
+### Weitere Änderungen
+
+- Inspektor springt nicht mehr beim Laden eines Videos ([#66](https://github.com/pklaschka/feldspur/pull/66), @pklaschka)
+- Zeitgerüst-Vorschau in den Farben des .docx ([#67](https://github.com/pklaschka/feldspur/pull/67), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.1.2...v0.2.0
+
 ## 0.1.2 – 2026-11-17
 
 <!-- Release notes generated using configuration in .github/release.yml at f5d3adf9bccaff8437a9a335d51395911779119e -->
