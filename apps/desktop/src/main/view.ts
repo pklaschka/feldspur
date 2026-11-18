@@ -12,6 +12,7 @@ import {
   effectiveGainDb,
 } from "@feldspur/core";
 import { sessionEpisodes, speechLevels } from "@feldspur/media";
+import { quickStates } from "./originals.ts";
 import type {
   AnchorRow,
   DeviceRow,
@@ -62,8 +63,10 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     const s = sourceById.get(id);
     return s ? diaryPageLabel(s, region) : "?";
   };
+  const files = quickStates(input.sources);
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
+    const file = files.get(s.id)!;
     const page = pageOf(s.id);
     const entry = input.diaryEntries.find(
       (e) => e.regions.some((r) => pageOf(r.sourceId) === page) && e.notedAtMs !== null,
@@ -90,6 +93,8 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       sizeBytes: s.sizeBytes,
       sha256: s.sha256,
       originalPath: s.originalPath,
+      file: file.state,
+      fileDetail: file.detail,
       uncertaintyMs: p?.uncertaintyMs ?? null,
       evidence: evs,
       hasDeviceClock: (evidenceBySource.get(s.id) ?? []).some((e) => e.enabled && e.clock === "device"),

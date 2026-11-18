@@ -32,6 +32,8 @@ export const ANALYSIS_VERSION = 1;
 
 export interface AnalyzeOptions extends IdleOptions {
   onProgress?: (done: number, total: number, fileName: string) => void;
+  /** Quellen, die nicht gelesen werden können (z. B. Originaldatei fehlt), mit Grund: erscheinen unter failed. */
+  skip?: Map<Id, string>;
 }
 
 export interface AnalyzeResult {
@@ -58,6 +60,11 @@ export async function analyzeSession(
       const env = unpackEnvelope(cached.envelope, cached.envelopeRate);
       envelopes.set(s.id, env);
       if (cached.speechLevelDb === null) store.saveAudioAnalysis({ ...cached, speechLevelDb: speechLevelDb(env.db) });
+      continue;
+    }
+    const skipped = opts.skip?.get(s.id);
+    if (skipped) {
+      failed.push({ sourceId: s.id, fileName: s.fileName, message: skipped });
       continue;
     }
     try {

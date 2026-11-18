@@ -8,6 +8,7 @@ import { ExportStep } from "../ExportStep.tsx";
 import { percent, useExport } from "../exportState.tsx";
 import { formatDay } from "../format.ts";
 import { Inspector } from "../Inspector.tsx";
+import { OriginalsBanner, OriginalsDialog } from "../Originals.tsx";
 import type { Todo } from "../inspector/status.ts";
 import { Review } from "../Review.tsx";
 import { PlaybackProvider } from "../playback.tsx";
@@ -45,6 +46,7 @@ export function SessionPane({
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
   const exporting = useExport();
   const [searching, setSearching] = useState(false);
+  const [originals, setOriginals] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
   const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
   const history = useHistory(view, sessionId, guard, setView, onProject);
@@ -253,6 +255,7 @@ export function SessionPane({
                 ))}
               </Tabs.List>
             </header>
+            <OriginalsBanner view={view} onOpen={() => setOriginals(true)} />
             {error && <p className="mx-6 mt-2 text-bad">{error}</p>}
             <Tabs.Content value="collect" className={tabContent}>
               <Collect
@@ -301,7 +304,7 @@ export function SessionPane({
               />
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
-              <ExportStep view={view} onGo={go} />
+              <ExportStep view={view} onGo={go} onView={setView} onOriginals={() => setOriginals(true)} />
             </Tabs.Content>
           </main>
         </Tabs.Root>
@@ -332,6 +335,8 @@ export function SessionPane({
             openDiary: setDiaryPage,
             transcribe: setTranscribeId,
             apply: (fn) => update(guard(fn)),
+            relinkOriginal: (id) => void guard(() => api.relinkOriginal(id)).then((v) => v && setView(v)),
+            openOriginals: () => setOriginals(true),
             importTranscript: async (id, mode) => {
               const r = await guard(() => api.importTranscript(id, { mode }));
               if (!r) return null;
@@ -367,6 +372,7 @@ export function SessionPane({
           onReview={() => setStep("review")}
           onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
+        <OriginalsDialog view={view} open={originals} onOpenChange={setOriginals} onView={setView} guard={guard} />
         <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
         <UndoToast
           view={view}

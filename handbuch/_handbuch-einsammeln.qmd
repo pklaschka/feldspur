@@ -34,6 +34,39 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
 
 Wenn alles eingesammelt ist, geht es mit **Weiter** zum Abgleichen.
 
+### Originaldateien {#sec-originale}
+
+Feldspur kopiert nichts: Es merkt sich, wo jedes Original liegt, und liest es dort. Verschiebst du den Ordner mit den
+Aufnahmen, steckst ein Laufwerk um oder öffnest das Projekt auf einem anderen Rechner, findet Feldspur die Dateien
+unter dem alten Pfad nicht mehr. Dann steht über den Schritten **„2 Originaldateien fehlen“** und in der Detailleiste
+der Quelle ein Hinweis. Vorschau, Tonanalyse und Ausgabe brauchen die Originale; die Tonanalyse überspringt fehlende
+Aufnahmen und nennt sie.
+
+Mit **Originale suchen…** öffnet sich eine Liste aller Quellen mit ihrem Zustand:
+
+| Zustand | Bedeutung |
+|---|---|
+| unverändert | Datei da, Größe und Prüfsumme wie beim Einsammeln |
+| da, Prüfsumme nicht geprüft | Datei da und gleich groß; die Prüfsumme wurde in dieser Sitzung noch nicht gerechnet |
+| verändert | Größe oder Prüfsumme anders als beim Einsammeln, z. B. nachbearbeitet oder überschrieben |
+| fehlt | unter dem gespeicherten Pfad liegt keine Datei |
+| nicht prüfbar | da, aber nicht lesbar (Zugriffsrechte, Laufwerksfehler) |
+
+- **Ordner durchsuchen…** sucht alle fehlenden und veränderten Originale in einem Ordner und seinen Unterordnern
+  (versteckte Ordner ausgenommen, höchstens 50 000 Dateien). Kandidaten sind Dateien gleicher Größe, gleichnamige
+  zuerst; so findet sich auch eine umbenannte Datei.
+- **Datei wählen…** verknüpft eine einzelne Quelle mit einer Datei, die du selbst auswählst.
+- **Alle Prüfsummen prüfen** liest alle Originale einmal und vergleicht sie mit der Prüfsumme vom Einsammeln. Bei
+  langen Videos dauert das einige Minuten; bis zum Beenden merkt sich Feldspur das Ergebnis.
+
+Feldspur übernimmt einen neuen Pfad **nur, wenn die Prüfsumme (SHA-256) stimmt**. Eine Datei mit gleichem Namen, aber
+anderem Inhalt wird nie übernommen; die Suche nennt sie mit Grund. Jede Neuverknüpfung ist ein eigener Schritt, den du
+rückgängig machen kannst, und steht mit altem und neuem Pfad im Änderungsprotokoll. Der Dateiname im Quellennachweis
+bleibt der vom Einsammeln. Sammelst du die verschobenen Dateien einfach erneut ein, verknüpft Feldspur sie ebenso neu,
+statt sie doppelt aufzunehmen.
+
+Prüfergebnisse sind keine Forschungsdaten: Sie stehen nicht in der Projektdatei und nicht in der Ausgabe.
+
 ### Formate {#sec-formate}
 
 Feldspur nimmt jede Datei auf und liest ihre Zeit, so gut es geht. Ansehen, abhören und mitschreiben kannst du aber

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import { IPC, type ExportProgress, type FeldspurApi } from "../shared/api.ts";
+import { IPC, type ExportProgress, type FeldspurApi, type OriginalsProgress } from "../shared/api.ts";
 
 const api: FeldspurApi = {
   newProject: () => ipcRenderer.invoke(IPC.newProject),
@@ -95,6 +95,14 @@ const api: FeldspurApi = {
     return () => ipcRenderer.removeListener(IPC.stillRequest, listener);
   },
   showInFolder: (path) => ipcRenderer.invoke(IPC.showInFolder, path),
+  checkOriginals: (id, video) => ipcRenderer.invoke(IPC.checkOriginals, id, video),
+  searchOriginals: (id) => ipcRenderer.invoke(IPC.searchOriginals, id),
+  relinkOriginal: (id) => ipcRenderer.invoke(IPC.relinkOriginal, id),
+  onOriginalsProgress: (cb) => {
+    const listener = (_e: unknown, p: OriginalsProgress) => cb(p);
+    ipcRenderer.on(IPC.originalsProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.originalsProgress, listener);
+  },
 };
 
 contextBridge.exposeInMainWorld("feldspur", api);

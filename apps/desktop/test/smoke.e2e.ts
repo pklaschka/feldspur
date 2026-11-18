@@ -6,7 +6,7 @@
  *   FELDSPUR_SCREENSHOT=bild.png …                 speichert ein Bildschirmfoto
  *   FELDSPUR_E2E_APP=release/…/feldspur vpx test/smoke.e2e.ts   prüft das fertige Paket
  */
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
@@ -905,6 +905,40 @@ try {
   await page.getByRole("menuitem", { name: /^Zweites/ }).waitFor();
   await shot("-zuletzt");
   await page.keyboard.press("Escape");
+
+  // Originale verschoben: Hinweis beim Öffnen, Ausgabe gesperrt, Ordner durchsuchen verknüpft neu (nur Prüfsumme).
+  if (sources === fixtures) {
+    const moved = join(dir, "Verschoben");
+    renameSync(fixtures, moved);
+    await page.keyboard.press("Control+o");
+    await page.getByRole("menuitem", { name: /^Zweites/ }).click();
+    await page.getByRole("heading", { name: "Noch kein Einsatz" }).waitFor();
+    await page.keyboard.press("Control+o");
+    await page.getByRole("menuitem", { name: /^Test/ }).click();
+    const banner = page.getByTestId("originals-banner");
+    await banner.getByText(/Originaldateien fehlen/).waitFor();
+    const bannerText = await banner.locator("b").innerText();
+    await page.getByRole("tab", { name: /Ausgeben/ }).click();
+    await page.getByRole("button", { name: /^(Trotzdem a|A)usgeben…$/ }).click();
+    const pre = page.getByTestId("export-originals");
+    await pre.getByText(/ohne sie geht die Ausgabe nicht/).waitFor();
+    if (await pre.getByTestId("export-anyway").count())
+      throw new Error("Fehlende Originale dürfen nicht übergangen werden");
+    await shot("-originale-fehlen");
+    await app.evaluate(({ dialog }, folder) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [folder] })) as typeof dialog.showOpenDialog;
+    }, moved);
+    await pre.getByRole("button", { name: "Originale suchen…" }).click();
+    const dlg = page.getByTestId("originals-dialog");
+    await dlg.getByRole("button", { name: "Ordner durchsuchen…" }).click();
+    const found = await dlg.getByTestId("originals-search").innerText();
+    if (!/neu verknüpft/.test(found)) throw new Error(`Neu verknüpfen: ${found}`);
+    await shot("-originale-verknuepft");
+    await banner.waitFor({ state: "detached" });
+    await dlg.getByRole("button", { name: "Schließen" }).click();
+    await pre.waitFor({ state: "detached" });
+    console.log(`Originale: ${bannerText} → ${found.split("\n")[0]}`);
+  }
   console.log("Rauchtest ok");
 } catch (e) {
   failed = true;

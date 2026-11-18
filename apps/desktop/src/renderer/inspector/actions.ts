@@ -20,6 +20,10 @@ export interface InspectorActions {
   setLevel: (sourceId: string, input: LevelInput) => void;
   /** Ganze Datei dekodieren und den Sprachpegel messen. */
   measureLevel: (sourceId: string) => Promise<void>;
+  /** Originaldatei für eine Quelle wählen (nur mit passender Prüfsumme übernommen). */
+  relinkOriginal: (sourceId: string) => void;
+  /** Dialog „Originaldateien“ öffnen (Ordner durchsuchen, alle prüfen). */
+  openOriginals: () => void;
   /** Änderung ausführen und die neue Ansicht übernehmen (Fehler zeigt die App an). */
   apply: ApplyView;
 }
