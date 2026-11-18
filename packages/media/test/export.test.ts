@@ -58,7 +58,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
   afterAll(() => {
     store?.close();
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it("ordnet Tafel, Episoden, Mitschrift und Fotos nach Uhrzeit", () => {
