@@ -9,7 +9,7 @@ import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
 import { renderImageRefJpeg } from "./stillRender.ts";
 import { Button, cx, ErrorBanner, ErrorProvider, Panel, TooltipProvider } from "./ui.tsx";
-import { Logo, NewSessionForm } from "./app/start.tsx";
+import { HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
 import { SessionPane } from "./app/SessionPane.tsx";
 
 const api = window.feldspur;
@@ -179,7 +179,10 @@ export function App() {
                   <span>{s.title}</span>
                 </button>
               ))}
-              <NewSessionForm onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
+              <NewSessionForm
+                onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)}
+                onRequestOpen={sessionId ? undefined : () => document.getElementById(HERO_TITLE_ID)?.focus()}
+              />
             </nav>
             {sessionId ? (
               <SessionPane
@@ -197,9 +200,10 @@ export function App() {
                 <ErrorBanner className="mb-4 max-w-[52ch]" />
                 <h2 className="mb-1 text-[1.4rem] font-semibold">Noch kein Einsatz</h2>
                 <p className="max-w-[52ch] text-muted">
-                  Ein Einsatz ist ein Tag im Feld, zum Beispiel „Wochenmarkt Südstadt“. Lege ihn links an und sammle
-                  dann alles ein, was an diesem Tag aufgezeichnet wurde.
+                  Ein Einsatz ist ein Tag im Feld, zum Beispiel „Wochenmarkt Südstadt“. Lege den ersten Einsatz an und
+                  sammle dann alles ein, was an diesem Tag aufgezeichnet wurde.
                 </p>
+                <NewSessionForm hero onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
               </main>
             )}
           </div>

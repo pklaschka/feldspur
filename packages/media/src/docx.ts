@@ -42,7 +42,13 @@ function entryParagraphs(e: ScaffoldEntry, stills: (Still | null)[], width: numb
       }),
     );
   }
-  runs.push(new TextRun({ text: e.body, italics: e.kind === "card" }));
+  // Zeilenumbrüche im Text als Umbruch im selben Absatz: roh in <w:t> lesen Word und MAXQDA sie als
+  // Leerzeichen, ein eigener Absatz bekäme eine zweite Zeitmarke.
+  e.body
+    .split(/\r?\n/)
+    .forEach((line, i) =>
+      runs.push(new TextRun({ text: line, italics: e.kind === "card", break: i > 0 ? 1 : undefined })),
+    );
   const out = [new Paragraph({ children: runs, spacing: { before: e.kind === "episode" ? 240 : 60 } })];
   e.images.forEach((ref, i) => {
     const s = stills[i];
