@@ -1,8 +1,18 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
-import { localMs, ProjectStore, type TouchedRow } from "@feldspur/core";
+import {
+  backupDir,
+  checkProjectFile,
+  copyProjectFile,
+  listBackups,
+  localMs,
+  nextBackupPath,
+  ProjectStore,
+  fileStamp,
+  type TouchedRow,
+} from "@feldspur/core";
 import {
   analyzeSession,
   applyImport,
@@ -56,9 +66,13 @@ import { addEpisodeAround, moveEpisodeEdge, timelineEnvelopes } from "./episodes
 import { buildSessionView } from "./view.ts";
 import { checkOriginals, relinkDuplicates, relinkFile, searchOriginals, unreachableForAnalysis } from "./originals.ts";
 import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
+import { AUTO_BACKUP_CHECK_MS, AutoBackup } from "./backup.ts";
 
 let store: ProjectStore | null = null;
 let win: BrowserWindow | null = null;
+const autoBackup = new AutoBackup();
+/** Zuletzt gescheitertes Öffnen: dort sucht „Sicherung als Kopie öffnen…“ zuerst nach Sicherungen. */
+let lastFailedPath: string | null = null;
 
 /** Die gebündelte App lädt better-sqlite3 über eine Datei neben der App (siehe scripts/fetch-electron-sqlite.mjs). */
 function nativeBinding(): string | undefined {
@@ -88,14 +102,42 @@ function requireStore(): ProjectStore {
   return store;
 }
 
-function openStore(path: string, create: boolean): ProjectInfo | null {
-  if (exportRunning()) throw new Error("Während einer Ausgabe lässt sich kein anderes Projekt öffnen.");
-  store?.close();
+function bindingOpts(): { nativeBinding?: string } {
   const binding = nativeBinding();
-  const opts = binding ? { nativeBinding: binding } : {};
+  return binding ? { nativeBinding: binding } : {};
+}
+
+/** Projekt schließen; vorher Änderungen seit der letzten automatischen Sicherung sichern. */
+function closeStore(): void {
+  if (!store) return;
+  autoBackup.detach();
+  store.close();
+  store = null;
+}
+
+/**
+ * Projekt öffnen oder anlegen. Eine vorhandene Datei wird vorher geprüft (vollständig, nicht beschädigt, ein
+ * Feldspur-Projekt); scheitert das, bleibt das bisherige Projekt offen. `fresh`: nichts automatisch sichern.
+ */
+function openStore(path: string, create: boolean, fresh = create): ProjectInfo | null {
+  if (exportRunning()) throw new Error("Während einer Ausgabe lässt sich kein anderes Projekt öffnen.");
+  const opts = bindingOpts();
+  if (!create) {
+    const check = checkProjectFile(path, opts);
+    if (!check.ok) {
+      lastFailedPath = path;
+      const hint = listBackups(path).length
+        ? ` Sicherungen dieses Projekts liegen im Ordner „${basename(backupDir(path))}“ daneben; mit „Sicherung als Kopie öffnen…“ lässt sich eine davon öffnen.`
+        : "";
+      throw new Error(`„${basename(path)}“ lässt sich nicht öffnen. ${check.problem}${hint}`);
+    }
+  }
+  closeStore();
   store = create
     ? ProjectStore.create(path, { name: basename(path).replace(/\.feldspur$/, ""), ...opts })
-    : ProjectStore.open(path, opts);
+    : ProjectStore.open(path, { ...opts, backupBeforeMigration: true });
+  lastFailedPath = null;
+  autoBackup.attach(store, { fresh });
   const info = projectInfo()!;
   win?.setTitle(`Feldspur · ${info.name}`);
   rememberProject(info.path, info.name);
@@ -227,6 +269,72 @@ function registerIpc(): void {
     return openStore(path, false);
   });
   ipcMain.handle(IPC.forgetRecent, (_e, path: string) => forgetProject(path));
+
+  ipcMain.handle(IPC.backups, () => autoBackup.overview());
+  ipcMain.handle(IPC.createBackup, async () => {
+    const s = requireStore();
+    const dir = backupDir(s.path);
+    mkdirSync(dir, { recursive: true });
+    const r = await dialog.showSaveDialog(win!, {
+      title: "Sicherung erstellen",
+      defaultPath: nextBackupPath(s.path, "manuell"),
+      filters: [{ name: "Feldspur-Projekt", extensions: ["feldspur"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    const dest = r.filePath.endsWith(".feldspur") ? r.filePath : `${r.filePath}.feldspur`;
+    s.backupTo(dest);
+    return dest;
+  });
+  ipcMain.handle(IPC.openBackupCopy, async (_e, given?: string) => {
+    let src = given;
+    if (!src) {
+      const near = lastFailedPath ?? store?.path;
+      const dir = near ? backupDir(near) : undefined;
+      const r = await dialog.showOpenDialog(win!, {
+        title: "Sicherung als Kopie öffnen",
+        defaultPath: dir && existsSync(dir) ? dir : near ? dirname(near) : undefined,
+        properties: ["openFile"],
+        filters: [{ name: "Feldspur-Projekt", extensions: ["feldspur"] }],
+      });
+      src = r.filePaths[0];
+      if (r.canceled || !src) return null;
+    }
+    const check = checkProjectFile(src, bindingOpts());
+    if (!check.ok) throw new Error(`Diese Sicherung lässt sich nicht öffnen. ${check.problem}`);
+    // Vorschlag: neben dem Original (falls bekannt), mit dem Stand der Sicherung im Namen.
+    const original = lastFailedPath ?? store?.path;
+    const listed = original ? listBackups(original).find((b) => b.path === src) : undefined;
+    const stamp = fileStamp(listed ? new Date(listed.createdAt) : statSync(src).mtime);
+    const base = (original ? basename(original) : basename(src))
+      .replace(/\.feldspur$/i, "")
+      .replace(/_\d{4}-\d\d-\d\d_.*$/, "");
+    const r = await dialog.showSaveDialog(win!, {
+      title: "Wiederhergestellte Kopie speichern unter",
+      defaultPath: join(original ? dirname(original) : dirname(dirname(src)), `${base} (Stand ${stamp}).feldspur`),
+      filters: [{ name: "Feldspur-Projekt", extensions: ["feldspur"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    const dest = r.filePath.endsWith(".feldspur") ? r.filePath : `${r.filePath}.feldspur`;
+    if (store && resolve(dest) === resolve(store.path))
+      throw new Error("Die Kopie darf nicht das offene Projekt ersetzen. Bitte einen anderen Namen wählen.");
+    if (resolve(dest) === resolve(src)) throw new Error("Die Kopie braucht einen anderen Namen als die Sicherung.");
+    if (exportRunning()) throw new Error("Während einer Ausgabe lässt sich kein anderes Projekt öffnen.");
+    copyProjectFile(src, dest, bindingOpts());
+    const info = openStore(dest, false, true);
+    // Woher die Kopie stammt, steht in der Projektdatei und als Schritt im Änderungsprotokoll.
+    const s = requireStore();
+    s.history.record("Aus Sicherung wiederhergestellt", () => {
+      s.setMeta("restored_from", basename(src));
+      s.setMeta("restored_at", new Date().toISOString());
+    });
+    s.history.clear();
+    return info;
+  });
+  ipcMain.handle(IPC.showBackupFolder, async () => {
+    const dir = backupDir(requireStore().path);
+    mkdirSync(dir, { recursive: true });
+    await shell.openPath(dir);
+  });
 
   undoable(IPC.createSession, "Einsatz angelegt", (_e, input: NewSessionInput) => {
     requireStore().addSession(input);
@@ -674,9 +782,20 @@ app.on("second-instance", (_e, argv) => {
   const path = argv.find((a) => a.endsWith(".feldspur"));
   // Während einer Ausgabe nicht das Projekt unter ihr wechseln.
   if (!path || !existsSync(path) || exportRunning()) return;
-  openStore(path, false);
+  try {
+    openStore(path, false);
+  } catch (e) {
+    showOpenError((e as Error).message);
+    return;
+  }
   win?.webContents.reload();
 });
+
+/** Fehler beim Öffnen außerhalb der Oberfläche (Doppelklick, „Öffnen mit“) als Meldung zeigen. */
+function showOpenError(detail: string): void {
+  const opts = { type: "error" as const, message: "Projekt lässt sich nicht öffnen", detail };
+  void (win ? dialog.showMessageBox(win, opts) : dialog.showMessageBox(opts));
+}
 
 void app.whenReady().then(() => {
   if (!primaryInstance) return;
@@ -684,8 +803,16 @@ void app.whenReady().then(() => {
   registerIpc();
   // Für Tests und „Öffnen mit“: Projektpfad als Argument.
   const arg = process.argv.find((a) => a.endsWith(".feldspur"));
-  if (arg) openStore(arg, !existsSync(arg));
+  let failed: string | null = null;
+  if (arg)
+    try {
+      openStore(arg, !existsSync(arg));
+    } catch (e) {
+      failed = (e as Error).message;
+    }
   createWindow();
+  if (failed) showOpenError(failed);
+  setInterval(() => autoBackup.tick(), AUTO_BACKUP_CHECK_MS).unref();
 });
 
 // macOS: Projekt aus dem Dock („Zuletzt benutzt“) oder per Doppelklick im Finder öffnen.
@@ -697,12 +824,16 @@ app.on("open-file", (e, path) => {
     process.argv.push(path);
     return;
   }
-  openStore(path, false);
+  try {
+    openStore(path, false);
+  } catch (e) {
+    showOpenError((e as Error).message);
+    return;
+  }
   win?.webContents.reload();
 });
 
 app.on("window-all-closed", () => {
-  store?.close();
-  store = null;
+  closeStore();
   app.quit();
 });
