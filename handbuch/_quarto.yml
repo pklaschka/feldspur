@@ -5,9 +5,11 @@ project:
   resources:
     - bilder/logo.svg
   # Bricht ab, wenn die Webseite etwas von fremden Servern lädt.
-  # Stand in die Zitierangaben der Webseite (siehe zitierangaben.ts), danach die Prüfung.
+  # Stand in die Zitierangaben der Webseite (siehe zitierangaben.ts), das Tastenkürzel-Spickblatt als PDF
+  # (spickblatt.ts), danach die Prüfung.
   post-render:
     - zitierangaben.ts
+    - spickblatt.ts
     - extern-pruefen.ts
 
 manuscript:
@@ -47,6 +49,9 @@ format:
       - text: PDF
         icon: file-pdf
         href: Feldspur-Handbuch.pdf
+      - text: Tastenkürzel (PDF, A4 quer)
+        icon: keyboard
+        href: Feldspur-Tastenkuerzel.pdf
       - text: Quelltext auf GitHub
         icon: github
         href: https://github.com/pklaschka/feldspur
