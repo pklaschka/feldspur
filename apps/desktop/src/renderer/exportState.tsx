@@ -13,12 +13,23 @@ export interface ExportJob {
   progress: ExportProgress | null;
   /** Beginn des Videoschritts: Zeitpunkt und schon fertige Sekunden, für die Restzeit. */
   videoFrom: { at: number; done: number } | null;
+  /** Abbrechen ist angefordert, ffmpeg wird beendet. */
+  cancelling: boolean;
+}
+
+/** Wie eine abgebrochene Ausgabe lief: mit Video bleiben fertige Abschnitte im Zwischenspeicher. */
+export interface CancelledExport {
+  video: boolean;
 }
 
 interface ExportState {
   job: ExportJob | null;
   results: Record<string, ExportOutcome>;
   errors: Record<string, string>;
+  /** Abgebrochene Ausgaben je Einsatz, bis zum nächsten Versuch. */
+  cancelled: Record<string, CancelledExport>;
+  /** Laufende Ausgabe abbrechen. */
+  cancel(): void;
   start(sessionId: string, opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean }): void;
 }
 
@@ -28,6 +39,7 @@ export function ExportProvider({ children }: { children: ReactNode }) {
   const [job, setJob] = useState<ExportJob | null>(null);
   const [results, setResults] = useState<Record<string, ExportOutcome>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cancelled, setCancelled] = useState<Record<string, CancelledExport>>({});
   useEffect(
     () =>
       api.onExportProgress((p) =>
@@ -44,15 +56,13 @@ export function ExportProvider({ children }: { children: ReactNode }) {
     opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean },
   ) => {
     if (job) return;
-    setJob({ sessionId, video: opts.video, progress: null, videoFrom: null });
-    setErrors((x) => {
-      const rest = { ...x };
-      delete rest[sessionId];
-      return rest;
-    });
+    setJob({ sessionId, video: opts.video, progress: null, videoFrom: null, cancelling: false });
+    setErrors((x) => without(x, sessionId));
+    setCancelled((x) => without(x, sessionId));
     api.exportSession(sessionId, opts).then(
       (r) => {
-        if (r) setResults((x) => ({ ...x, [sessionId]: r }));
+        if (r && "cancelled" in r) setCancelled((x) => ({ ...x, [sessionId]: { video: opts.video } }));
+        else if (r) setResults((x) => ({ ...x, [sessionId]: r }));
         setJob(null);
       },
       (e: unknown) => {
@@ -62,7 +72,25 @@ export function ExportProvider({ children }: { children: ReactNode }) {
       },
     );
   };
-  return <Ctx.Provider value={{ job, results, errors, start }}>{children}</Ctx.Provider>;
+  const cancel = () => {
+    if (!job || job.cancelling) return;
+    setJob({ ...job, cancelling: true });
+    void api.cancelExport(job.sessionId);
+  };
+  return <Ctx.Provider value={{ job, results, errors, cancelled, cancel, start }}>{children}</Ctx.Provider>;
+}
+
+function without<T>(x: Record<string, T>, key: string): Record<string, T> {
+  const rest = { ...x };
+  delete rest[key];
+  return rest;
+}
+
+/** Hinweis nach einem Abbruch. Fertige Abschnitte gibt es nur, wenn ein Video gerechnet wurde. */
+export function cancelledText(c: CancelledExport): string {
+  return c.video
+    ? "Abgebrochen. Fertige Videoabschnitte bleiben im Zwischenspeicher, ein neuer Versuch geht schneller."
+    : "Abgebrochen. Die Ausgabe ist nicht vollständig.";
 }
 
 export function useExport(): ExportState {

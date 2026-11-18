@@ -91,12 +91,13 @@ export interface Piece {
 }
 
 /** ffmpeg mit Fortschritt: meldet die schon geschriebene Ausgabezeit in ms. */
-function ffProgress(args: string[], onTimeMs: (ms: number) => void): Promise<void> {
+function ffProgress(args: string[], onTimeMs: (ms: number) => void, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
+    // Mit signal beendet Node den ffmpeg-Prozess beim Abbrechen und meldet einen AbortError.
     const child = spawn(
       toolPaths().ffmpeg,
       ["-hide_banner", "-loglevel", "error", "-nostats", "-progress", "pipe:1", "-y", ...args],
-      { stdio: ["ignore", "pipe", "pipe"] },
+      { stdio: ["ignore", "pipe", "pipe"], signal },
     );
     let err = "";
     let buf = "";
@@ -117,9 +118,10 @@ function ffProgress(args: string[], onTimeMs: (ms: number) => void): Promise<voi
   });
 }
 
-async function ff(args: string[]): Promise<void> {
+async function ff(args: string[], signal?: AbortSignal): Promise<void> {
   await run(toolPaths().ffmpeg, ["-hide_banner", "-loglevel", "error", "-y", ...args], {
     maxBuffer: 16 * 1024 * 1024,
+    signal,
   });
 }
 
@@ -272,6 +274,11 @@ export interface MontageVideoOptions {
   parallel?: number;
   /** Lautstärke-Angleichung je Quelle (audioLevelOf); fehlt eine Quelle, bleibt ihr Ton unverändert. */
   levels?: Map<string, AudioLevel | null>;
+  /**
+   * Abbrechen: laufende ffmpeg-Prozesse werden beendet, renderMontage wirft einen AbortError.
+   * Schon fertige Abschnitte bleiben im Zwischenspeicher (cacheDir) und werden beim nächsten Mal übernommen.
+   */
+  signal?: AbortSignal;
 }
 
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
@@ -297,19 +304,36 @@ function chunks(pieces: Piece[]): Piece[] {
   });
 }
 
-/** Einfache Warteschlange: höchstens n Aufgaben gleichzeitig. */
-async function pool<T>(items: T[], n: number, work: (item: T, i: number) => Promise<void>): Promise<void> {
+/**
+ * Einfache Warteschlange: höchstens n Aufgaben gleichzeitig. Scheitert eine oder wird abgebrochen,
+ * beginnt keine neue mehr; laufende werden noch abgewartet, dann kommt der erste Fehler.
+ */
+async function pool<T>(
+  items: T[],
+  n: number,
+  work: (item: T, i: number) => Promise<void>,
+  signal?: AbortSignal,
+): Promise<void> {
   let next = 0;
+  let failed = false;
   const workers = Array.from({ length: Math.max(1, Math.min(n, items.length)) }, async () => {
-    while (next < items.length) {
+    while (next < items.length && !failed) {
+      signal?.throwIfAborted();
       const i = next++;
-      await work(items[i]!, i);
+      await work(items[i]!, i).catch((e: unknown) => {
+        failed = true;
+        throw e;
+      });
     }
   });
-  await Promise.all(workers);
+  const settled = await Promise.allSettled(workers);
+  const err = settled.find((r) => r.status === "rejected");
+  if (err) throw err.reason;
 }
 
 export async function renderMontage(sc: Scaffold, outFile: string, opts: MontageVideoOptions): Promise<void> {
+  const { signal } = opts;
+  signal?.throwIfAborted();
   const dir = join(opts.workDir, "montage");
   await mkdir(dir, { recursive: true });
   // Erstes darstellbares Bild je Eintrag als Datei für ffmpeg, benannt nach Inhalt (für den Zwischenspeicher).
@@ -374,23 +398,27 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
     if (await exists(cached)) return cached;
     const aList: string[] = [];
     for (const [i, p] of pieces.entries()) {
+      signal?.throwIfAborted();
       const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
       const aOut = join(dir, `a${i}.wav`);
       const samples = Math.round(durS * RATE);
       const fit = `apad,atrim=end_sample=${samples}`;
       const src = sounds[i]!;
       if (!src.length) {
-        await ff([
-          "-f",
-          "lavfi",
-          "-i",
-          `anullsrc=r=${RATE}:cl=stereo`,
-          "-af",
-          `atrim=end_sample=${samples}`,
-          "-c:a",
-          "pcm_s16le",
-          aOut,
-        ]);
+        await ff(
+          [
+            "-f",
+            "lavfi",
+            "-i",
+            `anullsrc=r=${RATE}:cl=stereo`,
+            "-af",
+            `atrim=end_sample=${samples}`,
+            "-c:a",
+            "pcm_s16le",
+            aOut,
+          ],
+          signal,
+        );
       } else {
         // Mehrere Geräte übereinander: gleich laut addiert, ein Begrenzer fängt Spitzen ab.
         const args: string[] = [];
@@ -407,13 +435,13 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
             ? `${src.map((_, k) => `[a${k}]`).join("")}amix=inputs=${src.length}:normalize=0:duration=longest,alimiter=limit=0.95,`
             : "[a0]";
         f.push(`${mix}aformat=sample_fmts=s16:channel_layouts=stereo,${fit}[out]`);
-        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", aOut]);
+        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", aOut], signal);
       }
       aList.push(aOut);
     }
     await writeFile(join(dir, "a.txt"), aList.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
     const m4a = join(dir, "a.m4a");
-    await ff(["-f", "concat", "-safe", "0", "-i", join(dir, "a.txt"), "-c:a", "aac", "-b:a", "160k", m4a]);
+    await ff(["-f", "concat", "-safe", "0", "-i", join(dir, "a.txt"), "-c:a", "aac", "-b:a", "160k", m4a], signal);
     await rename(m4a, cached).catch(() => copyFile(m4a, cached));
     for (const f of aList) await rm(f, { force: true });
     return cached;
@@ -432,129 +460,144 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
 
   const vFiles: string[] = [];
 
-  await pool(parts, parallel, async (p, i) => {
-    const frameCount = p.f1 - p.f0;
-    const durS = (frameCount * FRAME_MS) / 1000;
-    const frames = opts.overlay ? framesFor(p) : null;
-    const key = createHash("sha1")
-      .update(
-        JSON.stringify({
-          v: LOOK_VERSION,
-          enc,
-          frameCount,
-          kind: p.kind,
-          videos: await Promise.all(
-            p.videos.map(async (v) => ({ id: await fileId(v.source.originalPath), fromMs: v.fromMs })),
-          ),
-          // Die Stelle im Video gehört nicht zum Bild: Abschnitte bleiben gültig, wenn sich davor etwas ändert.
-          frames: frames?.map(({ montageMs: _m, ...f }) => f),
-          header: frames ? header : null,
-        }),
-      )
-      .digest("hex");
-    const vOut = join(cacheDir, `${key}.mp4`);
-    vFiles[i] = vOut;
-    used.add(`${key}.mp4`);
-    if (await exists(vOut)) {
+  await pool(
+    parts,
+    parallel,
+    async (p, i) => {
+      const frameCount = p.f1 - p.f0;
+      const durS = (frameCount * FRAME_MS) / 1000;
+      const frames = opts.overlay ? framesFor(p) : null;
+      const key = createHash("sha1")
+        .update(
+          JSON.stringify({
+            v: LOOK_VERSION,
+            enc,
+            frameCount,
+            kind: p.kind,
+            videos: await Promise.all(
+              p.videos.map(async (v) => ({ id: await fileId(v.source.originalPath), fromMs: v.fromMs })),
+            ),
+            // Die Stelle im Video gehört nicht zum Bild: Abschnitte bleiben gültig, wenn sich davor etwas ändert.
+            frames: frames?.map(({ montageMs: _m, ...f }) => f),
+            header: frames ? header : null,
+          }),
+        )
+        .digest("hex");
+      const vOut = join(cacheDir, `${key}.mp4`);
+      vFiles[i] = vOut;
+      used.add(`${key}.mp4`);
+      if (await exists(vOut)) {
+        doneFrames.set(i, frameCount);
+        report();
+        return;
+      }
+
+      const pdir = join(dir, `p${i}`);
+      await mkdir(pdir, { recursive: true });
+      // Ohne Video ändert sich das Bild höchstens einmal je Sekunde: mit 1 Bild/s zusammensetzen,
+      // erst ganz am Ende auf 25 Bilder/s vervielfachen. Spart den größten Teil der Rechenzeit.
+      const rate = p.videos.length ? FPS : 1;
+      const srcDur = (Math.ceil(durS) + 1).toString();
+      const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${rate}:d=${srcDur}`];
+      const filters: string[] = [];
+      let last = "[0:v]";
+      let input = 1;
+      // Gleichzeitige Videos nebeneinander, jedes in sein Feld eingepasst.
+      const tiles = videoTiles(p.videos.length);
+      for (const [k, v] of p.videos.entries()) {
+        const box = tiles[k]!;
+        args.push("-hwaccel", "auto", "-ss", (v.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3));
+        args.push("-i", v.source.originalPath);
+        filters.push(
+          `[${input}:v]fps=${FPS},scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1[v${input}]`,
+          `${last}[v${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}+(${box.h}-overlay_h)/2:eof_action=pass[b${input}]`,
+        );
+        last = `[b${input}]`;
+        input++;
+      }
+      if (opts.overlay && frames) {
+        const pngs = await opts.overlay(header, frames);
+        signal?.throwIfAborted();
+        await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
+        args.push("-framerate", "1", "-i", join(pdir, "o%05d.png"));
+        filters.push(
+          rate === 1 ? `[${input}:v]null[o${input}]` : `[${input}:v]fps=${FPS}[o${input}]`,
+          `${last}[o${input}]overlay=0:0:eof_action=repeat[b${input}]`,
+        );
+        last = `[b${input}]`;
+        input++;
+      }
+      filters.push(`${last}format=yuv420p${rate === 1 ? `,fps=${FPS}` : ""},trim=duration=${durS.toFixed(3)}[out]`);
+      const tmp = join(pdir, "v.mp4");
+      await ffProgress(
+        [
+          ...args,
+          "-filter_complex",
+          filters.join(";"),
+          "-map",
+          "[out]",
+          "-frames:v",
+          String(frameCount),
+          "-r",
+          String(FPS),
+          ...enc,
+          "-g",
+          String(FPS * 2),
+          "-an",
+          tmp,
+        ],
+        (ms) => {
+          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS)));
+          report();
+        },
+        signal,
+      );
+      await rename(tmp, vOut).catch(async () => {
+        await copyFile(tmp, vOut);
+      });
+      await rm(pdir, { recursive: true, force: true });
       doneFrames.set(i, frameCount);
       report();
-      return;
-    }
-
-    const pdir = join(dir, `p${i}`);
-    await mkdir(pdir, { recursive: true });
-    // Ohne Video ändert sich das Bild höchstens einmal je Sekunde: mit 1 Bild/s zusammensetzen,
-    // erst ganz am Ende auf 25 Bilder/s vervielfachen. Spart den größten Teil der Rechenzeit.
-    const rate = p.videos.length ? FPS : 1;
-    const srcDur = (Math.ceil(durS) + 1).toString();
-    const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${rate}:d=${srcDur}`];
-    const filters: string[] = [];
-    let last = "[0:v]";
-    let input = 1;
-    // Gleichzeitige Videos nebeneinander, jedes in sein Feld eingepasst.
-    const tiles = videoTiles(p.videos.length);
-    for (const [k, v] of p.videos.entries()) {
-      const box = tiles[k]!;
-      args.push("-hwaccel", "auto", "-ss", (v.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3));
-      args.push("-i", v.source.originalPath);
-      filters.push(
-        `[${input}:v]fps=${FPS},scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1[v${input}]`,
-        `${last}[v${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}+(${box.h}-overlay_h)/2:eof_action=pass[b${input}]`,
-      );
-      last = `[b${input}]`;
-      input++;
-    }
-    if (opts.overlay && frames) {
-      const pngs = await opts.overlay(header, frames);
-      await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
-      args.push("-framerate", "1", "-i", join(pdir, "o%05d.png"));
-      filters.push(
-        rate === 1 ? `[${input}:v]null[o${input}]` : `[${input}:v]fps=${FPS}[o${input}]`,
-        `${last}[o${input}]overlay=0:0:eof_action=repeat[b${input}]`,
-      );
-      last = `[b${input}]`;
-      input++;
-    }
-    filters.push(`${last}format=yuv420p${rate === 1 ? `,fps=${FPS}` : ""},trim=duration=${durS.toFixed(3)}[out]`);
-    const tmp = join(pdir, "v.mp4");
-    await ffProgress(
-      [
-        ...args,
-        "-filter_complex",
-        filters.join(";"),
-        "-map",
-        "[out]",
-        "-frames:v",
-        String(frameCount),
-        "-r",
-        String(FPS),
-        ...enc,
-        "-g",
-        String(FPS * 2),
-        "-an",
-        tmp,
-      ],
-      (ms) => {
-        doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS)));
-        report();
-      },
-    );
-    await rename(tmp, vOut).catch(async () => {
-      await copyFile(tmp, vOut);
-    });
-    await rm(pdir, { recursive: true, force: true });
-    doneFrames.set(i, frameCount);
-    report();
-  });
+    },
+    signal,
+  );
 
   await writeFile(join(dir, "v.txt"), vFiles.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
   await writeFile(join(dir, "meta.txt"), chapterFile(sc));
   const m4a = await audioDone;
-  await ff([
-    "-f",
-    "concat",
-    "-safe",
-    "0",
-    "-i",
-    join(dir, "v.txt"),
-    "-i",
-    m4a,
-    "-i",
-    join(dir, "meta.txt"),
-    "-map",
-    "0:v",
-    "-map",
-    "1:a",
-    "-map_metadata",
-    "2",
-    "-map_chapters",
-    "2",
-    "-c",
-    "copy",
-    "-movflags",
-    "+faststart",
-    outFile,
-  ]);
+  signal?.throwIfAborted();
+  // Abgebrochen oder gescheitert: keine halbe Videodatei im Ausgabeordner liegen lassen.
+  await ff(
+    [
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      join(dir, "v.txt"),
+      "-i",
+      m4a,
+      "-i",
+      join(dir, "meta.txt"),
+      "-map",
+      "0:v",
+      "-map",
+      "1:a",
+      "-map_metadata",
+      "2",
+      "-map_chapters",
+      "2",
+      "-c",
+      "copy",
+      "-movflags",
+      "+faststart",
+      outFile,
+    ],
+    signal,
+  ).catch(async (e: unknown) => {
+    await rm(outFile, { force: true });
+    throw e;
+  });
   // Zwischenspeicher aufräumen: nur behalten, was diese Ausgabe gebraucht hat.
   for (const f of await readdir(cacheDir)) if (!used.has(f)) await rm(join(cacheDir, f), { force: true });
 }

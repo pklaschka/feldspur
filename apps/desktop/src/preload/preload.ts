@@ -88,6 +88,7 @@ const api: FeldspurApi = {
   exportStatus: (id, opts) => ipcRenderer.invoke(IPC.exportStatus, id, opts),
   montagePreview: (id, realtime) => ipcRenderer.invoke(IPC.montagePreview, id, realtime),
   exportSession: (id, opts) => ipcRenderer.invoke(IPC.exportSession, id, opts),
+  cancelExport: (id) => ipcRenderer.invoke(IPC.cancelExport, id),
   onExportProgress: (cb) => {
     const listener = (_e: unknown, p: ExportProgress) => cb(p);
     ipcRenderer.on(IPC.exportProgress, listener);

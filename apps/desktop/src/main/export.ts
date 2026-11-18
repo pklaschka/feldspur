@@ -20,11 +20,12 @@ import {
   type OverlayHeader,
   timestamp,
 } from "@feldspur/media";
-import { IPC, type ExportOutcome, type ScaffoldPreview } from "../shared/api.ts";
+import { IPC, type ExportRunResult, type ScaffoldPreview } from "../shared/api.ts";
 import { exportBlocker } from "./originals.ts";
 
 const CHUNK = 60;
 let running: string | null = null;
+let controller: AbortController | null = null;
 
 /** Läuft gerade eine Ausgabe? Dann nicht schließen, ohne zu fragen. */
 export function exportRunning(): boolean {
@@ -130,25 +131,34 @@ export function exportStatus(
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
 }
 
+/** Laufende Ausgabe dieses Einsatzes abbrechen (sonst nichts). */
+export function cancelExport(sessionId: string): void {
+  if (running === sessionId) controller?.abort();
+}
+
 export async function runExport(
   s: ProjectStore,
   wc: WebContents,
   sessionId: string,
   parent: string,
   opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
-): Promise<ExportOutcome> {
+): Promise<ExportRunResult> {
   // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
   const blocked = exportBlocker(s, sessionId, opts.video);
   if (blocked) throw new Error(blocked);
   running = sessionId;
+  const ctrl = new AbortController();
+  controller = ctrl;
   try {
     // Stand beim Start: Was sich während der Ausgabe ändert, kommt in die nächste (und macht diese veraltet).
     const settings = exportSettings(s, sessionId, opts);
     const fingerprint = exportFingerprint(s, sessionId, settings);
     const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(s, sessionId, opts.realtime))));
-    // Schlägt die Ausgabe in denselben Ordner fehl, liegen dort womöglich halbe Dateien: dann gilt der alte Stand nicht.
+    // Schlägt die Ausgabe in denselben Ordner fehl oder wird abgebrochen, liegen dort womöglich halbe Dateien:
+    // dann gilt der alte Stand nicht.
     const r = await exportSession(s, sessionId, dir, {
+      signal: ctrl.signal,
       video: opts.video,
       resolve: opts.resolve,
       overlay: overlayVia(wc),
@@ -159,8 +169,10 @@ export async function runExport(
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
     }).catch((e: unknown) => {
       if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);
+      if (ctrl.signal.aborted) return null;
       throw e;
     });
+    if (!r) return { cancelled: true };
     // Nicht rückgängig zu machen und kein Forschungsdatum: steht außerhalb des Verlaufs in der Projektdatei.
     s.saveExportRecord({
       sessionId,
@@ -174,5 +186,6 @@ export async function runExport(
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
   } finally {
     running = null;
+    controller = null;
   }
 }

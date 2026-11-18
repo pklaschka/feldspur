@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import type { ExportStatus, OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
-import { percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
+import { cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
 import { ScaffoldLine } from "./ScaffoldLine.tsx";
@@ -84,6 +84,7 @@ export function ExportStep({
   const progress = busy ? ex.job!.progress : null;
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
+  const cancelled = busy ? null : (ex.cancelled[sessionId] ?? null);
   const settings = { video, resolve, mixAudio, realtime };
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const [status, setStatus] = useState<ExportStatus | null>(null);
@@ -173,18 +174,32 @@ export function ExportStep({
           </>
         }
       />
-      {(busy || result || error) && (
+      {(busy || result || error || cancelled) && (
         <Panel className="mb-4 max-w-[1240px]">
           {busy && (
             <div data-testid="export-progress">
-              <div className="mb-1 flex justify-between text-[0.9rem]">
-                <span>{progress?.step ?? "Vorbereiten"}</span>
+              <div className="mb-1 flex items-center gap-3 text-[0.9rem]">
+                <span>{ex.job!.cancelling ? "Bricht ab…" : (progress?.step ?? "Vorbereiten")}</span>
+                <span className="flex-1" />
                 <span className="text-muted tabular-nums">
-                  {progress?.step === "Montagevideo" && `${remainingText(remainingMs(ex.job))} · `}
+                  {progress?.step === "Montagevideo" &&
+                    !ex.job!.cancelling &&
+                    `${remainingText(remainingMs(ex.job))} · `}
                   {pct} %
                 </span>
+                <Button size="sm" disabled={ex.job!.cancelling} onClick={ex.cancel} data-testid="export-cancel">
+                  Abbrechen
+                </Button>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
+              <div
+                className="h-1.5 overflow-hidden rounded-full bg-sunken"
+                role="progressbar"
+                aria-label="Ausgabe"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={pct}
+                aria-valuetext={`${progress?.step ?? "Vorbereiten"}, ${pct} %`}
+              >
                 <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
               </div>
               <p className="mt-2 text-[0.85rem] text-muted">
@@ -194,6 +209,11 @@ export function ExportStep({
             </div>
           )}
           {error && <Notice>Ausgabe fehlgeschlagen: {error}</Notice>}
+          {cancelled && (
+            <p className="text-[0.9rem]" role="status" data-testid="export-cancelled">
+              {cancelledText(cancelled)}
+            </p>
+          )}
           {result && (
             <ExportResult
               status={result}
