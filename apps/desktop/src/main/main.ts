@@ -49,10 +49,12 @@ import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion, setRegio
 import {
   addManualAnchor,
   addTimeEvidence,
+  confirmAnchors,
   confirmPlacement,
   decideMany,
   decidePlacement,
   parseClockOnDate,
+  proposalsToConfirm,
   kindHolds,
   kindName,
   type DecideInput,
@@ -649,6 +651,18 @@ function registerIpc(): void {
     }
     return buildSessionView(s, a.sessionId);
   });
+  undoable(
+    IPC.confirmAnchors,
+    (s, sessionId: string, anchorIds: string[]) => {
+      const n = proposalsToConfirm(s, sessionId, anchorIds).length;
+      return n === 1 ? "Vorschlag übernommen" : `${n} Vorschläge übernommen`;
+    },
+    (_e, sessionId: string, anchorIds: string[]) => {
+      const s = requireStore();
+      confirmAnchors(s, sessionId, anchorIds);
+      return buildSessionView(s, sessionId);
+    },
+  );
 
   undoable(IPC.rejectAnchor, "Anker entfernt", (_e, anchorId: string) => {
     const s = requireStore();

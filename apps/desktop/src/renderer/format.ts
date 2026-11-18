@@ -31,13 +31,14 @@ const UNIT_MS: [RegExp, number][] = [
 
 /**
  * Uhrabweichung als Text → ms. null bei leerer/ungültiger Eingabe. Versteht
- * "−2:47", "+0:04", "-167" (Sekunden), "+2:00:00", "+1 Tag 2:00:00", "−3 Tage", "+2 h 5 min".
+ * "−2:47", "+0:04", "± 0:00", "-167" (Sekunden), "+2:00:00", "+1 Tag 2:00:00", "−3 Tage", "+2 h 5 min".
  */
 export function parseOffset(text: string): number | null {
   let t = text.trim().replace(/[−–]/g, "-").replace(",", ".").toLowerCase();
   if (!t) return null;
   let sign = 1;
-  if (t[0] === "+" || t[0] === "-") {
+  // „±“ steht in der Anzeige für eine Abweichung von 0 (offsetText).
+  if (t[0] === "+" || t[0] === "-" || t[0] === "±") {
     sign = t[0] === "-" ? -1 : 1;
     t = t.slice(1).trim();
   }
@@ -63,6 +64,15 @@ export function parseOffset(text: string): number | null {
   if (consumed.replace(/\s/g, "") !== rest.replace(/\s/g, "")) return null;
   if (!clock && !consumed) return null;
   return sign * Math.round(ms);
+}
+
+/**
+ * Eingabe im Feld „Abweichung“ lesen: null = leer (Abgleich löschen), "invalid" = nicht lesbar (nichts speichern),
+ * sonst die Abweichung in ms.
+ */
+export function readOffsetInput(text: string): number | null | "invalid" {
+  if (!text.trim()) return null;
+  return parseOffset(text) ?? "invalid";
 }
 
 /** "10:15:00" */

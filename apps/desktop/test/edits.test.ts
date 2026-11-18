@@ -6,12 +6,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   addManualAnchor,
   addTimeEvidence,
+  confirmAnchors,
   confirmPlacement,
   decideMany,
   decidePlacement,
   parseClock,
   parseClockOnDate,
   parseMediaPos,
+  pickBestPerDevice,
   removeEvidence,
   replaceAnchor,
   setLevel,
@@ -529,5 +531,57 @@ describe("Uhrzeiten prüfen", () => {
     expect(() => parseClockOnDate("2024-05-01", "99:99", { seconds: false })).toThrow(
       "„99:99“ ist keine gültige Uhrzeit (hh:mm).",
     );
+  });
+});
+
+describe("Alle eindeutigen Vorschläge übernehmen", () => {
+  it("je Gerät den sichersten, ohne Fehler und als ein Verlaufsschritt", () => {
+    const { session, cam, audio, video } = seed();
+    const video2 = store.addSource({
+      sessionId: session.id,
+      deviceId: cam.id,
+      originalPath: "/x",
+      sizeBytes: 1,
+      metadata: {},
+      kind: "video",
+      fileName: "C2.MP4",
+      sha256: sha(4),
+      durationMs: 60_000,
+    });
+    const proposal = (sourceId: string, confidence: number) => ({
+      sessionId: session.id,
+      kind: "clap" as const,
+      a: { sourceId: audio.id, atMediaMs: 20_000 },
+      b: { sourceId, atMediaMs: 0 },
+      confidence,
+    });
+    const [weak, strong] = store.replaceProposedAnchors(session.id, [
+      proposal(video.id, 0.6),
+      proposal(video2.id, 0.9),
+    ]);
+    const before = store.history.state().serial;
+
+    const n = store.history.record("2 Vorschläge übernommen", () =>
+      confirmAnchors(store, session.id, [weak!.id, strong!.id, "gibt-es-nicht"]),
+    );
+
+    expect(n).toBe(1);
+    const anchors = store.listAnchors(session.id);
+    expect(anchors.map((a) => [a.id, a.proposed])).toEqual([[strong!.id, false]]);
+    expect(store.history.state().serial).toBe(before + 1);
+    expect(store.history.undo()).toBe("2 Vorschläge übernommen");
+    expect(store.listAnchors(session.id).filter((a) => a.proposed)).toHaveLength(2);
+  });
+
+  it("wählt je Gerät die höchste Sicherheit, Vorschläge ohne Gerät zählen einzeln", () => {
+    expect(
+      pickBestPerDevice([
+        { id: "a", deviceId: "cam", confidence: 0.6 },
+        { id: "b", deviceId: "cam", confidence: 0.8 },
+        { id: "c", deviceId: "phone", confidence: null },
+        { id: "d", deviceId: null, confidence: 0.7 },
+        { id: "e", deviceId: null, confidence: 0.7 },
+      ]),
+    ).toEqual(["b", "c", "d", "e"]);
   });
 });

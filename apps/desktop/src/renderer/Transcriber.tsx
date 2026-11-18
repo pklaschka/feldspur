@@ -10,7 +10,7 @@ import { Dialog } from "radix-ui";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { mediaUrl, type SessionView, type SourceRow, type TranscriptRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
+import { clock, KIND_LABEL } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "./transcribe.ts";
@@ -21,6 +21,7 @@ import { useLatest } from "./hooks.ts";
 import { type Item, eventsIn, itemRank, lastAtOrBefore, noteBands, sourceOptions } from "./transcriber/items.ts";
 import { At, Line, type LineActions } from "./transcriber/Line.tsx";
 import { OtherLineItem } from "./transcriber/OtherLineItem.tsx";
+import { createSerialQueue, restoreDraft, takeDraft } from "./transcriber/draft.ts";
 import { Scrubber } from "./transcriber/Scrubber.tsx";
 import { isEnter } from "./keys.js";
 
@@ -55,8 +56,14 @@ export function Transcriber({
 }) {
   const row = sourceId ? view.rows.find((r) => r.id === sourceId) : undefined;
   const avRows = view.rows.filter((r) => r.kind === "audio" || r.kind === "video");
+  // Eine angefangene Zeile wird angelegt, bevor der Dialog schließt oder die Tonquelle wechselt.
+  // Scheitert das Anlegen, bleibt alles offen und der Text im Feld.
+  const flushRef = useRef<(() => Promise<boolean>) | null>(null);
+  const close = () => void (flushRef.current?.() ?? Promise.resolve(true)).then((ok) => ok && onClose());
+  const switchSource = (id: string) =>
+    void (flushRef.current?.() ?? Promise.resolve(true)).then((ok) => ok && onSource(id));
   return (
-    <Dialog.Root open={!!row} onOpenChange={(o) => !o && onClose()}>
+    <Dialog.Root open={!!row} onOpenChange={(o) => !o && close()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40" />
         <Dialog.Content
@@ -72,8 +79,9 @@ export function Transcriber({
               view={view}
               row={row}
               avRows={avRows}
-              onSource={onSource}
-              onClose={onClose}
+              onSource={switchSource}
+              onClose={close}
+              flushRef={flushRef}
               guard={guard}
               onView={onView}
             />
@@ -91,6 +99,7 @@ function Body({
   avRows,
   onSource,
   onClose,
+  flushRef,
   guard,
   onView,
 }: {
@@ -99,6 +108,8 @@ function Body({
   avRows: SourceRow[];
   onSource: (id: string) => void;
   onClose: () => void;
+  /** Legt eine angefangene Zeile an; true, wenn danach nichts mehr im Feld steht. */
+  flushRef: { current: (() => Promise<boolean>) | null };
   guard: Guard;
   onView: (v: SessionView) => void;
 }) {
@@ -120,10 +131,27 @@ function Body({
   const [follow, setFollow] = useState(true);
   const [showOthers, setShowOthers] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraftState] = useState("");
   const [speaker, setSpeaker] = useState("");
   /** Stelle beim ersten Tastendruck der neuen Zeile. */
-  const [mark, setMark] = useState<number | null>(null);
+  const [mark, setMarkState] = useState<number | null>(null);
+  // Feld und Marke auch synchron lesbar: Ein zweites Enter oder Weitertippen kommt vor dem nächsten Rendern an.
+  const draftRef = useRef("");
+  const markRef = useRef<number | null>(null);
+  const speakerRef = useRef("");
+  const setDraft = (v: string) => {
+    draftRef.current = v;
+    setDraftState(v);
+  };
+  const setMark = (v: number | null) => {
+    markRef.current = v;
+    setMarkState(v);
+  };
+  const changeSpeaker = (v: string) => {
+    speakerRef.current = v;
+    setSpeaker(v);
+  };
+  const queue = useRef(createSerialQueue());
   const list = useRef<HTMLOListElement>(null);
 
   const lines = useMemo(() => view.transcript.filter((l) => l.sourceId === row.id), [view.transcript, row.id]);
@@ -259,22 +287,46 @@ function Body({
       list.current?.querySelector(`[data-line="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }),
     );
 
-  const commit = async () => {
-    const { speaker: sp, text } = splitSpeaker(draft);
-    if (!text.trim()) return;
-    const who = sp ?? speaker;
-    const atMs = mark ?? pos;
-    const res = await guard(() => api.addTranscriptLine(row.id, { atMs, speaker: who, text }));
-    if (!res) return;
-    onView(res.view);
-    setSpeaker(who);
+  const latest = useLatest({ guard, onView, row, nextAt });
+
+  /**
+   * Enter: Text und Marke werden sofort aus dem Feld genommen, damit man ohne Wartezeit weitertippen kann und ein
+   * zweites Enter nichts doppelt anlegt. Die Zeilen gehen nacheinander zum Hauptprozess. Bei einem Fehler kommt der
+   * Text zurück ins Feld. Ergebnis: true, wenn die Zeile angelegt wurde (oder es nichts anzulegen gab).
+   */
+  const commit = (): Promise<boolean> => {
+    const line = takeDraft(draftRef.current, speakerRef.current, markRef.current, posRef.current);
+    if (!line) return Promise.resolve(true);
+    changeSpeaker(line.speaker);
     setDraft("");
     setMark(null);
-    scrollToLine(res.lineId);
+    return queue.current.run(async () => {
+      const res = await latest.current.guard(() => api.addTranscriptLine(row.id, line));
+      if (!res) {
+        const back = restoreDraft({ draft: draftRef.current, mark: markRef.current }, line);
+        setDraft(back.draft);
+        setMark(back.mark);
+        return false;
+      }
+      latest.current.onView(res.view);
+      scrollToLine(res.lineId);
+      return true;
+    });
   };
+  const flush = async () => {
+    void commit();
+    await queue.current.idle();
+    return !draftRef.current.trim();
+  };
+  const flushNow = useEffectEvent(flush);
+  useEffect(() => {
+    flushRef.current = () => flushNow();
+    return () => {
+      flushRef.current = null;
+    };
+  }, [flushRef]);
 
   // Stabile Handlungen für die Zeilen, damit sie beim Mitlaufen nicht neu zeichnen.
-  const latest = useLatest({ guard, onView, row, nextAt });
   const lineActions = useMemo<LineActions>(() => {
     const patch = (id: string, p: Partial<Pick<TranscriptRow, "atMs" | "speaker" | "text">>) =>
       void latest.current.guard(() => api.updateTranscriptLine(id, p)).then((v) => v && latest.current.onView(v));
@@ -464,7 +516,7 @@ function Body({
               placeholder="Kürzel"
               list="feldspur-speakers"
               value={speaker}
-              onChange={(e) => setSpeaker(e.target.value)}
+              onChange={(e) => changeSpeaker(e.target.value)}
             />
             <datalist id="feldspur-speakers">
               {speakers.map((s) => (
@@ -489,11 +541,11 @@ function Body({
                 // „B1: “ am Anfang wechselt sofort den Sprecher.
                 const lead = leadingSpeaker(v);
                 if (lead) {
-                  setSpeaker(lead.speaker);
+                  changeSpeaker(lead.speaker);
                   v = lead.rest;
-                  if (mark === null) setMark(pos);
+                  if (markRef.current === null) setMark(posRef.current);
                 } else {
-                  if (mark === null && v) setMark(pos);
+                  if (markRef.current === null && v) setMark(posRef.current);
                   if (!v) setMark(null);
                 }
                 setDraft(v);

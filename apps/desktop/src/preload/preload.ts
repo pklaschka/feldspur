@@ -49,6 +49,7 @@ const api: FeldspurApi = {
   setDiaryNote: (id, clock) => ipcRenderer.invoke(IPC.setDiaryNote, id, clock),
   analyze: (id) => ipcRenderer.invoke(IPC.analyze, id),
   confirmAnchor: (id) => ipcRenderer.invoke(IPC.confirmAnchor, id),
+  confirmAnchors: (sessionId, ids) => ipcRenderer.invoke(IPC.confirmAnchors, sessionId, ids),
   rejectAnchor: (id) => ipcRenderer.invoke(IPC.rejectAnchor, id),
   addTime: (input) => ipcRenderer.invoke(IPC.addTime, input),
   confirmPlacement: (id, startMs) => ipcRenderer.invoke(IPC.confirmPlacement, id, startMs),
