@@ -14,7 +14,8 @@ Referenzuhr.
 ### Abweichung eintragen
 
 Weißt du, wie weit ein Gerät abweicht, trägst du es direkt ein: "Kamera geht 2:47 vor" wird zu `+2:47`. Auch große
-Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches Datum gestellt war.
+Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches Datum gestellt war. Ein leeres Feld löscht den Abgleich; kann Feldspur die Eingabe nicht
+lesen, färbt sich das Feld rot und die bisherige Abweichung bleibt, bis du sie korrigierst oder mit Esc zurückholst.
 
 ### Tonspuren abgleichen
 
@@ -27,7 +28,8 @@ Mit **Tonspuren abgleichen** hört Feldspur alle Audio- und Videodateien durch u
 Daraus entstehen **Vorschläge** ("Uhr geht +2:47, gefunden in V-01"). Ein Vorschlag zählt erst, wenn du ihn
 **übernimmst**. Steht dabei "unsicher, bitte anhören", prüfe die Stelle vorher, am besten mit **Fein justieren…**
 (siehe unten). Was nicht passt, **verwirfst** du. Sind mehrere Vorschläge eindeutig, übernimmst du sie mit **Alle
-eindeutigen übernehmen** auf einmal. Stimmen alle Uhren, sagt Feldspur das ("Alle 5 Uhren stimmen jetzt überein"), und
+eindeutigen übernehmen** auf einmal. Hat ein Gerät mehrere eindeutige Vorschläge, zählt dabei der sicherste, und
+**Rückgängig** nimmt die ganze Übernahme in einem Schritt zurück. Stimmen alle Uhren, sagt Feldspur das ("Alle 5 Uhren stimmen jetzt überein"), und
 **Weiter** wird zum Hauptknopf.
 
 Dabei erkennt Feldspur auch längere **Stille** (ab 5 Minuten) und laute Stellen darin. Das braucht es später für die

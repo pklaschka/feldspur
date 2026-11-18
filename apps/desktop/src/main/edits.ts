@@ -264,6 +264,58 @@ export function replaceAnchor(s: ProjectStore, anchorId: Id, input: AnchorInput)
   });
 }
 
+/** Ein Vorschlag, wie ihn die Sammelübernahme abwägt. */
+export interface ProposalPick {
+  id: Id;
+  /** null = Quelle ohne Gerät; dann zählt der Vorschlag für sich. */
+  deviceId: Id | null;
+  confidence: number | null;
+}
+
+/**
+ * Je Gerät nur den Vorschlag mit der höchsten Sicherheit; die übrigen erledigen sich mit ihm. Bei Gleichstand
+ * gewinnt der zuerst genannte. Reihenfolge der Geräte wie in der Eingabe.
+ */
+export function pickBestPerDevice(proposals: ProposalPick[]): Id[] {
+  const best = new Map<Id, ProposalPick>();
+  for (const p of proposals) {
+    const key = p.deviceId ?? p.id;
+    const cur = best.get(key);
+    if (!cur || (p.confidence ?? 0) > (cur.confidence ?? 0)) best.set(key, p);
+  }
+  return [...best.values()].map((p) => p.id);
+}
+
+/** Welche der genannten Vorschläge die Sammelübernahme tatsächlich übernimmt (gelöschte fallen weg). */
+export function proposalsToConfirm(s: ProjectStore, sessionId: Id, anchorIds: Id[]): Id[] {
+  const wanted = new Set(anchorIds);
+  const open = s.listAnchors(sessionId).filter((a) => a.proposed && wanted.has(a.id));
+  return pickBestPerDevice(
+    open.map((a) => ({ id: a.id, deviceId: s.getSource(a.b.sourceId).deviceId ?? null, confidence: a.confidence })),
+  );
+}
+
+/**
+ * Mehrere Vorschläge auf einmal übernehmen: je Gerät den sichersten, danach erledigen sich alle weiteren
+ * Vorschläge dieser Geräte. Gibt die Zahl der übernommenen Vorschläge zurück.
+ */
+export function confirmAnchors(s: ProjectStore, sessionId: Id, anchorIds: Id[]): number {
+  const picked = proposalsToConfirm(s, sessionId, anchorIds);
+  s.transaction(() => {
+    const devices = new Set<Id>();
+    for (const id of picked) {
+      s.confirmAnchor(id);
+      const device = s.getSource(s.getAnchor(id).b.sourceId).deviceId;
+      if (device) devices.add(device);
+    }
+    for (const other of s.listAnchors(sessionId)) {
+      const device = other.proposed ? s.getSource(other.b.sourceId).deviceId : null;
+      if (device && devices.has(device)) s.deleteAnchor(other.id);
+    }
+  });
+  return picked.length;
+}
+
 /** Lautstärke-Angleichung einer Ton- oder Videoquelle einstellen. */
 export function setLevel(s: ProjectStore, sourceId: Id, input: LevelInput): Id {
   const src = s.getSource(sourceId);

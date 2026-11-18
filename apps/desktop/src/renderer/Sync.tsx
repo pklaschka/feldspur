@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { offsetText, parseOffset } from "./format.ts";
+import { offsetText, readOffsetInput } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
 import {
   Button,
@@ -67,8 +67,8 @@ export function Sync({
   const [progress, setProgress] = useState<string | null>(null);
   /** Ergebnis der letzten Tonspur-Analyse; was davon noch offen ist, steht in `view`. */
   const [analysis, setAnalysis] = useState<{ analyzed: number; failed: number } | null>(null);
-  /** Fortschritt der Sammelübernahme: [erledigt, gesamt]. */
-  const [accepting, setAccepting] = useState<[number, number] | null>(null);
+  /** Sammelübernahme läuft. */
+  const [accepting, setAccepting] = useState(false);
   const [fine, setFine] = useState<FineAlignStart | null>(null);
   const hasReference = view.devices.some((d) => d.isReference);
 
@@ -92,15 +92,17 @@ export function Sync({
   };
 
   const sure = view.proposals.filter(isSure);
-  /** Alle eindeutigen Vorschläge nacheinander übernehmen (unsichere bleiben zum Anhören stehen). */
+  /** Alle eindeutigen Vorschläge in einem Schritt übernehmen (unsichere bleiben zum Anhören stehen). */
   const acceptSure = async () => {
-    let last: SessionView | undefined;
-    for (const [i, p] of sure.entries()) {
-      setAccepting([i, sure.length]);
-      last = (await guard(() => api.confirmAnchor(p.anchorId))) ?? last;
-    }
-    setAccepting(null);
-    if (last) onView(last);
+    setAccepting(true);
+    const v = await guard(() =>
+      api.confirmAnchors(
+        view.session.id,
+        sure.map((p) => p.anchorId),
+      ),
+    );
+    setAccepting(false);
+    if (v) onView(v);
   };
   const openClocks = view.devices.filter((d) => !d.isReference && d.offsetMs === null);
   const done = hasReference && !openClocks.length && !view.proposals.length;
@@ -173,10 +175,8 @@ export function Sync({
                 {analysis && `${analysis.analyzed} ${analysis.analyzed === 1 ? "Tonspur" : "Tonspuren"} analysiert. `}
                 {view.proposals.length} Vorschläge, davon {sure.length} eindeutig. Unsichere bleiben zum Anhören stehen.
               </span>
-              <Button variant="primary" size="sm" disabled={!!accepting} onClick={() => void acceptSure()}>
-                {accepting
-                  ? `Übernehme ${accepting[0] + 1} von ${accepting[1]}…`
-                  : `Alle eindeutigen übernehmen (${sure.length})`}
+              <Button variant="primary" size="sm" disabled={accepting} onClick={() => void acceptSure()}>
+                {accepting ? "Übernehme…" : `Alle eindeutigen übernehmen (${sure.length})`}
               </Button>
             </div>
           )}
@@ -322,26 +322,53 @@ function ClockRow({
 function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: number | null) => void }) {
   const show = (ms: number | null) => (ms === null ? "" : offsetText(ms));
   const [text, setText] = useDraft(show(device.offsetMs));
+  /** Zuletzt bestätigte Eingabe war nicht lesbar: dann bleibt der alte Abgleich und das Feld zeigt den Fehler. */
+  const [invalid, setInvalid] = useState(false);
+  const hintId = useId();
   const commit = () => {
-    const ms = parseOffset(text);
+    const ms = readOffsetInput(text);
+    if (ms === "invalid") return setInvalid(true);
+    setInvalid(false);
     if (ms !== device.offsetMs) onOffset(ms);
   };
+  const revert = () => {
+    setText(show(device.offsetMs));
+    setInvalid(false);
+  };
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex flex-wrap items-center gap-2">
       <input
-        className="w-[5.5rem] text-right font-mono disabled:bg-sunken"
+        className={cx("w-[5.5rem] text-right font-mono disabled:bg-sunken", invalid && "border-bad text-bad")}
         value={text}
         placeholder="z. B. +2:47"
         title="Wie weit diese Uhr von der Referenz abweicht: +2:47 = geht 2 Minuten 47 vor, −0:30 = geht 30 Sekunden nach"
         aria-label={`Abweichung ${device.label}`}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? hintId : undefined}
         disabled={device.offsetBasis === "anchor" || device.offsetBasis === "spoken"}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          setInvalid(false);
+        }}
         onBlur={commit}
-        onKeyDown={(e) => isEnter(e) && commit()}
+        onKeyDown={(e) => {
+          if (isEnter(e)) commit();
+          else if (e.key === "Escape" && (invalid || text !== show(device.offsetMs))) {
+            e.preventDefault();
+            e.stopPropagation();
+            revert();
+          }
+        }}
       />
-      <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
-        {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
-      </span>
+      {invalid ? (
+        <span id={hintId} className="text-[0.85rem] text-bad">
+          Nicht lesbar. Beispiel: +2:47 oder −0:30
+        </span>
+      ) : (
+        <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
+          {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
+        </span>
+      )}
     </span>
   );
 }

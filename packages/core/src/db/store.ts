@@ -8,7 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import Database from "better-sqlite3";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
@@ -527,6 +527,7 @@ export class ProjectStore {
       .select()
       .from(schema.diaryEntries)
       .where(eq(schema.diaryEntries.sessionId, sessionId))
+      .orderBy(sql`rowid`) // Reihenfolge des Anlegens
       .all()
       .map((r) => DiaryEntry.parse(r));
   }

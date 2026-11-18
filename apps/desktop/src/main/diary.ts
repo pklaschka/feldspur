@@ -21,16 +21,21 @@ function requirePage(s: ProjectStore, sourceId: Id) {
   return src;
 }
 
-/** Neuer Eintrag mit einem Rahmen auf einer Seite. */
+/**
+ * Neuer Eintrag mit einem Rahmen auf einer Seite. Die Form (Kurzform oder Volltext) übernimmt er vom zuletzt
+ * angelegten Eintrag des Einsatzes, der abgetippt wird; „Nur Scan“ wird nicht übernommen.
+ */
 export function createEntry(s: ProjectStore, sourceId: Id, region: Region): { sessionId: Id; entry: DiaryEntry } {
   const src = requirePage(s, sourceId);
   const r = cleanRegion(region);
   if (r.w < 0.01 || r.h < 0.01) throw new Error("Der Rahmen ist zu klein");
+  // listDiaryEntries liefert in der Reihenfolge des Anlegens.
+  const typed = s.listDiaryEntries(src.sessionId).filter((e) => e.mode !== "scan");
   const entry = s.addDiaryEntry({
     sessionId: src.sessionId,
     regions: [{ sourceId, ...r }],
     notedAtMs: null,
-    mode: "short",
+    mode: typed.at(-1)?.mode ?? "short",
   });
   return { sessionId: src.sessionId, entry };
 }
