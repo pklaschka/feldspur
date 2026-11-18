@@ -26,7 +26,10 @@ export interface InspectorActions {
   openDiary: (pageId: string) => void;
   transcribe: (sourceId: string) => void;
   /** Gibt die Zahl übernommener Zeilen zurück, null bei Abbruch oder Fehler. */
-  importTranscript: (sourceId: string, mode: "append" | "replace") => Promise<number | null>;
+  importTranscript: (
+    sourceId: string,
+    mode: "append" | "replace",
+  ) => Promise<{ count: number; dropped: number } | null>;
   setLevel: (sourceId: string, input: LevelInput) => void;
   /** Ganze Datei dekodieren und den Sprachpegel messen. */
   measureLevel: (sourceId: string) => Promise<void>;

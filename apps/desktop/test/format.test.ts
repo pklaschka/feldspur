@@ -2,6 +2,9 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   bytes,
   dbText,
+  dominantDay,
+  formatDate,
+  localDate,
   maskClock,
   maskClockAt,
   normalizeClock,
@@ -103,5 +106,59 @@ describe("Zahlen als Text", () => {
     expect(bytes(2048)).toBe("2 KB");
     expect(bytes(5.25 * 1024 ** 2)).toBe("5,3 MB");
     expect(bytes(3 * 1024 ** 3)).toBe("3,00 GB");
+  });
+});
+
+describe("Einsatzdatum und Dateien", () => {
+  const at = (iso: string) => Date.parse(`${iso}Z`);
+  const row = (iso: string | null, kind: string, extra: { chosen?: boolean; derived?: boolean } = {}) =>
+    ({
+      startMs: iso === null ? null : at(iso),
+      evidence: [{ kind, chosen: extra.chosen ?? true, derived: extra.derived ?? false }],
+      decision: null,
+    }) as unknown as Parameters<typeof dominantDay>[0][number];
+
+  it("nimmt den häufigsten Tag aus Metadaten und Dateinamen", () => {
+    const r = dominantDay([
+      row("2026-09-14T10:00:00", "metadata"),
+      row("2026-09-14T23:59:00", "filename"),
+      row("2026-09-15T00:01:00", "metadata"),
+    ]);
+    expect(r).toEqual({ day: "2026-09-14", count: 2, days: 2 });
+  });
+
+  it("zählt Handzeiten, Ansagen, Anker und unplatzierte Quellen nicht", () => {
+    expect(
+      dominantDay([
+        row("2026-11-18T10:00:00", "manual"),
+        row("2026-11-18T10:00:00", "spoken"),
+        row("2026-11-18T10:00:00", "metadata", { derived: true }),
+        row("2026-11-18T10:00:00", "metadata", { chosen: false }),
+        row(null, "metadata"),
+        row("2026-09-14T10:00:00", "metadata"),
+      ]),
+    ).toEqual({ day: "2026-09-14", count: 1, days: 1 });
+    expect(dominantDay([row("2026-11-18T10:00:00", "manual")])).toBeNull();
+    expect(dominantDay([])).toBeNull();
+  });
+
+  it("gilt eine geprüfte Lage nach ihrer Grundlage", () => {
+    const checked = { ...row("2026-09-14T10:00:00", "checked"), decision: { basisKind: "metadata" } };
+    expect(dominantDay([checked as never])?.day).toBe("2026-09-14");
+  });
+
+  it("wählt bei Gleichstand den früheren Tag", () => {
+    const r = dominantDay([row("2026-09-15T10:00:00", "metadata"), row("2026-09-14T10:00:00", "metadata")]);
+    expect(r).toEqual({ day: "2026-09-14", count: 1, days: 2 });
+  });
+
+  it("zeigt Daten deutsch", () => {
+    expect(formatDate("2026-09-14")).toBe("14.09.2026");
+  });
+
+  it("localDate nimmt die lokale Uhr, nicht UTC", () => {
+    // Lokal kurz nach Mitternacht: UTC wäre je nach Zeitzone noch der Vortag.
+    expect(localDate(new Date(2026, 10, 18, 0, 30))).toBe("2026-11-18");
+    expect(localDate(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
   });
 });

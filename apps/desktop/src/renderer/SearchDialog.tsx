@@ -1,7 +1,7 @@
 /** Schnellsuche (Strg/⌘+K): Mitschrift, Notizen, Tagebuch, Quellen und Episoden eines Einsatzes. */
 import { formatClock } from "@feldspur/core/time";
 import { Dialog } from "radix-ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { SessionView } from "../shared/api.ts";
 import { highlight, search, searchItems, type Hit } from "./search.ts";
 import { usePlayback } from "./playback.tsx";
@@ -32,7 +32,10 @@ export function SearchDialog({
   // Neue Suche: wieder beim ersten Treffer anfangen.
   const [active, setActive] = useDraft(0, query);
   const items = useMemo(() => searchItems(view), [view]);
-  const hits = useMemo(() => search(items, query), [items, query]);
+  const { hits, total } = useMemo(() => search(items, query), [items, query]);
+  const listId = useId();
+  const optionId = (i: number) => `${listId}-opt-${i}`;
+  const hasQuery = query.trim() !== "";
   const list = useRef<HTMLUListElement>(null);
   useEffect(() => {
     list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
@@ -58,6 +61,11 @@ export function SearchDialog({
             className="m-3 rounded-lg border border-line bg-panel-2 px-3 py-2 text-[0.95rem]"
             placeholder="Mitschrift, Notizen, Tagebuch, Quellen, Uhrzeit (z. B. 10:15) …"
             aria-label="Suchen"
+            role="combobox"
+            aria-expanded={hits.length > 0}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={hits.length ? optionId(active) : undefined}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -75,13 +83,13 @@ export function SearchDialog({
           />
           <ul
             ref={list}
+            id={listId}
             className="overflow-y-auto border-t border-line px-1.5 py-1.5"
             role="listbox"
             aria-label="Treffer"
           >
-            {query.trim() && !hits.length && <li className="px-3 py-3 text-[0.9rem] text-muted">Nichts gefunden.</li>}
-            {!query.trim() && (
-              <li className="px-3 py-3 text-[0.9rem] text-muted">
+            {!hasQuery && (
+              <li role="presentation" className="px-3 py-3 text-[0.9rem] text-muted">
                 {items.length} Einträge durchsuchbar. Mehrere Wörter: alle müssen vorkommen. ↑↓ wählen, Enter springt
                 hin.
               </li>
@@ -89,6 +97,7 @@ export function SearchDialog({
             {hits.map((h, i) => (
               <li
                 key={`${h.kind}:${h.target}:${h.atMs ?? ""}:${i}`}
+                id={optionId(i)}
                 data-index={i}
                 role="option"
                 aria-selected={i === active}
@@ -121,6 +130,23 @@ export function SearchDialog({
               </li>
             ))}
           </ul>
+          <p
+            role="status"
+            className={cx(
+              "border-t border-line px-4 py-1.5 text-[0.82rem] text-muted",
+              (!hasQuery || (total > 0 && total <= hits.length)) && "sr-only",
+            )}
+          >
+            {!hasQuery
+              ? ""
+              : total === 0
+                ? "Nichts gefunden."
+                : total > hits.length
+                  ? `Erste ${hits.length} von ${total} Treffern. Suche eingrenzen, z. B. mit einer Uhrzeit.`
+                  : total === 1
+                    ? "1 Treffer."
+                    : `${total} Treffer.`}
+          </p>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

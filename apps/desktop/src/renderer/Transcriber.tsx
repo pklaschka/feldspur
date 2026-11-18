@@ -14,7 +14,7 @@ import { clock, KIND_LABEL, splitSpeaker } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
 import { positionText, usePlayback } from "./playback.tsx";
 import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "./transcribe.ts";
-import { Button, Choice, Glyph, Picker, Toggle } from "./ui.tsx";
+import { Button, Choice, ErrorBanner, Glyph, Picker, Toggle } from "./ui.tsx";
 import { usePeakTiles, Waveform, type WaveMarker } from "./Waveform.tsx";
 import { LEVEL_MEDIA_PROPS, useLevel } from "./level.ts";
 import { useLatest } from "./hooks.ts";
@@ -78,6 +78,7 @@ export function Transcriber({
               onView={onView}
             />
           )}
+          <ErrorBanner dialog floating />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
