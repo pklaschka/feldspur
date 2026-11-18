@@ -10,10 +10,21 @@ import {
   normalizeClock,
   offsetText,
   parseOffset,
+  readOffsetInput,
   stepClock,
 } from "../src/renderer/format.ts";
 
 describe("Uhrabweichung eingeben", () => {
+  it("unterscheidet leer, unlesbar und lesbar", () => {
+    expect(readOffsetInput("")).toBeNull();
+    expect(readOffsetInput("  ")).toBeNull();
+    expect(readOffsetInput("+2;47")).toBe("invalid");
+    expect(readOffsetInput("abc")).toBe("invalid");
+    expect(readOffsetInput("+2:47")).toBe(167_000);
+    expect(readOffsetInput("−0:30")).toBe(-30_000);
+    expect(readOffsetInput("± 0:00")).toBe(0);
+  });
+
   it("Minuten und Sekunden wie bisher", () => {
     expect(parseOffset("−2:47")).toBe(-167_000);
     expect(parseOffset("+0:04")).toBe(4_000);
@@ -36,7 +47,7 @@ describe("Uhrabweichung eingeben", () => {
   });
 
   it("Anzeige und Eingabe passen zusammen", () => {
-    for (const ms of [-167_000, 7_200_000, 93_600_000, -259_205_000]) expect(parseOffset(offsetText(ms))).toBe(ms);
+    for (const ms of [0, -167_000, 7_200_000, 93_600_000, -259_205_000]) expect(parseOffset(offsetText(ms))).toBe(ms);
   });
 });
 
