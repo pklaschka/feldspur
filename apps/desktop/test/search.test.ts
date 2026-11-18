@@ -39,33 +39,42 @@ describe("Schnellsuche", () => {
   const items = searchItems(view);
 
   it("findet Mitschrift und Tagebuch ohne Rücksicht auf Groß-/Kleinschreibung", () => {
-    const hits = search(items, "brunnen");
+    const { hits } = search(items, "brunnen");
     expect(hits.map((x) => x.kind)).toEqual(["line", "diary"]);
     expect(hits[0]).toMatchObject({ target: "a1", atMs: 5_000 });
     expect(hits[1]).toMatchObject({ target: "t1" });
   });
 
   it("verlangt alle Wörter und faltet ß und Akzente", () => {
-    expect(search(items, "STRASSE gesperrt")).toHaveLength(1);
-    expect(search(items, "strasse brunnen")).toHaveLength(0);
-    expect(search(items, "gespräch")).toHaveLength(1);
-    expect(search(items, "gesprach")).toHaveLength(1);
+    expect(search(items, "STRASSE gesperrt").hits).toHaveLength(1);
+    expect(search(items, "strasse brunnen").hits).toHaveLength(0);
+    expect(search(items, "gespräch").hits).toHaveLength(1);
+    expect(search(items, "gesprach").hits).toHaveLength(1);
   });
 
   it("findet über die Uhrzeit und den Dateinamen", () => {
     // Tagebuch steht an seiner Notierzeit.
-    expect(search(items, "10:30").map((x) => x.kind)).toContain("diary");
-    expect(search(items, "10:15").map((x) => x.kind)).not.toContain("diary");
-    expect(search(items, "marktplatz").map((x) => x.kind)).toEqual(["source"]);
+    expect(search(items, "10:30").hits.map((x) => x.kind)).toContain("diary");
+    expect(search(items, "10:15").hits.map((x) => x.kind)).not.toContain("diary");
+    expect(search(items, "marktplatz").hits.map((x) => x.kind)).toEqual(["source"]);
   });
 
   it("findet Notizen an ihrer Stelle in der Aufnahme", () => {
-    const [hit] = search(items, "abtippen");
+    const [hit] = search(items, "abtippen").hits;
     expect(hit).toMatchObject({ kind: "note", target: "a1", atMs: 120_000, clockMs: h(10, 2) });
   });
 
   it("gibt Episoden mit ihrem Ende aus, damit die Zeitachse sie einpassen kann", () => {
     expect(items.find((x) => x.kind === "episode")).toMatchObject({ clockMs: h(10, 0), endMs: h(10, 30) });
+  });
+
+  it("zählt alle Treffer, auch wenn nur die ersten angezeigt werden", () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({ ...items[0]!, text: `Eintrag ${i}` }));
+    const r = search(many, "eintrag", 3);
+    expect(r.hits).toHaveLength(3);
+    expect(r.total).toBe(5);
+    expect(search(many, "eintrag").total).toBe(5);
+    expect(search(many, "  ")).toEqual({ hits: [], total: 0 });
   });
 
   it("markiert die Treffer im Text", () => {

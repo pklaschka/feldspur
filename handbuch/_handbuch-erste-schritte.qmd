@@ -54,7 +54,10 @@ Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
 Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Tagebuch, Quellen
-und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle.
+und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle. Die Liste zeigt höchstens
+60 Treffer in Uhrzeit-Reihenfolge; gibt es mehr, steht darunter "Erste 60 von 143 Treffern". Grenze die Suche dann ein,
+etwa mit einer Uhrzeit wie 10:15 oder einem weiteren Wort. Mit ↑↓ wählst du einen Treffer, Enter springt hin; Screenreader
+lesen den gewählten Treffer vor.
 
 **Rückgängig** (Strg+Z, auf dem Mac ⌘Z) nimmt den letzten Schritt zurück, etwa eine entfernte Quelle, einen
 gelöschten Anker, einen übernommenen Vorschlag oder "Lage passt". **Wiederholen** geht mit Strg+Y oder
