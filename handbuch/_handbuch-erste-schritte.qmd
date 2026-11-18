@@ -22,6 +22,11 @@ ins System eingebunden ist (etwa mit AppImageLauncher).
 Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
 genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.
 
+Das Datum ist vorbelegt mit dem heutigen Tag am Rechner. Feldspur vergleicht es beim Einsammeln mit den Dateien: Stammen
+die meisten nach ihren Metadaten oder Dateinamen von einem anderen Tag, steht über der Geräteliste ein Hinweis mit dem
+Knopf **Datum auf … setzen**. Das lässt sich rückgängig machen; von Hand eingetragene Uhrzeiten wandern mit. Liegen die
+Dateien auf mehreren Tagen, weist Feldspur sanft darauf hin, dass ein Einsatz ein Feldtag ist.
+
 ::: {.callout-tip}
 ### Deine Originale bleiben, wo sie sind
 Feldspur kopiert und verändert keine Originaldateien. Die Projektdatei merkt sich nur, wo sie liegen, und hält ihre

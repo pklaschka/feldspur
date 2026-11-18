@@ -6,6 +6,12 @@ import { Button } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import type { InspectorActions } from "./actions.ts";
 
+/** „212 Zeilen übernommen, 3 hinter dem Ende der Aufnahme ausgelassen“. */
+export function importMessage(count: number, dropped: number): string {
+  const text = `${count} ${count === 1 ? "Zeile" : "Zeilen"} übernommen`;
+  return dropped > 0 ? `${text}, ${dropped} hinter dem Ende der Aufnahme ausgelassen` : text;
+}
+
 /** Fertiges Transkript (Whisper u. a.) übernehmen; gibt es schon Zeilen, ergänzen oder ersetzen. */
 export function TranscriptImport({
   view,
@@ -20,8 +26,8 @@ export function TranscriptImport({
   const [done, setDone] = useDraft<string | null>(null, row.id);
   const has = view.transcript.some((l) => l.sourceId === row.id);
   const run = async (mode: "append" | "replace") => {
-    const n = await onImport(row.id, mode);
-    if (n !== null) setDone(`${n} ${n === 1 ? "Zeile" : "Zeilen"} übernommen`);
+    const r = await onImport(row.id, mode);
+    if (r) setDone(importMessage(r.count, r.dropped));
   };
   const trigger = "Transkript importieren…";
   return (
