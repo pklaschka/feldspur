@@ -6,7 +6,9 @@ import {
   formatDuration,
   formatClock,
   resolveTimeline,
+  type EvidenceComparison,
   type Id,
+  type Placement,
   type ProjectStore,
   type Source,
   effectiveGainDb,
@@ -15,6 +17,7 @@ import { sessionEpisodes, speechLevels } from "@feldspur/media";
 import { quickStates } from "./originals.ts";
 import type {
   AnchorRow,
+  ConflictGroupRow,
   DeviceRow,
   DiaryEntryRow,
   EpisodeRow,
@@ -40,6 +43,55 @@ function levelRow(s: Source, levels: Map<Id, number | null>): LevelRow {
     measuredDb,
     gainDb: effectiveGainDb(s, measuredDb),
   };
+}
+
+/**
+ * Gleichartige offene Widersprüche eines Geräts zusammenfassen: dieselben Belegarten und dieselbe Abweichung
+ * (auf die erlaubte Abweichung genau) oder dieselbe vermutete Ursache. Ab drei Dateien, bei Geräten mit nur
+ * zwei Dateien auch schon bei zwei.
+ */
+export function groupConflicts(
+  sources: Source[],
+  placements: Map<Id, Placement>,
+  devices: Map<Id, { label: string }>,
+): ConflictGroupRow[] {
+  type Case = { sourceId: Id; deviceId: Id; used: string; other: EvidenceComparison };
+  const cases: Case[] = [];
+  for (const s of sources) {
+    const p = placements.get(s.id);
+    if (!s.deviceId || !p || (p.conflict.state !== "open" && p.conflict.state !== "stale")) continue;
+    const other = p.comparison
+      .filter((c) => c.enabled && c.verdict === "conflict")
+      .sort((a, b) => Math.abs(b.differenceMs) - Math.abs(a.differenceMs))[0];
+    if (other) cases.push({ sourceId: s.id, deviceId: s.deviceId, used: p.basis.kind, other });
+  }
+  const groups: { cases: Case[] }[] = [];
+  for (const c of cases) {
+    const g = groups.find(({ cases: [f] }) => {
+      if (f!.deviceId !== c.deviceId || f!.used !== c.used || f!.other.kind !== c.other.kind) return false;
+      if (f!.other.cause && f!.other.cause === c.other.cause) return true;
+      return Math.abs(f!.other.differenceMs - c.other.differenceMs) <= Math.max(f!.other.allowedMs, c.other.allowedMs);
+    });
+    if (g) g.cases.push(c);
+    else groups.push({ cases: [c] });
+  }
+  const filesOf = (deviceId: Id) => sources.filter((s) => s.deviceId === deviceId && !s.partOf).length;
+  return groups
+    .filter((g) => g.cases.length >= Math.min(3, Math.max(2, filesOf(g.cases[0]!.deviceId))))
+    .map(({ cases: cs }) => {
+      const f = cs[0]!;
+      return {
+        key: `${f.deviceId}:${f.used}:${f.other.kind}:${f.sourceId}`,
+        deviceId: f.deviceId,
+        deviceLabel: devices.get(f.deviceId)?.label ?? "",
+        usedKind: f.used,
+        otherKind: f.other.kind,
+        sourceIds: cs.map((c) => c.sourceId),
+        differenceMs: f.other.differenceMs,
+        severity: cs.some((c) => c.other.severity === "strong") ? "strong" : "clear",
+        cause: cs.every((c) => c.other.cause === f.other.cause) ? (f.other.cause ?? null) : null,
+      };
+    });
 }
 
 /** Einsatz laden, Zeitbestimmung rechnen und als Tabellenzeilen aufbereiten. */
@@ -85,8 +137,10 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         own: e.kind === "manual" || e.kind === "spoken" || e.kind === "checked",
         derived: e.id.startsWith("anchor:"),
         uncertaintyMs: e.uncertaintyMs,
+        compare: p?.comparison.find((c) => c.evidenceId === e.id) ?? null,
       }))
       .sort((a, b) => Number(b.chosen) - Number(a.chosen));
+    const checkedEv = p?.basis.kind === "checked" ? input.evidence.find((e) => e.id === p.basis.evidenceId) : undefined;
     return {
       diaryWindow: dp ? { fromMs: dp.fromMs, toMs: dp.toMs } : null,
       durationMs: s.durationMs,
@@ -122,6 +176,18 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       diaryNote: s.kind === "diary" && entry?.notedAtMs != null ? formatClock(entry.notedAtMs).slice(0, 5) : null,
       status: p?.status ?? "unplaced",
       notes: p?.notes ?? [],
+      conflict: p?.conflict ?? { state: "none", severity: null, worstMs: 0, count: 0, staleBecause: [] },
+      basisReason: p?.basis.reason ?? "",
+      decision: checkedEv
+        ? {
+            evidenceId: checkedEv.id,
+            at: checkedEv.decision?.at ?? null,
+            reason: checkedEv.decision?.reason ?? "",
+            basisKind: checkedEv.decision?.basisKind ?? "",
+            basisId: checkedEv.decision?.basisId ?? null,
+            detail: checkedEv.detail,
+          }
+        : null,
       level: s.kind === "audio" || s.kind === "video" ? levelRow(s, levels) : null,
     };
   });
@@ -216,6 +282,8 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     }));
   }
 
+  const conflictGroups = groupConflicts(input.sources, res.placements, devices);
+
   const conflictBy = new Map(res.anchorConflicts.map((c) => [c.anchorId, c.differenceMs]));
   const anchors: AnchorRow[] = input.anchors
     .filter((a) => !a.proposed)
@@ -303,6 +371,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     allDevices,
     devices: deviceRows,
     proposals,
+    conflictGroups,
     episodes,
     gaps,
     episodeEdits: input.session.episodes ? store.listEpisodeEdits(sessionId).length : 0,

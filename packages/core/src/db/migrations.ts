@@ -184,4 +184,8 @@ export const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX change_log_step ON change_log(step);
   `,
+  // 13: Entscheidung bei widersprüchlichen Zeitbelegen (am Beleg „geprüft“): gewählter Beleg, Begründung, Stand
+  `
+  ALTER TABLE time_evidence ADD COLUMN decision TEXT;
+  `,
 ];

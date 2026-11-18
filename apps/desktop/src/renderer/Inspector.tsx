@@ -1,5 +1,5 @@
 import { formatDuration } from "@feldspur/core/time";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { mediaUrl, type SessionView, type SourceRow } from "../shared/api.ts";
 import { bytes, clock, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
@@ -15,6 +15,7 @@ import { Summary } from "./inspector/Summary.tsx";
 import { FILE_STATE_TEXT, needsRelink } from "./Originals.tsx";
 import { Fold, KV } from "./inspector/parts.tsx";
 import { CheckPanel } from "./inspector/CheckPanel.tsx";
+import { ConflictPanel } from "./inspector/ConflictPanel.tsx";
 import { DiaryPage } from "./inspector/DiaryPage.tsx";
 import { EvidenceList, TimeForm } from "./inspector/Evidence.tsx";
 import { LevelPanel } from "./inspector/LevelPanel.tsx";
@@ -119,6 +120,20 @@ function SourceDetails({
   const pageIds = new Set([main?.id ?? row.id, ...(main ? main.parts : row.parts)]);
   const sa = useActions();
   const { position, seek } = usePlayback();
+  // „Keine der beiden: Uhrzeit von Hand eintragen“ öffnet das Formular unten (neu aufgebaut, schon offen).
+  const [manualAsk, setManualAsk] = useState(0);
+  const openManual = () => {
+    setManualAsk((n) => n + 1);
+    requestAnimationFrame(() =>
+      document.querySelector("[data-testid=time-form]")?.scrollIntoView({ block: "center", behavior: "smooth" }),
+    );
+  };
+  const conflictShown = row.conflict.state !== "none";
+  const check = conflictShown ? (
+    <ConflictPanel row={row} view={view} actions={actions} onManual={openManual} />
+  ) : (
+    <CheckPanel row={row} view={view} actions={actions} />
+  );
 
   return (
     <>
@@ -155,7 +170,7 @@ function SourceDetails({
           </div>
         </div>
       )}
-      {checkFirst && <CheckPanel row={row} view={view} actions={actions} />}
+      {checkFirst && check}
       {(row.kind === "audio" || row.kind === "video") && (
         <>
           <Player row={row} />
@@ -202,7 +217,7 @@ function SourceDetails({
         </button>
       )}
       <KV items={items} />
-      {!checkFirst && <CheckPanel row={row} view={view} actions={actions} />}
+      {!checkFirst && check}
 
       <div className="mt-3">
         <NotesPanel
@@ -245,7 +260,9 @@ function SourceDetails({
 
       <Eyebrow>Zeitbelege</Eyebrow>
       <EvidenceList row={row} actions={actions} />
-      {row.kind !== "diary" && !row.partOf && <TimeForm row={row} onAdd={actions.addTime} />}
+      {row.kind !== "diary" && !row.partOf && (
+        <TimeForm key={manualAsk} row={row} onAdd={actions.addTime} initialOpen={manualAsk > 0} />
+      )}
       {row.partOf && (
         <p className="mt-1.5 text-[0.85rem] text-muted">Die Zeit kommt von {main?.label ?? "der Seite"}.</p>
       )}

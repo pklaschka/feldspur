@@ -10,7 +10,8 @@
     "./model": "./src/model.ts",
     "./waveform": "./src/waveform.ts",
     "./level": "./src/level.ts",
-    "./pages": "./src/pages.ts"
+    "./pages": "./src/pages.ts",
+    "./resolve": "./src/resolve.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.2.0",

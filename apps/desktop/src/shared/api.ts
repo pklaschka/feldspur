@@ -4,6 +4,10 @@
  */
 import type {
   ChangeStep,
+  ConflictCause,
+  ConflictSeverity,
+  ConflictSummary,
+  EvidenceComparison,
   FieldSession,
   LevelMode,
   OffsetBasis,
@@ -80,8 +84,41 @@ export interface SourceRow {
   pageSpread: boolean;
   status: PlacementStatus;
   notes: string[];
+  /** Widersprüche zwischen den Zeitbelegen und ob sie entschieden sind. */
+  conflict: ConflictSummary;
+  /** Warum der verwendete Beleg gilt („genaueste Angabe …“); leer ohne Zeitbelege. */
+  basisReason: string;
+  /** Entscheidung (Beleg „geprüft“), falls die Lage darauf beruht. */
+  decision: DecisionRow | null;
   /** Lautstärke-Angleichung (nur Audio/Video). */
   level: LevelRow | null;
+}
+
+export interface DecisionRow {
+  /** Id des Belegs „geprüft“ (zum Zurücknehmen). */
+  evidenceId: string;
+  /** null bei älteren Bestätigungen ohne gespeicherten Stand. */
+  at: string | null;
+  reason: string;
+  basisKind: string;
+  basisId: string | null;
+  /** Der lesbare Satz, wie er im Protokoll steht. */
+  detail: string;
+}
+
+/** Gleichartige Widersprüche mehrerer Dateien eines Geräts (z. B. ganze Kamera falsch gestellt). */
+export interface ConflictGroupRow {
+  key: string;
+  deviceId: string;
+  deviceLabel: string;
+  /** Art des verwendeten und des widersprechenden Belegs. */
+  usedKind: string;
+  otherKind: string;
+  sourceIds: string[];
+  /** Typische Abweichung (die der ersten Datei). */
+  differenceMs: number;
+  severity: ConflictSeverity;
+  cause: ConflictCause | null;
 }
 
 export interface LevelRow {
@@ -102,6 +139,15 @@ export interface LevelInput {
   compress: boolean;
 }
 
+export interface DecideInput {
+  sourceId: string;
+  /** Beleg, der gelten soll; null = die Lage so bestätigen, wie sie steht. */
+  evidenceId: string | null;
+  /** Lage, die gesehen wurde; hat sie sich verschoben, wird nichts gespeichert. */
+  expectedStartMs: number;
+  reason: string;
+}
+
 export interface EvidenceRow {
   id: string;
   kind: string;
@@ -114,6 +160,8 @@ export interface EvidenceRow {
   /** Aus einem Anker abgeleitet, nicht gespeichert. */
   derived: boolean;
   uncertaintyMs: number;
+  /** Vergleich mit der verwendeten Lage; null bei Quellen ohne eigenen Vergleich (Folgeaufnahme, Teil einer Seite). */
+  compare: EvidenceComparison | null;
 }
 
 /** Bestätigter oder von Hand gesetzter Anker. */
@@ -312,6 +360,8 @@ export interface SessionView {
   /** Geräte mit Uhr, die abgeglichen werden müssen. */
   devices: DeviceRow[];
   proposals: ProposalRow[];
+  /** Gleichartige Widersprüche mehrerer Dateien eines Geräts. */
+  conflictGroups: ConflictGroupRow[];
   anchors: AnchorRow[];
   diary: DiaryEntryRow[];
   /** Mitschrift aller Ton- und Videoquellen, je Quelle nach Stelle sortiert. */
@@ -476,6 +526,10 @@ export interface FeldspurApi {
   addTime(input: TimeInput): Promise<SessionView>;
   /** Unsichere Lage so bestätigen, wie sie zu sehen war (startMs = gesehene Lage). */
   confirmPlacement(sourceId: string, startMs: number): Promise<SessionView>;
+  /** Bei widersprüchlichen Zeitbelegen entscheiden, welche Zeit gilt (evidenceId null = Lage so bestätigen). */
+  decidePlacement(input: DecideInput): Promise<SessionView>;
+  /** Dieselbe Entscheidung für mehrere Quellen: je Quelle gilt ihr Beleg der Art `kind`. Ein Rückgängig-Schritt. */
+  decideMany(input: { sourceIds: string[]; kind: string; reason: string }): Promise<SessionView>;
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
@@ -622,6 +676,8 @@ export const IPC = {
   rejectAnchor: "anchor:reject",
   addTime: "evidence:add",
   confirmPlacement: "evidence:confirm",
+  decidePlacement: "evidence:decide",
+  decideMany: "evidence:decide-many",
   setEvidenceEnabled: "evidence:enable",
   removeEvidence: "evidence:remove",
   addAnchor: "anchor:add",

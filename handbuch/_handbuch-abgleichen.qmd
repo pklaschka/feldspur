@@ -67,4 +67,5 @@ sie in der Detailleiste mit **+ Uhrzeit eintragen** ein:
 Feldspur speichert die Lage einer Quelle nie direkt, sondern berechnet sie jedes Mal aus den **Zeitbelegen**:
 Metadaten, Dateiname, angesagte Uhrzeit, Anker oder Eingabe von Hand. In der Detailleiste siehst du, welcher Beleg
 verwendet wird, und kannst einzelne Belege abschalten. Jede Lage hat eine Genauigkeit; "sicher" heißt ± 2 Sekunden
-oder besser bei bekannter Geräteuhr.
+oder besser bei bekannter Geräteuhr. Widersprechen sich die Belege, zeigt Feldspur das an und du entscheidest, welcher
+gilt (@sec-widersprueche).

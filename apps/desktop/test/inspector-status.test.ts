@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vite-plus/test";
-import { checkReason, todos } from "../src/renderer/inspector/status.ts";
+import { checkQueue, checkReason, todos } from "../src/renderer/inspector/status.ts";
 import type { SessionView } from "../src/shared/api.ts";
 
 // Erfundenes Beispiel, keine Forschungsdaten. Nur die Felder, die todos() liest.
-type Row = { id: string; status: "ok" | "check" | "unplaced"; kind?: string; partOf?: string | null };
+type Row = {
+  id: string;
+  status: "ok" | "check" | "unplaced";
+  kind?: string;
+  partOf?: string | null;
+  startMs?: number;
+  conflict?: { state: string; severity: "clear" | "strong" | null; worstMs: number };
+};
 const view = (o: {
   rows?: Row[];
   devices?: { label: string; isReference: boolean; offsetMs: number | null }[];
@@ -12,17 +19,21 @@ const view = (o: {
   analyzedCount?: number;
   episodes?: boolean;
   diaryNoteless?: string[];
+  groups?: { sourceIds: string[] }[];
 }) =>
   ({
     rows: (o.rows ?? []).map((r) => ({
       kind: "photo",
       partOf: null,
       startMs: 0,
+      label: r.id,
+      conflict: { state: "none", severity: null, worstMs: 0, count: 0, staleBecause: [] },
       diaryNote: o.diaryNoteless?.includes(r.id) ? null : "10:00",
       ...r,
     })),
     devices: o.devices ?? [],
     proposals: Array.from({ length: o.proposals ?? 0 }, () => ({})),
+    conflictGroups: o.groups ?? [],
     avCount: o.avCount ?? 0,
     analyzedCount: o.analyzedCount ?? 0,
     session: { episodes: o.episodes ?? false },
@@ -80,6 +91,30 @@ describe("todos", () => {
     expect(todos(v)[0]).toMatchObject({ text: "2 Lagen prüfen.", sourceId: "a" });
   });
 
+  it("Widersprüche zuerst, stärkste vorn; eine Gruppe zählt als eine Stelle", () => {
+    const c = (severity: "clear" | "strong", worstMs: number) => ({ state: "open", severity, worstMs });
+    const v = view({
+      rows: [
+        { id: "early", status: "check", startMs: 0 },
+        { id: "clear", status: "check", startMs: 10, conflict: c("clear", 80_000) },
+        { id: "big", status: "check", startMs: 20, conflict: c("strong", -3_600_000) },
+        { id: "g1", status: "check", startMs: 30, conflict: c("strong", 7_200_000) },
+        { id: "g2", status: "check", startMs: 40, conflict: c("strong", 7_200_000) },
+      ],
+      groups: [{ sourceIds: ["g1", "g2"] }],
+    });
+    expect(checkQueue(v.rows).map((r) => r.id)).toEqual(["g1", "g2", "big", "clear", "early"]);
+    expect(todos(v).slice(0, 2)).toEqual([
+      {
+        text: "Zeitbelege widersprechen sich an 3 Stellen, davon 2 stark.",
+        step: "review",
+        sourceId: "g1",
+        action: "Ersten ansehen",
+      },
+      { text: "1 Lage prüfen.", step: "review", sourceId: "early", action: "Erste prüfen" },
+    ]);
+  });
+
   it("Tonspuren noch nicht abgeglichen: Begründung hängt an Episoden", () => {
     const base = { rows: [{ id: "a", status: "ok" as const }], avCount: 2 };
     expect(texts(view(base))).toEqual(["sync: Tonspuren abgleichen, damit Klatscher und Stille erkannt werden."]);
@@ -112,6 +147,7 @@ describe("checkReason", () => {
     expect(checkReason("nur Minute", "x")).toBe("Die Uhrzeit ist nur minutengenau bekannt.");
     expect(checkReason("± 2:00", "x")).toBe("Die Uhrzeit ist nur ungefähr bekannt (± 2:00).");
     expect(checkReason("Widerspruch 3:00", "x")).toBe("Zeitbelege widersprechen sich (3:00).");
+    expect(checkReason("Entscheidung neu prüfen", "x")).toBe("Seit der Entscheidung hat sich ein Zeitbeleg geändert.");
     expect(checkReason("etwas anderes", "x")).toBe("etwas anderes");
   });
 });

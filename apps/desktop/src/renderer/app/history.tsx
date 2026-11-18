@@ -18,7 +18,14 @@ export const NOTIFY = new Set([
   "Tagebucheintrag gelöscht",
   "Notiz gelöscht",
   "Geräte zusammengeführt",
+  "Widerspruch entschieden",
+  "Widerspruch neu entschieden",
+  "Widersprüche entschieden",
+  "Entscheidung zurückgenommen",
 ]);
+
+/** Beschriftungen tragen oft einen Zusatz („Lage bestätigt: F-003“); gemeldet wird nach dem Teil vor dem Doppelpunkt. */
+export const notifies = (label: string) => NOTIFY.has(label.split(":")[0]!);
 
 export interface Toast {
   text: string;
@@ -53,7 +60,7 @@ export function useHistory(
       setState(h);
       const before = lastSerial.current;
       lastSerial.current = h.serial;
-      if (before !== null && h.serial > before && h.undo && NOTIFY.has(h.undo))
+      if (before !== null && h.serial > before && h.undo && notifies(h.undo))
         setToast({ text: h.undo, redo: false, n: h.serial });
     });
   }, [view]);

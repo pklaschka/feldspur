@@ -147,6 +147,23 @@ export type Source = z.infer<typeof Source>;
 export const EvidenceKind = z.enum(["metadata", "filename", "spoken", "anchor", "manual", "checked"]);
 export type EvidenceKind = z.infer<typeof EvidenceKind>;
 
+/**
+ * Bewusste Entscheidung bei widersprüchlichen Zeitbelegen. Hängt am Beleg der Art „checked“:
+ * dessen Lage ist die entschiedene, hier steht, worauf sie sich stützt und was die Forscherin dabei sah.
+ */
+export const Decision = z.object({
+  /** Wann entschieden wurde (ISO, UTC). */
+  at: z.iso.datetime(),
+  /** Beleg, der gelten soll; null = Lage bestätigt, ohne einen Beleg zu wählen. */
+  basisId: Id.nullable(),
+  /** Art des gewählten Belegs, damit der Satz auch dann noch stimmt, wenn der Beleg gelöscht ist. */
+  basisKind: z.string().default(""),
+  reason: z.string().default(""),
+  /** Stand beim Entscheiden: Abweichung jedes Belegs von der entschiedenen Lage. */
+  seen: z.array(z.object({ id: Id, kind: z.string(), differenceMs: z.number().int() })).default([]),
+});
+export type Decision = z.infer<typeof Decision>;
+
 export const TimeEvidence = z.object({
   id: Id,
   sourceId: Id,
@@ -172,6 +189,8 @@ export const TimeEvidence = z.object({
   /** Rohwert wie gelesen, für das Begleitprotokoll. */
   raw: z.string().default(""),
   enabled: z.boolean().default(true),
+  /** Nur bei kind "checked": die Entscheidung bei einem Widerspruch (ältere Bestätigungen: null). */
+  decision: Decision.nullable().optional(),
 });
 export type TimeEvidence = z.infer<typeof TimeEvidence>;
 

@@ -46,7 +46,70 @@ export interface PlacementBasis {
   kind: EvidenceKind | "diary" | "follows" | "part";
   evidenceId?: Id;
   detail: string;
+  /** Warum gerade dieser Beleg gilt, auf Deutsch (nur bei Lagen aus Zeitbelegen). */
+  reason?: string;
 }
+
+/**
+ * Wie ein Zeitbeleg zur verwendeten Lage steht.
+ * - "chosen": der verwendete Beleg
+ * - "agrees": passt im Rahmen der Unsicherheiten
+ * - "rounding": knapp darüber, typisch für Rundung (Dateiname nur minutengenau); kein Widerspruch
+ * - "unsynced": echte Zeit gegen eine Geräteuhr, deren Abweichung noch unbekannt ist; erwartet, kein Widerspruch
+ * - "conflict": echter Widerspruch, die Lage muss geprüft werden
+ */
+export type EvidenceVerdict = "chosen" | "agrees" | "rounding" | "unsynced" | "conflict";
+/** Schweregrad eines Widerspruchs: "clear" (deutlich) unter fünf Minuten, "strong" (stark) ab fünf Minuten. */
+export type ConflictSeverity = "clear" | "strong";
+/**
+ * Vermutete Ursache eines Widerspruchs (nur Hinweis, nie automatisch korrigiert):
+ * "utc" = in der anderen Lesart (UTC/Ortszeit) des Geräts passen beide; "hours" = glatter Versatz um
+ * Stunden oder Viertelstunden (Zeitzone, Sommerzeit?); "clock" = echte Zeit gegen eine abgeglichene Geräteuhr.
+ */
+export type ConflictCause = "utc" | "hours" | "clock";
+
+export interface EvidenceComparison {
+  evidenceId: Id;
+  kind: EvidenceKind;
+  /** Beginn der Quelle, wenn dieser Beleg gälte (Ortszeit des Einsatzes, Geräteuhr korrigiert). */
+  startMs: LocalMs;
+  uncertaintyMs: number;
+  /** Wert wie gelesen (bzw. wie die Geräteuhr ihn zeigte), an der Stelle atMediaMs. */
+  readMs: LocalMs;
+  /** Aus einem als UTC markierten Zeitstempel in Ortszeit umgerechnet. */
+  convertedFromUtc: boolean;
+  /** Angewandte Korrektur der Geräteuhr (−Abweichung); 0 bei echter Zeit. */
+  correctionMs: number;
+  /** startMs minus Beginn der verwendeten Lage. */
+  differenceMs: number;
+  /** So weit dürfen die beiden voneinander abweichen, ohne dass es auffällt. */
+  allowedMs: number;
+  verdict: EvidenceVerdict;
+  severity?: ConflictSeverity;
+  cause?: ConflictCause;
+  /** Bei cause "utc": der Beleg, der in der anderen Lesart passt. */
+  utcEvidenceId?: Id;
+  enabled: boolean;
+}
+
+/**
+ * Stand der Widersprüche einer Quelle. "decided": bewusst entschieden (Beleg „geprüft“); "stale": seit der
+ * Entscheidung ist ein widersprechender Beleg dazugekommen oder hat sich verschoben, die Quelle ist wieder „prüfen“.
+ */
+export type ConflictState = "none" | "open" | "decided" | "stale";
+
+export interface ConflictSummary {
+  state: ConflictState;
+  /** Schwerster Widerspruch (offen oder entschieden); null ohne Widerspruch. */
+  severity: ConflictSeverity | null;
+  /** Größte Abweichung mit Vorzeichen. */
+  worstMs: number;
+  count: number;
+  /** Bei "stale": was sich seit der Entscheidung geändert hat (wasMs null = neuer Beleg). */
+  staleBecause: { evidenceId: Id; wasMs: number | null; nowMs: number }[];
+}
+
+const NO_CONFLICT: ConflictSummary = { state: "none", severity: null, worstMs: 0, count: 0, staleBecause: [] };
 
 export interface Placement {
   sourceId: Id;
@@ -61,8 +124,11 @@ export interface Placement {
   status: PlacementStatus;
   /** Hinweise für die Status-Spalte, auf Deutsch. */
   notes: string[];
-  /** Belege, die der gewählten Lage widersprechen. */
-  conflicts: { evidenceId: Id; differenceMs: number }[];
+  /** Eingeschaltete Belege, die der gewählten Lage widersprechen. */
+  conflicts: { evidenceId: Id; differenceMs: number; severity: ConflictSeverity }[];
+  /** Alle Zeitbelege der Quelle im Vergleich zur gewählten Lage (auch abgeschaltete), der verwendete zuerst. */
+  comparison: EvidenceComparison[];
+  conflict: ConflictSummary;
 }
 
 export interface DiaryPlacement {
@@ -96,6 +162,61 @@ export interface ResolveResult {
 export const OK_UNCERTAINTY_MS = 2_000;
 /** Belege dürfen um ihre Unsicherheiten plus diese Toleranz abweichen, ohne als Widerspruch zu gelten. */
 const CONFLICT_TOLERANCE_MS = 1_000;
+/** Rundung: höchstens so viel über der erlaubten Abweichung … */
+const ROUNDING_EXTRA_MS = 5_000;
+/** … und nie mehr als eine Minute insgesamt. */
+const ROUNDING_MAX_MS = 60_000;
+/** Ab dieser Abweichung ist ein Widerspruch „stark“ (wie die Episodengrenze bei Stille). */
+export const STRONG_CONFLICT_MS = 5 * 60_000;
+const QUARTER_HOUR = 15 * 60_000;
+
+/** Grenze, bis zu der eine Abweichung noch als Rundung gilt. */
+export function roundingLimit(allowedMs: number): number {
+  return Math.min(ROUNDING_MAX_MS, Math.max(allowedMs + ROUNDING_EXTRA_MS, 2 * allowedMs));
+}
+
+/**
+ * Abweichung eines Belegs von der verwendeten Lage einordnen.
+ * Rundung: höchstens 5 s über der erlaubten Abweichung oder bis zu ihrem Doppelten, nie mehr als 60 s. So stören
+ * weder ein minutengenauer Dateiname, der die Minute aufgerundet hat, noch ein Dateiname, den die Kamera erst
+ * beim Schließen der Datei geschrieben hat.
+ */
+export function assessDeviation(
+  differenceMs: number,
+  allowedMs: number,
+): { verdict: "agrees" | "rounding" | "conflict"; severity?: ConflictSeverity; hours?: boolean } {
+  const d = Math.abs(differenceMs);
+  if (d <= allowedMs) return { verdict: "agrees" };
+  if (d <= roundingLimit(allowedMs)) return { verdict: "rounding" };
+  const severity: ConflictSeverity = d >= STRONG_CONFLICT_MS ? "strong" : "clear";
+  // Glatter Versatz nur, wenn die Angaben genau genug sind, dass ein Raster überhaupt auffallen kann.
+  const rest = d % QUARTER_HOUR;
+  const hours =
+    allowedMs <= 2 * 60_000 &&
+    d >= 30 * 60_000 &&
+    d <= 14 * 3_600_000 &&
+    Math.min(rest, QUARTER_HOUR - rest) <= Math.max(allowedMs, 30_000);
+  return hours ? { verdict: "conflict", severity, hours } : { verdict: "conflict", severity };
+}
+
+const KIND_SENTENCE: Record<EvidenceKind, string> = {
+  metadata: "Metadaten",
+  filename: "Dateiname",
+  spoken: "angesagte Uhrzeit",
+  anchor: "Anker",
+  manual: "Handeingabe",
+  checked: "Entscheidung",
+};
+
+/** Genauigkeit in Worten: „sekundengenau“, „nur Minute“, „auf 15 Minuten genau“. */
+export function precisionText(uncertaintyMs: number): string {
+  if (uncertaintyMs < 1_500) return "sekundengenau";
+  if (uncertaintyMs === 30_000) return "nur Minute";
+  if (uncertaintyMs < 60_000) return `auf ${Math.round(uncertaintyMs / 1000)} Sekunden genau`;
+  if (uncertaintyMs === 60_000) return "auf 1 Minute genau";
+  if (uncertaintyMs < 3_600_000) return `auf ${Math.round(uncertaintyMs / 60_000)} Minuten genau`;
+  return `auf ${formatDuration(uncertaintyMs)} genau`;
+}
 
 /**
  * Unabhängige Fehler (Ablesefehler zweier Uhren, Anker) addieren sich nicht
@@ -116,6 +237,8 @@ const KIND_RANK: Record<EvidenceKind, number> = {
 
 interface Candidate {
   ev: TimeEvidence;
+  /** Ortszeit laut Beleg (Lesart und Zeitzone der Geräteuhr angewandt, Abweichung noch nicht). */
+  local: number;
   startMs: number;
   uncertaintyMs: number;
   correctionMs: number;
@@ -157,13 +280,21 @@ function candidatesFor(
   device: Device | undefined,
   clock: DeviceClock | undefined,
   tz: string,
+  withDisabled = false,
 ): Candidate[] {
   return evidence
-    .filter((ev) => ev.enabled)
+    .filter((ev) => withDisabled || ev.enabled)
     .map((ev) => {
       const local = effectiveLocal(ev, device, tz);
       if (ev.clock === "true") {
-        return { ev, startMs: local - ev.atMediaMs, uncertaintyMs: ev.uncertaintyMs, correctionMs: 0, trusted: true };
+        return {
+          ev,
+          local,
+          startMs: local - ev.atMediaMs,
+          uncertaintyMs: ev.uncertaintyMs,
+          correctionMs: 0,
+          trusted: true,
+        };
       }
       const known = clock?.offsetMs != null;
       const offset = clock?.offsetMs ?? 0;
@@ -174,6 +305,7 @@ function candidatesFor(
           : combineUncertainty(clock?.uncertaintyMs ?? 0, ev.uncertaintyMs);
       return {
         ev,
+        local,
         startMs: local - ev.atMediaMs - offset,
         uncertaintyMs: Math.round(offsetUnc),
         correctionMs: -offset,
@@ -191,6 +323,108 @@ function pickBest(cands: Candidate[]): Candidate | undefined {
     if (a.uncertaintyMs !== b.uncertaintyMs) return a.uncertaintyMs - b.uncertaintyMs;
     return KIND_RANK[a.ev.kind] - KIND_RANK[b.ev.kind];
   })[0];
+}
+
+const dateText = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+};
+
+/** Warum gerade dieser Beleg gilt, als Satzteil („genaueste Angabe (sekundengenau statt nur Minute)“). */
+function choiceReason(best: Candidate, cands: Candidate[]): string {
+  if (best.ev.kind === "checked")
+    return best.ev.decision ? `deine Entscheidung vom ${dateText(best.ev.decision.at)}` : "von dir geprüft";
+  const others = cands.filter((c) => c !== best);
+  if (!others.length) return "einziger Zeitbeleg";
+  if (best.ev.kind === "manual") return "von Hand eingetragen, das geht vor gelesenen Zeiten";
+  const next = pickBest(others)!;
+  if (best.trusted && !next.trusted) return "einzige Angabe, die nicht an einer unabgeglichenen Uhr hängt";
+  if (best.uncertaintyMs < next.uncertaintyMs) {
+    const [a, b] = [precisionText(best.uncertaintyMs), precisionText(next.uncertaintyMs)];
+    return a === b ? `etwas genauer als ${KIND_SENTENCE[next.ev.kind]}` : `genaueste Angabe (${a} statt ${b})`;
+  }
+  if (best.ev.kind !== next.ev.kind)
+    return `bei gleicher Genauigkeit gehen ${KIND_SENTENCE[best.ev.kind]} vor ${KIND_SENTENCE[next.ev.kind]}`;
+  return "erste von gleich guten Angaben";
+}
+
+/**
+ * Jeden Beleg (auch abgeschaltete) mit dem verwendeten vergleichen.
+ * Stammen beide von derselben Geräteuhr, hebt sich die Unsicherheit der Uhrabweichung auf: Es zählt nur die
+ * Ableseunsicherheit der beiden Belege.
+ */
+function compareEvidence(
+  best: Candidate,
+  all: Candidate[],
+  device: Device | undefined,
+  clock: DeviceClock | undefined,
+  tz: string,
+): EvidenceComparison[] {
+  const alt = device ? { ...device, timestampsAreUtc: !device.timestampsAreUtc } : undefined;
+  // Beginn in der anderen Lesart UTC/Ortszeit; null, wenn der Beleg keinen UTC-Stempel trägt.
+  const altStart = (c: Candidate) =>
+    c.ev.utcMs !== null && alt ? c.startMs + (effectiveLocal(c.ev, alt, tz) - c.local) : null;
+  const out = all.map((c): EvidenceComparison => {
+    const base = {
+      evidenceId: c.ev.id,
+      kind: c.ev.kind,
+      startMs: c.startMs,
+      uncertaintyMs: c.uncertaintyMs,
+      readMs: c.ev.localMs,
+      convertedFromUtc: c.ev.utcMs !== null && !!device?.timestampsAreUtc,
+      correctionMs: c.correctionMs,
+      differenceMs: c.startMs - best.startMs,
+      enabled: c.ev.enabled,
+    };
+    if (c.ev.id === best.ev.id) return { ...base, allowedMs: 0, verdict: "chosen" };
+    const sameClock = c.ev.clock === "device" && best.ev.clock === "device";
+    const allowedMs =
+      (sameClock
+        ? combineUncertainty(c.ev.uncertaintyMs, best.ev.uncertaintyMs)
+        : combineUncertainty(c.uncertaintyMs, best.uncertaintyMs)) + CONFLICT_TOLERANCE_MS;
+    const a = assessDeviation(base.differenceMs, allowedMs);
+    if (a.verdict !== "conflict") return { ...base, allowedMs, verdict: a.verdict };
+    // Echte Zeit gegen eine Uhr mit unbekannter Abweichung: genau das ist zu erwarten.
+    if (c.trusted !== best.trusted) return { ...base, allowedMs, verdict: "unsynced" };
+    const res: EvidenceComparison = { ...base, allowedMs, verdict: "conflict", severity: a.severity! };
+    const limit = roundingLimit(allowedMs);
+    const cAlt = altStart(c);
+    const bAlt = altStart(best);
+    if (cAlt !== null && Math.abs(cAlt - best.startMs) <= limit)
+      return { ...res, cause: "utc", utcEvidenceId: c.ev.id };
+    if (bAlt !== null && Math.abs(c.startMs - bAlt) <= limit)
+      return { ...res, cause: "utc", utcEvidenceId: best.ev.id };
+    if (a.hours) return { ...res, cause: "hours" };
+    const mixed = (c.ev.clock === "true") !== (best.ev.clock === "true");
+    if (mixed && clock && clock.basis !== "unknown") return { ...res, cause: "clock" };
+    return res;
+  });
+  return out.toSorted((x, y) => Number(y.verdict === "chosen") - Number(x.verdict === "chosen"));
+}
+
+/** Widersprüche zusammenfassen und eine Entscheidung (Beleg „geprüft“) gegen den heutigen Stand prüfen. */
+function summarizeConflicts(best: Candidate, comparison: EvidenceComparison[]): ConflictSummary {
+  const live = comparison.filter((c) => c.enabled && c.verdict === "conflict");
+  const checked = best.ev.kind === "checked";
+  const decision = checked ? best.ev.decision : null;
+  const staleBecause: ConflictSummary["staleBecause"] = [];
+  if (decision) {
+    for (const c of live) {
+      const seen = decision.seen.find((x) => x.id === c.evidenceId);
+      if (!seen) staleBecause.push({ evidenceId: c.evidenceId, wasMs: null, nowMs: c.differenceMs });
+      else if (Math.abs(seen.differenceMs - c.differenceMs) > c.allowedMs)
+        staleBecause.push({ evidenceId: c.evidenceId, wasMs: seen.differenceMs, nowMs: c.differenceMs });
+    }
+  }
+  if (!live.length) return NO_CONFLICT;
+  const worst = live.reduce((w, c) => (Math.abs(c.differenceMs) > Math.abs(w.differenceMs) ? c : w));
+  return {
+    state: staleBecause.length ? "stale" : checked ? "decided" : "open",
+    severity: live.some((c) => c.severity === "strong") ? "strong" : "clear",
+    worstMs: worst.differenceMs,
+    count: live.length,
+    staleBecause,
+  };
 }
 
 function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, placements: Map<Id, Placement>): void {
@@ -216,6 +450,8 @@ function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, pl
       status: missing ? "check" : "ok",
       notes: missing ? [`${missing} Eintrag ohne Uhrzeit`] : [],
       conflicts: [],
+      comparison: [],
+      conflict: NO_CONFLICT,
     });
   }
 }
@@ -255,37 +491,45 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
       const device = src.deviceId ? deviceById.get(src.deviceId) : undefined;
       const clock = src.deviceId ? clocks.get(src.deviceId) : undefined;
       const evs = [...(evidenceBySource.get(src.id) ?? []), ...derived.filter((d) => d.sourceId === src.id)];
-      const cands = candidatesFor(evs, device, clock, session.timeZone);
+      const all = candidatesFor(evs, device, clock, session.timeZone, true);
+      const cands = all.filter((c) => c.ev.enabled);
       candidates.set(src.id, cands);
       const best = pickBest(cands);
       if (!best) continue;
+      const comparison = compareEvidence(best, all, device, clock, session.timeZone);
+      const conflict = summarizeConflicts(best, comparison);
+      const conflicts = comparison
+        .filter((c) => c.enabled && c.verdict === "conflict")
+        .map((c) => ({ evidenceId: c.evidenceId, differenceMs: c.differenceMs, severity: c.severity! }));
       const notes: string[] = [];
-      const conflicts = cands
-        .filter((c) => c !== best)
-        .map((c) => ({ evidenceId: c.ev.id, differenceMs: c.startMs - best.startMs, c }))
-        .filter(
-          ({ differenceMs, c }) =>
-            Math.abs(differenceMs) > combineUncertainty(best.uncertaintyMs, c.uncertaintyMs) + CONFLICT_TOLERANCE_MS,
-        )
-        .map(({ evidenceId, differenceMs }) => ({ evidenceId, differenceMs }));
       if (!best.trusted) notes.push(hasReference ? "Uhr weicht ab?" : "Keine Referenzuhr gewählt");
       if (best.uncertaintyMs >= 30_000 && best.uncertaintyMs < 60_000) notes.push("nur Minute");
       else if (best.uncertaintyMs > OK_UNCERTAINTY_MS) notes.push(`± ${formatDuration(best.uncertaintyMs)}`);
       for (const c of conflicts) notes.push(`Widerspruch ${formatDuration(c.differenceMs, { sign: true })}`);
+      if (conflict.state === "stale") notes.unshift("Entscheidung neu prüfen");
       // Geprüft heißt: Die Forscherin hat die Lage gesehen und für richtig befunden. Hinweise bleiben stehen.
       const checked = best.ev.kind === "checked";
       if (checked) notes.unshift("geprüft");
-      const ok = checked || (best.trusted && best.uncertaintyMs <= OK_UNCERTAINTY_MS && conflicts.length === 0);
+      const ok =
+        (checked && conflict.state !== "stale") ||
+        (best.trusted && best.uncertaintyMs <= OK_UNCERTAINTY_MS && conflicts.length === 0);
       placements.set(src.id, {
         sourceId: src.id,
         startMs: best.startMs,
         endMs: best.startMs + (src.durationMs ?? 0),
         uncertaintyMs: best.uncertaintyMs,
-        basis: { kind: best.ev.kind, evidenceId: best.ev.id, detail: best.ev.detail },
+        basis: {
+          kind: best.ev.kind,
+          evidenceId: best.ev.id,
+          detail: best.ev.detail,
+          reason: choiceReason(best, cands),
+        },
         deviceCorrectionMs: best.correctionMs,
         status: ok ? "ok" : "check",
         notes,
         conflicts,
+        comparison,
+        conflict,
       });
     }
     chainFollowUps();
@@ -314,8 +558,12 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
           basis: { kind: "follows", detail: `Folgeaufnahme von ${prevSrc.label}` },
           deviceCorrectionMs: prev.deviceCorrectionMs,
           status: prev.status,
-          notes: prev.notes.filter((n) => !n.startsWith("Widerspruch") && n !== "geprüft"),
+          notes: prev.notes.filter(
+            (n) => !n.startsWith("Widerspruch") && n !== "geprüft" && n !== "Entscheidung neu prüfen",
+          ),
           conflicts: [],
+          comparison: [],
+          conflict: NO_CONFLICT,
         });
         if (trustedPlacement(prevSrc.id)) chainTrusted.add(src.id);
         changed = true;
@@ -426,6 +674,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             detail: `${anchorLabel(anchor.kind)} mit ${sourceById.get(known.sourceId)?.label ?? "?"}`,
             raw: "",
             enabled: true,
+            decision: null,
           });
           changed = true;
         }
@@ -449,6 +698,8 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
       sourceId: src.id,
       basis: { kind: "part", detail: `Teil von ${mainSrc.label}` },
       conflicts: [],
+      comparison: [],
+      conflict: NO_CONFLICT,
     });
   }
 

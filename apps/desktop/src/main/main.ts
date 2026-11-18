@@ -39,6 +39,11 @@ import {
   addManualAnchor,
   addTimeEvidence,
   confirmPlacement,
+  decideMany,
+  decidePlacement,
+  kindHolds,
+  kindName,
+  type DecideInput,
   removeEvidence,
   replaceAnchor,
   setLevel,
@@ -110,10 +115,21 @@ type ExportRequest = { video: boolean; resolve?: boolean; mixAudio?: boolean; re
  */
 function undoable<A extends unknown[], R>(
   channel: string,
-  label: string,
+  /** Beschriftung im Verlauf; als Funktion, wenn sie die betroffene Quelle nennen soll (vor der Änderung gelesen). */
+  label: string | ((s: ProjectStore, ...args: A) => string),
   handler: (e: Electron.IpcMainInvokeEvent, ...args: A) => R,
 ): void {
-  ipcMain.handle(channel, (e, ...args) => requireStore().history.record(label, () => handler(e, ...(args as A))));
+  ipcMain.handle(channel, (e, ...args) => {
+    const s = requireStore();
+    const text = typeof label === "string" ? label : label(s, ...(args as A));
+    return s.history.record(text, () => handler(e, ...(args as A)));
+  });
+}
+
+/** „F-003, Dateiname“ für Beschriftungen im Verlauf. */
+function evidenceLabel(s: ProjectStore, evidenceId: string): { source: string; kind: string; checked: boolean } {
+  const ev = s.getEvidence(evidenceId);
+  return { source: s.getSource(ev.sourceId).label, kind: kindName(ev.kind), checked: ev.kind === "checked" };
 }
 
 /** Rückgängig/Wiederholen ausführen und das Ergebnis für die Oberfläche zusammenstellen. */
@@ -424,11 +440,16 @@ function registerIpc(): void {
     const d = s.updateDevice(deviceId, { timeZone: zone });
     return buildSessionView(s, d.sessionId);
   });
-  undoable(IPC.setDeviceUtc, "Zeitangabe UTC/Ortszeit geändert", (_e, deviceId: string, utc: boolean) => {
-    const s = requireStore();
-    const d = s.updateDevice(deviceId, { timestampsAreUtc: utc });
-    return buildSessionView(s, d.sessionId);
-  });
+  undoable(
+    IPC.setDeviceUtc,
+    (s, deviceId: string, utc: boolean) =>
+      `Zeitstempel von ${s.getDevice(deviceId).label} als ${utc ? "UTC" : "Ortszeit"} gelesen`,
+    (_e, deviceId: string, utc: boolean) => {
+      const s = requireStore();
+      const d = s.updateDevice(deviceId, { timestampsAreUtc: utc });
+      return buildSessionView(s, d.sessionId);
+    },
+  );
 
   undoable(IPC.setDiaryNote, "Randnotiz eingetragen", (_e, sourceId: string, clock: string) => {
     const s = requireStore();
@@ -467,24 +488,72 @@ function registerIpc(): void {
     return buildSessionView(s, a.sessionId);
   });
 
-  undoable(IPC.confirmPlacement, "Lage bestätigt", (_e, sourceId: string, startMs: number) => {
-    const s = requireStore();
-    return buildSessionView(s, confirmPlacement(s, sourceId, startMs));
-  });
+  undoable(
+    IPC.confirmPlacement,
+    (s, sourceId: string, _startMs: number) => `Lage bestätigt: ${s.getSource(sourceId).label}`,
+    (_e, sourceId: string, startMs: number) => {
+      const s = requireStore();
+      return buildSessionView(s, confirmPlacement(s, sourceId, startMs));
+    },
+  );
+  undoable(
+    IPC.decidePlacement,
+    (s, input: DecideInput) => {
+      const src = s.getSource(input.sourceId).label;
+      const kind = input.evidenceId ? s.getEvidence(input.evidenceId) : null;
+      const what = kind
+        ? kindHolds(kind.kind === "checked" ? (kind.decision?.basisKind ?? "checked") : kind.kind)
+        : "Lage passt";
+      const again = s
+        .listEvidence(s.getSource(input.sourceId).sessionId)
+        .some((e) => e.sourceId === input.sourceId && e.kind === "checked" && e.decision);
+      return `Widerspruch ${again ? "neu " : ""}entschieden: ${src}, ${what}`;
+    },
+    (_e, input: DecideInput) => {
+      const s = requireStore();
+      return buildSessionView(s, decidePlacement(s, input));
+    },
+  );
+  undoable(
+    IPC.decideMany,
+    (s, input: { sourceIds: string[]; kind: string; reason: string }) => {
+      const first = input.sourceIds[0] ? s.getSource(input.sourceIds[0]) : null;
+      const dev = first?.deviceId ? ` von ${s.getDevice(first.deviceId).label}` : "";
+      return `Widersprüche entschieden: ${input.sourceIds.length} Dateien${dev}, ${kindHolds(input.kind)}`;
+    },
+    (_e, input: { sourceIds: string[]; kind: string; reason: string }) => {
+      const s = requireStore();
+      return buildSessionView(s, decideMany(s, input));
+    },
+  );
   undoable(IPC.addTime, "Uhrzeit eingetragen", (_e, input: TimeInput) => {
     const s = requireStore();
     return buildSessionView(s, addTimeEvidence(s, input));
   });
 
-  undoable(IPC.setEvidenceEnabled, "Zeitbeleg umgeschaltet", (_e, evidenceId: string, enabled: boolean) => {
-    const s = requireStore();
-    return buildSessionView(s, toggleEvidence(s, evidenceId, enabled));
-  });
+  undoable(
+    IPC.setEvidenceEnabled,
+    (s, evidenceId: string, enabled: boolean) => {
+      const l = evidenceLabel(s, evidenceId);
+      return `Zeitbeleg ${enabled ? "eingeschaltet" : "abgeschaltet"}: ${l.source}, ${l.kind}`;
+    },
+    (_e, evidenceId: string, enabled: boolean) => {
+      const s = requireStore();
+      return buildSessionView(s, toggleEvidence(s, evidenceId, enabled));
+    },
+  );
 
-  undoable(IPC.removeEvidence, "Zeitbeleg gelöscht", (_e, evidenceId: string) => {
-    const s = requireStore();
-    return buildSessionView(s, removeEvidence(s, evidenceId));
-  });
+  undoable(
+    IPC.removeEvidence,
+    (s, evidenceId: string) => {
+      const l = evidenceLabel(s, evidenceId);
+      return l.checked ? `Entscheidung zurückgenommen: ${l.source}` : `Zeitbeleg gelöscht: ${l.source}, ${l.kind}`;
+    },
+    (_e, evidenceId: string) => {
+      const s = requireStore();
+      return buildSessionView(s, removeEvidence(s, evidenceId));
+    },
+  );
 
   undoable(IPC.addAnchor, "Anker gesetzt", (_e, input: AnchorInput) => {
     const s = requireStore();

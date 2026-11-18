@@ -1,5 +1,5 @@
 /** Stand eines Einsatzes in Worten: offene Punkte und Gründe für „prüfen“. */
-import type { SessionView } from "../../shared/api.ts";
+import type { SessionView, SourceRow } from "../../shared/api.ts";
 import type { Step } from "../App.tsx";
 
 /** Was als Nächstes zu tun ist, mit Sprungziel (Schritt und ggf. Quelle). */
@@ -8,6 +8,37 @@ export interface Todo {
   step: Step;
   sourceId?: string;
   action: string;
+}
+
+/** Offener oder neu zu prüfender Widerspruch. */
+export const openConflict = (r: SourceRow) => r.conflict.state === "open" || r.conflict.state === "stale";
+
+/** Rang in der Prüfliste: starke Widersprüche, deutliche, dann übrige unsichere Lagen. */
+function rank(r: SourceRow): number {
+  if (openConflict(r)) return r.conflict.severity === "strong" ? 0 : 1;
+  return 2;
+}
+
+/** Eine Gruppe (ganze Kamera mit demselben Widerspruch) zählt als eine Stelle: nur ihre erste Datei bleibt. */
+export function asPlaces<T extends { id: string }>(rows: T[], groups: { sourceIds: string[] }[]): T[] {
+  const grouped = new Set(groups.flatMap((g) => g.sourceIds.slice(1)));
+  return rows.filter((r) => !grouped.has(r.id));
+}
+
+/**
+ * Was zu prüfen ist, in der Reihenfolge der Prüfliste: stärkste Widersprüche zuerst (innerhalb eines Grades
+ * die größte Abweichung), danach übrige unsichere Lagen nach Uhrzeit. „Nächste →“ folgt dieser Reihenfolge.
+ */
+export function checkQueue(rows: SourceRow[]): SourceRow[] {
+  return rows
+    .filter((r) => r.status === "check" && !r.partOf && (r.startMs !== null || r.diaryWindow))
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (rank(a) < 2 ? Math.abs(b.conflict.worstMs) - Math.abs(a.conflict.worstMs) : 0) ||
+        (a.startMs ?? a.diaryWindow?.toMs ?? 0) - (b.startMs ?? b.diaryWindow?.toMs ?? 0) ||
+        a.label.localeCompare(b.label),
+    );
 }
 
 /** Offene Punkte eines Einsatzes, in der Reihenfolge der Schritte. Auch Ausgeben zeigt sie vor dem Knopf. */
@@ -30,9 +61,19 @@ export function todos(view: SessionView): Todo[] {
       step: "sync",
       action: "Vorschläge ansehen",
     });
-  const checks = view.rows
-    .filter((r) => r.status === "check" && !r.partOf)
-    .sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
+  const queue = checkQueue(view.rows);
+  const conflicted = queue.filter(openConflict);
+  if (conflicted.length) {
+    const places = asPlaces(conflicted, view.conflictGroups);
+    const strong = places.filter((r) => r.conflict.severity === "strong").length;
+    out.push({
+      text: `Zeitbelege widersprechen sich an ${places.length} ${places.length === 1 ? "Stelle" : "Stellen"}${strong && strong < places.length ? `, davon ${strong} stark` : strong ? " (stark)" : ""}.`,
+      step: "review",
+      sourceId: conflicted[0]!.id,
+      action: places.length === 1 ? "Ansehen" : "Ersten ansehen",
+    });
+  }
+  const checks = queue.filter((r) => !openConflict(r));
   if (checks.length)
     out.push({
       text: `${checks.length} ${checks.length === 1 ? "Lage" : "Lagen"} prüfen.`,
@@ -74,5 +115,6 @@ export function checkReason(note: string, deviceLabel: string | undefined): stri
   if (note === "nur Minute") return "Die Uhrzeit ist nur minutengenau bekannt.";
   if (note.startsWith("± ")) return `Die Uhrzeit ist nur ungefähr bekannt (${note}).`;
   if (note.startsWith("Widerspruch ")) return `Zeitbelege widersprechen sich (${note.slice(12)}).`;
+  if (note === "Entscheidung neu prüfen") return "Seit der Entscheidung hat sich ein Zeitbeleg geändert.";
   return note;
 }

@@ -217,6 +217,7 @@ try {
   await page
     .getByTestId("inspector")
     .getByText(/^10:16:00/)
+    .first()
     .waitFor();
 
   // Randnotiz auf der ersten Tagebuchseite: 10:12, Bezug reicht 15 Min. zurück.
@@ -328,6 +329,7 @@ try {
   await page
     .getByTestId("inspector")
     .getByText(/^10:30:00/)
+    .first()
     .waitFor();
   await page.getByTestId("inspector").getByText("Von Hand: geschätzt").waitFor();
   const sw = page.getByRole("switch", { name: /Von Hand: geschätzt/ });

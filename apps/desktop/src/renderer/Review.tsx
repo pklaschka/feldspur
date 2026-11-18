@@ -18,6 +18,7 @@ import {
   tOf,
   TRACK_H,
   xOf,
+  type CompareGhost,
   type Item,
 } from "./timeline.ts";
 import { prepareCanvas } from "./canvas.ts";
@@ -28,6 +29,10 @@ import { axisRange, fitPpm, MAX_PPM, revealPpm, scrollFor, wheelFactor, zoomArou
 import { buildTracks, rowStart, trackHeightFor, trackSub } from "./review/tracks.ts";
 import { HoverCard, Legend, Tray, ZoomGlyph } from "./review/parts.tsx";
 import { useEnvelopes } from "./review/envelopes.ts";
+import { CheckList } from "./review/CheckList.tsx";
+import { ConflictMark, startText } from "./inspector/ConflictPanel.tsx";
+import { asPlaces, checkQueue } from "./inspector/status.ts";
+import { signed } from "../shared/conflict-text.ts";
 
 const LABEL_W = 180;
 
@@ -164,6 +169,25 @@ function Timeline({
     return () => mq.removeEventListener("change", on);
   }, []);
 
+  // Vergleichslage der gewählten Quelle: wo sie laut am weitesten abweichendem Beleg läge.
+  const compare = useMemo((): CompareGhost | null => {
+    const r = placed.find((x) => x.id === selected);
+    if (!r || r.startMs === null || (r.conflict.state !== "open" && r.conflict.state !== "stale")) return null;
+    const worst = r.evidence.find((e) => e.compare && e.enabled && e.compare.differenceMs === r.conflict.worstMs);
+    const track = tracks.findIndex((t) => t.rows.some((x) => x.id === r.id));
+    if (!worst?.compare || track < 0) return null;
+    const len = (r.endMs ?? r.startMs) - r.startMs;
+    return {
+      track,
+      from: r.startMs,
+      t0: worst.compare.startMs,
+      t1: worst.compare.startMs + len,
+      point: len <= 0,
+      label: signed(worst.compare.differenceMs),
+      at: startText(worst.compare),
+    };
+  }, [placed, selected, tracks]);
+
   // Vor dem Anzeigen zeichnen (Layout-Effekt), damit nach Scrollen oder Zoomen nie ein alter Ausschnitt aufblitzt.
   useLayoutEffect(() => {
     const c = canvas.current;
@@ -182,8 +206,23 @@ function Timeline({
       transcripts,
       envelopes,
       dragEdge: drag && { t: drag.t },
+      compare,
     });
-  }, [width, height, scale, tracks, items, selected, hover, themeTick, playheadMs, transcripts, envelopes, drag]);
+  }, [
+    width,
+    height,
+    scale,
+    tracks,
+    items,
+    selected,
+    hover,
+    themeTick,
+    playheadMs,
+    transcripts,
+    envelopes,
+    drag,
+    compare,
+  ]);
 
   // Aktueller Ausschnitt, auch zwischen zwei Renderdurchläufen (mehrere Mausrad-Ereignisse pro Bild).
   const live = useRef<{ ppm: number; scrollX: number; pendingScroll?: number }>({ ppm, scrollX });
@@ -365,21 +404,23 @@ function Timeline({
     }
   };
 
-  // Unsichere Lagen der Reihe nach durchgehen.
-  const toCheck = useMemo(
-    () => placed.filter((r) => r.status === "check").sort((a, b) => rowStart(a) - rowStart(b)),
-    [placed],
-  );
+  // Unsichere Lagen in der Reihenfolge der Prüfliste durchgehen (stärkste Widersprüche zuerst).
+  const toCheck = useMemo(() => checkQueue(placed), [placed]);
+  const show = (r: SourceRow) => {
+    const px = xOf(scale, rowStart(r));
+    if (px < 0 || px > width) centerOn(rowStart(r));
+  };
   const nextCheck = () => {
     if (!toCheck.length) return;
-    const cur = placed.find((r) => r.id === selected);
-    const after = cur
-      ? toCheck.find((r) => rowStart(r) > rowStart(cur) || (rowStart(r) === rowStart(cur) && r.id > cur.id))
-      : undefined;
-    const next = after ?? toCheck[0]!;
+    const i = toCheck.findIndex((r) => r.id === selected);
+    const next = toCheck[(i + 1) % toCheck.length]!;
     onSelect(next.id);
-    const px = xOf(scale, rowStart(next));
-    if (px < 0 || px > width) centerOn(rowStart(next));
+    show(next);
+  };
+  const selectFromList = (id: string) => {
+    onSelect(id);
+    const r = placed.find((x) => x.id === id);
+    if (r) show(r);
   };
   const hoverLine =
     hover?.item.type === "clip" && hover.item.row.startMs !== null
@@ -420,7 +461,7 @@ function Timeline({
             title="Springt zur nächsten Quelle mit unsicherer Lage. Rechts lässt sie sich als geprüft markieren."
             data-testid="next-check"
           >
-            {toCheck.length} zu prüfen · Nächste →
+            {asPlaces(toCheck, view.conflictGroups).length} zu prüfen · Nächste →
           </Button>
         )}
         <span className="flex-1" />
@@ -583,11 +624,25 @@ function Timeline({
         <Legend swatch="h-2.5 w-4.5 rounded-xs border-[1.5px] border-dashed border-warn">
           Lage prüfen (anklicken, rechts bestätigen)
         </Legend>
+        <Legend
+          swatch={
+            <span className="inline-flex gap-0.5">
+              <ConflictMark severity="clear" />
+              <ConflictMark severity="strong" />
+            </span>
+          }
+        >
+          Zeitbelege widersprechen sich (gefüllt: stark)
+        </Legend>
+        <Legend swatch="size-2.5 rotate-45 rounded-[2px] border-[1.5px] border-dashed border-warn">
+          Vergleichslage laut anderem Beleg
+        </Legend>
         <span className="ml-auto">
           Klick in Audio/Video spult dorthin · Episodengrenzen lassen sich ziehen · Mausrad zoomt an der Maus · Umschalt
           + Mausrad oder Mausrad gedrückt ziehen verschiebt
         </span>
       </div>
+      <CheckList view={view} selected={selected} onSelect={selectFromList} />
       {/* Direkt unter Achse und Legende: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
     </div>
