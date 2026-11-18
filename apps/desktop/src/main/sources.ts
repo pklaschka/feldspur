@@ -1,5 +1,6 @@
 /** Quellen und Geräte pflegen: entfernen, umhängen, Geräte zusammenlegen. */
-import { effectiveLocal, type ProjectStore } from "@feldspur/core";
+import { effectiveLocal, type Device, type ProjectStore, type Source } from "@feldspur/core";
+import { deviceGuess, evidenceFromExif, evidenceFromFilename, type ImageExif } from "@feldspur/media";
 
 /** Quelle aus dem Projekt nehmen; die Originaldatei bleibt, wo sie ist. Gibt die Einsatz-Id zurück. */
 export function removeSource(s: ProjectStore, sourceId: string): string {
@@ -77,9 +78,76 @@ export function setPartOf(s: ProjectStore, sourceId: string, mainId: string | nu
     for (const child of s.listSources(src.sessionId).filter((x) => x.partOf === sourceId)) {
       s.updateSource(child.id, { partOf: main.id });
     }
-    s.updateSource(sourceId, { partOf: main.id, kind: main.kind, deviceId: main.deviceId });
+    // Wechselt die Art (Foto an Tagebuchseite), passt auch das Kurzzeichen dazu: F-… wird T-…
+    const label = src.kind === main.kind ? src.label : s.nextLabel(src.sessionId, main.kind);
+    s.updateSource(sourceId, { partOf: main.id, kind: main.kind, deviceId: main.deviceId, label });
+    if (src.deviceId && src.deviceId !== main.deviceId) s.deleteDeviceIfEmpty(src.deviceId);
   });
   return src.sessionId;
+}
+
+/**
+ * Bild als Tagebuchseite oder als Foto behandeln. Die Einschätzung beim Einsammeln richtet sich nach Dateiname
+ * und Kamera-EXIF; abfotografierte Notizbuchseiten landen so oft bei den Fotos. Neues Kurzzeichen, weitere Bilder
+ * der Seite ziehen mit. Das Gerät wählt sich wie beim Einsammeln: Tagebuch für Seiten, für Fotos nach Modell
+ * bzw. Dateinamen-Familie. Ein dadurch leeres Gerät verschwindet. Zeitbelege bleiben erhalten (eine Tagebuchseite
+ * liegt trotzdem nur nach ihren Randnotizen); fehlen einem neuen Foto welche, kommen sie aus EXIF und Dateinamen.
+ */
+export function setSourceKind(s: ProjectStore, sourceId: string, kind: "diary" | "photo"): string {
+  const src = s.getSource(sourceId);
+  if (!IMAGE_KINDS.has(src.kind)) throw new Error("Nur Fotos und Tagebuchseiten lassen sich umstellen");
+  if (src.partOf) throw new Error("Weitere Bilder einer Seite haben die Art ihrer Hauptseite");
+  if (src.kind === kind) return src.sessionId;
+  const parts = s.listSources(src.sessionId).filter((x) => x.partOf === sourceId);
+  if (kind === "photo") {
+    const ids = new Set([sourceId, ...parts.map((x) => x.id)]);
+    const n = s.listDiaryEntries(src.sessionId).filter((e) => e.regions.some((r) => ids.has(r.sourceId))).length;
+    if (n) {
+      throw new Error(
+        `${src.label} hat ${n === 1 ? "einen Tagebucheintrag" : `${n} Tagebucheinträge`}. Bitte erst die Einträge löschen, dann als Foto behandeln.`,
+      );
+    }
+  }
+  s.transaction(() => {
+    const from = src.deviceId ? s.getDevice(src.deviceId) : null;
+    const to = targetDevice(s, src, kind, from);
+    for (const x of [src, ...parts]) {
+      s.updateSource(x.id, { kind, label: s.nextLabel(src.sessionId, kind), deviceId: to.id });
+      if (kind === "photo" && !s.listEvidence(src.sessionId).some((e) => e.sourceId === x.id)) {
+        const exif = (x.metadata.exif ?? null) as ImageExif | null;
+        for (const e of [...evidenceFromExif(exif), ...evidenceFromFilename(x.fileName)]) {
+          s.addEvidence({ ...e, sourceId: x.id });
+        }
+      }
+    }
+    for (const id of new Set([src.deviceId, ...parts.map((x) => x.deviceId)])) {
+      if (!id || id === to.id) continue;
+      const wasReference = id === from?.id && from.isReference;
+      if (s.deleteDeviceIfEmpty(id) && wasReference && kind === "photo") s.setReferenceDevice(to.id);
+    }
+  });
+  return src.sessionId;
+}
+
+/** Gerät für ein umgestelltes Bild: vorhandenes passendes Gerät, sonst neu wie beim Einsammeln. */
+function targetDevice(s: ProjectStore, src: Source, kind: "diary" | "photo", from: Device | null): Device {
+  const exif = (src.metadata.exif ?? null) as ImageExif | null;
+  const guess = deviceGuess(src.fileName, kind, exif, null);
+  const devices = s.listDevices(src.sessionId);
+  const sources = s.listSources(src.sessionId);
+  const onlyDiary = (d: Device) => {
+    const own = sources.filter((x) => x.deviceId === d.id && x.id !== src.id && x.partOf !== src.id);
+    return own.length > 0 && own.every((x) => x.kind === "diary");
+  };
+  const found =
+    devices.find((d) => d.matchKey === guess.key) ?? (kind === "diary" ? devices.find(onlyDiary) : undefined);
+  if (found) return found;
+  return s.addDevice({
+    sessionId: src.sessionId,
+    label: guess.label,
+    matchKey: guess.key,
+    personId: from?.personId ?? null,
+  });
 }
 
 /** Folgeaufnahme setzen: sourceId setzt prevId nahtlos fort (null = lösen). */
