@@ -21,12 +21,23 @@ import type { AnchorInput, DecideInput, LevelInput, PageNumberingInput, TimeInpu
 /** ± je Genauigkeitsstufe. */
 export const PRECISION_MS = { exact: 1_000, approx: 60_000, rough: 15 * 60_000 } as const;
 
-/** "10:15", "10:15:30", "10.15" → Ortszeit am Tag des Einsatzes. */
-export function parseClockOnDate(date: string, text: string): number {
+/**
+ * Uhrzeit "10:15", "10:15:30" oder "10.15" in Stunde/Minute/Sekunde zerlegen und auf Bereiche prüfen
+ * (Stunde 0–23, Minute und Sekunde 0–59). Mit `seconds: false` sind keine Sekunden erlaubt.
+ */
+export function parseClock(text: string, opts: { seconds?: boolean } = {}): { h: number; mi: number; se: number } {
+  const seconds = opts.seconds ?? true;
   const m = /^(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?$/.exec(text.trim());
-  if (!m) throw new Error(`Uhrzeit bitte als hh:mm oder hh:mm:ss, nicht „${text}“`);
+  const format = seconds ? "hh:mm oder hh:mm:ss" : "hh:mm";
+  if (!m || (!seconds && m[3] !== undefined)) throw new Error(`„${text}“ ist keine gültige Uhrzeit (${format}).`);
   const [h, mi, se] = [Number(m[1]), Number(m[2]), Number(m[3] ?? 0)];
-  if (h > 23 || mi > 59 || se > 59) throw new Error(`„${text}“ ist keine gültige Uhrzeit`);
+  if (h > 23 || mi > 59 || se > 59) throw new Error(`„${text}“ ist keine gültige Uhrzeit (${format}).`);
+  return { h, mi, se };
+}
+
+/** "10:15", "10:15:30", "10.15" → Ortszeit am Tag des Einsatzes. */
+export function parseClockOnDate(date: string, text: string, opts: { seconds?: boolean } = {}): number {
+  const { h, mi, se } = parseClock(text, opts);
   const [y, mo, d] = date.split("-").map(Number) as [number, number, number];
   return localMs(y, mo, d, h, mi, se);
 }

@@ -22,6 +22,11 @@ ins System eingebunden ist (etwa mit AppImageLauncher).
 Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
 genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.
 
+Das Datum ist vorbelegt mit dem heutigen Tag am Rechner. Feldspur vergleicht es beim Einsammeln mit den Dateien: Stammen
+die meisten nach ihren Metadaten oder Dateinamen von einem anderen Tag, steht über der Geräteliste ein Hinweis mit dem
+Knopf **Datum auf … setzen**. Das lässt sich rückgängig machen; von Hand eingetragene Uhrzeiten wandern mit. Liegen die
+Dateien auf mehreren Tagen, weist Feldspur sanft darauf hin, dass ein Einsatz ein Feldtag ist.
+
 ::: {.callout-tip}
 ### Deine Originale bleiben, wo sie sind
 Feldspur kopiert und verändert keine Originaldateien. Die Projektdatei merkt sich nur, wo sie liegen, und hält ihre
@@ -54,7 +59,10 @@ Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
 Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Tagebuch, Quellen
-und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle.
+und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle. Die Liste zeigt höchstens
+60 Treffer in Uhrzeit-Reihenfolge; gibt es mehr, steht darunter "Erste 60 von 143 Treffern". Grenze die Suche dann ein,
+etwa mit einer Uhrzeit wie 10:15 oder einem weiteren Wort. Mit ↑↓ wählst du einen Treffer, Enter springt hin; Screenreader
+lesen den gewählten Treffer vor.
 
 **Rückgängig** (Strg+Z, auf dem Mac ⌘Z) nimmt den letzten Schritt zurück, etwa eine entfernte Quelle, einen
 gelöschten Anker, einen übernommenen Vorschlag oder "Lage passt". **Wiederholen** geht mit Strg+Y oder

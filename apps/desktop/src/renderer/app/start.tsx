@@ -1,6 +1,7 @@
 /** Startbildschirm: App-Symbol und erster Einsatz. */
 import iconUrl from "../../../../../packaging/icon.svg?url";
 import { useState, type FormEvent } from "react";
+import { localDate } from "../format.ts";
 import { Button, cx } from "../ui.tsx";
 
 /** Das App-Symbol (Feldmarker auf Notizpapier) mit Namen. */
@@ -22,7 +23,7 @@ export function NewSessionForm({
 }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localDate());
   if (!open) {
     return (
       <button

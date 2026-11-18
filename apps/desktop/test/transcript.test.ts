@@ -72,6 +72,19 @@ describe("Mitschrift", () => {
     expect(() => importLines(store, photo.id, lines, "append")).toThrow(/keine Ton/);
   });
 
+  it("macht Ersetzen rückgängig und lässt den Verlauf davor bestehen", () => {
+    const { session, audio } = seed();
+    store.history.record("Zeile angelegt", () => addLine(store, audio.id, { atMs: 5_000, speaker: "", text: "alt" }));
+    const lines = [{ atMs: 1_000, speaker: "S1", text: "neu" }];
+    store.history.record("Mitschrift ersetzt", () => importLines(store, audio.id, lines, "replace"));
+    const texts = () => buildSessionView(store, session.id).transcript.map((l) => l.text);
+    expect(texts()).toEqual(["neu"]);
+    expect(store.history.undo()).toBe("Mitschrift ersetzt");
+    expect(texts()).toEqual(["alt"]);
+    expect(store.history.undo()).toBe("Zeile angelegt");
+    expect(texts()).toEqual([]);
+  });
+
   it("legt Zeilen an, rechnet die Uhrzeit aus dem Abgleich und begrenzt die Stelle", () => {
     const { session, audio } = seed();
     addLine(store, audio.id, { atMs: 70_000, speaker: " H ", text: " Zwölf Jahre " });

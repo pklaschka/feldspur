@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import type { BackupInfo } from "@feldspur/core";
 import type { BackupOverview, ProjectInfo } from "../shared/api.ts";
 import { bytes } from "./format.ts";
-import { Button, CloseButton } from "./ui.tsx";
+import { Button, CloseButton, ErrorBanner } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -85,6 +85,7 @@ export function Backups({
             Sicherungen bleiben liegen, eigene Sicherungen immer. Eine Sicherung öffnet sich als Kopie; das Projekt
             selbst bleibt unverändert.
           </Dialog.Description>
+          <ErrorBanner dialog className="mb-3" />
           {overview?.lastError && (
             <p className="mb-3 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-[0.88rem]" role="alert">
               {overview.lastError}
