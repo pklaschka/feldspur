@@ -7,6 +7,7 @@ import { highlight, search, searchItems, type Hit } from "./search.ts";
 import { usePlayback } from "./playback.tsx";
 import { cx } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
+import { isEnter } from "./keys.js";
 
 const KIND_LABEL: Record<Hit["kind"], string> = {
   line: "Mitschrift",
@@ -66,7 +67,7 @@ export function SearchDialog({
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setActive((a) => Math.max(0, a - 1));
-              } else if (e.key === "Enter") {
+              } else if (isEnter(e)) {
                 e.preventDefault();
                 pick(hits[active]);
               }

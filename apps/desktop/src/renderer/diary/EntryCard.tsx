@@ -4,6 +4,7 @@ import type { DiaryEntryRow, DiaryMode, DiaryPatch } from "../../shared/api.ts";
 import { hm, maskClockAt, normalizeClock, stepClock } from "../format.ts";
 import { Button, Choice, cx } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
+import { isEnter } from "../keys.js";
 
 const MODE_OPTIONS: { value: DiaryMode; label: string; title: string }[] = [
   { value: "scan", label: "Nur Scan", title: "Nicht abtippen, der Scan steht für sich" },
@@ -58,7 +59,7 @@ export function PageField({
         }}
         onChange={(e) => setText(e.target.value.replace(/[^\d]/g, ""))}
         onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        onKeyDown={(e) => isEnter(e) && e.currentTarget.blur()}
       />
     </label>
   );
@@ -166,7 +167,7 @@ export function EntryCard({
                 const v = back.trim() === "" ? null : Number(back.replace(",", "."));
                 if (v !== entry.lookbackMin && (v === null || Number.isFinite(v))) onPatch({ lookbackMin: v });
               }}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              onKeyDown={(e) => isEnter(e) && e.currentTarget.blur()}
             />
             <span className="text-muted">Min. davor</span>
           </span>
@@ -276,7 +277,7 @@ export function ClockField({
           }
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
+          if (isEnter(e)) e.currentTarget.blur();
           else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
             e.preventDefault();
             onChange(stepClock(value, (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1)));

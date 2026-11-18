@@ -9,7 +9,7 @@ import { fieldChanges, OP_LABEL, TABLE_LABEL } from "../shared/changelog.ts";
 export function changeLogRows(steps: ChangeStep[]): unknown[][] {
   const rows: unknown[][] = [];
   // Älteste zuerst: so liest man ein Protokoll.
-  for (const s of [...steps].reverse()) {
+  for (const s of steps.toReversed()) {
     for (const c of s.changes) {
       const fields = fieldChanges(c);
       const base = [

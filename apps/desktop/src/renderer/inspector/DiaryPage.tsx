@@ -2,6 +2,7 @@ import type { DiaryEntryRow, SourceRow } from "../../shared/api.ts";
 import { hm } from "../format.ts";
 import { Button, Eyebrow } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
+import { isEnter } from "../keys.js";
 
 export function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
   const [text, setText] = useDraft(row.diaryNote ?? "", row.id);
@@ -17,7 +18,7 @@ export function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock:
           aria-label={`Randnotiz ${row.label}`}
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
-          onKeyDown={(e) => e.key === "Enter" && commit()}
+          onKeyDown={(e) => isEnter(e) && commit()}
         />
       </label>
       <p className="mt-1.5 text-[0.85rem] text-muted">

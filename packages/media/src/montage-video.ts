@@ -202,7 +202,7 @@ export function planPieces(sc: Scaffold): Piece[] {
       const audioOnly = running.filter((s) => s.kind === "audio");
       const mainAudio =
         audioOnly.find((s) => s.deviceId === refDevice) ??
-        [...audioOnly].sort((x, y) => span(place(y.id)!) - span(place(x.id)!))[0] ??
+        audioOnly.toSorted((x, y) => span(place(y.id)!) - span(place(x.id)!))[0] ??
         videos[0];
       const sounding = running.filter((s) => s.kind === "audio" || s.kind === "video");
       const audios = mainAudio ? [mainAudio, ...sounding.filter((s) => s !== mainAudio)] : sounding;

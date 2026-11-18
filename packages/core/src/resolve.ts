@@ -183,7 +183,7 @@ function candidatesFor(
 }
 
 function pickBest(cands: Candidate[]): Candidate | undefined {
-  return [...cands].sort((a, b) => {
+  return cands.toSorted((a, b) => {
     // Bestätigt vor von Hand: eine neue Handeingabe entfernt die Bestätigung (siehe edits.ts).
     for (const k of ["checked", "manual"] as const)
       if ((a.ev.kind === k) !== (b.ev.kind === k)) return a.ev.kind === k ? -1 : 1;

@@ -6,6 +6,7 @@ import { positionText } from "../playback.tsx";
 import { leadingSpeaker, oneParagraph } from "../transcribe.ts";
 import { Button, CloseButton, cx } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
+import { isEnter } from "../keys.js";
 
 export function At({ ms, startMs }: { ms: number; startMs: number | null }) {
   return (
@@ -80,7 +81,7 @@ export const Line = memo(function Line({
           }
         }}
         onKeyDown={(e) => {
-          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+          if (!isEnter(e)) return;
           e.preventDefault();
           const el = e.currentTarget;
           if (e.metaKey || e.ctrlKey) {

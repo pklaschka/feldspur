@@ -43,3 +43,15 @@ release. Add a tool name to select part of the graph. For example, run
   setzen: `neu`, `verbessert`, `behoben`, `doku`, `intern` oder `kein-changelog` (siehe `.github/release.yml`).
 - Versionen nie von Hand ändern: das macht der Release-Workflow (`.github/workflows/release.yml`, `scripts/release.ts`).
 - README.md wird aus `README.qmd` und Bausteinen in `handbuch/` erzeugt (`vp run readme`); nie direkt bearbeiten. Neue Funktionen auch im Handbuch (`handbuch/_handbuch-*.qmd`) nachtragen.
+
+## Modern Web Guidance
+
+- Die Oberfläche läuft nur in Electron, also nur im mitgelieferten Chromium. **Browser-Unterstützung:** alles, was die
+  Chromium-Fassung der verwendeten Electron-Version kann, auch „Newly available“ oder nur in Chromium; keine Polyfills
+  und keine Rückfalllösungen für andere Browser.
+- Für Oberfläche, CSS und Browser-JS den Skill `.agents/skills/modern-web-guidance` nutzen (eingebunden über
+  `skills-lock.json`, für Claude Code verlinkt in `.claude/skills/`). Aktualisieren: `npx -y skills update modern-web-guidance`.
+- Altlasten suchen: `DISABLE_TELEMETRY=1 npx -y modern-web-guidance@latest legacy-scan apps --json` (ebenso für
+  `packages`). Ohne `DISABLE_TELEMETRY=1` schickt das Werkzeug anonyme Nutzungsdaten an Google.
+- Farben nicht auf `light-dark()` umstellen: die Canvas-Zeichnungen lesen die Farbvariablen per `getComputedStyle`
+  und bekämen dann den unaufgelösten Ausdruck statt einer Farbe.

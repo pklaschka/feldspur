@@ -7,7 +7,7 @@ export const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "o
 
 /** Spuren: Referenzuhr zuerst, dann nach Art; Quellen ohne Gerät zuletzt in einer eigenen Spur. */
 export function buildTracks(devices: DeviceRow[], placed: SourceRow[]): Track[] {
-  const sorted = [...devices].sort(
+  const sorted = devices.toSorted(
     (a, b) => Number(b.isReference) - Number(a.isReference) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
   );
   const list: Track[] = sorted.map((d) => ({ device: d, rows: placed.filter((r) => r.deviceId === d.id) }));

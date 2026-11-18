@@ -147,6 +147,11 @@
   h2,
   h3 {
     @apply font-serif tracking-[-0.005em];
+    /* Mehrzeilige Überschriften in gleich langen Zeilen, Fließtext ohne einzelnes Wort in der letzten Zeile. */
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
   /* Was der Browser sonst selbst zeichnet, trägt auch die Farben der App. */
   ::selection {
@@ -155,6 +160,8 @@
   html {
     scrollbar-color: var(--line-2) transparent;
     caret-color: var(--accent);
+    /* Kästchen, Schieberegler und Fortschrittsbalken des Browsers im Terrakotta der App. */
+    accent-color: var(--accent);
   }
   ::placeholder {
     color: var(--muted);

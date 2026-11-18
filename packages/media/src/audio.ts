@@ -96,7 +96,7 @@ export function unpackEnvelope(bytes: Uint8Array, rate = ENVELOPE_RATE): Envelop
 
 function percentile(values: Float32Array, p: number): number {
   if (values.length === 0) return DB_FLOOR;
-  const sorted = Float32Array.from(values).sort();
+  const sorted = values.toSorted();
   return sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))]!;
 }
 

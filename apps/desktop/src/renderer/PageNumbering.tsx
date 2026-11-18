@@ -10,6 +10,7 @@ import type { ApplyView } from "./Notes.tsx";
 import { loadPdf, usePdfPageCount } from "./pdf.tsx";
 import { Button, Eyebrow, Toggle } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
+import { isEnter } from "./keys.js";
 
 const api = window.feldspur;
 const byLabel = (a: SourceRow, b: SourceRow) => a.label.localeCompare(b.label, "de", { numeric: true });
@@ -82,7 +83,7 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
             aria-label={`Seitenzahl im Notizbuch für ${row.label}`}
             onChange={(e) => setText(e.target.value.replace(/[^\d]/g, ""))}
             onBlur={commit}
-            onKeyDown={(e) => e.key === "Enter" && commit()}
+            onKeyDown={(e) => isEnter(e) && commit()}
           />
         </label>
         <label className="inline-flex cursor-pointer items-center gap-1.5">
