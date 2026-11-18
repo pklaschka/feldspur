@@ -649,7 +649,7 @@ try {
 
   // Schnellsuche (Strg+K) findet die importierte Zeile und springt hin.
   await page.keyboard.press("Control+k");
-  const searchBox = page.getByTestId("search").getByRole("textbox", { name: "Suchen" });
+  const searchBox = page.getByTestId("search").getByRole("combobox", { name: "Suchen" });
   await searchBox.fill("noch frei");
   await page.getByTestId("search").getByRole("option").first().getByText("noch frei").waitFor();
   await shot("-suche");
