@@ -4,7 +4,13 @@
  */
 import { describe, expect, it } from "vite-plus/test";
 import type { Decision, Device, TimeEvidence } from "../src/model.ts";
-import { assessDeviation, resolveTimeline, type EvidenceComparison, type Placement } from "../src/resolve.ts";
+import {
+  assessDeviation,
+  precisionText,
+  resolveTimeline,
+  type EvidenceComparison,
+  type Placement,
+} from "../src/resolve.ts";
 import { localMs, localToUtc } from "../src/time.ts";
 import { T, testmarkt } from "./scenario.ts";
 
@@ -336,5 +342,16 @@ describe("Entscheidungen", () => {
     const { p } = photo([exif, name, spoken, checked(null)], known);
     expect(state(p)).toEqual(["decided", "ok"]);
     expect(p.basis.reason).toBe("von dir geprüft");
+  });
+});
+
+describe("Genauigkeit als Text", () => {
+  it("nennt Einzahl und Mehrzahl richtig", () => {
+    expect(precisionText(500)).toBe("sekundengenau");
+    expect(precisionText(30_000)).toBe("nur Minute");
+    expect(precisionText(5_000)).toBe("auf 5 Sekunden genau");
+    expect(precisionText(60_000)).toBe("auf 1 Minute genau");
+    expect(precisionText(61_000)).toBe("auf 1 Minute genau");
+    expect(precisionText(120_000)).toBe("auf 2 Minuten genau");
   });
 });

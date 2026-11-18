@@ -22,6 +22,7 @@ const row = (o: Partial<SourceRow> & { id: string }) =>
     diaryWindow: null,
     deviceId: null,
     partOf: null,
+    conflict: { state: "none", severity: null, worstMs: 0, count: 0, staleBecause: [] },
     ...o,
   }) as SourceRow;
 const device = (o: Partial<DeviceRow> & { id: string }) =>
@@ -115,17 +116,24 @@ describe("Spuren", () => {
     expect(trackHeightFor(70, 0)).toBe(70);
   });
 
-  it("Untertitel: Referenzuhr, Person oder Anzahl, dazu was noch ohne Zeit ist", () => {
+  it("Untertitel: Referenzuhr, Person oder Anzahl, dazu was noch ohne Zeit ist und offene Widersprüche", () => {
     const rows = [
       row({ id: "1", deviceId: "a", startMs: 1 }),
       row({ id: "2", deviceId: "a" }),
       row({ id: "2b", deviceId: "a", partOf: "2" }),
       row({ id: "3", deviceId: "b", startMs: 1 }),
+      row({
+        id: "4",
+        deviceId: "c",
+        startMs: 1,
+        conflict: { state: "open", severity: "strong", worstMs: 1, count: 1, staleBecause: [] },
+      }),
     ];
     expect(trackSub({ device: device({ id: "a" }), rows: [] }, rows)).toBe("2 Dateien · 1 ohne Zeit");
     expect(trackSub({ device: device({ id: "b", personName: "Kim" }), rows: [] }, rows)).toBe("Kim");
     expect(trackSub({ device: device({ id: "b", isReference: true }), rows: [] }, rows)).toBe("Referenzuhr");
     expect(trackSub({ device: null, rows: [rows[0]!] }, rows)).toBe("1 Datei");
+    expect(trackSub({ device: device({ id: "c" }), rows: [] }, rows)).toBe("1 Datei · 1 ≠");
   });
 
   it("Startzeit: eigene Uhrzeit, sonst Ende des Tagebuch-Zeitraums, sonst 0", () => {

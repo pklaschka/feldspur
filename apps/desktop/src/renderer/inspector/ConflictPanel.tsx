@@ -2,7 +2,8 @@
  * Widersprüchliche Zeitbelege: vergleichen und bewusst entscheiden, welche Zeit gilt.
  * Ein Kasten in drei Zuständen: offen, entschieden, neu prüfen (siehe Konzept zu Issue #75).
  */
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useElementWidth } from "../canvas.ts";
 import type { EvidenceComparison } from "@feldspur/core/resolve";
 import { precisionText } from "@feldspur/core/resolve";
 import type { ConflictGroupRow, DeviceRow, EvidenceRow, SessionView, SourceRow } from "../../shared/api.ts";
@@ -74,9 +75,12 @@ export function compared(row: SourceRow): Compared[] {
 
 /** Belegstrahl: ein Punkt je Beleg, Unsicherheit als Balken, Abstand als Klammer; große Lücken unterbrochen. */
 export function EvidenceStrip({ items }: { items: Compared[] }) {
+  // In Pixeln der Leiste zeichnen, nicht skalieren: Sonst wächst die Schrift mit einer breiten Detailleiste.
+  const box = useRef<HTMLDivElement>(null);
+  const measured = useElementWidth(box);
   const pts = items.filter((e) => e.enabled).toSorted((a, b) => a.compare.startMs - b.compare.startMs);
   if (pts.length < 2) return null;
-  const W = 240;
+  const W = measured || 228;
   const PAD = 30;
   const ts = pts.map((p) => p.compare.startMs);
   const lo = ts[0]!;
@@ -90,7 +94,8 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
       gap = ts[i]! - ts[i - 1]!;
       gapAt = i;
     }
-  const broken = range >= 10 * 60_000 && gap >= 0.6 * range && ts.length > 2;
+  // Ab 10 Min. Abstand wird unterbrochen (wie in der Skizze), damit kleine Unsicherheiten sichtbar bleiben.
+  const broken = range >= 10 * 60_000 && (ts.length === 2 || gap >= 0.6 * range);
   const usable = W - 2 * PAD;
   const x = (t: number): number => {
     if (!broken) return PAD + ((t - lo) / range) * usable;
@@ -98,9 +103,10 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
     const left = ts.slice(0, gapAt);
     const right = ts.slice(gapAt);
     const seg = usable * 0.4;
-    const inSeg = (arr: number[], t0: number) =>
-      arr.length > 1 ? ((t - arr[0]!) / Math.max(1, arr.at(-1)! - arr[0]!)) * seg + t0 : t0 + seg / 2;
-    return t < right[0]! ? inSeg(left, PAD) : inSeg(right, W - PAD - seg);
+    const inSeg = (arr: number[], t0: number, edge: number) =>
+      arr.length > 1 ? ((t - arr[0]!) / Math.max(1, arr.at(-1)! - arr[0]!)) * seg + t0 : edge;
+    // Ein einzelner Punkt eines Abschnitts sitzt an dessen Außenkante.
+    return t < right[0]! ? inSeg(left, PAD, PAD) : inSeg(right, W - PAD - seg, W - PAD);
   };
   const scaleOf = broken ? 0 : usable / range;
   const chosen = pts.find((p) => p.compare.verdict === "chosen");
@@ -111,63 +117,71 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
   const y = 40;
   const midGap = broken ? (x(ts[gapAt - 1]!) + x(ts[gapAt]!)) / 2 : null;
   return (
-    <svg
-      viewBox={`0 0 ${W} ${twoLevel ? 98 : 78}`}
-      className="mt-2 w-full text-warn"
-      aria-hidden
-      data-testid="evidence-strip"
-    >
-      <line x1={8} x2={W - 8} y1={y} y2={y} className="stroke-line-2" strokeWidth={1.5} />
-      {midGap !== null && (
-        <g className="stroke-muted" strokeWidth={1.5}>
-          <rect x={midGap - 8} y={y - 4} width={16} height={8} className="fill-warn-soft stroke-none" />
-          <line x1={midGap - 7} x2={midGap - 3} y1={y + 5} y2={y - 5} />
-          <line x1={midGap + 3} x2={midGap + 7} y1={y + 5} y2={y - 5} />
-        </g>
-      )}
-      {Math.abs(far.compare.differenceMs) > 0 && (
-        <g>
-          <path d={`M${xa} 21 V15 H${xb} V21`} fill="none" stroke="currentColor" strokeWidth={1.2} />
-          <rect
-            x={(xa + xb) / 2 - 30}
-            y={5}
-            width={60}
-            height={18}
-            rx={9}
-            className="fill-panel stroke-warn"
-            strokeWidth={1}
-          />
-          <text x={(xa + xb) / 2} y={18} textAnchor="middle" className="fill-warn font-mono text-[12px] font-semibold">
-            {plain(far.compare.differenceMs)}
-          </text>
-        </g>
-      )}
-      {pts.map((p, i) => {
-        const px = x(p.compare.startMs);
-        const unc = Math.min(40, p.compare.uncertaintyMs * scaleOf);
-        const used = p.compare.verdict === "chosen";
-        const ly = y + 18 + (twoLevel && i % 2 ? 20 : 0);
-        const anchor = px < 40 ? "start" : px > W - 40 ? "end" : "middle";
-        return (
-          <g key={p.id}>
-            {unc > 2 && <rect x={px - unc} y={y - 3} width={2 * unc} height={6} rx={3} className="fill-warn/25" />}
-            <circle
-              cx={px}
-              cy={y}
-              r={5.5}
-              className={used ? "fill-accent stroke-panel" : "fill-panel stroke-warn"}
-              strokeWidth={used ? 2 : 2}
+    <div ref={box} className="mt-2.5 mb-0.5" data-testid="evidence-strip">
+      <svg
+        width={W}
+        height={twoLevel ? 98 : 78}
+        viewBox={`0 0 ${W} ${twoLevel ? 98 : 78}`}
+        className="block text-warn"
+        aria-hidden
+      >
+        <line x1={8} x2={W - 8} y1={y} y2={y} className="stroke-line-2" strokeWidth={1.5} />
+        {midGap !== null && (
+          <g className="stroke-muted" strokeWidth={1.5}>
+            <rect x={midGap - 8} y={y - 4} width={16} height={8} className="fill-warn-soft stroke-none" />
+            <line x1={midGap - 7} x2={midGap - 3} y1={y + 5} y2={y - 5} />
+            <line x1={midGap + 3} x2={midGap + 7} y1={y + 5} y2={y - 5} />
+          </g>
+        )}
+        {Math.abs(far.compare.differenceMs) > 0 && (
+          <g>
+            <path d={`M${xa} 21 V15 H${xb} V21`} fill="none" stroke="currentColor" strokeWidth={1.2} />
+            <rect
+              x={(xa + xb) / 2 - 30}
+              y={5}
+              width={60}
+              height={18}
+              rx={9}
+              className="fill-panel stroke-warn"
+              strokeWidth={1}
             />
-            <text x={px} y={ly} textAnchor={anchor} className="fill-ink font-mono text-[12px] font-semibold">
-              {startText(p.compare)}
-            </text>
-            <text x={px} y={ly + 13} textAnchor={anchor} className="fill-muted text-[11px]">
-              {kindName(p.kind)}
+            <text
+              x={(xa + xb) / 2}
+              y={18}
+              textAnchor="middle"
+              className="fill-warn font-mono text-[12px] font-semibold"
+            >
+              {plain(far.compare.differenceMs)}
             </text>
           </g>
-        );
-      })}
-    </svg>
+        )}
+        {pts.map((p, i) => {
+          const px = x(p.compare.startMs);
+          const unc = Math.min(40, p.compare.uncertaintyMs * scaleOf);
+          const used = p.compare.verdict === "chosen";
+          const ly = y + 18 + (twoLevel && i % 2 ? 20 : 0);
+          const anchor = px < 28 ? "start" : px > W - 28 ? "end" : "middle";
+          return (
+            <g key={p.id}>
+              {unc > 2 && <rect x={px - unc} y={y - 3} width={2 * unc} height={6} rx={3} className="fill-warn/25" />}
+              <circle
+                cx={px}
+                cy={y}
+                r={5.5}
+                className={used ? "fill-accent stroke-panel" : "fill-panel stroke-warn"}
+                strokeWidth={used ? 2 : 2}
+              />
+              <text x={px} y={ly} textAnchor={anchor} className="fill-ink font-mono text-[13px] font-semibold">
+                {startText(p.compare)}
+              </text>
+              <text x={px} y={ly + 14.5} textAnchor={anchor} className="fill-muted text-[12px]">
+                {kindName(p.kind)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
@@ -190,9 +204,9 @@ export function EvidenceFacts({ e, reason, decided }: { e: Compared; reason?: st
           {verdictBadge(c, decided)}
         </span>
       </span>
-      <span>
-        Beginn <b className="font-mono font-semibold tabular-nums">{startText(c)}</b>
-        <span className="text-muted"> · {precisionText(c.uncertaintyMs)}</span>
+      <span className="mt-0.5 text-[0.93rem]">
+        Beginn <b className="font-mono font-semibold tabular-nums">{startText(c)}</b>{" "}
+        <span className="text-[0.8rem] whitespace-nowrap text-muted">· {precisionText(c.uncertaintyMs)}</span>
       </span>
       {(e.raw || e.detail) && (
         <span className="text-[0.82rem] [overflow-wrap:anywhere] text-muted">
@@ -204,7 +218,9 @@ export function EvidenceFacts({ e, reason, decided }: { e: Compared; reason?: st
         <span className="text-[0.82rem] text-muted">Uhr korrigiert {offsetText(c.correctionMs)}</span>
       )}
       {reason && (
-        <span className="text-[0.82rem] text-ink-2">Warum dieser? {reason[0]!.toUpperCase() + reason.slice(1)}.</span>
+        <span className="mt-0.5 text-[0.82rem] text-ink-2">
+          Warum dieser? {reason[0]!.toUpperCase() + reason.slice(1)}.
+        </span>
       )}
     </span>
   );
@@ -275,6 +291,34 @@ function Cause({
       <p className="mt-0.5">{text}</p>
       <div className="mt-1.5">{action}</div>
     </div>
+  );
+}
+
+/** Aufklappbarer Weg im Kasten („… entscheiden ▸“). */
+function Disclosure({
+  open,
+  onToggle,
+  hidden,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  hidden?: boolean;
+  children: React.ReactNode;
+}) {
+  if (hidden) return null;
+  return (
+    <Button
+      variant="link"
+      className="min-h-7 !whitespace-normal text-left text-[0.84rem]"
+      aria-expanded={open}
+      onClick={onToggle}
+    >
+      {children}
+      <span aria-hidden className={cx("ml-1 inline-block text-[0.62rem] transition-transform", open && "rotate-90")}>
+        ▶
+      </span>
+    </Button>
   );
 }
 
@@ -396,6 +440,9 @@ function Open({
     options[0]?.id ||
     "";
   const [pick, setPick] = useState(initial);
+  // Bei einer Gruppe steht zuerst die Ursache bzw. die Entscheidung für alle; die Wahl je Datei ist eingeklappt.
+  const [single, setSingle] = useState(false);
+  const [forAll, setForAll] = useState(false);
   const [reason, setReason] = useState(stale ? (row.decision?.reason ?? "") : "");
   const name = useId();
   const conflicts = list.filter((e) => e.enabled && e.compare.verdict === "conflict");
@@ -406,6 +453,8 @@ function Open({
   const picked = options.find((o) => o.id === pick);
   const moves = picked && picked.compare.startMs !== row.startMs;
   const others = group ? group.sourceIds.length - 1 : 0;
+  const grouped = !!group && others > 0 && !decided;
+  const hasCause = !!worst?.compare.cause;
   const decide = () => {
     if (!picked) return;
     actions.decide({
@@ -415,34 +464,38 @@ function Open({
       reason,
     });
   };
+  // Der Grad steht als Wort im Satz; das Zeichen davor zeigt ihn zusätzlich (gefüllt = stark).
+  const severity = conflict.severity && !decided && (
+    <span className="font-semibold text-warn"> ({SEVERITY_TEXT[conflict.severity]})</span>
+  );
   const sentence =
     conflicts.length <= 1 ? (
       <>
-        Die Angaben liegen <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b> auseinander.
+        Die Angaben liegen <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b> auseinander
+        {severity}.
       </>
     ) : (
       <>
         {conflicts.length} Angaben weichen von der verwendeten ab, am weitesten um{" "}
-        <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b>.
+        <b className="font-mono font-semibold">{plain(conflict.worstMs)}</b>
+        {severity}.
       </>
     );
   return (
     <section
       className={cx(
-        "mt-3.5 rounded-lg border px-3 py-2.5 text-[0.88rem]",
+        "mt-3.5 rounded-lg border px-3.5 pt-3 pb-3.5 text-[0.86rem] leading-snug",
         decided ? "border-line bg-panel-2" : "border-warn/40 bg-warn-soft",
       )}
       data-testid="conflict-panel"
       aria-label="Zeitbelege widersprechen sich"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <ConflictMark severity={conflict.severity} decided={decided} />
-        <b className={cx("flex-1 font-semibold", !decided && "text-warn")}>
+        <b className={cx("flex-1 font-semibold whitespace-nowrap", !decided && "text-warn")}>
           {stale ? "Entscheidung neu prüfen" : decided ? "Entschieden: Vergleich" : "Zeitbelege widersprechen sich"}
         </b>
-        {conflict.severity && !decided && (
-          <span className="text-[0.82rem] font-semibold text-warn">{SEVERITY_TEXT[conflict.severity]}</span>
-        )}
+
         {onHide && (
           <Button variant="link" className="inline-flex min-h-7 items-center text-[0.82rem]" onClick={onHide}>
             schließen
@@ -470,7 +523,7 @@ function Open({
           </ul>
         </div>
       ) : (
-        <p className="mt-1">
+        <p className="mt-1.5">
           {sentence}
           {others > 0 && (
             <>
@@ -482,88 +535,108 @@ function Open({
       )}
       <EvidenceStrip items={list} />
       {worst && !decided && <Cause worst={worst} row={row} device={device} view={view} actions={actions} />}
-      {group && others > 0 && !decided && (
-        <div className="mt-2.5 border-t border-warn/30 pt-2.5" data-testid="group-decide">
-          <b className="block font-semibold">
-            Alle {group.sourceIds.length} Dateien von {group.deviceLabel} auf einmal
-          </b>
-          <p className="mt-0.5 text-ink-2">Je Datei gilt dann ihr eigener Beleg dieser Art.</p>
-          <div className="mt-1.5 flex flex-wrap gap-2">
-            {[group.usedKind, group.otherKind].map((k) => (
-              <Button key={k} size="sm" onClick={() => actions.decideMany(group.sourceIds, k, reason)}>
-                Für alle {group.sourceIds.length}: {kindHolds(k)}
-              </Button>
-            ))}
-          </div>
+      {grouped && (
+        <div className="mt-3 grid justify-items-start gap-0.5 border-t border-warn/30 pt-2.5">
+          <Disclosure open={single} onToggle={() => setSingle((v) => !v)}>
+            Nur für diese Datei entscheiden
+          </Disclosure>
+          <Disclosure open={forAll || !hasCause} onToggle={() => setForAll((v) => !v)} hidden={!hasCause}>
+            Für alle {group!.sourceIds.length} gleich entscheiden
+          </Disclosure>
+          {(forAll || !hasCause) && (
+            <div className="mt-1 mb-1 w-full" data-testid="group-decide">
+              {!hasCause && (
+                <b className="block font-semibold">
+                  Für alle {group!.sourceIds.length} Dateien von {group!.deviceLabel}
+                </b>
+              )}
+              <p className="text-ink-2">Je Datei gilt dann ihr eigener Beleg dieser Art.</p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {[group!.usedKind, group!.otherKind].map((k) => (
+                  <Button key={k} size="sm" onClick={() => actions.decideMany(group!.sourceIds, k, reason)}>
+                    {kindHolds(k)[0]!.toUpperCase() + kindHolds(k).slice(1)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      <fieldset className="mt-2.5 border-t border-warn/30 pt-2" disabled={decided}>
-        <legend className="sr-only">Welche Zeit gilt?</legend>
-        <b className="block pt-2 font-semibold" aria-hidden>
-          Welche Zeit gilt?
-        </b>
-        <ul className="mt-1 divide-y divide-warn/25">
-          {options.map((e) => (
-            <li key={e.id}>
-              <label className="flex cursor-pointer items-start gap-2.5 py-2">
-                <input
-                  type="radio"
-                  name={name}
-                  className="mt-1 accent-[var(--accent)]"
-                  checked={pick === e.id}
-                  onChange={() => setPick(e.id)}
-                />
-                {e.kind === "checked" ? (
-                  <span>
-                    <b className="font-semibold">Deine bisherige Entscheidung</b>
-                    <span className="block">
-                      Beginn <b className="font-mono font-semibold">{startText(e.compare)}</b>
-                    </span>
-                  </span>
-                ) : (
-                  <EvidenceFacts
-                    e={e}
-                    decided={decided}
-                    reason={e.compare.verdict === "chosen" ? row.basisReason : undefined}
-                  />
-                )}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </fieldset>
-      {!decided && (
+      {(!grouped || single) && (
         <>
-          {moves && picked && (
-            <p className="mt-1 border-t border-warn/30 pt-2 font-medium" data-testid="decision-consequence">
-              Die Quelle rückt von <b className="font-mono">{clock(row.startMs!)}</b> auf{" "}
-              <b className="font-mono">{startText(picked.compare)}</b>.
-              {picked.compare.uncertaintyMs > 2_000 &&
-                ` Die Lage gilt dann als geprüft, bleibt aber ${precisionText(picked.compare.uncertaintyMs).replace("nur Minute", "nur auf die Minute genau")}.`}
-            </p>
+          <fieldset className="mt-3" disabled={decided}>
+            <legend className="sr-only">Welche Zeit gilt?</legend>
+            <b className="block border-b border-warn/30 pb-1.5 font-semibold" aria-hidden>
+              Welche Zeit gilt?
+            </b>
+            <ul className="divide-y divide-warn/25">
+              {options.map((e) => (
+                <li key={e.id}>
+                  <label className="flex cursor-pointer items-start gap-2.5 py-2.5">
+                    <input
+                      type="radio"
+                      name={name}
+                      className="mt-[0.2rem] size-4 flex-none accent-[var(--accent)]"
+                      checked={pick === e.id}
+                      onChange={() => setPick(e.id)}
+                    />
+                    {e.kind === "checked" ? (
+                      <span>
+                        <b className="font-semibold">Deine bisherige Entscheidung</b>
+                        <span className="block">
+                          Beginn <b className="font-mono font-semibold">{startText(e.compare)}</b>
+                        </span>
+                      </span>
+                    ) : (
+                      <EvidenceFacts
+                        e={e}
+                        decided={decided}
+                        reason={e.compare.verdict === "chosen" ? row.basisReason : undefined}
+                      />
+                    )}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+          {!decided && (
+            <>
+              {moves && picked && (
+                <p className="mt-1 border-t border-warn/30 pt-2 font-medium" data-testid="decision-consequence">
+                  Die Quelle rückt von <b className="font-mono">{clock(row.startMs!)}</b> auf{" "}
+                  <b className="font-mono">{startText(picked.compare)}</b>.
+                  {picked.compare.uncertaintyMs > 2_000 &&
+                    ` Die Lage gilt dann als geprüft, bleibt aber ${precisionText(picked.compare.uncertaintyMs).replace("nur Minute", "nur auf die Minute genau")}.`}
+                </p>
+              )}
+              <textarea
+                className="mt-2.5 block w-full min-w-0 resize-none"
+                rows={2}
+                placeholder="Begründung (optional), z. B. „umbenannt“"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                aria-label="Begründung"
+              />
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <Button variant="primary" onClick={decide} disabled={!picked} data-testid="decide">
+                  {group && others > 0 ? "Nur für diese Datei festhalten" : "Entscheidung festhalten"}
+                </Button>
+              </div>
+              <p className="mt-2 text-[0.84rem]">
+                <Button
+                  variant="link"
+                  className="min-h-7 !whitespace-normal text-left text-[0.86rem]"
+                  onClick={onManual}
+                >
+                  {options.length === 2 ? "Keine der beiden" : "Keine davon"}: Uhrzeit von Hand eintragen
+                </Button>
+              </p>
+              <p className="mt-0.5 text-[0.82rem] text-ink-2">
+                Ist ein Beleg schlicht falsch, schalte ihn unten bei Zeitbelege ab.
+              </p>
+            </>
           )}
-          <input
-            className="mt-2 w-full min-w-0"
-            placeholder="Begründung (optional)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && decide()}
-            aria-label="Begründung"
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button variant="primary" size="sm" onClick={decide} disabled={!picked} data-testid="decide">
-              {group && others > 0 ? "Nur für diese Datei festhalten" : "Entscheidung festhalten"}
-            </Button>
-          </div>
-          <p className="mt-2 text-[0.84rem]">
-            <Button variant="link" className="min-h-7 !whitespace-normal text-left text-[0.84rem]" onClick={onManual}>
-              {options.length === 2 ? "Keine der beiden" : "Keine davon"}: Uhrzeit von Hand eintragen
-            </Button>
-          </p>
-          <p className="mt-0.5 text-[0.82rem] text-ink-2">
-            Ist ein Beleg schlicht falsch (z. B. Dateiname vom Kopieren), schalte ihn unten bei Zeitbelege ab.
-          </p>
         </>
       )}
     </section>

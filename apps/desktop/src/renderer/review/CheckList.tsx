@@ -29,10 +29,13 @@ export function CheckList({
   view,
   selected,
   onSelect,
+  onNext,
 }: {
   view: SessionView;
   selected: string | null;
   onSelect: (id: string) => void;
+  /** „Nächste →“: dieselbe Reihenfolge wie der Knopf an der Zeitachse. */
+  onNext?: () => void;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("severity");
@@ -112,10 +115,18 @@ export function CheckList({
 
   return (
     <section className="mt-4" aria-label="Zu prüfen" data-testid="check-list">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h3 className="font-semibold">
           {filter === "decided" ? `Entschieden (${decided.length})` : `Zu prüfen (${places.length})`}
         </h3>
+        {onNext && places.length > 0 && filter !== "decided" && (
+          <button
+            className="inline-flex min-h-7 cursor-pointer items-center rounded-full border border-warn/40 bg-warn-soft px-3 text-[0.86rem] text-warn hover:brightness-95"
+            onClick={onNext}
+          >
+            Nächste →
+          </button>
+        )}
         <span className="flex-1" />
         <span className="text-[0.85rem] text-muted">
           Sortiert:{" "}
@@ -146,7 +157,7 @@ export function CheckList({
             onClick={() => setFilter(f)}
             disabled={f !== "all" && counts[f] === 0}
             className={cx(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-0.5 text-[0.86rem] disabled:cursor-default disabled:opacity-45",
+              "inline-flex min-h-7 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[0.88rem] disabled:cursor-default disabled:opacity-45",
               filter === f ? "border-ink bg-ink text-panel" : "border-line-2 bg-panel hover:enabled:border-muted",
             )}
           >
@@ -254,26 +265,24 @@ function GroupRow({
   onSelect: (id: string) => void;
 }) {
   const same = rows.every((r) => Math.abs(Math.abs(r.conflict.worstMs) - Math.abs(g.differenceMs)) <= 60_000);
+  // Die ersten zwei Dateien stehen immer da, damit klar ist, worum es geht; der Rest auf Wunsch.
+  const shown = expanded ? rows : rows.slice(0, 2);
+  const more = rows.length - shown.length;
   return (
     <li data-testid="check-group" className="bg-panel-2/60">
-      <div className="grid grid-cols-[22px_1fr_auto] items-baseline gap-x-3 px-3 py-2 text-[0.9rem]">
+      <div className="grid grid-cols-[22px_minmax(8rem,14rem)_1fr_auto] items-baseline gap-x-3 px-3 py-2.5 text-[0.9rem]">
         <span className="self-center">
           <ConflictMark severity={g.severity} />
         </span>
         <span>
-          <b className="font-semibold">{g.deviceLabel}</b> <span className="text-muted">{rows.length} Dateien · </span>
+          <b className="font-semibold">{g.deviceLabel}</b> <span className="text-muted">{rows.length} Dateien</span>
+        </span>
+        <span className="min-w-0">
           {kindName(g.usedKind)} und {kindName(g.otherKind)} liegen {same ? "überall" : "jeweils etwa"}{" "}
           <b className="font-mono font-semibold">{plain(g.differenceMs)}</b> auseinander
-          {g.cause && <span className="text-muted"> · {CAUSE_HINT[g.cause]}</span>}
         </span>
-        <span className="-my-1 flex gap-3 whitespace-nowrap">
-          <button
-            className="inline-flex min-h-7 cursor-pointer items-center text-accent hover:underline"
-            onClick={onToggle}
-            aria-expanded={expanded}
-          >
-            {expanded ? "zuklappen" : `${rows.length} zeigen`}
-          </button>
+        <span className="-my-1 flex items-baseline gap-3 whitespace-nowrap">
+          {g.cause && <span className="text-muted">{CAUSE_HINT[g.cause]}</span>}
           <button
             className="inline-flex min-h-7 cursor-pointer items-center text-accent hover:underline"
             onClick={() => onSelect(rows[0]!.id)}
@@ -282,28 +291,40 @@ function GroupRow({
           </button>
         </span>
       </div>
-      {expanded && (
-        <ul className="divide-y divide-line border-t border-line bg-panel">
-          {rows.map((r) => (
-            <li key={r.id}>
-              <button
-                onClick={() => onSelect(r.id)}
-                data-testid="check-row"
-                data-source={r.label}
-                className={cx(
-                  "grid w-full cursor-pointer grid-cols-[22px_minmax(6rem,10rem)_1fr_auto] items-baseline gap-x-3 py-1.5 pr-3 pl-10 text-left text-[0.88rem] hover:bg-panel-2",
-                  selected === r.id && "bg-accent-soft/60",
-                )}
-              >
-                <ConflictMark severity={r.conflict.severity} className="self-center" />
+      <ul className="divide-y divide-line border-t border-line bg-panel">
+        {shown.map((r) => (
+          <li key={r.id}>
+            <button
+              onClick={() => onSelect(r.id)}
+              data-testid="check-row"
+              data-source={r.label}
+              className={cx(
+                "grid w-full cursor-pointer grid-cols-[22px_minmax(8rem,14rem)_1fr_auto] items-baseline gap-x-3 px-3 py-2 text-left text-[0.9rem] hover:bg-panel-2",
+                selected === r.id && "bg-accent-soft/60 hover:bg-accent-soft/60",
+              )}
+            >
+              <span aria-hidden />
+              <span className="flex items-center gap-2.5">
+                <ConflictMark severity={r.conflict.severity} />
                 <b className="font-mono font-semibold">{r.label}</b>
-                <span>{pair(r)}</span>
-                <span className="font-mono font-semibold text-warn tabular-nums">{signed(r.conflict.worstMs)}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+              </span>
+              <span>{pair(r)}</span>
+              <span className="font-mono font-semibold text-warn tabular-nums">{signed(r.conflict.worstMs)}</span>
+            </button>
+          </li>
+        ))}
+        {(more > 0 || expanded) && rows.length > 2 && (
+          <li className="py-1 pl-[2.875rem]">
+            <button
+              className="inline-flex min-h-7 cursor-pointer items-center text-[0.9rem] text-accent hover:underline"
+              onClick={onToggle}
+              aria-expanded={expanded}
+            >
+              {expanded ? "weniger zeigen" : `${more} ${more === 1 ? "weitere" : "weitere"} zeigen`}
+            </button>
+          </li>
+        )}
+      </ul>
     </li>
   );
 }
