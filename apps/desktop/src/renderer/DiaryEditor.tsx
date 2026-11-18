@@ -90,10 +90,27 @@ export function DiaryEditor({
       });
   }
   const contEntry = view.diary.find((e) => e.id === continuing) ?? null;
-  const goto = (p: NavPage) => {
-    setNavKey(p.key);
-    onPage(p.mainId);
+
+  // Felder speichern beim Verlassen. Blättern und Schließen nehmen das fokussierte Feld aus dem DOM, ohne dass
+  // Chromium dabei verlässlich ein blur meldet; deshalb vorher gezielt verlassen und warten, bis gespeichert ist.
+  const content = useRef<HTMLDivElement>(null);
+  const saving = useRef(new Set<Promise<unknown>>());
+  const track = <T,>(p: Promise<T>) => {
+    saving.current.add(p);
+    void p.finally(() => saving.current.delete(p));
+    return p;
   };
+  const afterSave = (then: () => void) => {
+    const el = document.activeElement;
+    if (el instanceof HTMLElement && content.current?.contains(el) && el.matches("input, textarea")) el.blur();
+    if (saving.current.size === 0) return then();
+    void Promise.allSettled(saving.current).then(then);
+  };
+  const goto = (p: NavPage) =>
+    afterSave(() => {
+      setNavKey(p.key);
+      onPage(p.mainId);
+    });
 
   // Zoom: 1 = Seite passt ganz in die Fläche (kleine Scans werden dafür auch vergrößert), darüber hineingezoomt.
   const area = useRef<HTMLDivElement>(null);
@@ -198,13 +215,15 @@ export function DiaryEditor({
       setFresh(res.entryId);
     }
   };
-  const patch = (id: string, p: DiaryPatch) => void guard(() => api.patchDiaryEntry(id, p)).then((v) => v && onView(v));
+  const patch = (id: string, p: DiaryPatch) =>
+    void track(guard(() => api.patchDiaryEntry(id, p)).then((v) => v && onView(v)));
 
   return (
-    <Dialog.Root open={!!page} onOpenChange={(o) => !o && onClose()}>
+    <Dialog.Root open={!!page} onOpenChange={(o) => !o && afterSave(onClose)}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40" />
         <Dialog.Content
+          ref={content}
           className="fixed inset-3 z-50 grid grid-cols-[150px_minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl"
           aria-describedby={undefined}
           data-testid="diary-editor"
@@ -352,7 +371,9 @@ export function DiaryEditor({
                 isHere={(r) => !!page?.surfaces.some((sf) => sKey(sf) === sKey(r))}
                 defaultLookback={view.diaryLookbackMin}
                 suggestPage={(i) => suggestions.get(`${e.id}#${i}`) ?? null}
-                onPage={(i, n) => void guard(() => api.setDiaryRegionPage(e.id, i, n)).then((v) => v && onView(v))}
+                onPage={(i, n) =>
+                  void track(guard(() => api.setDiaryRegionPage(e.id, i, n)).then((v) => v && onView(v)))
+                }
                 active={selected === e.id}
                 fresh={fresh === e.id}
                 onFocus={() => setSelected(e.id)}
