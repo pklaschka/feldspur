@@ -54,14 +54,18 @@ export function useHistory(
   const [state, setState] = useState({ undo: null as string | null, redo: null as string | null, serial: 0 });
   const [toast, setToast] = useState<Toast | null>(null);
   const lastSerial = useRef<number | null>(null);
+  /** Zusatz für den nächsten Hinweis (z. B. „Alle Stellen geprüft“), gesetzt vor der neuen Ansicht. */
+  const pendingNote = useRef<string | null>(null);
   // Nach jeder Änderung der Ansicht nachsehen, ob ein neuer Schritt dazugekommen ist.
   useEffect(() => {
+    const note = pendingNote.current;
+    pendingNote.current = null;
     void api.historyState().then((h) => {
       setState(h);
       const before = lastSerial.current;
       lastSerial.current = h.serial;
       if (before !== null && h.serial > before && h.undo && notifies(h.undo))
-        setToast({ text: h.undo, redo: false, n: h.serial });
+        setToast({ text: note ? `${h.undo}. ${note}.` : h.undo, redo: false, n: h.serial });
     });
   }, [view]);
   const step = async (redo: boolean) => {
@@ -112,7 +116,15 @@ export function useHistory(
       window.removeEventListener("keydown", onKey);
     };
   }, []);
-  return { state, toast, step: (redo: boolean) => void step(redo), dismiss: () => setToast(null) };
+  return {
+    state,
+    toast,
+    step: (redo: boolean) => void step(redo),
+    dismiss: () => setToast(null),
+    note: (text: string) => {
+      pendingNote.current = text;
+    },
+  };
 }
 
 export function UndoToast({

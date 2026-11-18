@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
-import { checkQueue, checkReason, todos } from "../src/renderer/inspector/status.ts";
+import {
+  canConfirm,
+  checkQueue,
+  checkReason,
+  firstOpen,
+  placesAfter,
+  stepPlace,
+  todos,
+} from "../src/renderer/inspector/status.ts";
 import type { SessionView } from "../src/shared/api.ts";
 
 // Erfundenes Beispiel, keine Forschungsdaten. Nur die Felder, die todos() liest.
@@ -136,6 +144,58 @@ describe("todos", () => {
     expect(todos(v)).toEqual([
       { text: "2 Tagebuchseiten ohne Randnotiz.", step: "collect", sourceId: "t1", action: "Erste ansehen" },
     ]);
+  });
+});
+
+describe("Reihenfolge der Stellen", () => {
+  // Erfundene Reihenfolge wie aus checkQueue: g1/g2 sind eine Gruppe (eine Stelle).
+  const q = ["g1", "g2", "a", "b"].map((id) => ({ id }));
+  const groups = [{ sourceIds: ["g1", "g2"] }];
+  const ids = (r: { id: string } | undefined) => r?.id;
+
+  it("N springt über die Stellen, ein Gruppenmitglied zählt als seine Gruppe", () => {
+    expect(ids(stepPlace(q, groups, null, 1))).toBe("g1");
+    expect(ids(stepPlace(q, groups, "g1", 1))).toBe("a");
+    expect(ids(stepPlace(q, groups, "g2", 1))).toBe("a");
+    expect(ids(stepPlace(q, groups, "b", 1))).toBe("g1");
+    expect(ids(stepPlace(q, groups, "fremd", 1))).toBe("g1");
+    expect(stepPlace([], groups, null, 1)).toBeUndefined();
+  });
+
+  it("Umschalt+N geht zurück, ringsum", () => {
+    expect(ids(stepPlace(q, groups, "a", -1))).toBe("g1");
+    expect(ids(stepPlace(q, groups, "g2", -1))).toBe("b");
+    expect(ids(stepPlace(q, groups, null, -1))).toBe("b");
+  });
+
+  it("nach „Lage passt“: die nächste noch offene Stelle in der alten Reihenfolge", () => {
+    const order = placesAfter(q, groups, "a");
+    expect(order).toEqual(["b", "g1"]);
+    // b hat sich inzwischen mit erledigt: weiter zur Gruppe.
+    expect(ids(firstOpen(order, [{ id: "g1" }, { id: "g2" }], groups))).toBe("g1");
+    expect(ids(firstOpen(order, [{ id: "b" }, { id: "g1" }], groups))).toBe("b");
+    expect(firstOpen(order, [], groups)).toBeUndefined();
+    // Bleibt nur die eigene Stelle übrig (z. B. noch nicht erledigt), gibt es keinen Sprung.
+    expect(firstOpen(placesAfter([{ id: "a" }], [], "a"), [{ id: "a" }], [])).toBeUndefined();
+  });
+
+  it("„Lage passt“ gibt es nur für unsichere Lagen ohne Widerspruch", () => {
+    const row = (o: object) =>
+      ({
+        status: "check",
+        startMs: 0,
+        kind: "photo",
+        partOf: null,
+        conflict: { state: "none" },
+        evidence: [],
+        ...o,
+      }) as unknown as Parameters<typeof canConfirm>[0];
+    expect(canConfirm(row({}))).toBe(true);
+    expect(canConfirm(row({ status: "ok" }))).toBe(false);
+    expect(canConfirm(row({ kind: "diary" }))).toBe(false);
+    expect(canConfirm(row({ partOf: "x" }))).toBe(false);
+    expect(canConfirm(row({ conflict: { state: "open" } }))).toBe(false);
+    expect(canConfirm(row({ evidence: [{ kind: "checked", chosen: true }] }))).toBe(false);
   });
 });
 

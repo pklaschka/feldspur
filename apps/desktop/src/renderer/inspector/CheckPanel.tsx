@@ -1,7 +1,8 @@
 import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { Button } from "../ui.tsx";
 import type { InspectorActions } from "./actions.ts";
-import { checkReason } from "./status.ts";
+import { isMac } from "../keys.ts";
+import { canConfirm, checkReason } from "./status.ts";
 
 /**
  * Lage mit Status „prüfen“: erklären, warum, und den Weg zu „geprüft“ anbieten.
@@ -22,9 +23,8 @@ export function CheckPanel({ row, view, actions }: { row: SourceRow; view: Sessi
       </div>
     );
   }
-  if (row.status !== "check" || row.startMs === null) return null;
   // Tagebuchseiten werden über ihre Einträge geprüft, weitere Bilder über die Hauptseite.
-  if (row.kind === "diary" || row.partOf) return null;
+  if (!canConfirm(row)) return null;
   const device = view.devices.find((d) => d.id === row.deviceId);
   const hasRef = view.devices.some((d) => d.isReference);
   // Nur anbieten, wenn die Lage wirklich an der Geräteuhr hängt (nicht bei einer Handeingabe).
@@ -58,6 +58,8 @@ export function CheckPanel({ row, view, actions }: { row: SourceRow; view: Sessi
           size="sm"
           variant={hasRef ? "primary" : "default"}
           onClick={() => actions.confirm(row.id, row.startMs!)}
+          title={`In Durchsehen geht es danach zur nächsten zu prüfenden Stelle (${isMac ? "⌘+Enter" : "Strg+Enter"})`}
+          aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
         >
           ✓ Lage passt, als geprüft markieren
         </Button>

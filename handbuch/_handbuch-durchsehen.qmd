@@ -27,9 +27,17 @@ Die Legende unter der Zeitachse erklärt die Zeichen:
 ### Lagen prüfen
 
 Ist die Lage einer Quelle unsicher, zeigt die Zeitachse oben einen Knopf wie **3 zu prüfen · Nächste →**. Er springt
-der Reihe nach zu diesen Quellen. Passt die Lage, bestätigst du das rechts in der Detailleiste: **Von Hand geprüft:
-Die Lage passt.** Die Bestätigung ist ein eigener Zeitbeleg und lässt sich wieder löschen. Ist die Uhr des ganzen
-Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt.
+der Reihe nach zu diesen Stellen, in der Reihenfolge der Liste **Zu prüfen** (siehe unten); mehrere Dateien mit
+demselben Widerspruch zählen als eine Stelle. Passt die Lage, bestätigst du das rechts in der Detailleiste mit
+**✓ Lage passt**; dort steht dann **Von Hand geprüft: Die Lage passt.** Danach wählt Feldspur gleich die nächste zu
+prüfende Stelle und holt sie ins Bild. Ist keine mehr übrig, bleibt die Auswahl stehen und der Hinweis unten meldet
+**Alle Stellen geprüft**. Die Bestätigung ist ein eigener Zeitbeleg und lässt sich wieder löschen. Ist die Uhr des
+ganzen Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt.
+
+Tastenkürzel in Durchsehen (nicht, solange du in einem Textfeld schreibst oder ein Dialog offen ist):
+
+- **N**: nächste zu prüfende Stelle, **Umschalt+N**: vorige,
+- **Strg+Enter** (macOS: **⌘+Enter**): **Lage passt** für die gewählte Quelle.
 
 ### Wenn Zeitbelege sich widersprechen {#sec-widersprueche}
 

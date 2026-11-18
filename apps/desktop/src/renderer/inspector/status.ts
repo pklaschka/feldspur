@@ -25,9 +25,59 @@ export function asPlaces<T extends { id: string }>(rows: T[], groups: { sourceId
   return rows.filter((r) => !grouped.has(r.id));
 }
 
+/** Die Stelle, zu der eine Quelle gehört: bei einer Gruppe deren erste Datei. */
+const placeOf = (id: string, groups: { sourceIds: string[] }[]) =>
+  groups.find((g) => g.sourceIds.includes(id))?.sourceIds[0] ?? id;
+
+/**
+ * Nächste (`dir` 1) oder vorige (-1) zu prüfende Stelle ab der gewählten Quelle, ringsum. Ein Gruppenmitglied
+ * zählt als seine Stelle; ist nichts davon gewählt, geht es bei der ersten (bzw. letzten) Stelle los.
+ */
+export function stepPlace<T extends { id: string }>(
+  queue: T[],
+  groups: { sourceIds: string[] }[],
+  selected: string | null,
+  dir: 1 | -1,
+): T | undefined {
+  const places = asPlaces(queue, groups);
+  if (!places.length) return undefined;
+  const at = selected === null ? -1 : places.findIndex((r) => r.id === placeOf(selected, groups));
+  if (at < 0) return dir === 1 ? places[0] : places.at(-1);
+  return places[(at + dir + places.length) % places.length];
+}
+
+/** Die übrigen Stellen nach der Stelle von `id`, ringsum: vorab bestimmt, wohin es nach „Lage passt“ geht. */
+export function placesAfter(queue: { id: string }[], groups: { sourceIds: string[] }[], id: string): string[] {
+  const own = placeOf(id, groups);
+  const ids = asPlaces(queue, groups).map((r) => r.id);
+  const at = ids.indexOf(own);
+  return (at < 0 ? ids : [...ids.slice(at + 1), ...ids.slice(0, at)]).filter((x) => x !== own);
+}
+
+/** Erste Stelle aus `order`, die (nach dem Speichern) noch zu prüfen ist. */
+export function firstOpen<T extends { id: string }>(
+  order: string[],
+  queue: T[],
+  groups: { sourceIds: string[] }[],
+): T | undefined {
+  const open = new Map(asPlaces(queue, groups).map((r) => [r.id, r]));
+  for (const id of order) {
+    const r = open.get(id);
+    if (r) return r;
+  }
+  return undefined;
+}
+
+/** „Lage passt“ steht für diese Quelle zur Wahl (wie im Prüfkasten der Seitenleiste). */
+export function canConfirm(r: SourceRow): boolean {
+  if (r.evidence.some((e) => e.kind === "checked" && e.chosen)) return false;
+  return r.status === "check" && r.startMs !== null && r.kind !== "diary" && !r.partOf && r.conflict.state === "none";
+}
+
 /**
  * Was zu prüfen ist, in der Reihenfolge der Prüfliste: stärkste Widersprüche zuerst (innerhalb eines Grades
- * die größte Abweichung), danach übrige unsichere Lagen nach Uhrzeit. „Nächste →“ folgt dieser Reihenfolge.
+ * die größte Abweichung), danach übrige unsichere Lagen nach Uhrzeit. „Nächste →“ folgt dieser Reihenfolge
+ * (über die Stellen, siehe `stepPlace`).
  */
 export function checkQueue(rows: SourceRow[]): SourceRow[] {
   return rows
