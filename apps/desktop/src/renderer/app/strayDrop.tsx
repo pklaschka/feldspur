@@ -68,7 +68,9 @@ export function StrayDropHint({
   action?: string;
   onAction?: () => void;
 }) {
-  const [closed, setClosed] = useState(0);
+  // Startwert `n`: ein neu eingehängter Hinweis (Projekt geöffnet, Einsatz gewechselt) zeigt nur, was danach
+  // gezogen wird, nicht das letzte Ziehen von vorher noch einmal.
+  const [closed, setClosed] = useState(n);
   const close = useEffectEvent(() => setClosed(n));
   useEffect(() => {
     if (!n) return;

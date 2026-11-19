@@ -1,6 +1,10 @@
 // @vitest-environment happy-dom
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { installStrayDropGuard } from "../src/renderer/app/strayDrop.tsx";
+import { StrayDropHint, installStrayDropGuard } from "../src/renderer/app/strayDrop.tsx";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 function drag(type: string, target: Element, types: string[]) {
   const e = new Event(type, { bubbles: true, cancelable: true });
@@ -36,5 +40,28 @@ describe("installStrayDropGuard", () => {
     off();
     drag("drop", out, ["Files"]);
     expect(onStray).not.toHaveBeenCalled();
+  });
+});
+
+describe("StrayDropHint", () => {
+  it("zeigt nach dem (erneuten) Einhängen nur Ziehen, das danach passiert", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const shown = () => !!host.querySelector('[data-testid="stray-drop-hint"]');
+    const render = (n: number, key: string) =>
+      act(() => root.render(createElement(StrayDropHint, { key, n, text: "Hinweis" })));
+
+    render(0, "a");
+    expect(shown()).toBe(false);
+    render(1, "a");
+    expect(shown()).toBe(true);
+    // Einsatzwechsel (key={sessionId}) oder Projekt öffnen: der alte Zähler bleibt, der Hinweis nicht.
+    render(1, "b");
+    expect(shown()).toBe(false);
+    render(2, "b");
+    expect(shown()).toBe(true);
+    act(() => root.unmount());
+    host.remove();
   });
 });
