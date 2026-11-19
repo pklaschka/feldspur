@@ -34,8 +34,9 @@ Ein Eintrag kann auf einer anderen Seite weitergehen; dann ziehst du dort einen 
 Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
 
 Sitzt ein Rahmen nicht ganz, korrigierst du ihn, statt einen neuen Eintrag anzulegen: Klick in den Rahmen (oder auf
-seine Nummer), dann bekommt er Griffe an Kanten und Ecken. Den Rahmen selbst ziehst du an eine andere Stelle, an den
-Griffen änderst du die Größe. Mit der Tastatur geht es auch: Ist der Rahmen gewählt, verschieben ihn die Pfeiltasten,
+seine Nummer), dann bekommt er Griffe an Kanten und Ecken. Am Nummernschild oben links ziehst du ihn an eine andere
+Stelle, an den Griffen änderst du die Größe. Innerhalb eines Rahmens kannst du weiterhin einen neuen aufziehen, auch
+überlappend. Mit der Tastatur geht es auch: Ist der Rahmen gewählt, verschieben ihn die Pfeiltasten,
 mit **Alt** ändern sie die Größe, mit **Umschalt** in großen Schritten. Notierzeit und Text bleiben am Eintrag; nur die
 Nummer kann sich ändern, weil Einträge von oben nach unten gezählt werden.
 

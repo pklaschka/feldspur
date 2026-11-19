@@ -295,8 +295,8 @@ try {
   }
   await editor.getByText("10:26–10:41").waitFor();
   await shot("-tagebuch");
-  // Rahmen nachbessern, ohne neuen Eintrag: Eintrag 3 ist gewählt; an der Ecke kleiner ziehen, dann verschieben und
-  // mit den Pfeiltasten nachrücken.
+  // Rahmen nachbessern, ohne neuen Eintrag: Eintrag 3 ist gewählt; an der Ecke kleiner ziehen, dann am Nummernschild
+  // verschieben und mit den Pfeiltasten nachrücken.
   const frame = editor.getByRole("group", { name: "Rahmen Eintrag 3" });
   const box3 = async () => (await frame.boundingBox())!;
   const until = (test: (b: { x: number; y: number; width: number; height: number }) => boolean, what: string) =>
@@ -315,13 +315,16 @@ try {
   await page.mouse.up();
   await until((b) => b.width < start.width - 40 && Math.abs(b.x - start.x) < 2, "Ecke ziehen");
   const resized = await box3();
-  await page.mouse.move(resized.x + resized.width / 2, resized.y + resized.height / 2);
+  // Verschoben wird nur am Nummernschild; in der Fläche aufgezogen entsteht ein neuer (überlappender) Rahmen.
+  const plate = frame.getByRole("button", { name: "Eintrag 3" });
+  const pb = (await plate.boundingBox())!;
+  await page.mouse.move(pb.x + pb.width / 2, pb.y + pb.height / 2);
   await page.mouse.down();
-  await page.mouse.move(resized.x + resized.width / 2 + 30, resized.y + resized.height / 2 + 10, { steps: 6 });
+  await page.mouse.move(pb.x + pb.width / 2 + 30, pb.y + pb.height / 2 + 10, { steps: 6 });
   await page.mouse.up();
   await until((b) => b.x > resized.x + 20 && Math.abs(b.width - resized.width) < 2, "verschieben");
   const moved = await box3();
-  await frame.focus();
+  await plate.focus();
   await page.keyboard.press("Shift+ArrowLeft");
   await until((b) => b.x < moved.x - 5, "Pfeiltaste");
   await page.keyboard.press("Alt+Shift+ArrowRight");

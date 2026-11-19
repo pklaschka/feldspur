@@ -426,7 +426,7 @@
       text(size: 11pt, weight: "bold", style: "italic", fill: umbra)[Rahmen]
       h(2 * E)
       [gewählt: *Pfeile* verschieben #h(1.5mm)·#h(1.5mm) *Alt + Pfeile* Größe #h(1.5mm)·#h(1.5mm)
-        *⇧* große Schritte #h(1.5mm)·#h(1.5mm) Maus: Rahmen oder Griffe ziehen]
+        *⇧* große Schritte #h(1.5mm)·#h(1.5mm) Maus: Nummer oder Griffe ziehen]
     })
   },
   // ---------------------------------------------------------------- rechts
