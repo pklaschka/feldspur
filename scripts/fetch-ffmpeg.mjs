@@ -15,6 +15,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSy
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkFfmpeg } from "./check-ffmpeg.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const line = process.env.FFMPEG_LINE ?? "8.1";
@@ -22,8 +23,15 @@ const platform = process.env.npm_config_platform ?? process.platform;
 const arch = process.env.npm_config_arch ?? process.arch;
 const out = join(root, "apps", "desktop", "vendor", "ffmpeg", `${platform}-${arch}`);
 
+/** Bricht ab, wenn dem Build etwas fehlt, das die App braucht (siehe check-ffmpeg.mjs). */
+function verify() {
+  const problems = checkFfmpeg(join(out, platform === "win32" ? "ffmpeg.exe" : "ffmpeg"));
+  if (problems.length) throw new Error(`ffmpeg in ${out} reicht nicht:\n- ${problems.join("\n- ")}`);
+}
+
 if (platform === "darwin") {
   execFileSync("bash", [join(root, "scripts", "build-ffmpeg-macos.sh"), line, out], { stdio: "inherit" });
+  verify();
   process.exit(0);
 }
 
@@ -80,6 +88,7 @@ try {
   writeFileSync(join(out, "BUILD.txt"), `Quelle: ${base}/${asset}\nSHA-256: ${actual}\n\n${version}`);
   console.log(`ffmpeg/ffprobe (LGPL) → ${out}`);
   console.log(version.split("\n")[0]);
+  verify();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

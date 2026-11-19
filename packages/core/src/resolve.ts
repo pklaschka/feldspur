@@ -310,9 +310,9 @@ function candidatesFor(
   tz: string,
   withDisabled = false,
 ): Candidate[] {
-  return evidence
+  const cands = evidence
     .filter((ev) => withDisabled || ev.enabled)
-    .map((ev) => {
+    .map((ev): Candidate => {
       const local = effectiveLocal(ev, device, tz);
       if (ev.clock === "true") {
         return {
@@ -340,6 +340,23 @@ function candidatesFor(
         trusted: known,
       };
     });
+  return followBasis(cands);
+}
+
+/**
+ * Eine Bestätigung („geprüft“, auch eine entschiedene Abwägung) hält fest, welchem Beleg die Lage folgt. Hängt dieser
+ * Beleg an der Geräteuhr, wandert die bestätigte Lage mit, wenn die Uhr später genauer abgeglichen wird (etwa über
+ * einen Feinabgleich): Bestätigt war der Beleg, nicht eine feste Uhrzeit.
+ */
+function followBasis(cands: Candidate[]): Candidate[] {
+  return cands.map((c) => {
+    const d = c.ev.kind === "checked" ? c.ev.decision : null;
+    if (!d?.basisId) return c;
+    const basis = cands.find((b) => b.ev.id === d.basisId && b.ev.enabled && b.ev.clock === "device");
+    if (!basis) return c;
+    const seenMs = d.seen.find((x) => x.id === d.basisId)?.differenceMs ?? 0;
+    return { ...c, startMs: basis.startMs - seenMs, local: basis.startMs - seenMs, uncertaintyMs: basis.uncertaintyMs };
+  });
 }
 
 function pickBest(cands: Candidate[]): Candidate | undefined {
@@ -656,8 +673,21 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         if (!pk) continue;
         const moment = pk.startMs + known.atMediaMs;
         const unc = combineUncertainty(anchor.uncertaintyMs, pk.uncertaintyMs);
+        const otherSrc = sourceById.get(other.sourceId);
+        if (!otherSrc) continue;
+        const clock = otherSrc.deviceId ? clocks.get(otherSrc.deviceId) : undefined;
         const po = trustedPlacement(other.sourceId);
-        if (po) {
+        // Liegt die andere Aufnahme nur über eine angesagte Uhrzeit ihres Geräts (auf die Minute genau),
+        // gilt der Anker: Er verbindet zwei Stellen auf Bruchteile einer Sekunde, die Ansage nicht.
+        // Auch eine Bestätigung, die einem Beleg der Geräteuhr folgt (followBasis), hängt an dieser Uhr.
+        const otherCands = candidates.get(other.sourceId) ?? [];
+        const usedEv = po ? otherCands.find((c) => c.ev.id === po.basis.evidenceId)?.ev : undefined;
+        const followedId = usedEv?.kind === "checked" ? usedEv.decision?.basisId : undefined;
+        const onDeviceClock =
+          usedEv?.clock === "device" ||
+          (!!followedId && otherCands.some((c) => c.ev.id === followedId && c.ev.clock === "device"));
+        const viaSpokenClock = po !== undefined && clock?.basis === "spoken" && onDeviceClock;
+        if (po && !viaSpokenClock) {
           const diff = po.startMs + other.atMediaMs - moment;
           if (
             Math.abs(diff) > combineUncertainty(unc, po.uncertaintyMs) + CONFLICT_TOLERANCE_MS &&
@@ -667,9 +697,6 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
           }
           continue;
         }
-        const otherSrc = sourceById.get(other.sourceId);
-        if (!otherSrc) continue;
-        const clock = otherSrc.deviceId ? clocks.get(otherSrc.deviceId) : undefined;
         const device = otherSrc.deviceId ? deviceById.get(otherSrc.deviceId) : undefined;
         const deviceEv = pickBest(
           candidatesFor(
@@ -679,7 +706,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             session.timeZone,
           ),
         );
-        if (clock && clock.offsetMs === null && deviceEv) {
+        if (clock && (clock.offsetMs === null || viaSpokenClock) && deviceEv) {
           // Geräteuhr zeigte im Moment des Ankers:
           const deviceShows =
             effectiveLocal(deviceEv.ev, device, session.timeZone) - deviceEv.ev.atMediaMs + other.atMediaMs;
