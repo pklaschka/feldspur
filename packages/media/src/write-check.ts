@@ -67,6 +67,11 @@ export async function ensureWritable(paths: string[]): Promise<void> {
       if ((e as NodeJS.ErrnoException).code === "ENOENT") continue;
       throw friendlyWriteError(e);
     }
+    // Unter Windows lässt sich auch ein Ordner so öffnen; einer am Platz der Zieldatei ist nie beschreibbar.
+    const isDir = (await fh.stat()).isDirectory();
     await fh.close();
+    if (isDir) {
+      throw Object.assign(new Error(`„${basename(path)}“ ist ein Ordner, keine Datei.`), { code: "EISDIR", path });
+    }
   }
 }
