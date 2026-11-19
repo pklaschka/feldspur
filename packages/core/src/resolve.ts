@@ -284,9 +284,9 @@ function candidatesFor(
   tz: string,
   withDisabled = false,
 ): Candidate[] {
-  return evidence
+  const cands = evidence
     .filter((ev) => withDisabled || ev.enabled)
-    .map((ev) => {
+    .map((ev): Candidate => {
       const local = effectiveLocal(ev, device, tz);
       if (ev.clock === "true") {
         return {
@@ -314,6 +314,23 @@ function candidatesFor(
         trusted: known,
       };
     });
+  return followBasis(cands);
+}
+
+/**
+ * Eine Bestätigung („geprüft“, auch eine entschiedene Abwägung) hält fest, welchem Beleg die Lage folgt. Hängt dieser
+ * Beleg an der Geräteuhr, wandert die bestätigte Lage mit, wenn die Uhr später genauer abgeglichen wird (etwa über
+ * einen Feinabgleich): Bestätigt war der Beleg, nicht eine feste Uhrzeit.
+ */
+function followBasis(cands: Candidate[]): Candidate[] {
+  return cands.map((c) => {
+    const d = c.ev.kind === "checked" ? c.ev.decision : null;
+    if (!d?.basisId) return c;
+    const basis = cands.find((b) => b.ev.id === d.basisId && b.ev.enabled && b.ev.clock === "device");
+    if (!basis) return c;
+    const seenMs = d.seen.find((x) => x.id === d.basisId)?.differenceMs ?? 0;
+    return { ...c, startMs: basis.startMs - seenMs, local: basis.startMs - seenMs, uncertaintyMs: basis.uncertaintyMs };
+  });
 }
 
 function pickBest(cands: Candidate[]): Candidate | undefined {
@@ -417,22 +434,8 @@ function summarizeConflicts(best: Candidate, comparison: EvidenceComparison[]): 
       else if (Math.abs(seen.differenceMs - c.differenceMs) > c.allowedMs)
         staleBecause.push({ evidenceId: c.evidenceId, wasMs: seen.differenceMs, nowMs: c.differenceMs });
     }
-    // Hat sich der Beleg verschoben, dessen Lage bestätigt wurde (etwa weil die Geräteuhr inzwischen genauer
-    // abgeglichen ist), gilt die Bestätigung einer alten Lage: neu prüfen, auch wenn es kein Widerspruch ist.
-    const basis = comparison.find((c) => c.enabled && c.evidenceId === decision.basisId);
-    const seenBasis = decision.seen.find((x) => x.id === decision.basisId);
-    if (
-      basis &&
-      seenBasis &&
-      !staleBecause.some((x) => x.evidenceId === basis.evidenceId) &&
-      Math.abs(seenBasis.differenceMs - basis.differenceMs) > CONFLICT_TOLERANCE_MS
-    )
-      staleBecause.push({ evidenceId: basis.evidenceId, wasMs: seenBasis.differenceMs, nowMs: basis.differenceMs });
   }
-  if (!live.length)
-    return staleBecause.length
-      ? { state: "stale", severity: null, worstMs: staleBecause[0]!.nowMs, count: 0, staleBecause }
-      : NO_CONFLICT;
+  if (!live.length) return NO_CONFLICT;
   const worst = live.reduce((w, c) => (Math.abs(c.differenceMs) > Math.abs(w.differenceMs) ? c : w));
   return {
     state: staleBecause.length ? "stale" : checked ? "decided" : "open",

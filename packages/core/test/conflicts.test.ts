@@ -11,7 +11,7 @@ import {
   type EvidenceComparison,
   type Placement,
 } from "../src/resolve.ts";
-import { localMs, localToUtc } from "../src/time.ts";
+import { formatClock, localMs, localToUtc } from "../src/time.ts";
 import { T, testmarkt } from "./scenario.ts";
 
 type Ev = Partial<TimeEvidence> & Pick<TimeEvidence, "id" | "kind" | "localMs">;
@@ -321,32 +321,26 @@ describe("Entscheidungen", () => {
     expect(p.notes).toContain("Entscheidung neu prüfen");
   });
 
-  it("Uhr nachträglich abgeglichen: verschobener Beleg macht sie veraltet", () => {
+  it("Uhr nachträglich abgeglichen: die Entscheidung wandert mit ihrem Beleg mit (#117)", () => {
+    // Entschieden „Metadaten gilt“; danach wird die Kamerauhr um 2 Min. abgeglichen. Bestätigt war der Beleg,
+    // keine feste Uhrzeit: Die Lage folgt den Metadaten, die Entscheidung bleibt gültig.
     const { p } = photo([exif, name, checked(decision(seenNow))], {
       offsetBasis: "manual",
       clockOffsetMs: 120_000,
     });
-    expect(p.conflict.state).toBe("stale");
-    expect(p.conflict.staleBecause.find((s) => s.evidenceId === "exif")).toMatchObject({ wasMs: 0 });
+    expect(state(p)).toEqual(["decided", "ok"]);
+    expect(formatClock(p.startMs)).toBe("10:30:07");
   });
 
-  it("Uhr um weniger als die Unsicherheit verschoben: bestätigte Lage ist trotzdem neu zu prüfen (#117)", () => {
-    // Bestätigt, als die Uhr noch als genau galt; jetzt 20 s anders abgeglichen (± 1 Min.): kein Widerspruch,
-    // aber die bestätigte Lage stimmt nicht mehr mit dem Beleg überein, auf dem sie beruhte.
+  it("auch eine Bestätigung ohne Widerspruch folgt der neu abgeglichenen Uhr (#117)", () => {
     const chk: Ev = {
       ...checked(decision([{ id: "exif", kind: "metadata", differenceMs: 0 }])),
       uncertaintyMs: 60_000,
     };
-    const { p } = photo([exif, chk], {
-      offsetBasis: "manual",
-      clockOffsetMs: 20_000,
-      clockOffsetUncertaintyMs: 60_000,
-    });
-    expect(state(p)).toEqual(["stale", "check"]);
-    expect(p.conflict.staleBecause).toEqual([{ evidenceId: "exif", wasMs: 0, nowMs: -20_000 }]);
-    expect(p.notes).toContain("Entscheidung neu prüfen");
-    // Unverändert abgeglichen: bleibt entschieden.
-    expect(photo([exif, chk], known).p.conflict.state).toBe("none");
+    const { p } = photo([exif, chk], { offsetBasis: "manual", clockOffsetMs: 20_000, clockOffsetUncertaintyMs: 500 });
+    expect(formatClock(p.startMs)).toBe("10:31:47");
+    expect(p.basis.kind).toBe("checked");
+    expect(p.status).toBe("ok");
   });
 
   it("ein passender neuer Beleg und abgeschaltete Belege ändern nichts", () => {
