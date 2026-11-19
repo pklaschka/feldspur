@@ -559,7 +559,9 @@ export async function renderMontage(
       await rename(tmp, vOut).catch(async () => {
         await copyFile(tmp, vOut);
       });
-      await rm(pdir, { recursive: true, force: true });
+      // Aufräumen darf die Ausgabe nicht scheitern lassen: Unter macOS meldet rm gelegentlich ENOTEMPTY,
+      // wenn das System noch Dateien im Ordner anlegt oder freigibt. Der Arbeitsordner wird am Ende ohnehin entfernt.
+      await rm(pdir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => {});
       doneFrames.set(i, frameCount);
       report();
     },

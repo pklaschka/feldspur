@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Baut ffmpeg/ffprobe als LGPL-Fassung aus den offiziellen Quellen (macOS).
-# Nur eingebaute Codecs plus Apples VideoToolbox/AudioToolbox; keine GPL-Teile,
-# keine Bibliotheken aus Homebrew (--disable-autodetect).
+# Nur eingebaute Codecs plus Apples VideoToolbox/AudioToolbox und die zlib aus dem
+# macOS-SDK; keine GPL-Teile, keine Bibliotheken aus Homebrew (--disable-autodetect).
 #
 #   scripts/build-ffmpeg-macos.sh <release-linie, z. B. 8.1> <zielordner>
 set -euo pipefail
@@ -23,6 +23,10 @@ config=(
   --prefix="$work/install"
   --disable-gpl --disable-nonfree --disable-version3
   --disable-autodetect
+  # zlib (zlib-Lizenz, Teil von macOS) ausdrücklich einschalten: --disable-autodetect schaltet
+  # sie sonst ab, und ohne zlib fehlen PNG- und TIFF-Decoder. Die Einblendungen im
+  # Montagevideo sind PNG-Bilder, die Ausgabe scheiterte daran.
+  --enable-zlib
   --enable-videotoolbox --enable-audiotoolbox
   --disable-ffplay --disable-doc --disable-debug
   --disable-network
