@@ -156,7 +156,10 @@ export function SessionPane({
       id: "export",
       n: 4,
       title: "Ausgeben",
-      badge: exporting.job?.sessionId === view.session.id ? `läuft ${percent(exporting.job.progress)} %` : null,
+      badge:
+        exporting.job?.sessionId === view.session.id
+          ? `läuft ${percent(exporting.job.progress, exporting.job.video)} %`
+          : null,
     },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;

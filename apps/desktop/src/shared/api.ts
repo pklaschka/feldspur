@@ -482,7 +482,16 @@ export interface ExportCancelled {
   cancelled: true;
 }
 
-export type ExportRunResult = ExportOutcome | ExportCancelled;
+/**
+ * Die Prüfung der Originale (erster Schritt der Ausgabe) hat etwas gefunden; noch ist nichts geschrieben. parent ist
+ * der gewählte Ordner: „Trotzdem ausgeben“ geht mit dir = parent dorthin, ohne erneut zu fragen.
+ */
+export interface ExportNeedsDecision {
+  originals: OriginalsCheck;
+  parent: string;
+}
+
+export type ExportRunResult = ExportOutcome | ExportCancelled | ExportNeedsDecision;
 
 export interface ExportRequestOptions {
   video: boolean;
@@ -491,9 +500,16 @@ export interface ExportRequestOptions {
   realtime: boolean;
   /** Ohne Ordnerdialog in den Ordner der letzten Ausgabe. */
   reuseDir?: boolean;
+  /** Ohne Ordnerdialog in diesen Ordner (z. B. nach „Trotzdem ausgeben“). */
+  dir?: string;
+  /** Auffälligkeiten der Prüfung übergehen; fehlende Pflichtdateien halten die Ausgabe weiter an. */
+  acceptOriginals?: boolean;
 }
 
 export type { ExportStatus, ExportDifference } from "@feldspur/media";
+
+/** Erster Schritt jeder Ausgabe, nach der Ordnerwahl: Originale mit Prüfsumme prüfen (done/total in Bytes). */
+export const EXPORT_CHECK_STEP = "Originale prüfen";
 
 export interface ExportProgress {
   sessionId: string;
@@ -752,7 +768,8 @@ export interface FeldspurApi {
    * Montagevideo, Einsatztranskript und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = kein Ordner gewählt; { cancelled } = mit
    * cancelExport abgebrochen. Mit reuseDir ohne Dialog in den Ordner der letzten Ausgabe, falls er noch
-   * existiert; der Dialog beginnt sonst dort.
+   * existiert; der Dialog beginnt sonst dort. Erster Schritt nach der Ordnerwahl ist die Prüfung der Originale;
+   * findet sie etwas, kommt { originals, parent } zurück (außer acceptOriginals übergeht Auffälligkeiten).
    */
   exportSession(
     sessionId: string,
@@ -763,6 +780,7 @@ export interface FeldspurApi {
       realtime?: boolean;
       dir?: string;
       reuseDir?: boolean;
+      acceptOriginals?: boolean;
     },
   ): Promise<ExportRunResult | null>;
   /** Laufende Ausgabe abbrechen; ffmpeg wird beendet, die Ausgabe gilt nicht als fertig. */

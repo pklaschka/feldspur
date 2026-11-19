@@ -11,7 +11,7 @@ import { stat, readdir } from "node:fs/promises";
 import { statSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Id, Source } from "@feldspur/core";
-import { sha256File } from "./hash.ts";
+import { sha256File, type HashOptions } from "./hash.ts";
 
 /**
  * Zustand einer Originaldatei:
@@ -51,10 +51,10 @@ export class HashCache {
   set(stamp: FileStamp, sha256: string): void {
     this.known.set(stampKey(stamp), sha256);
   }
-  async hash(stamp: FileStamp): Promise<string> {
+  async hash(stamp: FileStamp, opts: HashOptions = {}): Promise<string> {
     const hit = this.get(stamp);
     if (hit) return hit;
-    const h = await sha256File(stamp.path);
+    const h = await sha256File(stamp.path, opts);
     this.set(stamp, h);
     return h;
   }
@@ -124,25 +124,46 @@ export function quickCheck(src: Source, cache?: HashCache): FileCheck {
 /** Vollständige Prüfung: Existenz, Größe und SHA-256. Liest jede Datei einmal (Cache hilft beim zweiten Mal). */
 export async function checkSources(
   sources: Source[],
-  opts: { cache?: HashCache; onProgress?: (done: number, total: number, fileName: string) => void } = {},
+  opts: {
+    cache?: HashCache;
+    onProgress?: (done: number, total: number, fileName: string) => void;
+    /**
+     * Gelesene Bytes über alle Dateien (schon geprüfte zählen sofort), für einen gleichmäßigen Balken auch bei
+     * wenigen großen Videos.
+     */
+    onBytes?: (done: number, total: number, fileName: string) => void;
+    /** Bricht die Prüfung ab, auch mitten in einer Datei (wirft einen AbortError). */
+    signal?: AbortSignal;
+  } = {},
 ): Promise<FileCheck[]> {
   const cache = opts.cache ?? new HashCache();
   const out: FileCheck[] = [];
+  const totalBytes = sources.reduce((n, s) => n + s.sizeBytes, 0);
+  let before = 0;
   for (const [i, src] of sources.entries()) {
+    opts.signal?.throwIfAborted();
     opts.onProgress?.(i, sources.length, src.fileName);
+    opts.onBytes?.(before, totalBytes, src.fileName);
     const st = await statLater(src.originalPath);
     let hash: string | undefined;
     if (st.ok && st.stamp.size === src.sizeBytes) {
       try {
-        hash = await cache.hash(st.stamp);
+        hash = await cache.hash(st.stamp, {
+          signal: opts.signal,
+          onBytes: opts.onBytes && ((b) => opts.onBytes!(before + b, totalBytes, src.fileName)),
+        });
       } catch (e) {
+        if (opts.signal?.aborted) throw e;
         out.push({ sourceId: src.id, ...(fromError(e) as { state: "unreadable"; detail: string }) });
+        before += src.sizeBytes;
         continue;
       }
     }
     out.push(judge(src, st, hash));
+    before += src.sizeBytes;
   }
   opts.onProgress?.(sources.length, sources.length, "");
+  opts.onBytes?.(totalBytes, totalBytes, "");
   return out;
 }
 

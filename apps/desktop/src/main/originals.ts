@@ -37,11 +37,17 @@ function summarize(sources: Source[], checks: FileCheck[], video: boolean): Orig
 export async function checkOriginals(
   s: ProjectStore,
   sessionId: Id,
-  opts: { video: boolean; onProgress?: (done: number, total: number, fileName: string) => void },
+  opts: {
+    video: boolean;
+    onProgress?: (done: number, total: number, fileName: string) => void;
+    onBytes?: (done: number, total: number, fileName: string) => void;
+    signal?: AbortSignal;
+  },
 ): Promise<OriginalsCheck> {
   const sources = s.listSources(sessionId);
-  const checks = await checkSources(sources, { cache: hashCache, onProgress: opts.onProgress });
-  return summarize(sources, checks, opts.video);
+  const { video, ...rest } = opts;
+  const checks = await checkSources(sources, { cache: hashCache, ...rest });
+  return summarize(sources, checks, video);
 }
 
 /**
