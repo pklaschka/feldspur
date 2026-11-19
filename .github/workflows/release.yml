@@ -49,10 +49,12 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Nur von main
-        if: github.ref != 'refs/heads/main' && !inputs.probelauf
+      # Hotfix (z. B. v0.2.1, während main schon auf v0.3.0 zugeht): kurzlebiger Branch claude/hotfix-*
+      # vom letzten Tag plus Fix; nach dem Release wird er gelöscht, der Tag hält die Commits fest.
+      - name: Nur von main oder einem Hotfix-Branch
+        if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/claude/hotfix-') && !inputs.probelauf
         run: |
-          echo "::error::Releases entstehen nur von main aus (gestartet auf ${GITHUB_REF}). Für Versuche „Probelauf“ wählen."
+          echo "::error::Releases entstehen nur von main oder claude/hotfix-* aus (gestartet auf ${GITHUB_REF}). Für Versuche „Probelauf“ wählen."
           exit 1
       - name: Deploy-Schlüssel vorhanden?
         if: ${{ !inputs.probelauf }}
@@ -100,7 +102,12 @@ jobs:
         run: |
           args=(-f tag_name="v$V" -f target_commitish="$GITHUB_SHA")
           if [ -n "$PREVIOUS" ]; then args+=(-f previous_tag_name="$PREVIOUS"); fi
-          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body > "$RUNNER_TEMP/notes.md"
+          # Cherry-Picks gehören zu keinem Pull Request: Ein Hotfix bringt seine Notizen als Datei mit.
+          if [ -f ".github/release-notes/v$V.md" ]; then
+            cp ".github/release-notes/v$V.md" "$RUNNER_TEMP/notes.md"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body > "$RUNNER_TEMP/notes.md"
+          fi
           node scripts/release.ts prepare "$V" "$RUNNER_TEMP/notes.md"
           vp fmt CHANGELOG.md package.json apps/desktop/package.json .zenodo.json README.md
           mkdir -p "$RUNNER_TEMP/text"
@@ -126,7 +133,7 @@ jobs:
             echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           else
             # Atomar: entweder landen Commit und Tag beide oder keins (z. B. wenn main inzwischen weiter ist).
-            git push --atomic origin "HEAD:refs/heads/main" "refs/tags/v$V"
+            git push --atomic origin "HEAD:$GITHUB_REF" "refs/tags/v$V"
             echo "ref=v$V" >> "$GITHUB_OUTPUT"
           fi
 

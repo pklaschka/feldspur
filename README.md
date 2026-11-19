@@ -282,6 +282,12 @@ Eine Release startet von Hand: **Actions → Release → Run workflow**, Version
   Releases von Hand veröffentlichen; dann archiviert Zenodo ihn doch.
 - **Probelauf:** baut alles und zeigt Changelog und Release-Text in der Zusammenfassung, pusht aber nichts.
 
+**Hotfix** (z. B. `0.2.1`, während `main` schon auf `0.3.0` zugeht): kurzlebigen Branch `claude/hotfix-…` vom letzten
+Tag anlegen, die Fixes per Cherry-Pick übernehmen und die Notizen als `.github/release-notes/v<version>.md` beilegen
+(Cherry-Picks gehören zu keinem Pull Request, die automatischen Notizen fänden sie nicht). Dann den Workflow auf
+diesem Branch starten. Commit und Tag landen auf dem Hotfix-Branch, nicht auf `main`; danach den Branch löschen, der
+Tag hält die Commits fest. Den Changelog-Abschnitt per kleinem PR nach `main` holen.
+
 Der Workflow prüft und testet, schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
 `package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, zieht Version und Stand in den
 Zitierbeispielen (`handbuch/_zitieren.qmd`) und im README-Kopf (`date` in `README.qmd`, `README.md` gleich mit)
