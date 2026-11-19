@@ -32,6 +32,11 @@ let controller: AbortController | null = null;
 export function exportRunning(): boolean {
   return running !== null;
 }
+
+/** Einsatz, für den gerade ausgegeben wird (null = keine Ausgabe). */
+export function exportingSession(): string | null {
+  return running;
+}
 let nextId = 1;
 const pending = new Map<number, { resolve: (b: Buffer[]) => void; reject: (e: Error) => void }>();
 

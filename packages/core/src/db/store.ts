@@ -8,7 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import Database from "better-sqlite3";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
@@ -177,6 +177,43 @@ export class ProjectStore {
     const next = FieldSession.parse({ ...this.getSession(id), ...patch, id });
     this.db.update(schema.sessions).set(next).where(eq(schema.sessions.id, id)).run();
     return next;
+  }
+
+  /**
+   * Einsatz mit allem, was dazugehört, aus dem Projekt nehmen (Originaldateien und frühere Ausgaben bleiben
+   * unberührt). Die abhängigen Zeilen werden ausdrücklich vor dem Einsatz gelöscht, nicht erst per Fremdschlüssel:
+   * So steht jede Löschung als eigener Befehl im Verlauf, und Rückgängig holt alles zurück.
+   */
+  deleteSession(id: Id): void {
+    this.getSession(id);
+    this.transaction(() => {
+      const sourceIds = this.db
+        .select({ id: schema.sources.id })
+        .from(schema.sources)
+        .where(eq(schema.sources.sessionId, id))
+        .all()
+        .map((r) => r.id);
+      if (sourceIds.length) {
+        for (const t of [
+          schema.evidence,
+          schema.transcriptLines,
+          schema.sourceNotes,
+          schema.episodeEdits,
+          schema.audioAnalysis,
+        ])
+          this.db.delete(t).where(inArray(t.sourceId, sourceIds)).run();
+        this.db
+          .delete(schema.anchors)
+          .where(or(inArray(schema.anchors.aSourceId, sourceIds), inArray(schema.anchors.bSourceId, sourceIds)))
+          .run();
+      }
+      this.db.delete(schema.anchors).where(eq(schema.anchors.sessionId, id)).run();
+      this.db.delete(schema.diaryEntries).where(eq(schema.diaryEntries.sessionId, id)).run();
+      this.db.delete(schema.sources).where(eq(schema.sources.sessionId, id)).run();
+      this.db.delete(schema.devices).where(eq(schema.devices.sessionId, id)).run();
+      this.db.delete(schema.exportRecords).where(eq(schema.exportRecords.sessionId, id)).run();
+      this.db.delete(schema.sessions).where(eq(schema.sessions.id, id)).run();
+    });
   }
 
   // ── Personen ─────────────────────────────────────────────────────────────

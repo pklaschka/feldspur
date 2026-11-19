@@ -21,7 +21,7 @@ import { SourceActionsProvider, type SourceActions } from "../SourceMenu.tsx";
 import { Transcriber } from "../Transcriber.tsx";
 import { Sync } from "../Sync.tsx";
 import { Button, cx, ErrorBanner } from "../ui.tsx";
-import { HistoryGlyph, UndoToast, useHistory } from "./history.tsx";
+import { HistoryGlyph, UndoToast, useHistory, type HistoryState } from "./history.tsx";
 import type { Guard, Step } from "../App.tsx";
 
 const api = window.feldspur;
@@ -30,10 +30,16 @@ export function SessionPane({
   sessionId,
   guard,
   onProject,
+  onDeleted,
+  onHistory,
 }: {
   sessionId: string;
   guard: Guard;
   onProject: (p: ProjectInfo) => void;
+  /** Der Einsatz wurde gelöscht; `p` ist das Projekt danach. */
+  onDeleted: (p: ProjectInfo) => void;
+  /** Jeder neu gelesene Stand des Verlaufs. */
+  onHistory?: (h: HistoryState) => void;
 }) {
   const [view, setView] = useState<SessionView | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -47,7 +53,7 @@ export function SessionPane({
   const [originals, setOriginals] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
   const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
-  const history = useHistory(view, sessionId, guard, setView, onProject);
+  const history = useHistory(view, sessionId, guard, setView, onProject, onHistory);
   /** „Lage passt“ läuft: weitere Bestätigungen (zweites Strg+Enter, Doppelklick) bis zur Antwort verwerfen. */
   const confirming = useRef(false);
 
@@ -95,6 +101,7 @@ export function SessionPane({
     onProject(res.project);
     return true;
   };
+  const deleteSession = () => void guard(() => api.deleteSession(sessionId)).then((p) => p && onDeleted(p));
   const unsynced = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
   const hasRef = view.devices.some((d) => d.isReference);
   const unplaced = view.rows.filter((r) => r.status === "unplaced").length;
@@ -402,7 +409,13 @@ export function SessionPane({
           onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
         <OriginalsDialog view={view} open={originals} onOpenChange={setOriginals} onView={setView} guard={guard} />
-        <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
+        <SessionDetails
+          view={view}
+          open={editing}
+          onOpenChange={setEditing}
+          onSave={saveDetails}
+          onDelete={deleteSession}
+        />
         <UndoToast
           view={view}
           toast={history.toast}

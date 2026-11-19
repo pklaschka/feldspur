@@ -200,3 +200,145 @@ describe("Dauerhaftes Änderungsprotokoll", () => {
     expect(more.map((s) => s.label)).toEqual(["→ B", null]);
   });
 });
+
+describe("Einsatz löschen", () => {
+  /** Alles, was zu einem Einsatz gehört, so wie der Store es liefert. */
+  function snapshot(store: ProjectStore, sessionId: string) {
+    return {
+      sessions: store.listSessions(),
+      devices: store.listDevices(sessionId),
+      sources: store.listSources(sessionId),
+      evidence: store.listEvidence(sessionId),
+      anchors: store.listAnchors(sessionId),
+      diary: store.listDiaryEntries(sessionId),
+      transcript: store.listTranscript(sessionId),
+      notes: store.listSourceNotes(sessionId),
+      edits: store.listEpisodeEdits(sessionId),
+      analyses: store.listAudioAnalyses(sessionId),
+      exportRecord: store.getExportRecord(sessionId),
+    };
+  }
+
+  function seed() {
+    const { store, session, device, source } = setup();
+    const cam = store.addDevice({ sessionId: session.id, label: "Kamera", isReference: false });
+    const video = store.addSource({
+      sessionId: session.id,
+      deviceId: cam.id,
+      kind: "video",
+      fileName: "C0001.MP4",
+      originalPath: "/v",
+      sizeBytes: 1,
+      sha256: sha(2),
+      durationMs: 60_000,
+      metadata: {},
+    });
+    const page = store.addSource({
+      sessionId: session.id,
+      deviceId: null,
+      kind: "diary",
+      fileName: "Tagebuch_S01.jpg",
+      originalPath: "/t",
+      sizeBytes: 1,
+      sha256: sha(3),
+      durationMs: null,
+      metadata: {},
+    });
+    // Verweise zwischen Quellen (Folgeaufnahme) setzt SQLite beim Löschen auf NULL; auch das muss zurückkommen.
+    store.updateSource(video.id, { follows: source.id });
+    store.addAnchor({
+      sessionId: session.id,
+      kind: "clap",
+      a: { sourceId: source.id, atMediaMs: 10_000 },
+      b: { sourceId: video.id, atMediaMs: 5_000 },
+    });
+    store.addDiaryEntry({
+      sessionId: session.id,
+      regions: [{ sourceId: page.id }],
+      notedAtMs: T(10, 12),
+      lookbackMs: 60_000,
+      mode: "short",
+      shortText: "Ankunft",
+    });
+    store.addTranscriptLine({ sourceId: source.id, atMs: 1000, speaker: "A", text: "Hallo" });
+    store.addSourceNote({ sourceId: source.id, fromMs: null, toMs: null, text: "nachhören", done: false });
+    store.addEpisodeEdit({ sourceId: source.id, fromMs: 0, toMs: 1000, mode: "include" });
+    store.saveAudioAnalysis({
+      sourceId: source.id,
+      envelope: new Uint8Array([1, 2, 3]),
+      envelopeRate: 10,
+      noiseFloorDb: -60,
+      idle: [],
+      loudInIdle: [],
+      version: 1,
+      analyzedAt: new Date().toISOString(),
+    });
+    store.saveExportRecord({
+      sessionId: session.id,
+      exportedAt: new Date().toISOString(),
+      dir: "/aus",
+      files: ["a.docx"],
+      durationMs: 1000,
+      options: { video: false, resolve: false, mixAudio: true, realtime: true },
+      fingerprint: { version: 1, content: "x", originals: {} },
+    });
+    const other = store.addSession({ title: "Anderer Tag", date: "2026-09-15", place: "", extra: {} });
+    return { store, session, device, other };
+  }
+
+  it("entfernt Quellen, Belege, Tagebuch und Mitschrift; Rückgängig holt alles zurück", () => {
+    const { store, session, other } = seed();
+    const before = snapshot(store, session.id);
+    expect(before.sources).toHaveLength(3);
+    expect(before.anchors).toHaveLength(1);
+    expect(before.analyses).toHaveLength(1);
+
+    store.history.record("Einsatz gelöscht", () => store.deleteSession(session.id));
+    expect(store.listSessions().map((s) => s.id)).toEqual([other.id]);
+    const gone = snapshot(store, session.id);
+    expect(gone).toMatchObject({
+      devices: [],
+      sources: [],
+      evidence: [],
+      anchors: [],
+      diary: [],
+      transcript: [],
+      notes: [],
+      edits: [],
+      analyses: [],
+      exportRecord: null,
+    });
+
+    expect(store.history.undo()).toBe("Einsatz gelöscht");
+    expect(snapshot(store, session.id)).toEqual(before);
+    store.history.redo();
+    expect(store.listSessions().map((s) => s.id)).toEqual([other.id]);
+    store.history.undo();
+    expect(snapshot(store, session.id)).toEqual(before);
+  });
+
+  it("steht mit jeder Zeile im Änderungsprotokoll", () => {
+    const { store, session } = seed();
+    store.history.record("Einsatz gelöscht", () => store.deleteSession(session.id));
+    const step = store.history.changeLog({ limit: 1 })[0]!;
+    expect(step.label).toBe("Einsatz gelöscht");
+    expect(new Set(step.changes.map((c) => c.table))).toEqual(
+      new Set([
+        "sessions",
+        "devices",
+        "sources",
+        "time_evidence",
+        "sync_anchors",
+        "diary_entries",
+        "transcript_lines",
+        "source_notes",
+        "episode_edits",
+      ]),
+    );
+  });
+
+  it("meldet einen unbekannten Einsatz", () => {
+    const { store } = setup();
+    expect(() => store.deleteSession("gibt-es-nicht")).toThrow(/Einsatz nicht gefunden/);
+  });
+});

@@ -1,8 +1,9 @@
 /**
  * Einsatzdaten bearbeiten: Titel, Datum, Ort, Zeitzone, Bezugszeitraum fürs Tagebuch
- * und freie Zusatzfelder für den Quellennachweis (z. B. DOI, Projektnummer).
+ * und freie Zusatzfelder für den Quellennachweis (z. B. DOI, Projektnummer). Von hier lässt sich der Einsatz auch
+ * löschen (mit Nachfrage).
  */
-import { Dialog } from "radix-ui";
+import { AlertDialog, Dialog } from "radix-ui";
 import { useState, type FormEvent } from "react";
 import type { SessionPatch, SessionView } from "../shared/api.ts";
 import { Button, CloseButton, ErrorBanner } from "./ui.tsx";
@@ -23,12 +24,15 @@ export function SessionDetails({
   open,
   onOpenChange,
   onSave,
+  onDelete,
 }: {
   view: SessionView;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   /** Liefert true, wenn gespeichert wurde. */
   onSave: (patch: SessionPatch) => Promise<boolean>;
+  /** Einsatz löschen (nach der Nachfrage). */
+  onDelete: () => void;
 }) {
   const s = view.session;
   const [title, setTitle] = useState(s.title);
@@ -37,6 +41,7 @@ export function SessionDetails({
   const [timeZone, setTimeZone] = useState(s.timeZone);
   const [lookback, setLookback] = useState(String(view.diaryLookbackMin));
   const [extra, setExtra] = useState<[string, string][]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Beim Öffnen mit den gespeicherten Angaben beginnen; spätere Änderungen von außen nicht ins Formular holen.
   const [wasOpen, setWasOpen] = useState(false);
@@ -159,6 +164,14 @@ export function SessionDetails({
               </div>
             </fieldset>
             <div className="mt-1 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="mr-auto px-2.5 text-bad"
+                onClick={() => setConfirmDelete(true)}
+              >
+                Einsatz löschen…
+              </Button>
               <Button type="button" onClick={() => onOpenChange(false)}>
                 Abbrechen
               </Button>
@@ -167,8 +180,64 @@ export function SessionDetails({
               </Button>
             </div>
           </form>
+          <DeleteConfirm
+            open={confirmDelete}
+            onOpenChange={setConfirmDelete}
+            title={s.title}
+            sources={view.rows.length}
+            onConfirm={() => {
+              onOpenChange(false);
+              onDelete();
+            }}
+          />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+/** Nachfrage vor dem Löschen: was verschwindet, was bleibt. */
+function DeleteConfirm({
+  open,
+  onOpenChange,
+  title,
+  sources,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  title: string;
+  sources: number;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <AlertDialog.Content
+          className="fixed top-1/2 left-1/2 z-50 w-[min(28rem,90vw)] -translate-1/2 rounded-xl border border-line bg-panel p-5 shadow-xl"
+          data-testid="delete-session"
+        >
+          <AlertDialog.Title className="font-semibold">Einsatz „{title}“ löschen?</AlertDialog.Title>
+          <AlertDialog.Description className="mt-2 text-[0.88rem] text-ink-2">
+            {sources === 0
+              ? "Der Einsatz hat keine Quellen."
+              : `${sources === 1 ? "Die eine Quelle" : `Alle ${sources} Quellen`} mit Zeitbelegen, Ankern, Tagebucheinträgen, Mitschrift und Notizen ${sources === 1 ? "wird" : "werden"} aus dem Projekt genommen.`}{" "}
+            Originaldateien und frühere Ausgaben bleiben erhalten. Rückgängig machen lässt es sich danach, solange das
+            Projekt offen ist und du nichts Neues einsammelst oder analysierst.
+          </AlertDialog.Description>
+          <div className="mt-4 flex justify-end gap-2">
+            <AlertDialog.Cancel asChild>
+              <Button>Abbrechen</Button>
+            </AlertDialog.Cancel>
+            <AlertDialog.Action asChild>
+              <Button variant="primary" onClick={onConfirm}>
+                Einsatz löschen
+              </Button>
+            </AlertDialog.Action>
+          </div>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }

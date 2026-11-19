@@ -11,6 +11,7 @@ import { renderImageRefJpeg } from "./stillRender.ts";
 import { Button, cx, ErrorBanner, ErrorProvider, Panel, TooltipProvider } from "./ui.tsx";
 import { HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
 import { SessionPane } from "./app/SessionPane.tsx";
+import { DeletedToast, SESSION_DELETED } from "./app/history.tsx";
 
 const api = window.feldspur;
 
@@ -27,6 +28,10 @@ export function App() {
   const [projectMenu, setProjectMenu] = useState(false);
   const [changeLog, setChangeLog] = useState(false);
   const [backups, setBackups] = useState(false);
+  /** Zuletzt gelöschter Einsatz: Hinweis mit „Rückgängig“, auch wenn danach kein Einsatz mehr offen ist. */
+  const [deleted, setDeleted] = useState<{ id: string; title: string } | null>(null);
+  /** Oberster Rückgängig-Schritt, wie ihn der offene Einsatz zuletzt gelesen hat (undefined: noch keiner). */
+  const [topUndo, setTopUndo] = useState<string | null | undefined>(undefined);
 
   // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
   const hasProject = useEffectEvent(() => !!project);
@@ -81,6 +86,7 @@ export function App() {
 
   const adopt = (p: ProjectInfo | null | undefined) => {
     if (!p) return;
+    setDeleted(null);
     setProject(p);
     setSessionId(lastSession(p));
   };
@@ -89,6 +95,26 @@ export function App() {
     if (!p) return;
     setProject(p);
     setSessionId(p.sessions.find((s) => !project?.sessions.some((o) => o.id === s.id))?.id ?? lastSession(p));
+  };
+  const undoDelete = async () => {
+    const gone = deleted;
+    setDeleted(null);
+    const r = await guard(async () => {
+      // Nur den Löschschritt zurücknehmen, nie etwas, das inzwischen dazugekommen ist.
+      const { undo } = await api.historyState();
+      if (undo === null)
+        throw new Error(
+          "Das Löschen lässt sich nicht mehr rückgängig machen: Der Verlauf ist leer (nach dem Schließen des Projekts, nach Einsammeln oder Tonspur-Analyse). Einen früheren Stand findest du unter Sicherungen im Projektmenü.",
+        );
+      if (undo !== SESSION_DELETED)
+        throw new Error(
+          "Seit dem Löschen wurde etwas anderes geändert. Rückgängig geht Schritt für Schritt mit Strg+Z (Mac: ⌘Z).",
+        );
+      return api.undo(sessionId);
+    });
+    if (!r) return;
+    setProject(r.project);
+    if (gone && r.project.sessions.some((s) => s.id === gone.id)) setSessionId(gone.id);
   };
   // Den zuletzt gewählten Einsatz je Projekt merken, damit man beim nächsten Öffnen dort weitermacht.
   useEffect(() => {
@@ -194,6 +220,14 @@ export function App() {
                   // Rückgängig kann den offenen Einsatz entfernen (Anlegen rückgängig): dann einen anderen zeigen.
                   if (!p.sessions.some((x) => x.id === sessionId)) setSessionId(p.sessions[0]?.id ?? null);
                 }}
+                onHistory={(h) => setTopUndo(h.undo)}
+                onDeleted={(p) => {
+                  const title = project.sessions.find((x) => x.id === sessionId)?.title ?? "";
+                  setTopUndo(undefined);
+                  setDeleted({ id: sessionId, title });
+                  setProject(p);
+                  setSessionId(p.sessions[0]?.id ?? null);
+                }}
               />
             ) : (
               <main className="col-span-2 p-8">
@@ -205,6 +239,15 @@ export function App() {
                 </p>
                 <NewSessionForm hero onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
               </main>
+            )}
+            {deleted && !project.sessions.some((s) => s.id === deleted.id) && (
+              <DeletedToast
+                key={deleted.id}
+                title={deleted.title}
+                topUndo={topUndo}
+                onUndo={() => void undoDelete()}
+                onClose={() => setDeleted(null)}
+              />
             )}
           </div>
         </TooltipProvider>
