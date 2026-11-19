@@ -66,6 +66,11 @@ Optionen:
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
 - **Ton aller Geräte mischen**: sonst nur die Haupttonquelle.
+- **Zusätzlich eine Tonspur je Gerät** (Standard): Die Mischung (oder Haupttonquelle) bleibt Tonspur 1 und ist als
+  Standard markiert; MAXQDA und jeder Player spielen sie wie bisher. Dahinter folgt für jedes Gerät mit Ton eine eigene
+  Spur mit dem Namen des Geräts, das Referenzgerät zuerst. Jede Spur ist so lang wie das Video und still, wo das Gerät
+  nicht läuft. In VLC (Audio › Audiospur), QuickTime oder einem Schnittprogramm hörst du so ein Gerät allein, etwa
+  wenn eine Stimme im Rekorder untergeht und das Handy näher dran war. Bei nur einem Gerät mit Ton entfällt die Extraspur.
 - **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
   willst.
 

@@ -37,9 +37,10 @@ interface Options {
   video: boolean;
   resolve: boolean;
   mixAudio: boolean;
+  deviceTracks: boolean;
   byEpisodes: boolean;
 }
-const DEFAULTS: Options = { video: true, resolve: false, mixAudio: true, byEpisodes: false };
+const DEFAULTS: Options = { video: true, resolve: false, mixAudio: true, deviceTracks: true, byEpisodes: false };
 const KEY = "feldspur.export-options";
 function loadOptions(): Options {
   try {
@@ -84,7 +85,7 @@ export function ExportStep({
       }
       return next;
     });
-  const { video, resolve, mixAudio, byEpisodes } = opts;
+  const { video, resolve, mixAudio, deviceTracks, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
   const realtime = !(withEpisodes && byEpisodes);
@@ -96,20 +97,20 @@ export function ExportStep({
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
   const cancelled = busy ? null : (ex.cancelled[sessionId] ?? null);
-  const settings = { video, resolve, mixAudio, realtime };
+  const settings = { video, resolve, mixAudio, deviceTracks, realtime };
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const [status, setStatus] = useState<ExportStatus | null>(null);
   useEffect(() => {
     if (busy) return;
     let live = true;
-    void api.exportStatus(sessionId, { video, resolve, mixAudio, realtime }).then(
+    void api.exportStatus(sessionId, { video, resolve, mixAudio, deviceTracks, realtime }).then(
       (st) => live && setStatus(st),
       () => live && setStatus(null),
     );
     return () => {
       live = false;
     };
-  }, [view, sessionId, video, resolve, mixAudio, realtime, busy, justDone]);
+  }, [view, sessionId, video, resolve, mixAudio, deviceTracks, realtime, busy, justDone]);
   const result = busy || status?.record.sessionId !== sessionId ? null : status;
 
   useEffect(() => {
@@ -292,6 +293,12 @@ export function ExportStep({
                 onChange={(v) => set({ mixAudio: v })}
                 label="Ton aller Geräte mischen"
                 hint="Aus: nur der Ton der Hauptquelle."
+              />
+              <Option
+                checked={deviceTracks}
+                onChange={(v) => set({ deviceTracks: v })}
+                label="Zusätzlich eine Tonspur je Gerät"
+                hint="Die Mischung bleibt Spur 1. VLC und Schnittprogramme spielen die Geräte auch einzeln."
               />
               <Option
                 checked={resolve}

@@ -7,7 +7,7 @@ import { compareExport, exportFingerprint, FINGERPRINT_VERSION, settingsDifferen
 import { applyImport, scanPaths } from "../src/import.ts";
 import { hasFfmpeg, makePhoto } from "./fixtures.ts";
 
-const SETTINGS: ExportSettings = { video: true, resolve: false, mixAudio: true, realtime: true };
+const SETTINGS: ExportSettings = { video: true, resolve: false, mixAudio: true, realtime: true, deviceTracks: true };
 
 describe("Einstellungen im Vergleich", () => {
   it("nennt nur, was sich unterscheidet", () => {
@@ -15,6 +15,14 @@ describe("Einstellungen im Vergleich", () => {
     expect(settingsDifference(SETTINGS, { ...SETTINGS, video: false })).toEqual([
       "damals mit Montagevideo, jetzt ohne Montagevideo",
     ]);
+  });
+
+  it("liest eine ältere Ausgabe ohne Gerätespuren als „ohne“", () => {
+    const { deviceTracks: _d, ...older } = SETTINGS;
+    expect(settingsDifference(older as ExportSettings, SETTINGS)).toEqual([
+      "damals ohne Tonspuren je Gerät, jetzt mit einer Tonspur je Gerät",
+    ]);
+    expect(settingsDifference(older as ExportSettings, { ...SETTINGS, deviceTracks: false })).toEqual([]);
   });
 });
 

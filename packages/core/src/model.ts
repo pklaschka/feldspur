@@ -348,6 +348,8 @@ export const ExportSettings = z.object({
   resolve: z.boolean(),
   mixAudio: z.boolean(),
   realtime: z.boolean(),
+  /** Je Gerät eine eigene Tonspur im Montagevideo (Issue #122). Ältere Ausgaben kannten das nicht: aus. */
+  deviceTracks: z.boolean().default(false),
 });
 export type ExportSettings = z.infer<typeof ExportSettings>;
 
