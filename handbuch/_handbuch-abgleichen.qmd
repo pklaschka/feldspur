@@ -14,7 +14,8 @@ Referenzuhr.
 ### Abweichung eintragen
 
 Weißt du, wie weit ein Gerät abweicht, trägst du es direkt ein: "Kamera geht 2:47 vor" wird zu `+2:47`. Auch große
-Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches Datum gestellt war.
+Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches Datum gestellt war. Ein leeres Feld löscht den Abgleich; kann Feldspur die Eingabe nicht
+lesen, färbt sich das Feld rot und die bisherige Abweichung bleibt, bis du sie korrigierst oder mit Esc zurückholst.
 
 ### Tonspuren abgleichen
 

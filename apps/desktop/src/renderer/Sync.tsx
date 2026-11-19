@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { offsetText, parseOffset } from "./format.ts";
+import { offsetText, readOffsetInput } from "./format.ts";
 import { positionText, usePlayback } from "./playback.tsx";
 import {
   Button,
@@ -322,26 +322,53 @@ function ClockRow({
 function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: number | null) => void }) {
   const show = (ms: number | null) => (ms === null ? "" : offsetText(ms));
   const [text, setText] = useDraft(show(device.offsetMs));
+  /** Zuletzt bestätigte Eingabe war nicht lesbar: dann bleibt der alte Abgleich und das Feld zeigt den Fehler. */
+  const [invalid, setInvalid] = useState(false);
+  const hintId = useId();
   const commit = () => {
-    const ms = parseOffset(text);
+    const ms = readOffsetInput(text);
+    if (ms === "invalid") return setInvalid(true);
+    setInvalid(false);
     if (ms !== device.offsetMs) onOffset(ms);
   };
+  const revert = () => {
+    setText(show(device.offsetMs));
+    setInvalid(false);
+  };
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex flex-wrap items-center gap-2">
       <input
-        className="w-[5.5rem] text-right font-mono disabled:bg-sunken"
+        className={cx("w-[5.5rem] text-right font-mono disabled:bg-sunken", invalid && "border-bad text-bad")}
         value={text}
         placeholder="z. B. +2:47"
         title="Wie weit diese Uhr von der Referenz abweicht: +2:47 = geht 2 Minuten 47 vor, −0:30 = geht 30 Sekunden nach"
         aria-label={`Abweichung ${device.label}`}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? hintId : undefined}
         disabled={device.offsetBasis === "anchor" || device.offsetBasis === "spoken"}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          setInvalid(false);
+        }}
         onBlur={commit}
-        onKeyDown={(e) => isEnter(e) && commit()}
+        onKeyDown={(e) => {
+          if (isEnter(e)) commit();
+          else if (e.key === "Escape" && (invalid || text !== show(device.offsetMs))) {
+            e.preventDefault();
+            e.stopPropagation();
+            revert();
+          }
+        }}
       />
-      <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
-        {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
-      </span>
+      {invalid ? (
+        <span id={hintId} className="text-[0.85rem] text-bad">
+          Nicht lesbar. Beispiel: +2:47 oder −0:30
+        </span>
+      ) : (
+        <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
+          {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
+        </span>
+      )}
     </span>
   );
 }
