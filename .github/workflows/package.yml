@@ -50,11 +50,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       # Vite+ bringt Node, pnpm und den Abhängigkeits-Cache mit und führt `vp install` aus.
-      - uses: voidzero-dev/setup-vp@v1.21.2
+      - uses: voidzero-dev/setup-vp@v1.22.0
         with:
           node-version: 22
           cache: true
@@ -62,7 +62,7 @@ jobs:
       # FFmpeg (LGPL): Windows/Linux fertig von BtbN, macOS aus den Quellen gebaut (dauert, daher Cache).
       - name: FFmpeg-Cache (macOS)
         if: runner.os == 'macOS'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: apps/desktop/vendor/ffmpeg
           key: ffmpeg-lgpl-${{ matrix.name }}-${{ env.FFMPEG_LINE }}-${{ hashFiles('scripts/build-ffmpeg-macos.sh') }}
@@ -94,7 +94,7 @@ jobs:
           cd apps/desktop
           FELDSPUR_E2E_APP="$PWD/release/dist/linux-unpacked/feldspur" xvfb-run -a vpx test/smoke.e2e.ts
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: feldspur-${{ matrix.name }}
           path: |

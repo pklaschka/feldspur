@@ -67,11 +67,11 @@ jobs:
           fi
       # Gepusht wird mit einem Deploy-Schlüssel: Die Regel für main verlangt Statusprüfungen, und nur
       # Deploy-Schlüssel (nicht GITHUB_TOKEN) lassen sich bei einem persönlichen Repository als Ausnahme eintragen.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
-      - uses: voidzero-dev/setup-vp@v1.21.2
+      - uses: voidzero-dev/setup-vp@v1.22.0
         with:
           node-version: 22
           cache: true
@@ -137,7 +137,7 @@ jobs:
             echo "ref=v$V" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-text
           path: ${{ runner.temp }}/text/
@@ -167,19 +167,19 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: feldspur-*
           merge-multiple: true
           path: assets
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         # Lässt die Release nicht scheitern, falls das Handbuch einmal fehlt.
         continue-on-error: true
         with:
           pattern: handbuch
           merge-multiple: true
           path: assets
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-text
           path: text

@@ -17,9 +17,9 @@ jobs:
         os: [ubuntu-latest, windows-2022, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Vite+ bringt Node, pnpm und den Abhängigkeits-Cache mit und führt `vp install` aus.
-      - uses: voidzero-dev/setup-vp@v1.21.2
+      - uses: voidzero-dev/setup-vp@v1.22.0
         with:
           node-version: 22
           cache: true
