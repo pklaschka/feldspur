@@ -650,10 +650,14 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         const po = trustedPlacement(other.sourceId);
         // Liegt die andere Aufnahme nur über eine angesagte Uhrzeit ihres Geräts (auf die Minute genau),
         // gilt der Anker: Er verbindet zwei Stellen auf Bruchteile einer Sekunde, die Ansage nicht.
-        const viaSpokenClock =
-          po !== undefined &&
-          clock?.basis === "spoken" &&
-          candidates.get(other.sourceId)?.find((c) => c.ev.id === po.basis.evidenceId)?.ev.clock === "device";
+        // Auch eine Bestätigung, die einem Beleg der Geräteuhr folgt (followBasis), hängt an dieser Uhr.
+        const otherCands = candidates.get(other.sourceId) ?? [];
+        const usedEv = po ? otherCands.find((c) => c.ev.id === po.basis.evidenceId)?.ev : undefined;
+        const followedId = usedEv?.kind === "checked" ? usedEv.decision?.basisId : undefined;
+        const onDeviceClock =
+          usedEv?.clock === "device" ||
+          (!!followedId && otherCands.some((c) => c.ev.id === followedId && c.ev.clock === "device"));
+        const viaSpokenClock = po !== undefined && clock?.basis === "spoken" && onDeviceClock;
         if (po && !viaSpokenClock) {
           const diff = po.startMs + other.atMediaMs - moment;
           if (

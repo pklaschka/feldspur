@@ -155,6 +155,51 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(res.anchorConflicts).toEqual([]);
   });
 
+  it("Anker gilt weiter, wenn der verankerte Clip selbst bestätigt ist (#117)", () => {
+    const input = testmarkt();
+    input.evidence.push(
+      {
+        id: "ansage",
+        sourceId: "C0013.MP4",
+        kind: "spoken",
+        clock: "true",
+        atMediaMs: 30_000,
+        localMs: T(10, 40, 20),
+        utcMs: null,
+        uncertaintyMs: 60_000,
+        detail: "angesagt",
+        raw: "",
+        enabled: true,
+      },
+      // „Lage passt“ auf den verankerten Clip: folgt den Metadaten, hängt also weiter an der Kamerauhr.
+      {
+        id: "chk",
+        sourceId: "C0012.MP4",
+        kind: "checked",
+        clock: "true",
+        atMediaMs: 0,
+        localMs: T(10, 16),
+        utcMs: null,
+        uncertaintyMs: 1_000,
+        detail: "Geprüft: Lage passt",
+        raw: "",
+        enabled: true,
+        decision: {
+          at: "2026-11-19T16:00:00.000Z",
+          basisId: "ev:C0012.MP4:metadata",
+          basisKind: "metadata",
+          reason: "",
+          seen: [{ id: "ev:C0012.MP4:metadata", kind: "metadata", differenceMs: 0 }],
+        },
+      },
+    );
+    const res = resolveTimeline(input);
+    expect(res.deviceClocks.get("camA")!.basis).toBe("anchor");
+    expect(formatClock(res.placements.get("C0012.MP4")!.startMs)).toBe("10:16:00");
+    expect(res.placements.get("C0012.MP4")!.basis.kind).toBe("checked");
+    expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:10");
+  });
+
   it("abgeschalteter Beleg zählt nicht", () => {
     const input = testmarkt();
     input.evidence.find((e) => e.sourceId === "IMG_0231.jpg")!.enabled = false;
