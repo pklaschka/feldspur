@@ -18,7 +18,8 @@ export const REQUIRED = {
   decoders: ["png", "mjpeg", "tiff", "webp", "bmp", "gif", "h264", "aac", "mp3", "pcm_s16le"],
   // mjpeg: Standbilder fürs Einsatztranskript; mpeg4: Rückfall, wenn kein H.264-Encoder da ist.
   encoders: ["mjpeg", "aac", "pcm_s16le", "mpeg4"],
-  demuxers: ["image2", "concat", "lavfi", "mov", "wav", "mp3"],
+  // lavfi (Farbfläche, Stille) ist ein Eingabegerät: ab ffmpeg 8 steht es nicht mehr in -demuxers, der Probelauf prüft es.
+  demuxers: ["image2", "concat", "mov", "wav", "mp3"],
   muxers: ["mp4", "f32le", "wav", "image2"],
   filters: [
     "overlay",
