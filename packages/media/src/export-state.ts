@@ -47,10 +47,13 @@ function contentHash(store: ProjectStore, sessionId: Id, transcript: SessionTran
       base: baseName(transcript),
       header: transcript.header,
       entries: transcript.entries.map((e) => [e.montageMs, e.kind, entryText(e), e.images]),
+      // Kontext nur, wenn es welchen gibt: So bleibt der Abdruck von Einsätzen ohne Kontext wie vor Issue #108.
+      ...(transcript.context.length ? { context: transcript.context } : {}),
       segments: transcript.plan.segments,
       durationMs: transcript.plan.durationMs,
       placements: transcript.resolved.placements,
-      sources: transcript.input.sources,
+      // Ohne die Kontext-Felder der Quellen (Issue #108): die ändern den Abdruck nur über `context`.
+      sources: transcript.input.sources.map(({ role: _r, contextOrder: _o, contextMade: _m, ...rest }) => rest),
       devices: transcript.input.devices,
       persons: store.listPersons(),
       levels,

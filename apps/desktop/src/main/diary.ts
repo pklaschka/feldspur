@@ -2,8 +2,9 @@
  * Tagebuch abtippen: Einträge als Rahmen auf Scan-Seiten, mit Notierzeit,
  * Kurzform und Volltext. Ein Eintrag kann über mehrere Seiten laufen.
  */
-import type { DiaryEntry, Id, ProjectStore } from "@feldspur/core";
+import { contextKey, type DiaryEntry, type Id, type ProjectStore } from "@feldspur/core";
 import type { DiaryPatch, Region } from "../shared/api.ts";
+import { dropRefsTo } from "./context.ts";
 import { parseClockOnDate } from "./edits.ts";
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
@@ -54,7 +55,7 @@ export function removeRegion(s: ProjectStore, entryId: Id, index: number): Id {
   const e = s.getDiaryEntry(entryId);
   const regions = e.regions.filter((_, i) => i !== index);
   if (regions.length) s.updateDiaryEntry(entryId, { regions });
-  else s.deleteDiaryEntry(entryId);
+  else deleteEntry(s, entryId);
   return e.sessionId;
 }
 
@@ -89,7 +90,10 @@ export function setRegionPage(s: ProjectStore, entryId: Id, index: number, pageN
 
 export function deleteEntry(s: ProjectStore, entryId: Id): Id {
   const e = s.getDiaryEntry(entryId);
-  s.deleteDiaryEntry(entryId);
+  s.transaction(() => {
+    s.deleteDiaryEntry(entryId);
+    dropRefsTo(s, e.sessionId, [contextKey.entry(entryId)]);
+  });
   return e.sessionId;
 }
 
@@ -106,6 +110,7 @@ export function patchEntry(s: ProjectStore, entryId: Id, patch: DiaryPatch): Id 
     }
     next.lookbackMs = patch.lookbackMin === null ? null : Math.round(patch.lookbackMin * 60_000);
   }
+  if (patch.title !== undefined) next.title = patch.title.trim();
   if (patch.mode !== undefined) next.mode = patch.mode;
   if (patch.shortText !== undefined) next.shortText = patch.shortText;
   if (patch.fullText !== undefined) next.fullText = patch.fullText;

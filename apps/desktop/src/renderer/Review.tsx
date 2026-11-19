@@ -1,5 +1,14 @@
 import { Slider, VisuallyHidden } from "radix-ui";
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import type { SessionView, SourceRow } from "../shared/api.ts";
 import { clock, hm, lage } from "./format.ts";
 import {
@@ -24,7 +33,7 @@ import {
 import { prepareCanvas } from "./canvas.ts";
 import { usePlayback } from "./playback.tsx";
 import type { Reveal } from "./SearchDialog.tsx";
-import { Button, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
+import { Button, ContextMark, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
 import { axisRange, fitPpm, MAX_PPM, revealPpm, scrollFor, wheelFactor, zoomAround } from "./review/viewport.ts";
 import { buildTracks, rowStart, trackHeightFor, trackSub } from "./review/tracks.ts";
 import { HoverCard, Legend, Tray, ZoomGlyph } from "./review/parts.tsx";
@@ -34,6 +43,8 @@ import { ConflictMark, startText } from "./inspector/ConflictPanel.tsx";
 import { asPlaces, canConfirm, checkQueue, stepPlace } from "./inspector/status.ts";
 import { DIALOG, isMac, reviewKey } from "./keys.ts";
 import { signed } from "../shared/conflict-text.ts";
+import { ContextStrip } from "./context/ContextStrip.tsx";
+import type { ApplyView } from "./Notes.tsx";
 
 const LABEL_W = 180;
 
@@ -47,6 +58,8 @@ export function Review({
   onEpisodes,
   onEpisodeEdit,
   reveal,
+  apply,
+  onCreateText,
 }: {
   view: SessionView;
   /** Durchsehen ist der aktive Schritt (es bleibt auch sonst geladen): nur dann gelten die Tastenkürzel. */
@@ -61,11 +74,19 @@ export function Review({
   onEpisodeEdit: (e: EpisodeEdit) => void;
   /** Sprungziel von außen (Suche): Uhrzeit oder Bereich ins Bild holen. */
   reveal: (Reveal & { n: number }) | null;
+  /** Änderung ausführen und die neue Ansicht übernehmen (Kontext umsortieren). */
+  apply: ApplyView;
+  /** Neues Kontextstück als Text ohne Scan. */
+  onCreateText: () => void;
 }) {
   // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
   const rows = view.rows.filter((r) => !r.partOf);
   const placed = rows.filter((r) => r.startMs !== null || r.diaryWindow);
-  const unplaced = rows.filter((r) => r.startMs === null && !r.diaryWindow);
+  // Kontext ist bewusst ohne Uhrzeit: nicht in der roten Ablage, sondern in der Zeile über der Achse.
+  const unplaced = rows.filter((r) => r.startMs === null && !r.diaryWindow && r.status !== "context");
+  const strip = (
+    <ContextStrip view={view} selected={selected} onSelect={onSelect} apply={apply} onCreateText={onCreateText} />
+  );
 
   if (!placed.length) {
     return (
@@ -74,6 +95,7 @@ export function Review({
           title="Durchsehen"
           summary="Noch keine Quelle hat eine Uhrzeit. Sammle Aufnahmen ein oder trage bei Tagebuchseiten die Randnotiz ein."
         />
+        {strip}
         {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}
       </div>
     );
@@ -91,6 +113,7 @@ export function Review({
       onEpisodes={onEpisodes}
       onEpisodeEdit={onEpisodeEdit}
       reveal={reveal}
+      strip={strip}
     />
   );
 }
@@ -107,6 +130,7 @@ function Timeline({
   onEpisodes,
   onEpisodeEdit,
   reveal,
+  strip,
 }: {
   view: SessionView;
   active: boolean;
@@ -119,6 +143,8 @@ function Timeline({
   onEpisodes: (on: boolean) => void;
   onEpisodeEdit: (e: EpisodeEdit) => void;
   reveal: (Reveal & { n: number }) | null;
+  /** Kontext-Zeile; steht über der Uhrzeitleiste. */
+  strip: ReactNode;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -145,13 +171,19 @@ function Timeline({
 
   const tracks = useMemo(() => buildTracks(view.allDevices, placed), [view.allDevices, placed]);
   const items = useMemo(
-    () => buildItems(tracks, view.episodes, view.gaps, view.diary),
-    [tracks, view.episodes, view.gaps, view.diary],
+    () => {
+      // Nur Verweise auf Stücke, die gerade Kontext sind, tragen →K (die anderen ruhen).
+      const live = new Set(view.context.map((c) => c.key));
+      const diary = view.diary.map((e) => ({ ...e, refs: e.refs.filter((k) => live.has(k)) }));
+      return buildItems(tracks, view.episodes, view.gaps, diary);
+    },
+    [tracks, view.episodes, view.gaps, view.diary, view.context],
   );
   const transcripts = useMemo(() => groupTranscript(view.transcript), [view.transcript]);
   // Die Spuren teilen sich die freie Höhe (Kopf, Legende und „Ohne Uhrzeit“ abgezogen), statt unten Platz frei
   // zu lassen; zwischen 52 und 88 px, damit wenige Spuren nicht zu Balken aufquellen.
-  const free = window.innerHeight - 340 - (unplaced.length ? 56 : 0) - RULER_H - EPISODE_H;
+  const free =
+    window.innerHeight - 340 - (unplaced.length ? 56 : 0) - (view.context.length ? 88 : 46) - RULER_H - EPISODE_H;
   setTrackHeight(trackHeightFor(free, tracks.length));
   const height = RULER_H + EPISODE_H + tracks.length * TRACK_H;
   const scale = useMemo(() => ({ start: t0 + (scrollX / ppm) * MIN, pxPerMin: ppm }), [t0, scrollX, ppm]);
@@ -487,6 +519,7 @@ function Timeline({
           Weiter: Ausgeben →
         </Button>
       </StepHeader>
+      {strip}
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <h3 className="font-semibold">Zeitachse</h3>
         {toCheck.length > 0 && (
@@ -674,6 +707,9 @@ function Timeline({
         <Legend swatch="size-2.5 rotate-45 rounded-[2px] border-[1.5px] border-dashed border-warn">
           Vergleichslage laut anderem Beleg
         </Legend>
+        {view.context.length > 0 && (
+          <Legend swatch={<ContextMark arrow decorative />}>verweist auf ein Kontextstück</Legend>
+        )}
         <span className="ml-auto">
           Klick in Audio/Video spult dorthin · Episodengrenzen lassen sich ziehen · Mausrad zoomt an der Maus · Umschalt
           + Mausrad oder Mausrad gedrückt ziehen verschiebt · N / Umschalt+N: nächste / vorige zu prüfende Stelle ·{" "}

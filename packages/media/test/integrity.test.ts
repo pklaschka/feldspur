@@ -38,6 +38,9 @@ function source(name: string, content: string, kind: Source["kind"] = "audio", s
     levelCompress: true,
     firstPage: null,
     pageSpread: false,
+    role: "timeline",
+    contextOrder: null,
+    contextMade: "",
   };
 }
 

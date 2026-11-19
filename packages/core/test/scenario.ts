@@ -5,6 +5,15 @@
 import type { Device, DiaryEntry, FieldSession, Source, SyncAnchor, TimeEvidence } from "../src/model.ts";
 import { localMs } from "../src/time.ts";
 
+/** Neue Felder für Kontext (Issue #108) mit ihren Standardwerten: alles in der Chronologie. */
+export const CONTEXT_DEFAULTS = {
+  role: "timeline",
+  contextOrder: null,
+  title: "",
+  contextMade: "",
+  contextRefs: [],
+} satisfies Pick<DiaryEntry, "role" | "contextOrder" | "title" | "contextMade" | "contextRefs">;
+
 export const T = (h: number, m: number, s = 0) => localMs(2026, 9, 14, h, m, s);
 
 export function testmarkt() {
@@ -68,6 +77,9 @@ export function testmarkt() {
     levelCompress: true,
     firstPage: null,
     pageSpread: false,
+    role: "timeline",
+    contextOrder: null,
+    contextMade: "",
   });
   const sources = [
     src("ZOOM0004.m4a", "A-01", "audio", "zoom", 1_590_000),
@@ -132,6 +144,7 @@ export function testmarkt() {
       mode: "scan",
       shortText: "",
       fullText: "",
+      ...CONTEXT_DEFAULTS,
     },
     {
       id: "d2",
@@ -142,6 +155,7 @@ export function testmarkt() {
       mode: "short",
       shortText: "Käsestand",
       fullText: "",
+      ...CONTEXT_DEFAULTS,
     },
   ];
   return { session, devices, sources, evidence, anchors, diaryEntries };

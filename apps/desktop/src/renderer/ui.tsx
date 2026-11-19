@@ -293,8 +293,8 @@ export function ErrorBanner({
   );
 }
 
-/** Erklärt die Statuspunkte. */
-export function StatusLegend() {
+/** Erklärt die Statuspunkte; mit `context` auch das Zeichen K für Kontext (nur, wenn es Kontext gibt). */
+export function StatusLegend({ context = false }: { context?: boolean }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.86rem] text-muted">
       {(["ok", "check", "unplaced"] as const).map((s) => (
@@ -303,10 +303,54 @@ export function StatusLegend() {
           {STATUS_LEGEND[s]}
         </span>
       ))}
+      {context && (
+        <span className="inline-flex items-center gap-1.5">
+          <ContextMark decorative />
+          Kontext
+        </span>
+      )}
     </span>
   );
 }
 const STATUS_LEGEND = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
+
+/** Text zum Zeichen K, für Tooltips und Screenreader. */
+export const CONTEXT_HINT = "Kontext: bewusst ohne Uhrzeit, steht vor der Chronologie";
+
+/**
+ * Zeichen für Kontext (Issue #108): K im kleinen Quadrat, neutral (Tinte auf Papier). Mit `arrow` als →K für
+ * Einträge, die auf ein Kontextstück verweisen. Nie nur Farbe: das Zeichen trägt einen Buchstaben.
+ */
+export function ContextMark({
+  arrow = false,
+  decorative = false,
+  label,
+  className,
+}: {
+  arrow?: boolean;
+  decorative?: boolean;
+  label?: string;
+  className?: string;
+}) {
+  const cls = cx(
+    "inline-flex h-[15px] flex-none items-center justify-center rounded-[3px] border border-ink-2 px-[2px] text-[11px] leading-none font-bold text-ink-2",
+    arrow ? "min-w-[22px] gap-px" : "w-[15px]",
+    className,
+  );
+  const text = arrow ? "→K" : "K";
+  if (decorative)
+    return (
+      <span aria-hidden="true" className={cls}>
+        {text}
+      </span>
+    );
+  const l = label ?? (arrow ? "verweist auf Kontext" : CONTEXT_HINT);
+  return (
+    <span role="img" aria-label={l} title={l} className={cls}>
+      {text}
+    </span>
+  );
+}
 
 /** Überschrift eines Abschnitts in Seitenleisten und Kästen. */
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
@@ -335,16 +379,22 @@ export function StatusDot({
   className,
   decorative = false,
 }: {
-  status: "ok" | "check" | "unplaced";
+  status: "ok" | "check" | "unplaced" | "context";
   className?: string;
   decorative?: boolean;
 }) {
+  if (status === "context") return <ContextMark decorative={decorative} className={className} />;
   const cls = cx("inline-block size-2 flex-none rounded-full", STATUS_BG[status], className);
   if (decorative) return <span aria-hidden="true" className={cls} />;
   const label = `Zeit: ${STATUS_TEXT[status]}`;
   return <span role="img" aria-label={label} title={label} className={cls} />;
 }
-export const STATUS_TEXT_CLASS = { ok: "text-good", check: "text-warn", unplaced: "text-bad" } as const;
+export const STATUS_TEXT_CLASS = {
+  ok: "text-good",
+  check: "text-warn",
+  unplaced: "text-bad",
+  context: "text-ink-2",
+} as const;
 const STATUS_BG = { ok: "bg-good/60", check: "bg-warn", unplaced: "bg-bad" } as const;
 
 /** Radix-Tooltip mit einheitlichem Aussehen. */

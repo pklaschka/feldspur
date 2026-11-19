@@ -85,6 +85,11 @@ export const sources = sqliteTable(
     levelCompress: bool("level_compress").notNull().default(true),
     firstPage: integer("first_page"),
     pageSpread: bool("page_spread").notNull().default(false),
+    role: text("role", { enum: ["timeline", "context"] })
+      .notNull()
+      .default("timeline"),
+    contextOrder: integer("context_order"),
+    contextMade: text("context_made").notNull().default(""),
   },
   (t) => [
     index("sources_session").on(t.sessionId),
@@ -165,6 +170,15 @@ export const diaryEntries = sqliteTable(
       .default("scan"),
     shortText: text("short_text").notNull().default(""),
     fullText: text("full_text").notNull().default(""),
+    role: text("role", { enum: ["timeline", "context"] })
+      .notNull()
+      .default("timeline"),
+    contextOrder: integer("context_order"),
+    title: text("title").notNull().default(""),
+    contextMade: text("context_made").notNull().default(""),
+    contextRefs: json<string[]>("context_refs")
+      .notNull()
+      .default(sql`'[]'`),
   },
   (t) => [index("diary_session").on(t.sessionId)],
 );

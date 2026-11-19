@@ -3,7 +3,13 @@
  * jede Zeile ein eigener Absatz, Bilder direkt unter ihrer Zeile.
  */
 import { AlignmentType, Document, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from "docx";
-import { timestamp, type SessionTranscript, type SessionTranscriptEntry } from "./session-transcript.ts";
+import {
+  timestamp,
+  type ImageRef,
+  type SessionTranscript,
+  type SessionTranscriptContext,
+  type SessionTranscriptEntry,
+} from "./session-transcript.ts";
 import type { Still } from "./stills.ts";
 
 export interface DocxOptions {
@@ -11,6 +17,8 @@ export interface DocxOptions {
   mediaFileName: string;
   /** Standbilder je Eintrag (gleiche Reihenfolge wie entry.images); null = nicht darstellbar. */
   stills: Map<SessionTranscriptEntry, (Still | null)[]>;
+  /** Standbilder je Kontextstück (gleiche Reihenfolge wie images). */
+  contextStills?: Map<SessionTranscriptContext, (Still | null)[]>;
   /** Breite der Bilder im Dokument in px (96 dpi). */
   imageWidth?: number;
 }
@@ -27,6 +35,8 @@ export const SESSION_TRANSCRIPT_KIND_COLOR: Partial<Record<SessionTranscriptEntr
   diary: "A8571F",
   sync: "107A5F",
 };
+/** Farbe der Kopfzeile eines Kontextstücks (wie Episoden: Tinte, neutral). Vorschau: --st-context. */
+export const SESSION_TRANSCRIPT_CONTEXT_COLOR = "1D2B33";
 /** Farbe der Uhrzeit hinter der Zeitmarke und der Kopfzeilen. */
 export const SESSION_TRANSCRIPT_CLOCK_COLOR = "5F6B73";
 
@@ -50,7 +60,13 @@ function entryParagraphs(e: SessionTranscriptEntry, stills: (Still | null)[], wi
       runs.push(new TextRun({ text: line, italics: e.kind === "card", break: i > 0 ? 1 : undefined })),
     );
   const out = [new Paragraph({ children: runs, spacing: { before: e.kind === "episode" ? 240 : 60 } })];
-  e.images.forEach((ref, i) => {
+  out.push(...imageParagraphs(e.images, stills, width));
+  return out;
+}
+
+function imageParagraphs(images: ImageRef[], stills: (Still | null)[], width: number): Paragraph[] {
+  const out: Paragraph[] = [];
+  images.forEach((ref, i) => {
     const s = stills[i];
     if (!s) {
       out.push(
@@ -82,6 +98,53 @@ function entryParagraphs(e: SessionTranscriptEntry, stills: (Still | null)[], wi
   return out;
 }
 
+/** Ein Kontextstück: Kopfzeile ohne Zeitmarke, Bilder, Text mit weichen Zeilenumbrüchen. */
+function contextParagraphs(c: SessionTranscriptContext, stills: (Still | null)[], width: number): Paragraph[] {
+  const out = [
+    new Paragraph({
+      spacing: { before: 200 },
+      children: [
+        new TextRun({ text: c.head, bold: true, color: SESSION_TRANSCRIPT_CONTEXT_COLOR }),
+        ...(c.details ? [new TextRun({ text: c.details, color: SESSION_TRANSCRIPT_CLOCK_COLOR })] : []),
+      ],
+    }),
+    ...imageParagraphs(c.images, stills, width),
+  ];
+  if (c.body)
+    out.push(
+      new Paragraph({
+        children: c.body.split(/\r?\n/).map((line, i) => new TextRun({ text: line, break: i > 0 ? 1 : undefined })),
+      }),
+    );
+  return out;
+}
+
+/** Abschnitt „Kontext“ vor der ersten Zeitmarke; ohne Kontext nichts (das Dokument bleibt wie bisher). */
+function contextSection(transcript: SessionTranscript, opts: DocxOptions, width: number): Paragraph[] {
+  if (!transcript.context.length) return [];
+  return [
+    new Paragraph({ text: "Kontext", heading: HeadingLevel.HEADING_2 }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: "Diese Stücke gehören nicht in die Chronologie und haben keine Zeitmarke.",
+          color: SESSION_TRANSCRIPT_CLOCK_COLOR,
+          size: 20,
+        }),
+      ],
+    }),
+    ...transcript.context.flatMap((c) => contextParagraphs(c, opts.contextStills?.get(c) ?? [], width)),
+    new Paragraph({ text: "" }),
+    new Paragraph({ text: "Chronologie", heading: HeadingLevel.HEADING_2 }),
+  ];
+}
+
+/** Hinweiszeile im Kopf, wenn es Kontext gibt. */
+export function contextHeaderLine(count: number | undefined): string {
+  if (!count) return "";
+  return `Kontext: ${count} ${count === 1 ? "Stück" : "Stücke"} ohne Zeitmarke, vor der Chronologie.`;
+}
+
 export async function sessionTranscriptDocx(transcript: SessionTranscript, opts: DocxOptions): Promise<Buffer> {
   const h = transcript.header;
   const [y, m, d] = h.date.split("-");
@@ -94,6 +157,7 @@ export async function sessionTranscriptDocx(transcript: SessionTranscript, opts:
     ...Object.entries(h.extra)
       .filter(([, v]) => v.trim())
       .map(([k, v]) => `${k}: ${v}`),
+    contextHeaderLine(h.contextCount),
     "Zeitmarken = Stelle im Montagevideo; die Uhrzeit steht jeweils dahinter.",
   ].filter(Boolean);
   const width = opts.imageWidth ?? 420;
@@ -113,6 +177,7 @@ export async function sessionTranscriptDocx(transcript: SessionTranscript, opts:
               }),
           ),
           new Paragraph({ text: "" }),
+          ...contextSection(transcript, opts, width),
           ...transcript.entries.flatMap((e) => entryParagraphs(e, opts.stills.get(e) ?? [], width)),
         ],
       },

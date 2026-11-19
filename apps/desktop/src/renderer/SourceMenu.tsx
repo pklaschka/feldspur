@@ -21,6 +21,10 @@ export interface SourceActions {
   preview(sourceId: string): void;
   /** Mitschreiben für eine Audio- oder Videoquelle öffnen. */
   transcribe(sourceId: string): void;
+  /** Als Kontext führen (bewusst ohne Uhrzeit, vor der Chronologie) oder zurück in die Chronologie holen. */
+  setContext(sourceId: string, on: boolean): void;
+  /** Abtipp-Ansicht einer Tagebuchseite öffnen. */
+  openDiary(sourceId: string): void;
 }
 
 const Ctx = createContext<SourceActions | null>(null);
@@ -63,6 +67,51 @@ const rowLabel = (r: SourceRow) => (
 );
 
 /** „⋯“-Menü einer Quelle. */
+/** „Als Kontext führen“ bzw. „Zurück in die Chronologie“; bei Ton und Video ausgegraut, mit Grund. */
+function ContextItem({ row, view }: { row: SourceRow; view: SessionView }) {
+  const a = useActions();
+  if (row.status === "context")
+    return (
+      <DropdownMenu.Item className={item} onSelect={() => a.setContext(row.id, false)} data-testid="menu-context-off">
+        Zurück in die Chronologie
+      </DropdownMenu.Item>
+    );
+  if (AV.has(row.kind))
+    return (
+      <DropdownMenu.Item
+        className={item}
+        disabled
+        title="Ton und Video brauchen eine Uhrzeit, weil sie ins Montagevideo gehen."
+      >
+        Als Kontext führen
+      </DropdownMenu.Item>
+    );
+  const dated =
+    row.kind === "diary" &&
+    view.diary.some((e) => e.role === "timeline" && e.notedAt && e.regions.some((r) => r.sourceId === row.id));
+  // Die ganze Seite umzustellen würde datierte Einträge mitnehmen: dann einzelne Teile beim Abtippen.
+  if (dated)
+    return (
+      <DropdownMenu.Item className={item} onSelect={() => a.openDiary(row.id)}>
+        Teile der Seite als Kontext führen…
+      </DropdownMenu.Item>
+    );
+  const sub =
+    row.kind === "diary"
+      ? "Ganze Seite, ohne Uhrzeit"
+      : row.startMs !== null
+        ? "Verlässt die Zeitachse. Die Uhrzeit bleibt gemerkt."
+        : "Ohne Uhrzeit, steht vor der Chronologie.";
+  return (
+    <DropdownMenu.Item className={item} onSelect={() => a.setContext(row.id, true)} data-testid="menu-context-on">
+      <span className="grid">
+        {row.kind === "diary" ? "Seite als Kontext führen" : "Als Kontext führen"}
+        <span className="text-[0.8rem] text-muted">{sub}</span>
+      </span>
+    </DropdownMenu.Item>
+  );
+}
+
 export function SourceMenu({ row, view, className }: { row: SourceRow; view: SessionView; className?: string }) {
   const a = useActions();
   const [naming, setNaming] = useState(false);
@@ -160,6 +209,7 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
                   ))}
                 </Sub>
               ))}
+            {!row.partOf && <ContextItem row={row} view={view} />}
             <DropdownMenu.Separator className={sep} />
             {/* Ohne Nachfrage: danach erscheint ein Hinweis mit „Rückgängig“ (auch Strg/⌘+Z). */}
             <DropdownMenu.Item className={cx(item, "text-bad")} onSelect={() => a.remove(row.id)}>

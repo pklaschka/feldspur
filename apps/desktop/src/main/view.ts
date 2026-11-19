@@ -13,11 +13,12 @@ import {
   type Source,
   effectiveGainDb,
 } from "@feldspur/core";
-import { sessionEpisodes, speechLevels } from "@feldspur/media";
+import { contextPieces, sessionEpisodes, speechLevels } from "@feldspur/media";
 import { quickStates } from "./originals.ts";
 import type {
   AnchorRow,
   ConflictGroupRow,
+  ContextRow,
   DeviceRow,
   DiaryEntryRow,
   EpisodeRow,
@@ -116,13 +117,21 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     return s ? diaryPageLabel(s, region) : "?";
   };
   const files = quickStates(input.sources);
+  // Kontext (Issue #108): Einträge je Seite, um Seiten mit nur Kontext als „Kontext“ zu zeigen.
+  const entriesOfPage = new Map<Id, typeof input.diaryEntries>();
+  for (const e of input.diaryEntries)
+    for (const pid of new Set(e.regions.map((r) => pageOf(r.sourceId))))
+      entriesOfPage.set(pid, [...(entriesOfPage.get(pid) ?? []), e]);
+  const roleOf = (s: Source) => (s.partOf ? (sourceById.get(s.partOf)?.role ?? s.role) : s.role);
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
     const file = files.get(s.id)!;
     const page = pageOf(s.id);
-    const entry = input.diaryEntries.find(
-      (e) => e.regions.some((r) => pageOf(r.sourceId) === page) && e.notedAtMs !== null,
-    );
+    const onPage = entriesOfPage.get(page) ?? [];
+    const entry = onPage.find((e) => e.notedAtMs !== null && e.role !== "context");
+    const contextEntries = onPage.filter((e) => e.role === "context").length;
+    const isContext =
+      s.kind === "diary" ? contextEntries > 0 && contextEntries === onPage.length : roleOf(s) === "context";
     const dp = entry ? res.diary.get(entry.id) : undefined;
     const d = s.deviceId ? devices.get(s.deviceId) : undefined;
     const an = analysisBySource.get(s.id);
@@ -174,7 +183,10 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       endMs: p?.endMs ?? null,
       correctionMs: p?.deviceCorrectionMs ?? 0,
       diaryNote: s.kind === "diary" && entry?.notedAtMs != null ? formatClock(entry.notedAtMs).slice(0, 5) : null,
-      status: p?.status ?? "unplaced",
+      status: isContext ? "context" : (p?.status ?? "unplaced"),
+      role: s.kind === "diary" ? "timeline" : roleOf(s),
+      contextEntries,
+      entryCount: onPage.length,
       notes: p?.notes ?? [],
       conflict: p?.conflict ?? { state: "none", severity: null, worstMs: 0, count: 0, staleBecause: [] },
       basisReason: p?.basis.reason ?? "",
@@ -319,6 +331,11 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     .map(({ e }, i) => {
       const dp = res.diary.get(e.id);
       return {
+        role: e.role,
+        title: e.title,
+        contextMade: e.contextMade,
+        refs: e.contextRefs,
+        contextPosition: res.context.find((c) => c.entryId === e.id)?.position ?? null,
         id: e.id,
         number: i + 1,
         notedAt: e.notedAtMs === null ? null : formatClock(e.notedAtMs).slice(0, 5),
@@ -338,6 +355,55 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
         }),
       };
     });
+
+  const numberOf = new Map(diary.map((d) => [d.id, d.number]));
+  const context: ContextRow[] = contextPieces(input, res, persons).map((p) => {
+    const first = p.entry?.regions[0];
+    const thumbSrc = p.source ?? (first ? sourceById.get(first.sourceId) : undefined);
+    const wouldBasis = p.source
+      ? (input.evidence.find((e) => e.sourceId === p.source!.id && e.enabled)?.detail ?? "")
+      : p.entry?.notedAtMs != null
+        ? "Notierzeit"
+        : "";
+    return {
+      key: p.item.key,
+      position: p.item.position,
+      entryId: p.entry?.id ?? null,
+      sourceId: p.source?.id ?? null,
+      kind: p.kind,
+      title: p.title,
+      name: p.name,
+      find: p.find,
+      personName: p.person,
+      mode: p.mode,
+      text: p.text,
+      textEditable: !!p.entry,
+      made: p.made,
+      notedAt: p.notedAt,
+      wouldStartMs: p.item.wouldStartMs,
+      wouldStartBasis: wouldBasis,
+      canReturn: !p.entry || p.entry.regions.length > 0,
+      mentionedBy: p.item.mentionedBy.map((m) => {
+        const e = input.diaryEntries.find((x) => x.id === m.entryId);
+        const r = e?.regions[0];
+        return {
+          entryId: m.entryId,
+          number: numberOf.get(m.entryId) ?? 0,
+          notedAt: formatClock(m.notedAtMs).slice(0, 5),
+          pageId: r ? pageOf(r.sourceId) : null,
+        };
+      }),
+      thumb:
+        thumbSrc && (thumbSrc.kind === "photo" || thumbSrc.kind === "diary")
+          ? {
+              sourceId: thumbSrc.id,
+              region: first ? { page: first.page, x: first.x, y: first.y, w: first.w, h: first.h } : null,
+              previewable: /\.(jpe?g|png|webp|gif)$/i.test(thumbSrc.fileName),
+              isPdf: /\.pdf$/i.test(thumbSrc.fileName),
+            }
+          : null,
+    };
+  });
 
   const transcript: TranscriptRow[] = store.listTranscript(sessionId).map((l) => {
     const p = res.placements.get(l.sourceId);
@@ -367,6 +433,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     rows,
     anchors,
     diary,
+    context,
     diaryLookbackMin: input.session.diaryLookbackMs / 60_000,
     allDevices,
     devices: deviceRows,

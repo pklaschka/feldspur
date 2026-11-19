@@ -179,7 +179,7 @@ export function Collect({
               erkannt aus Kameramodell oder Dateinamen · Namen anklicken zum Ändern
             </span>
             <span className="flex-1" />
-            <StatusLegend />
+            <StatusLegend context={view.rows.some((r) => r.status === "context")} />
           </div>
           <div className="columns-[300px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
             {view.allDevices.map((d) => (
@@ -448,9 +448,11 @@ function SourceList({
               {nested && <span className="block text-[0.8rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
             </span>
             <span className="font-mono text-[0.82rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
-              {r.startMs === null
-                ? "–"
-                : r.endMs !== null && r.endMs !== r.startMs
+              {r.status === "context"
+                ? "Kontext"
+                : r.startMs === null
+                  ? "–"
+                  : r.endMs !== null && r.endMs !== r.startMs
                   ? `${hm(r.startMs)}–${hm(r.endMs)}`
                   : lage(r.startMs, null)}
             </span>

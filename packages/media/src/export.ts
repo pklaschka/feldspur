@@ -14,6 +14,7 @@ import {
   buildSessionTranscript,
   type ImageRef,
   type SessionTranscript,
+  type SessionTranscriptContext,
   type SessionTranscriptEntry,
 } from "./session-transcript.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
@@ -91,6 +92,8 @@ export function documentVariables(transcript: SessionTranscript, documentName: s
     ["Geräte", devices.join(", ")],
     ["Referenzuhr", h.reference ?? ""],
     ["Quellen", h.sources.length],
+    // Nur mit Kontext: So bleiben Ausgaben ohne Kontext Zeichen für Zeichen wie vor Issue #108.
+    ...(h.contextCount ? [["Kontextstücke", h.contextCount] as [string, Cell]] : []),
     ["Beginn", first ? formatClock(first.fromMs) : ""],
     ["Ende", last ? formatClock(last.toMs) : ""],
     ["Videolänge (Min.)", Math.round(transcript.plan.durationMs / 6000) / 10],
@@ -140,6 +143,42 @@ export function protocolCsv(
     "setzt fort",
     "Lautstärke im Montagevideo",
   ];
+  // Kontext (Issue #108): eigene Spalten nur, wenn es Kontext gibt.
+  const withContext = transcript.context.length > 0;
+  const pieces = new Map(transcript.context.map((c) => [c.key, c]));
+  const entriesOf = (s: Source) => {
+    const parts = new Set([s.id, ...input.sources.filter((x) => x.partOf === s.id).map((x) => x.id)]);
+    return input.diaryEntries.filter((e) => e.regions.some((r) => parts.has(r.sourceId)));
+  };
+  const roleOf = (s: Source): string => {
+    const main = s.partOf ? input.sources.find((x) => x.id === s.partOf) : s;
+    if (!main) return "";
+    if (main.kind !== "diary") return main.role === "context" ? "Kontext" : "Chronologie";
+    const roles = new Set(entriesOf(main).map((e) => e.role));
+    if (roles.has("context") && roles.has("timeline")) return "Chronologie und Kontext";
+    return roles.has("context") ? "Kontext" : "Chronologie";
+  };
+  const contextOf = (s: Source): { names: string; made: string } => {
+    if (s.partOf) return { names: "", made: "" };
+    const keys =
+      s.kind === "diary" ? entriesOf(s).map((e) => `entry:${e.id}`) : [`source:${s.id}`];
+    const found = keys.flatMap((k) => (pieces.has(k) ? [pieces.get(k)!] : []));
+    const made = [
+      ...new Set(
+        found.map((c) =>
+          c.key.startsWith("source:")
+            ? s.contextMade
+            : (input.diaryEntries.find((e) => `entry:${e.id}` === c.key)?.contextMade ?? ""),
+        ),
+      ),
+    ].filter(Boolean);
+    return {
+      names: found.map((c) => `${c.position}: ${c.head.replace(/^Kontext · /, "")}`).join("; "),
+      made: made.join("; "),
+    };
+  };
+  const contextResting = new Map(transcript.resolved.context.map((c) => [c.sourceId ?? "", c.wouldStartMs]));
+  if (withContext) head.push("Rolle", "Kontext", "Kontext entstanden");
   const label = (id: Id | null) => (id ? (input.sources.find((s) => s.id === id)?.label ?? "") : "");
   const rows = input.sources.map((s) => {
     const p = resolved.placements.get(s.id);
@@ -156,12 +195,16 @@ export function protocolCsv(
       p ? formatClock(p.startMs) : "",
       p && p.endMs !== p.startMs ? formatClock(p.endMs) : "",
       p ? `± ${formatDuration(p.uncertaintyMs)}` : "",
-      p?.basis.detail ?? "keine Zeit",
+      p?.basis.detail ??
+        (withContext && roleOf(s) === "Kontext"
+          ? `Kontext, bewusst ohne Uhrzeit${contextResting.get(s.id) != null ? ` (Lage ${formatClock(contextResting.get(s.id)!)} ruht)` : ""}`
+          : "keine Zeit"),
       p && p.deviceCorrectionMs ? formatDuration(p.deviceCorrectionMs, { sign: true }) : "",
       at === null ? "" : formatDuration(at),
       label(s.partOf),
       label(s.follows),
       s.kind === "audio" || s.kind === "video" ? levelText(levels.get(s.id)) : "",
+      ...(withContext ? [roleOf(s), contextOf(s).names, contextOf(s).made] : []),
     ];
   });
   return excelCsv([head, ...rows]);
@@ -199,7 +242,12 @@ export async function exportSession(
   const { signal } = opts;
   signal?.throwIfAborted();
   const transcript = buildSessionTranscript(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
-  if (transcript.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
+  if (transcript.plan.durationMs <= 0)
+    throw new Error(
+      transcript.context.length
+        ? "Nichts auszugeben: Keine Quelle liegt auf der Zeitachse. Kontext allein ergibt kein Einsatztranskript."
+        : "Nichts zu exportieren: keine Quelle hat eine Uhrzeit",
+    );
   const base = baseName(transcript);
   try {
     await mkdir(outDir, { recursive: true });
@@ -234,6 +282,16 @@ export async function exportSession(
       }
       stills.set(e, list);
     }
+    const contextStills = new Map<SessionTranscriptContext, (Still | null)[]>();
+    for (const c of transcript.context) {
+      signal?.throwIfAborted();
+      const list: (Still | null)[] = [];
+      for (const ref of c.images) {
+        const src = sources.get(ref.sourceId);
+        list.push(src ? await stillOf(src, ref, work, `still-${++n}`, opts) : null);
+      }
+      contextStills.set(c, list);
+    }
 
     const files: string[] = [];
     const media = `${base}.mp4`;
@@ -263,7 +321,7 @@ export async function exportSession(
 
     signal?.throwIfAborted();
     opts.onProgress?.("Einsatztranskript", 0, 1);
-    const docx = await sessionTranscriptDocx(transcript, { mediaFileName: media, stills });
+    const docx = await sessionTranscriptDocx(transcript, { mediaFileName: media, stills, contextStills });
     await writeFile(outPath(outDir, `${base}.docx`), docx);
     files.push(`${base}.docx`);
     await writeFile(

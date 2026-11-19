@@ -1,11 +1,20 @@
 /** Quellen und Geräte pflegen: entfernen, umhängen, Geräte zusammenlegen. */
-import { effectiveLocal, type Device, type ProjectStore, type Source } from "@feldspur/core";
+import { contextKey, effectiveLocal, type Device, type ProjectStore, type Source } from "@feldspur/core";
+import { dropRefsTo } from "./context.ts";
 import { deviceGuess, evidenceFromExif, evidenceFromFilename, type ImageExif } from "@feldspur/media";
 
 /** Quelle aus dem Projekt nehmen; die Originaldatei bleibt, wo sie ist. Gibt die Einsatz-Id zurück. */
 export function removeSource(s: ProjectStore, sourceId: string): string {
   const src = s.getSource(sourceId);
-  s.deleteSource(sourceId);
+  s.transaction(() => {
+    // Einträge, die nur auf dieser Seite liegen, gehen mit ihr; Verweise auf sie und auf die Quelle entfallen.
+    const gone = s
+      .listDiaryEntries(src.sessionId)
+      .filter((e) => e.regions.length && e.regions.every((r) => r.sourceId === sourceId))
+      .map((e) => contextKey.entry(e.id));
+    s.deleteSource(sourceId);
+    dropRefsTo(s, src.sessionId, [contextKey.source(sourceId), ...gone]);
+  });
   return src.sessionId;
 }
 

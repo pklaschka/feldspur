@@ -216,7 +216,13 @@ export function PageCanvas({
               // Verschoben wird nur am Nummernschild oben links.
               className={cx(
                 "pointer-events-none absolute rounded-sm border-2",
-                active ? "border-accent bg-accent/15" : "border-k-diary bg-k-diary/10",
+                // Kontext: gestrichelt und neutral, denn er hat bewusst keine Uhrzeit.
+                e.role === "context" && "border-dashed",
+                active
+                  ? "border-accent bg-accent/15"
+                  : e.role === "context"
+                    ? "border-ink-2 bg-ink-2/8"
+                    : "border-k-diary bg-k-diary/10",
               )}
             >
               <button
@@ -226,15 +232,15 @@ export function PageCanvas({
                 onClick={() => onSelect(e.id)}
                 onKeyDown={(ev) => active && onRegionKey(ev, key, r)}
                 onKeyUp={(ev) => active && onRegionKeyUp(ev, key, e.id, i, r)}
-                aria-label={`Eintrag ${e.number}`}
+                aria-label={`Eintrag ${e.number}${e.role === "context" ? ", Kontext" : ""}`}
                 title="Am Nummernschild ziehen verschiebt den Rahmen, die Griffe an Kanten und Ecken ändern die Größe. Gewählt: Pfeiltasten verschieben, mit Alt ändern sie die Größe, mit Umschalt in großen Schritten."
                 className={cx(
                   "pointer-events-auto absolute -top-px -left-px cursor-move rounded-br px-1.5 text-[0.8rem] font-semibold text-white",
-                  active ? "bg-accent" : "bg-k-diary",
+                  active ? "bg-accent" : e.role === "context" ? "bg-ink-2" : "bg-k-diary",
                 )}
               >
                 {e.number}
-                {e.notedAt ? ` · ${e.notedAt}` : ""}
+                {e.role === "context" ? " · K" : e.notedAt ? ` · ${e.notedAt}` : ""}
               </button>
               {active &&
                 HANDLES.map((h) => (

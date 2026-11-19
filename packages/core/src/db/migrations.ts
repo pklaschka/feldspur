@@ -200,4 +200,15 @@ export const MIGRATIONS: readonly string[] = [
     fingerprint TEXT NOT NULL DEFAULT '{}'
   );
   `,
+  // 15: Kontext: Quellen und Tagebucheinträge, die bewusst ohne Uhrzeit vor der Chronologie stehen (Issue #108)
+  `
+  ALTER TABLE sources ADD COLUMN role TEXT NOT NULL DEFAULT 'timeline';
+  ALTER TABLE sources ADD COLUMN context_order INTEGER;
+  ALTER TABLE sources ADD COLUMN context_made TEXT NOT NULL DEFAULT '';
+  ALTER TABLE diary_entries ADD COLUMN role TEXT NOT NULL DEFAULT 'timeline';
+  ALTER TABLE diary_entries ADD COLUMN context_order INTEGER;
+  ALTER TABLE diary_entries ADD COLUMN title TEXT NOT NULL DEFAULT '';
+  ALTER TABLE diary_entries ADD COLUMN context_made TEXT NOT NULL DEFAULT '';
+  ALTER TABLE diary_entries ADD COLUMN context_refs TEXT NOT NULL DEFAULT '[]';
+  `,
 ];

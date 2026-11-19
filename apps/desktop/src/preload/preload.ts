@@ -72,6 +72,12 @@ const api: FeldspurApi = {
   setDiaryRegionPage: (entryId, index, pageNo) => ipcRenderer.invoke(IPC.setDiaryRegionPage, entryId, index, pageNo),
   deleteDiaryEntry: (entryId) => ipcRenderer.invoke(IPC.deleteDiaryEntry, entryId),
   patchDiaryEntry: (entryId, patch) => ipcRenderer.invoke(IPC.patchDiaryEntry, entryId, patch),
+  setContext: (key, on) => ipcRenderer.invoke(IPC.setContext, key, on),
+  setContextDetails: (key, details) => ipcRenderer.invoke(IPC.setContextDetails, key, details),
+  moveContext: (key, position) => ipcRenderer.invoke(IPC.moveContext, key, position),
+  sortContextByPage: (sessionId) => ipcRenderer.invoke(IPC.sortContextByPage, sessionId),
+  setEntryRefs: (entryId, refs) => ipcRenderer.invoke(IPC.setEntryRefs, entryId, refs),
+  createContextText: (sessionId, input) => ipcRenderer.invoke(IPC.createContextText, sessionId, input),
   onProgress: (cb) => {
     const listener = (_e: unknown, p: { done: number; total: number; fileName: string }) => cb(p);
     ipcRenderer.on(IPC.progress, listener);

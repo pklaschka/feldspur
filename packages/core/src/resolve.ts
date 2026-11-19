@@ -148,7 +148,33 @@ export interface ResolveInput {
   diaryEntries: DiaryEntry[];
 }
 
+/**
+ * Ein Kontextstück: eine Quelle oder ein Tagebucheintrag in der Rolle „Kontext“. Es hat keine Lage, steht aber in
+ * einer festen Reihenfolge vor der Chronologie. Berechnet, nie gespeichert (gespeichert ist nur die Wunschstelle).
+ */
+export interface ContextItem {
+  /** „entry:<id>“ oder „source:<id>“, stabil; so verweisen Tagebucheinträge darauf. */
+  key: string;
+  entryId?: Id;
+  sourceId?: Id;
+  /** 1 … n in der Reihenfolge des Einsatztranskripts. */
+  position: number;
+  /** Notierzeit eines Kontext-Eintrags als Angabe; sie platziert nichts. */
+  notedAtMs: LocalMs | null;
+  /** Wo das Stück läge, käme es zurück in die Chronologie; null = dann „ohne Uhrzeit“. */
+  wouldStartMs: LocalMs | null;
+  /** Datierte Einträge, die auf das Stück verweisen, nach Notierzeit. */
+  mentionedBy: { entryId: Id; notedAtMs: LocalMs }[];
+}
+
+export const contextKey = {
+  entry: (id: Id) => `entry:${id}`,
+  source: (id: Id) => `source:${id}`,
+};
+
 export interface ResolveResult {
+  /** Kontextstücke in der Reihenfolge der Ausgabe (leer, wenn es keine gibt). */
+  context: ContextItem[];
   placements: Map<Id, Placement>;
   deviceClocks: Map<Id, DeviceClock>;
   diary: Map<Id, DiaryPlacement>;
@@ -434,7 +460,10 @@ function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, pl
   const pageOf = new Map(input.sources.map((x) => [x.id, x.partOf ?? x.id]));
   for (const src of input.sources) {
     if (src.kind !== "diary" || src.partOf) continue;
-    const entries = input.diaryEntries.filter((e) => e.regions.some((r) => pageOf.get(r.sourceId) === src.id));
+    // Kontext-Einträge legen eine Seite nicht fest und fehlen auch nicht: Sie gehören nicht in die Chronologie.
+    const entries = input.diaryEntries.filter(
+      (e) => e.role !== "context" && e.regions.some((r) => pageOf.get(r.sourceId) === src.id),
+    );
     const placed = entries.map((e) => diary.get(e.id)).filter((p): p is DiaryPlacement => !!p);
     if (placed.length === 0) continue; // bleibt „zuordnen“
     const missing = entries.length - placed.length;
@@ -469,7 +498,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
   // Tagebucheinträge hängen nur an der Notierzeit, nicht an Geräten.
   const diary = new Map<Id, DiaryPlacement>();
   for (const e of input.diaryEntries) {
-    if (e.notedAtMs === null) continue;
+    if (e.notedAtMs === null || e.role === "context") continue;
     const back = e.lookbackMs ?? session.diaryLookbackMs;
     diary.set(e.id, { entryId: e.id, notedAtMs: e.notedAtMs, fromMs: e.notedAtMs - back, toMs: e.notedAtMs });
   }
@@ -705,7 +734,74 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     });
   }
 
-  return { placements, deviceClocks: clocks, diary, derivedEvidence: derived, anchorConflicts };
+  // Kontext-Quellen verlassen die Zeitachse. Ihre Lage bleibt nur als Rückweg gemerkt; Teile folgen der Hauptquelle.
+  const wouldStart = new Map<Id, LocalMs>();
+  for (const src of input.sources) {
+    const main = src.partOf ? sourceById.get(src.partOf) : src;
+    if (main?.role !== "context" || main.kind === "diary") continue;
+    const p = placements.get(src.id);
+    if (p && !src.partOf) wouldStart.set(src.id, p.startMs);
+    placements.delete(src.id);
+  }
+
+  return {
+    context: contextItems(input, diary, wouldStart),
+    placements,
+    deviceClocks: clocks,
+    diary,
+    derivedEvidence: derived,
+    anchorConflicts,
+  };
+}
+
+const LAST = "\uffff";
+const byCode = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+/** Sortierschlüssel nach Fundstelle: Kurzzeichen der Seite, weiteres Bild, PDF-Seite, Lage auf der Seite. */
+function findKey(input: ResolveInput, item: { entryId?: Id; sourceId?: Id }): string {
+  const byId = new Map(input.sources.map((s) => [s.id, s]));
+  if (item.sourceId) return byId.get(item.sourceId)?.label ?? LAST;
+  const e = input.diaryEntries.find((x) => x.id === item.entryId);
+  const first = e?.regions[0];
+  if (!first) return LAST; // Text ohne Scan: nach allem mit Fundstelle
+  const src = byId.get(first.sourceId);
+  const main = src?.partOf ? byId.get(src.partOf) : src;
+  return `${main?.label ?? LAST}:${src?.partOf ? src.label : ""}:${String(first.page).padStart(4, "0")}:${first.y.toFixed(4)}:${first.x.toFixed(4)}`;
+}
+
+/** Kontextstücke des Einsatzes in Ausgabereihenfolge: gewünschte Stelle, dann Fundstelle. */
+export function contextItems(
+  input: ResolveInput,
+  diary: Map<Id, DiaryPlacement>,
+  wouldStart: Map<Id, LocalMs> = new Map(),
+): ContextItem[] {
+  type Raw = Omit<ContextItem, "position" | "mentionedBy"> & { order: number | null; find: string };
+  const raw: Raw[] = [];
+  for (const s of input.sources) {
+    if (s.role !== "context" || s.partOf || s.kind === "diary") continue;
+    const it = { key: contextKey.source(s.id), sourceId: s.id };
+    raw.push({ ...it, notedAtMs: null, wouldStartMs: wouldStart.get(s.id) ?? null, order: s.contextOrder, find: findKey(input, it) });
+  }
+  for (const e of input.diaryEntries) {
+    if (e.role !== "context") continue;
+    const it = { key: contextKey.entry(e.id), entryId: e.id };
+    raw.push({ ...it, notedAtMs: e.notedAtMs, wouldStartMs: e.notedAtMs, order: e.contextOrder, find: findKey(input, it) });
+  }
+  raw.sort(
+    (a, b) =>
+      (a.order ?? Infinity) - (b.order ?? Infinity) || byCode(a.find, b.find) || byCode(a.key, b.key),
+  );
+  const mentions = new Map<string, { entryId: Id; notedAtMs: LocalMs }[]>();
+  for (const e of input.diaryEntries) {
+    const dp = diary.get(e.id);
+    if (!dp) continue;
+    for (const k of new Set(e.contextRefs)) mentions.set(k, [...(mentions.get(k) ?? []), { entryId: e.id, notedAtMs: dp.notedAtMs }]);
+  }
+  return raw.map(({ order: _o, find: _f, ...r }, i) => ({
+    ...r,
+    position: i + 1,
+    mentionedBy: (mentions.get(r.key) ?? []).toSorted((a, b) => a.notedAtMs - b.notedAtMs),
+  }));
 }
 
 function anchorLabel(kind: SyncAnchor["kind"]): string {

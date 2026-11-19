@@ -1,9 +1,9 @@
 /** Ein Eintrag im Tagebuch: Notierzeit, Kurzform, Volltext und Seitenzahl. */
-import { useEffect, useRef } from "react";
-import type { DiaryEntryRow, DiaryMode, DiaryPatch } from "../../shared/api.ts";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import type { ContextDetails, ContextRow, DiaryEntryRow, DiaryMode, DiaryPatch } from "../../shared/api.ts";
 import { hm } from "../format.ts";
 import { ClockField } from "../ClockField.tsx";
-import { Button, Choice, cx } from "../ui.tsx";
+import { Button, Choice, ContextMark, cx } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import { isEnter } from "../keys.js";
 
@@ -66,8 +66,17 @@ export function PageField({
   );
 }
 
+const ROLE_OPTIONS: { value: "timeline" | "context"; label: string; title: string }[] = [
+  { value: "timeline", label: "Chronologie", title: "Mit Notierzeit, steht an ihrer Stelle im Ablauf" },
+  { value: "context", label: "Kontext", title: "Bewusst ohne Uhrzeit, steht vor der Chronologie" },
+];
+
 export function EntryCard({
   entry,
+  context,
+  onRole,
+  onDetails,
+  onRefs,
   isHere,
   defaultLookback,
   suggestPage,
@@ -82,6 +91,12 @@ export function EntryCard({
   onGoto,
 }: {
   entry: DiaryEntryRow;
+  /** Alle Kontextstücke des Einsatzes (für Verweise und für Titel und Stelle dieses Eintrags). */
+  context: ContextRow[];
+  /** „Gehört zu“: Kontext (true) oder Chronologie. */
+  onRole: (context: boolean) => void;
+  onDetails: (d: ContextDetails) => void;
+  onRefs: (refs: string[]) => void;
   isHere: (r: { sourceId: string; page?: number }) => boolean;
   defaultLookback: number;
   suggestPage: (index: number) => number | null;
@@ -100,6 +115,17 @@ export function EntryCard({
   const [back, setBack] = useDraft(entry.lookbackMin === null ? "" : String(entry.lookbackMin));
   const [short, setShort] = useDraft(entry.shortText);
   const [full, setFull] = useDraft(entry.fullText);
+  const [title, setTitle] = useDraft(entry.title);
+  const [made, setMade] = useDraft(entry.contextMade);
+  const isContext = entry.role === "context";
+  const mine = context.find((c) => c.entryId === entry.id);
+  /** Taste K im leeren Zeitfeld: den Eintrag als Kontext führen. */
+  const onTimeKey = (e: KeyboardEvent) => {
+    if (e.key.toLowerCase() !== "k" || e.ctrlKey || e.metaKey || e.altKey || noted.trim() !== "") return;
+    e.preventDefault();
+    e.stopPropagation();
+    onRole(true);
+  };
   const card = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (active) card.current?.scrollIntoView({ block: "nearest" });
@@ -146,33 +172,81 @@ export function EntryCard({
           </span>
         )}
       </div>
-      <div className="flex flex-wrap items-end gap-3 text-[0.9rem]">
-        <ClockField
-          label="Notiert um"
-          ariaLabel={`Notierzeit ${label}`}
-          value={noted}
-          autoFocus={fresh}
-          onChange={setNoted}
-          onCommit={(v) => v !== (entry.notedAt ?? "") && onPatch({ notedAt: v })}
+      <div className="flex flex-wrap items-center gap-2 text-[0.9rem]">
+        <span className="text-muted" id={`role-${entry.id}`}>
+          Gehört zu
+        </span>
+        <Choice
+          label={`Gehört zu, ${label}`}
+          value={entry.role}
+          onChange={(v) => onRole(v === "context")}
+          options={ROLE_OPTIONS}
         />
-        <label className="grid gap-0.5">
-          <span className="text-muted">bezieht sich auf</span>
-          <span className="flex items-center gap-1">
-            <input
-              className="w-14 text-right font-mono"
-              placeholder={String(defaultLookback)}
-              value={back}
-              aria-label={`Bezugszeitraum ${label}`}
-              onChange={(e) => setBack(e.target.value)}
-              onBlur={() => {
-                const v = back.trim() === "" ? null : Number(back.replace(",", "."));
-                if (v !== entry.lookbackMin && (v === null || Number.isFinite(v))) onPatch({ lookbackMin: v });
-              }}
-              onKeyDown={(e) => isEnter(e) && e.currentTarget.blur()}
-            />
-            <span className="text-muted">Min. davor</span>
+        {isContext && mine && (
+          <span className="text-[0.85rem] text-muted">
+            Stelle {mine.position} von {context.length} im Kontext
           </span>
-        </label>
+        )}
+      </div>
+      <div className="flex flex-wrap items-end gap-3 text-[0.9rem]">
+        {isContext ? (
+          <>
+            <label className="grid min-w-48 flex-1 gap-0.5">
+              <span className="text-muted">Titel</span>
+              <input
+                value={title}
+                autoFocus={fresh}
+                placeholder={mine?.find ?? "z. B. Karte 2: Standplan"}
+                aria-label={`Titel ${label}`}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => title.trim() !== entry.title && onDetails({ title })}
+                onKeyDown={(e) => isEnter(e) && e.currentTarget.blur()}
+              />
+            </label>
+            <label className="grid min-w-40 flex-1 gap-0.5">
+              <span className="text-muted">Entstanden (optional)</span>
+              <input
+                value={made}
+                placeholder="z. B. vor dem Einsatz"
+                aria-label={`Entstanden ${label}`}
+                onChange={(e) => setMade(e.target.value)}
+                onBlur={() => made.trim() !== entry.contextMade && onDetails({ made })}
+                onKeyDown={(e) => isEnter(e) && e.currentTarget.blur()}
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <div onKeyDownCapture={onTimeKey}>
+              <ClockField
+                label="Notiert um"
+                ariaLabel={`Notierzeit ${label}`}
+                value={noted}
+                autoFocus={fresh}
+                onChange={setNoted}
+                onCommit={(v) => v !== (entry.notedAt ?? "") && onPatch({ notedAt: v })}
+              />
+            </div>
+            <label className="grid gap-0.5">
+              <span className="text-muted">bezieht sich auf</span>
+              <span className="flex items-center gap-1">
+                <input
+                  className="w-14 text-right font-mono"
+                  placeholder={String(defaultLookback)}
+                  value={back}
+                  aria-label={`Bezugszeitraum ${label}`}
+                  onChange={(e) => setBack(e.target.value)}
+                  onBlur={() => {
+                    const v = back.trim() === "" ? null : Number(back.replace(",", "."));
+                    if (v !== entry.lookbackMin && (v === null || Number.isFinite(v))) onPatch({ lookbackMin: v });
+                  }}
+                  onKeyDown={(e) => isEnter(e) && e.currentTarget.blur()}
+                />
+                <span className="text-muted">Min. davor</span>
+              </span>
+            </label>
+          </>
+        )}
         {entry.regions.map((r, i) => (
           <PageField
             key={i}
@@ -185,6 +259,9 @@ export function EntryCard({
           />
         ))}
       </div>
+      {!isContext && !noted.trim() && (
+        <p className="-mt-1 text-[0.82rem] text-muted">Keine Uhrzeit? Taste K führt den Eintrag als Kontext.</p>
+      )}
       <Choice
         label={`Form ${label}`}
         value={entry.mode}
@@ -211,6 +288,7 @@ export function EntryCard({
           onBlur={() => full !== entry.fullText && onPatch({ fullText: full })}
         />
       )}
+      <Refs entry={entry} context={context} onRefs={onRefs} />
       <div className="flex gap-3 text-[0.85rem]">
         <Button variant="link" onClick={onContinue}>
           auf anderer Seite fortsetzen
@@ -220,6 +298,105 @@ export function EntryCard({
           Eintrag löschen
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** „Verweist auf“: Abzeichen je Kontextstück mit ×, dazu „+ Kontext“ mit Suche. */
+function Refs({
+  entry,
+  context,
+  onRefs,
+}: {
+  entry: DiaryEntryRow;
+  context: ContextRow[];
+  onRefs: (refs: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const byKey = new Map(context.map((c) => [c.key, c]));
+  const own = `entry:${entry.id}`;
+  const choices = context.filter(
+    (c) =>
+      c.key !== own &&
+      !entry.refs.includes(c.key) &&
+      `${c.name} ${c.find}`.toLowerCase().includes(q.trim().toLowerCase()),
+  );
+  const add = (key: string) => {
+    onRefs([...entry.refs, key]);
+    setOpen(false);
+    setQ("");
+  };
+  if (!entry.refs.length && !open && !context.some((c) => c.key !== own)) return null;
+  return (
+    <div className="text-[0.86rem]" data-testid="entry-refs">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-muted">Verweist auf:</span>
+        {entry.refs.map((k) => {
+          const c = byKey.get(k);
+          return (
+            <span
+              key={k}
+              className={cx(
+                "inline-flex items-center gap-1 rounded-full border py-px pr-1 pl-1.5",
+                c ? "border-line-2" : "border-dashed border-line-2 text-muted",
+              )}
+              title={c ? c.find : "Verweis ruht: Das Stück ist kein Kontext mehr."}
+            >
+              <ContextMark decorative />
+              {c ? c.name : "ruht"}
+              <button
+                type="button"
+                className="cursor-pointer px-0.5 text-muted hover:text-bad"
+                aria-label={`Verweis auf ${c?.name ?? "ruhendes Stück"} entfernen`}
+                onClick={() => onRefs(entry.refs.filter((x) => x !== k))}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+        <Button size="sm" variant="ghost" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          + Kontext
+        </Button>
+      </div>
+      {open && (
+        <div className="mt-1.5 rounded-lg border border-line bg-panel p-2 shadow-sm">
+          <input
+            autoFocus
+            className="w-full"
+            placeholder="Kontext suchen …"
+            aria-label="Kontext suchen"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+              if (isEnter(e) && choices[0]) add(choices[0].key);
+            }}
+          />
+          <ul className="mt-1.5 grid max-h-48 gap-0.5 overflow-y-auto">
+            {choices.map((c) => (
+              <li key={c.key}>
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-baseline gap-2 rounded px-1.5 py-1 text-left hover:bg-accent-soft"
+                  onClick={() => add(c.key)}
+                >
+                  <b className="font-mono text-ink-2">{c.position}</b>
+                  <span className="truncate">{c.name}</span>
+                  <span className="truncate text-[0.8rem] text-muted">{c.find}</span>
+                </button>
+              </li>
+            ))}
+            {!choices.length && (
+              <li className="px-1.5 py-1 text-muted">
+                {context.length ? "Nichts gefunden." : "Noch kein Kontext in diesem Einsatz."}
+              </li>
+            )}
+          </ul>
+          <p className="mt-1 border-t border-line pt-1 text-[0.8rem] text-muted">Fehlt etwas? Erst als Kontext führen.</p>
+        </div>
+      )}
     </div>
   );
 }

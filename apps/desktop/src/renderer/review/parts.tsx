@@ -136,7 +136,8 @@ export function Tray({
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h3 className="text-[0.95rem] font-semibold text-bad">Ohne Uhrzeit ({rows.length})</h3>
         <span className="text-[0.85rem] text-muted">
-          Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein.
+          Diese Quellen liegen noch nicht auf der Achse. Wähle eine aus und trage rechts eine Zeit ein. Gehört etwas
+          nicht in die Chronologie, führe es als Kontext.
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
