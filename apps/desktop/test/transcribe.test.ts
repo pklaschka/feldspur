@@ -40,6 +40,7 @@ describe("Mitschreiben: Hilfen", () => {
       ctrlKey: false,
       metaKey: false,
       altKey: false,
+      repeat: false,
       isComposing: false,
       defaultPrevented: false,
       ...mods,
