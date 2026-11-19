@@ -22,6 +22,7 @@ import { Transcriber } from "../Transcriber.tsx";
 import { Sync } from "../Sync.tsx";
 import { Button, cx, ErrorBanner } from "../ui.tsx";
 import { HistoryGlyph, UndoToast, useHistory } from "./history.tsx";
+import { StrayDropHint } from "./strayDrop.tsx";
 import type { Guard, Step } from "../App.tsx";
 
 const api = window.feldspur;
@@ -29,10 +30,13 @@ const api = window.feldspur;
 export function SessionPane({
   sessionId,
   guard,
+  strayDrop,
   onProject,
 }: {
   sessionId: string;
   guard: Guard;
+  /** Zähler aus `useStrayDrop`: Dateien wurden neben „Einsammeln“ gezogen. */
+  strayDrop: number;
   onProject: (p: ProjectInfo) => void;
 }) {
   const [view, setView] = useState<SessionView | null>(null);
@@ -409,6 +413,16 @@ export function SessionPane({
           onReview={() => setStep("review")}
           onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
+        {step === "collect" ? (
+          <StrayDropHint n={strayDrop} text="Dateien im gestrichelten Feld von „Einsammeln“ ablegen." />
+        ) : (
+          <StrayDropHint
+            n={strayDrop}
+            text="Dateien kommen über „Einsammeln“ in den Einsatz."
+            action="Einsammeln öffnen"
+            onAction={() => setStep("collect")}
+          />
+        )}
       </SourceActionsProvider>
     </PlaybackProvider>
   );

@@ -10,7 +10,8 @@ jede Datei
   Videos, BWF bei Rekorder-WAVs) und Uhrzeiten im Dateinamen.
 
 Begleitdateien, die Kameras neben die Aufnahmen legen, überspringt Feldspur. Dateien, die schon im Einsatz sind,
-werden nicht doppelt übernommen.
+werden nicht doppelt übernommen. Landen Dateien anderswo im Fenster, übernimmt Feldspur nichts und bietet an,
+**Einsammeln** zu öffnen.
 
 ### Große Ordner
 
