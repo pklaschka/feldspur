@@ -395,7 +395,7 @@
         )
       },
     )
-    v(3 * E, weak: true)
+    v(E, weak: true)
     // ---------------------------------------------------------------- Zeitachse (nur Maus)
     block(inset: (x: 2 * E + 1mm), {
       set text(fill: grau)
@@ -406,7 +406,7 @@
       [*Mausrad* zoomt an der Maus #h(1.5mm)·#h(1.5mm) *⇧ + Mausrad* verschiebt die Achse #h(1.5mm)·#h(1.5mm)
         *Rad gedrückt ziehen* verschiebt auch]
     })
-    v(1.5 * E, weak: true)
+    v(E, weak: true)
     // ---------------------------------------------------------------- Durchsehen (drei Kürzel)
     block(inset: (x: 2 * E + 1mm), {
       set text(fill: grau)
@@ -416,6 +416,17 @@
       h(2 * E)
       [*N* nächste Stelle #h(1.5mm)·#h(1.5mm) *⇧ + N* vorige Stelle #h(1.5mm)·#h(1.5mm)
         *Strg + Enter* Lage passt, weiter]
+    })
+    v(E, weak: true)
+    // ---------------------------------------------------------------- Tagebuch-Rahmen nachbessern
+    block(inset: (x: 2 * E + 1mm), {
+      set text(fill: grau)
+      icon("tagebuch", farbe: umbra, groesse: 5mm, staerke: 1.4)
+      h(1.2 * E)
+      text(size: 11pt, weight: "bold", style: "italic", fill: umbra)[Rahmen]
+      h(2 * E)
+      [gewählt: *Pfeile* verschieben #h(1.5mm)·#h(1.5mm) *Alt + Pfeile* Größe #h(1.5mm)·#h(1.5mm)
+        *⇧* große Schritte #h(1.5mm)·#h(1.5mm) Maus: Rahmen oder Griffe ziehen]
     })
   },
   // ---------------------------------------------------------------- rechts

@@ -295,6 +295,40 @@ try {
   }
   await editor.getByText("10:26–10:41").waitFor();
   await shot("-tagebuch");
+  // Rahmen nachbessern, ohne neuen Eintrag: Eintrag 3 ist gewählt; an der Ecke kleiner ziehen, dann verschieben und
+  // mit den Pfeiltasten nachrücken.
+  const frame = editor.getByRole("group", { name: "Rahmen Eintrag 3" });
+  const box3 = async () => (await frame.boundingBox())!;
+  const until = (test: (b: { x: number; y: number; width: number; height: number }) => boolean, what: string) =>
+    (async () => {
+      for (let i = 0; i < 50; i++) {
+        if (test(await box3())) return;
+        await page.waitForTimeout(100);
+      }
+      throw new Error(`Rahmen: ${what}`);
+    })();
+  const start = await box3();
+  const corner = (await frame.getByTestId("diary-handle-se").boundingBox())!;
+  await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(corner.x - 60, corner.y - 30, { steps: 6 });
+  await page.mouse.up();
+  await until((b) => b.width < start.width - 40 && Math.abs(b.x - start.x) < 2, "Ecke ziehen");
+  const resized = await box3();
+  await page.mouse.move(resized.x + resized.width / 2, resized.y + resized.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(resized.x + resized.width / 2 + 30, resized.y + resized.height / 2 + 10, { steps: 6 });
+  await page.mouse.up();
+  await until((b) => b.x > resized.x + 20 && Math.abs(b.width - resized.width) < 2, "verschieben");
+  const moved = await box3();
+  await frame.focus();
+  await page.keyboard.press("Shift+ArrowLeft");
+  await until((b) => b.x < moved.x - 5, "Pfeiltaste");
+  await page.keyboard.press("Alt+Shift+ArrowRight");
+  await until((b) => b.width > moved.width + 5, "Alt+Pfeiltaste");
+  // Weiterhin zwei Einträge auf der Seite: nachgebessert, nicht neu angelegt.
+  if ((await editor.getByTestId("diary-entry").count()) !== 2)
+    throw new Error("Rahmen nachbessern hat Einträge verändert");
   // Blättern mit Bild auf/ab, auch während ein Textfeld den Fokus hat; Zoom über Knopf und Tasten.
   const pageOf = editor.getByTestId("diary-page-of");
   const pageBefore = await pageOf.innerText();

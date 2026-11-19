@@ -1,10 +1,25 @@
 /** Scan einer Seite mit Rahmen der Einträge. */
-import { useRef, useState, type PointerEvent } from "react";
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { mediaUrl, type DiaryEntryRow, type Region } from "../../shared/api.ts";
 import { loadPdf, PdfPageCanvas } from "../pdf.tsx";
 import { cx } from "../ui.tsx";
 import { useLoaded } from "../hooks.ts";
 import { type Surface, sKey } from "./pages.ts";
+import { type Box, CURSOR, type EditMode, HANDLES, MIN_SIZE, editBox, nudgeBox, sameBox } from "./regionEdit.ts";
+
+const pct = (r: Box): CSSProperties => ({
+  left: `${r.x * 100}%`,
+  top: `${r.y * 100}%`,
+  width: `${r.w * 100}%`,
+  height: `${r.h * 100}%`,
+});
+
+/** Griff an Kante oder Ecke: mittig auf der Linie. */
+const handleStyle = (h: EditMode): CSSProperties => ({
+  left: h.includes("w") ? "0%" : h.includes("e") ? "100%" : "50%",
+  top: h.includes("n") ? "0%" : h.includes("s") ? "100%" : "50%",
+  cursor: CURSOR[h],
+});
 
 export function Thumb({ surface }: { surface: Surface }) {
   if (surface.isPdf) {
@@ -17,7 +32,11 @@ export function Thumb({ surface }: { surface: Surface }) {
   return <img src={mediaUrl(surface.sourceId)} alt="" className="mb-1 max-h-28 w-full rounded object-contain" />;
 }
 
-/** Scan (Bild oder PDF-Seite) mit Rahmen; Ziehen mit der Maus legt einen neuen Rahmen an. */
+/**
+ * Scan (Bild oder PDF-Seite) mit Rahmen; Ziehen mit der Maus legt einen neuen Rahmen an. Die Rahmen des gewählten
+ * Eintrags lassen sich verschieben (Rahmen ziehen) und an Kanten und Ecken in der Größe ändern, auch mit den
+ * Pfeiltasten. Ein Klick in einen Rahmen wählt seinen Eintrag.
+ */
 export function PageCanvas({
   surface,
   label,
@@ -27,6 +46,7 @@ export function PageCanvas({
   selected,
   onSelect,
   onDraw,
+  onMove,
 }: {
   surface: Surface;
   label: string | null;
@@ -37,6 +57,8 @@ export function PageCanvas({
   selected: string | null;
   onSelect: (id: string) => void;
   onDraw: (r: Region) => void;
+  /** Rahmen Nummer `index` des Eintrags verschoben oder in der Größe geändert. */
+  onMove: (entryId: string, index: number, box: Box) => Promise<unknown>;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const natural = useNaturalSize(surface);
@@ -55,12 +77,52 @@ export function PageCanvas({
     w: Math.abs(drag.x1 - drag.x0),
     h: Math.abs(drag.y1 - drag.y0),
   };
-  const pct = (r: Region) => ({
-    left: `${r.x * 100}%`,
-    top: `${r.y * 100}%`,
-    width: `${r.w * 100}%`,
-    height: `${r.h * 100}%`,
-  });
+  // Rahmen, der gerade gezogen wird, und der zuletzt geänderte, bis die gespeicherte Fassung zurück ist.
+  const [edit, setEdit] = useState<{
+    key: string;
+    entryId: string;
+    index: number;
+    mode: EditMode;
+    start: { x: number; y: number };
+    orig: Box;
+    box: Box;
+  } | null>(null);
+  const [pending, setPending] = useState<{ key: string; box: Box; token: number } | null>(null);
+  const token = useRef(0);
+  const shown = (key: string, r: Box): Box =>
+    edit?.key === key ? edit.box : pending?.key === key ? pending.box : { x: r.x, y: r.y, w: r.w, h: r.h };
+  const hold = (key: string, box: Box) => {
+    const t = ++token.current;
+    setPending({ key, box, token: t });
+    return t;
+  };
+  const commit = (key: string, entryId: string, index: number, orig: Box, box: Box) => {
+    if (sameBox(orig, box)) return setPending(null);
+    const t = hold(key, box);
+    void onMove(entryId, index, box).finally(() => setPending((p) => (p?.token === t ? null : p)));
+  };
+
+  const here = entries.flatMap((e) =>
+    e.regions.map((r, i) => ({ e, r, i, key: `${e.id}-${i}` })).filter(({ r }) => sKey(r) === sKey(surface)),
+  );
+  // Klick ohne Ziehen: den kleinsten Rahmen unter der Maus wählen (bei verschachtelten Rahmen den inneren).
+  const pick = (p: { x: number; y: number }) => {
+    const hit = here
+      .filter(({ r }) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)
+      .sort((a, b) => a.r.w * a.r.h - b.r.w * b.r.h)[0];
+    if (hit) onSelect(hit.e.id);
+  };
+  const onRegionKey = (e: KeyboardEvent, key: string, orig: Box) => {
+    const box = nudgeBox(shown(key, orig), e.key, { shift: e.shiftKey, alt: e.altKey });
+    if (!box) return;
+    e.preventDefault();
+    e.stopPropagation();
+    hold(key, box);
+  };
+  const onRegionKeyUp = (e: KeyboardEvent, key: string, entryId: string, index: number, orig: Box) => {
+    if (!e.key.startsWith("Arrow") || pending?.key !== key) return;
+    commit(key, entryId, index, orig, pending.box);
+  };
   return (
     <figure className="mx-auto" style={{ width: cssW ?? undefined, visibility: cssW ? undefined : "hidden" }}>
       {label && <figcaption className="mb-1 font-mono text-[0.82rem] text-muted">{label}</figcaption>}
@@ -69,18 +131,50 @@ export function PageCanvas({
         data-testid="diary-page"
         className="relative cursor-crosshair touch-none select-none"
         onPointerDown={(e) => {
-          if ((e.target as HTMLElement).closest("[data-region]")) return;
-          e.currentTarget.setPointerCapture(e.pointerId);
+          if (e.button !== 0) return;
+          const t = e.target as HTMLElement;
+          if (t.closest("[data-region]")) return;
           const p = rel(e);
+          const handle = t.closest<HTMLElement>("[data-edit]");
+          const hit = handle && here.find((h) => h.key === handle.dataset.key);
+          e.currentTarget.setPointerCapture(e.pointerId);
+          if (hit) {
+            const orig = shown(hit.key, hit.r);
+            setEdit({
+              key: hit.key,
+              entryId: hit.e.id,
+              index: hit.i,
+              mode: handle.dataset.edit as EditMode,
+              start: p,
+              orig,
+              box: orig,
+            });
+            return;
+          }
           setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
         }}
         onPointerMove={(e) => {
+          if (edit) {
+            const p = rel(e);
+            setEdit({ ...edit, box: editBox(edit.orig, edit.mode, p.x - edit.start.x, p.y - edit.start.y) });
+            return;
+          }
           if (!drag) return;
           const p = rel(e);
           setDrag({ ...drag, x1: p.x, y1: p.y });
         }}
         onPointerUp={() => {
-          if (rect && rect.w > 0.01 && rect.h > 0.01) onDraw(rect);
+          if (edit) {
+            commit(edit.key, edit.entryId, edit.index, edit.orig, edit.box);
+            setEdit(null);
+            return;
+          }
+          if (rect && rect.w > MIN_SIZE && rect.h > MIN_SIZE) onDraw(rect);
+          else if (drag) pick({ x: drag.x0, y: drag.y0 });
+          setDrag(null);
+        }}
+        onPointerCancel={() => {
+          setEdit(null);
           setDrag(null);
         }}
       >
@@ -106,34 +200,60 @@ export function PageCanvas({
             className="block w-full rounded shadow"
           />
         )}
-        {entries.flatMap((e) =>
-          e.regions
-            .map((r, i) => ({ r, i }))
-            .filter(({ r }) => sKey(r) === sKey(surface))
-            .map(({ r, i }) => (
-              <div
-                key={`${e.id}-${i}`}
-                style={pct(r)}
+        {here.map(({ e, r, i, key }) => {
+          const active = selected === e.id;
+          const box = shown(key, r);
+          const name = `Eintrag ${e.number}${e.regions.length > 1 ? `, ${i + 1}. Teil` : ""}`;
+          return (
+            <div
+              key={key}
+              style={pct(box)}
+              data-testid="diary-region"
+              {...(active && {
+                "data-edit": "move",
+                "data-key": key,
+                tabIndex: 0,
+                role: "group",
+                "aria-label": `Rahmen ${name}`,
+                title:
+                  "Ziehen verschiebt den Rahmen, die Griffe an Kanten und Ecken ändern die Größe. Pfeiltasten: verschieben, mit Alt: Größe ändern, mit Umschalt in großen Schritten.",
+                onKeyDown: (ev: KeyboardEvent) => onRegionKey(ev, key, r),
+                onKeyUp: (ev: KeyboardEvent) => onRegionKeyUp(ev, key, e.id, i, r),
+              })}
+              className={cx(
+                "absolute rounded-sm border-2",
+                active
+                  ? "pointer-events-auto cursor-move border-accent bg-accent/15 outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
+                  : "pointer-events-none border-k-diary bg-k-diary/10",
+              )}
+            >
+              <button
+                data-region
+                onClick={() => onSelect(e.id)}
+                aria-label={`Eintrag ${e.number}`}
                 className={cx(
-                  "pointer-events-none absolute rounded-sm border-2",
-                  selected === e.id ? "border-accent bg-accent/15" : "border-k-diary bg-k-diary/10",
+                  "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.8rem] font-semibold text-white",
+                  active ? "bg-accent" : "bg-k-diary",
                 )}
               >
-                <button
-                  data-region
-                  onClick={() => onSelect(e.id)}
-                  aria-label={`Eintrag ${e.number}`}
-                  className={cx(
-                    "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.8rem] font-semibold text-white",
-                    selected === e.id ? "bg-accent" : "bg-k-diary",
-                  )}
-                >
-                  {e.number}
-                  {e.notedAt ? ` · ${e.notedAt}` : ""}
-                </button>
-              </div>
-            )),
-        )}
+                {e.number}
+                {e.notedAt ? ` · ${e.notedAt}` : ""}
+              </button>
+              {active &&
+                HANDLES.map((h) => (
+                  <span
+                    key={h}
+                    data-edit={h}
+                    data-key={key}
+                    data-testid={`diary-handle-${h}`}
+                    aria-hidden
+                    style={handleStyle(h)}
+                    className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-accent bg-panel"
+                  />
+                ))}
+            </div>
+          );
+        })}
         {rect && (
           <div style={pct(rect)} className="pointer-events-none absolute border-2 border-dashed border-accent" />
         )}

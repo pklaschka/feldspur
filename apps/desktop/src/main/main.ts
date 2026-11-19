@@ -45,7 +45,7 @@ import {
   type ProjectInfo,
 } from "../shared/api.ts";
 import { changeLogCsv } from "./changelog.ts";
-import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion, setRegionPage } from "./diary.ts";
+import { addRegion, createEntry, deleteEntry, moveRegion, patchEntry, removeRegion, setRegionPage } from "./diary.ts";
 import {
   addManualAnchor,
   addTimeEvidence,
@@ -817,6 +817,10 @@ function registerIpc(): void {
   undoable(IPC.removeDiaryRegion, "Rahmen entfernt", (_e, entryId: string, index: number) => {
     const s = requireStore();
     return buildSessionView(s, removeRegion(s, entryId, index));
+  });
+  undoable(IPC.moveDiaryRegion, "Rahmen verschoben", (_e, entryId: string, index: number, region: Region) => {
+    const s = requireStore();
+    return buildSessionView(s, moveRegion(s, entryId, index, region));
   });
   undoable(
     IPC.setDiaryRegionPage,

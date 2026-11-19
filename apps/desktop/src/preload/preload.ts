@@ -68,6 +68,7 @@ const api: FeldspurApi = {
   createDiaryEntry: (sourceId, region) => ipcRenderer.invoke(IPC.createDiaryEntry, sourceId, region),
   addDiaryRegion: (entryId, sourceId, region) => ipcRenderer.invoke(IPC.addDiaryRegion, entryId, sourceId, region),
   removeDiaryRegion: (entryId, index) => ipcRenderer.invoke(IPC.removeDiaryRegion, entryId, index),
+  moveDiaryRegion: (entryId, index, region) => ipcRenderer.invoke(IPC.moveDiaryRegion, entryId, index, region),
   setDiaryRegionPage: (entryId, index, pageNo) => ipcRenderer.invoke(IPC.setDiaryRegionPage, entryId, index, pageNo),
   deleteDiaryEntry: (entryId) => ipcRenderer.invoke(IPC.deleteDiaryEntry, entryId),
   patchDiaryEntry: (entryId, patch) => ipcRenderer.invoke(IPC.patchDiaryEntry, entryId, patch),
