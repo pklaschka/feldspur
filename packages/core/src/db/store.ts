@@ -358,6 +358,9 @@ export class ProjectStore {
         | "firstPage"
         | "pageSpread"
         | "originalPath"
+        | "role"
+        | "contextOrder"
+        | "contextMade"
       >
     >,
   ): Source {

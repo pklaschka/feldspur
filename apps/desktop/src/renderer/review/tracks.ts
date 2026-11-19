@@ -27,7 +27,7 @@ export const rowStart = (r: SourceRow) => r.startMs ?? r.diaryWindow?.toMs ?? 0;
 export function trackSub(t: Track, rows: SourceRow[]): string {
   if (!t.device) return `${t.rows.length} ${t.rows.length === 1 ? "Datei" : "Dateien"}`;
   const all = rows.filter((r) => r.deviceId === t.device!.id && !r.partOf);
-  const open = all.filter((r) => r.startMs === null && !r.diaryWindow).length;
+  const open = all.filter((r) => r.startMs === null && !r.diaryWindow && r.status !== "context").length;
   const base = t.device.isReference
     ? "Referenzuhr"
     : t.device.personName || `${all.length} ${all.length === 1 ? "Datei" : "Dateien"}`;

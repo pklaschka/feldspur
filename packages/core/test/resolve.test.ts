@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { combineUncertainty, resolveTimeline } from "../src/resolve.ts";
 import { formatClock } from "../src/time.ts";
-import { T, testmarkt } from "./scenario.ts";
+import { CONTEXT_DEFAULTS, T, testmarkt } from "./scenario.ts";
 
 const clock = (ms: number | undefined) => (ms === undefined ? undefined : formatClock(ms));
 
@@ -339,6 +339,7 @@ describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
       mode: "short",
       shortText: "",
       fullText: "",
+      ...CONTEXT_DEFAULTS,
     });
     const res = resolveTimeline(input);
     const main = res.placements.get("Tagebuch_S02.jpg")!;

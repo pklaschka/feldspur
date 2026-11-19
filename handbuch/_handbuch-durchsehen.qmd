@@ -82,7 +82,8 @@ nicht mehr zum Stand passt, etwa durch einen neuen Abgleich, meldet Feldspur **E
 ### Ohne Uhrzeit
 
 Quellen, für die Feldspur noch keine Uhrzeit kennt, liegen direkt unter der Zeitachse im Bereich **Ohne Uhrzeit**. Wähle sie aus und gib
-ihnen eine Zeit (@sec-abgleichen).
+ihnen eine Zeit (@sec-abgleichen). Gehört eine Quelle gar nicht in den Ablauf, etwa eine Kartenzeichnung, führst du
+sie stattdessen als Kontext (@sec-kontext). Sie steht dann in der Kontext-Zeile über der Zeitachse.
 
 ![Wiedergabe mehrerer gleichzeitig laufender Aufnahmen](bilder/wiedergabe.png){#fig-wiedergabe}
 

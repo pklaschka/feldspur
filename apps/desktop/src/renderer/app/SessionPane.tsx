@@ -25,6 +25,7 @@ import { Button, cx, ErrorBanner } from "../ui.tsx";
 import { StrayDropHint } from "./strayDrop.tsx";
 import { HistoryGlyph, UndoToast, useHistory, type HistoryState } from "./history.tsx";
 import type { Guard, Step } from "../App.tsx";
+import { contextFor } from "../context/parts.tsx";
 
 const api = window.feldspur;
 
@@ -98,7 +99,16 @@ export function SessionPane({
     setFollows: (id, prevId) => update(guard(() => api.setFollows(id, prevId))),
     preview: setPreviewId,
     transcribe: setTranscribeId,
+    setContext: (id, on) => update(guard(() => api.setContext(`source:${id}`, on))),
+    openDiary: setDiaryPage,
   };
+  /** Neues Kontextstück als Text ohne Scan; danach gleich gewählt, damit Titel und Text rechts bereitstehen. */
+  const createContextText = () =>
+    void guard(() => api.createContextText(sessionId, { title: "", text: "" })).then((r) => {
+      if (!r) return;
+      setView(r.view);
+      setSelected(r.key);
+    });
   const saveDetails = async (patch: SessionPatch) => {
     const res = await guard(() => api.updateSession(sessionId, patch));
     if (!res) return false;
@@ -150,6 +160,7 @@ export function SessionPane({
     },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;
+  const selectedContext = contextFor(view, selected);
   /** Sprung zu einem offenen Punkt: Schritt wechseln und die betroffene Quelle wählen. */
   const go = (t: Todo) => {
     setStep(t.step);
@@ -337,6 +348,8 @@ export function SessionPane({
                   )
                 }
                 reveal={reveal}
+                apply={(fn) => update(guard(fn))}
+                onCreateText={createContextText}
               />
             </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
@@ -348,6 +361,7 @@ export function SessionPane({
           view={view}
           // In Ausgeben zählt der Stand des ganzen Einsatzes, nicht eine einzelne Quelle.
           row={step === "export" ? null : selectedRow}
+          context={step === "export" ? null : selectedContext}
           step={step}
           onClose={() => setSelected(null)}
           onGo={go}

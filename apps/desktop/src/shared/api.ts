@@ -53,6 +53,12 @@ export interface ProjectInfo {
   sessions: FieldSession[];
 }
 
+/**
+ * Zustand einer Quelle in der Oberfläche: wie die Zeitbestimmung (sicher, prüfen, ohne Zeit), dazu „context“ =
+ * bewusst ohne Uhrzeit, steht vor der Chronologie (Issue #108). Kontext ist kein offener Punkt.
+ */
+export type RowStatus = PlacementStatus | "context";
+
 export interface SourceRow {
   id: string;
   label: string;
@@ -103,7 +109,13 @@ export interface SourceRow {
   firstPage: number | null;
   /** Tagebuch: Jedes Bild zeigt eine Doppelseite. */
   pageSpread: boolean;
-  status: PlacementStatus;
+  status: RowStatus;
+  /** Rolle der Quelle selbst (Tagebuchseiten: immer „timeline“, sie werden über ihre Einträge Kontext). */
+  role: "timeline" | "context";
+  /** Tagebuchseiten: so viele Einträge der Seite sind Kontext („2 Einträge, davon 1 Kontext“). */
+  contextEntries: number;
+  /** Tagebuchseiten: so viele Einträge hat die Seite insgesamt. */
+  entryCount: number;
   notes: string[];
   /** Widersprüche zwischen den Zeitbelegen und ob sie entschieden sind. */
   conflict: ConflictSummary;
@@ -310,10 +322,67 @@ export interface DiaryEntryRow {
   fullText: string;
   /** pageNo = Seitenzahl im Notizbuch (von Hand oder aus der Zählung des Scans), null = unbekannt. */
   regions: (Region & { sourceId: string; pageLabel: string; pageNo: number | null; pageNoOwn: boolean })[];
+  /** Chronologie oder Kontext (Issue #108). */
+  role: "timeline" | "context";
+  /** Titel als Kontextstück; leer = Fundstelle. */
+  title: string;
+  /** Freie Angabe „Entstanden“ als Kontextstück. */
+  contextMade: string;
+  /** Verweise auf Kontextstücke („entry:…“, „source:…“), auch ruhende. */
+  refs: string[];
+  /** Stelle unter den Kontextstücken (1 … n); null = kein Kontext. */
+  contextPosition: number | null;
+}
+
+/** Ein Kontextstück: bewusst ohne Uhrzeit, steht im Einsatztranskript vor der ersten Zeitmarke. */
+export interface ContextRow {
+  /** „entry:<id>“ oder „source:<id>“. */
+  key: string;
+  /** 1 … n in der Reihenfolge des Einsatztranskripts. */
+  position: number;
+  entryId: string | null;
+  sourceId: string | null;
+  /** Art der Quelle (Foto, Notiz …) bzw. „diary“ bei Tagebucheinträgen und Texten ohne Scan. */
+  kind: SourceKind;
+  /** Eigener Titel; leer = keiner. */
+  title: string;
+  /** Titel oder, ohne Titel, die Fundstelle. */
+  name: string;
+  /** „Tagebuch T-01 · S. 3“, „Foto F-005, IMG_0007.jpg“, „Text ohne Scan“. */
+  find: string;
+  personName: string;
+  /** Form des Texts: Nur Scan, Kurzform, Volltext; bei Fotos „scan“, bei Notizdateien „full“. */
+  mode: DiaryMode;
+  /** Text, wie er im Dokument steht (Kurzform, Volltext oder der Inhalt einer Textdatei). */
+  text: string;
+  /** Text lässt sich hier bearbeiten (Text ohne Scan). */
+  textEditable: boolean;
+  /** „Entstanden“, freie Angabe. */
+  made: string;
+  /** Notierzeit eines Kontext-Eintrags „13:05“; null = keine. */
+  notedAt: string | null;
+  /** Wohin das Stück zurück in der Chronologie käme; null = dann „ohne Uhrzeit“. */
+  wouldStartMs: number | null;
+  /** Woraus diese Lage käme („Metadaten“, „Randnotiz“). */
+  wouldStartBasis: string;
+  /** Lässt sich zurück in die Chronologie holen (nicht bei Text ohne Scan). */
+  canReturn: boolean;
+  /** Datierte Einträge, die hierher verweisen. */
+  mentionedBy: { entryId: string; number: number; notedAt: string; pageId: string | null }[];
+  /** Vorschau: ganzes Bild oder Rahmen auf einer Seite; null = nichts zu zeigen. */
+  thumb: { sourceId: string; region: Region | null; previewable: boolean; isPdf: boolean } | null;
+}
+
+/** Titel und „Entstanden“ eines Kontextstücks; nur gesetzte Felder werden übernommen. */
+export interface ContextDetails {
+  title?: string;
+  made?: string;
 }
 
 export interface DiaryPatch {
   notedAt?: string;
+  /** Titel als Kontextstück. */
+  title?: string;
   lookbackMin?: number | null;
   mode?: DiaryMode;
   shortText?: string;
@@ -385,6 +454,8 @@ export interface SessionView {
   conflictGroups: ConflictGroupRow[];
   anchors: AnchorRow[];
   diary: DiaryEntryRow[];
+  /** Kontextstücke in der Reihenfolge des Einsatztranskripts (Issue #108). */
+  context: ContextRow[];
   /** Mitschrift aller Ton- und Videoquellen, je Quelle nach Stelle sortiert. */
   transcript: TranscriptRow[];
   /** Arbeitsnotizen zu den Dateien des Einsatzes. */
@@ -452,6 +523,8 @@ export interface SessionTranscriptPreview {
   /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
   entries: SessionTranscriptPreviewEntry[];
+  /** Abschnitt „Kontext“ vor der ersten Zeitmarke (Issue #108); leer = keiner. */
+  context: { key: string; head: string; details: string; body: string }[];
 }
 
 /** Einsammeln abgebrochen: Nichts wurde übernommen. */
@@ -630,6 +703,21 @@ export interface FeldspurApi {
   setDiaryRegionPage(entryId: string, index: number, pageNo: number | null): Promise<SessionView>;
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
   patchDiaryEntry(entryId: string, patch: DiaryPatch): Promise<SessionView>;
+  /** Als Kontext führen (on) oder zurück in die Chronologie; key = „source:…“ oder „entry:…“. */
+  setContext(key: string, on: boolean): Promise<SessionView>;
+  /** Titel und „Entstanden“ eines Kontextstücks. */
+  setContextDetails(key: string, details: ContextDetails): Promise<SessionView>;
+  /** Kontextstück an Stelle position (1 … n) schieben. */
+  moveContext(key: string, position: number): Promise<SessionView>;
+  /** Kontext einmalig nach Fundstelle ordnen. */
+  sortContextByPage(sessionId: string): Promise<SessionView>;
+  /** Verweise eines Tagebucheintrags auf Kontextstücke (ersetzt alle). */
+  setEntryRefs(entryId: string, refs: string[]): Promise<SessionView>;
+  /** Neues Kontextstück als Text ohne Scan; gibt seinen Schlüssel mit zurück. */
+  createContextText(
+    sessionId: string,
+    input: { title: string; text: string },
+  ): Promise<{ view: SessionView; key: string }>;
   /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
   /**
    * Automatisches Transkript (.srt, .vtt, .json, .tsv, z. B. Whisper) an eine Aufnahme hängen.
@@ -788,6 +876,12 @@ export const IPC = {
   setDiaryRegionPage: "diary:region-page",
   deleteDiaryEntry: "diary:delete",
   patchDiaryEntry: "diary:patch",
+  setContext: "context:set",
+  setContextDetails: "context:details",
+  moveContext: "context:move",
+  sortContextByPage: "context:sort",
+  setEntryRefs: "context:refs",
+  createContextText: "context:text",
   progress: "progress",
   undo: "history:undo",
   moveEpisodeEdge: "episodes:move-edge",

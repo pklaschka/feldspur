@@ -1,10 +1,10 @@
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vite-plus/test";
 import { sessionTranscriptDocx } from "../src/docx.ts";
-import type { SessionTranscript, SessionTranscriptEntry } from "../src/session-transcript.ts";
+import type { SessionTranscript, SessionTranscriptContext, SessionTranscriptEntry } from "../src/session-transcript.ts";
 
 /** Nur der Teil von SessionTranscript, den sessionTranscriptDocx liest. */
-function fake(entries: SessionTranscriptEntry[]): SessionTranscript {
+function fake(entries: SessionTranscriptEntry[], context: SessionTranscriptContext[] = []): SessionTranscript {
   return {
     header: {
       title: "Test",
@@ -16,8 +16,10 @@ function fake(entries: SessionTranscriptEntry[]): SessionTranscript {
       extra: {},
       montageId: "M1",
       modeLabel: "Echtzeit",
+      ...(context.length ? { contextCount: context.length } : {}),
     },
     entries,
+    context,
   } as unknown as SessionTranscript;
 }
 
@@ -58,5 +60,51 @@ describe("Einsatztranskript-.docx: Zeilenumbrüche", () => {
     // Eine Zeitmarke je Eintrag: Absatz bleibt einer.
     expect(xml.match(/#00:00:01-0#/g)).toHaveLength(1);
     expect(xml).toContain("Volltext: a");
+  });
+});
+
+describe("Einsatztranskript-.docx: Kontext (Issue #108)", () => {
+  const line: SessionTranscriptEntry = {
+    montageMs: 9 * 60_000,
+    kind: "diary",
+    clock: "10:24",
+    head: "Tagebuch T-01 · S. 3",
+    body: "Kurzform: Streit am Käsestand → Kontext: Karte 2: Standplan",
+    images: [],
+  };
+  const karte: SessionTranscriptContext = {
+    key: "entry:karte",
+    position: 1,
+    head: "Kontext · Karte 2: Standplan",
+    details: " · Tagebuch T-01 · S. 3 (Testperson A) · erwähnt um 10:24",
+    body: "Kurzform: Standplan\nBrunnen",
+    images: [],
+  };
+  const text = (xml: string) => xml.replace(/<[^>]+>/g, "");
+
+  it("steht vor der ersten Zeitmarke, ohne Zeitmarke, mit Überschriften", async () => {
+    const xml = documentXml(
+      await sessionTranscriptDocx(fake([line], [karte]), { mediaFileName: "m.mp4", stills: new Map() }),
+    );
+    const t = text(xml);
+    const firstStamp = t.indexOf("#00:");
+    expect(t.indexOf("Kontext · Karte 2: Standplan")).toBeGreaterThan(-1);
+    expect(t.indexOf("Kontext · Karte 2: Standplan")).toBeLessThan(firstStamp);
+    expect(t.indexOf("Chronologie")).toBeLessThan(firstStamp);
+    expect(t).toContain("Kontext: 1 Stück ohne Zeitmarke, vor der Chronologie.");
+    // Der Kontextabschnitt trägt kein „#“.
+    expect(t.slice(t.indexOf("Diese Stücke"), firstStamp)).not.toContain("#");
+    expect(t.match(/#\d\d:\d\d:\d\d-\d#/g)).toHaveLength(1);
+    // Verweis im selben Absatz wie die Zeitmarke.
+    expect(t).toContain("Kurzform: Streit am Käsestand → Kontext: Karte 2: Standplan");
+    expect(xml.match(/<w:br\/>/g)).toHaveLength(1);
+  });
+
+  it("ohne Kontext: keine Überschrift „Kontext“ oder „Chronologie“", async () => {
+    const t = text(
+      documentXml(await sessionTranscriptDocx(fake([line]), { mediaFileName: "m.mp4", stills: new Map() })),
+    );
+    expect(t).not.toContain("Chronologie");
+    expect(t).not.toContain("Diese Stücke");
   });
 });

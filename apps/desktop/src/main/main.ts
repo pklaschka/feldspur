@@ -31,6 +31,7 @@ import {
   type AnchorInput,
   type LevelInput,
   type PageNumberingInput,
+  type ContextDetails,
   type DiaryPatch,
   type Region,
   type ImportResult,
@@ -45,6 +46,17 @@ import {
   type ProjectInfo,
 } from "../shared/api.ts";
 import { changeLogCsv } from "./changelog.ts";
+import {
+  contextFind,
+  contextName,
+  contextPosition,
+  createContextText,
+  moveContext,
+  setContext,
+  setContextDetails,
+  setEntryRefs,
+  sortContextByPage,
+} from "./context.ts";
 import { addRegion, createEntry, deleteEntry, moveRegion, patchEntry, removeRegion, setRegionPage } from "./diary.ts";
 import {
   addManualAnchor,
@@ -838,6 +850,69 @@ function registerIpc(): void {
     const s = requireStore();
     return buildSessionView(s, patchEntry(s, entryId, patch));
   });
+
+  // Kontext (Issue #108): Beschriftungen nennen das Stück, damit das Änderungsprotokoll die Entscheidung belegt.
+  undoable(
+    IPC.setContext,
+    (s, key: string, on: boolean) =>
+      `${on ? "Als Kontext geführt" : "Zurück in die Chronologie"}: ${contextFind(s, key)}`,
+    (_e, key: string, on: boolean) => {
+      const s = requireStore();
+      return buildSessionView(s, setContext(s, key, on));
+    },
+  );
+  undoable(
+    IPC.setContextDetails,
+    (s, key: string, _details: ContextDetails) => `Kontext geändert: ${contextName(s, key)}`,
+    (_e, key: string, details: ContextDetails) => {
+      const s = requireStore();
+      return buildSessionView(s, setContextDetails(s, key, details));
+    },
+  );
+  undoable(
+    IPC.moveContext,
+    (s, key: string, position: number) =>
+      `Kontext umsortiert: ${contextName(s, key)} von Stelle ${contextPosition(s, key)} auf ${position}`,
+    (_e, key: string, position: number) => {
+      const s = requireStore();
+      return buildSessionView(s, moveContext(s, key, position));
+    },
+  );
+  undoable(IPC.sortContextByPage, "Kontext nach Seite geordnet", (_e, sessionId: string) => {
+    const s = requireStore();
+    return buildSessionView(s, sortContextByPage(s, sessionId));
+  });
+  undoable(
+    IPC.setEntryRefs,
+    (s, entryId: string, refs: string[]) => {
+      const before = s.getDiaryEntry(entryId).contextRefs;
+      const added = refs.filter((k) => !before.includes(k));
+      const removed = before.filter((k) => !refs.includes(k));
+      const name = (k: string) => {
+        try {
+          return contextName(s, k);
+        } catch {
+          return "?";
+        }
+      };
+      if (added.length === 1 && !removed.length) return `Verweis gesetzt: → ${name(added[0]!)}`;
+      if (removed.length === 1 && !added.length) return `Verweis entfernt: → ${name(removed[0]!)}`;
+      return "Verweise geändert";
+    },
+    (_e, entryId: string, refs: string[]) => {
+      const s = requireStore();
+      return buildSessionView(s, setEntryRefs(s, entryId, refs));
+    },
+  );
+  undoable(
+    IPC.createContextText,
+    "Kontext als Text angelegt",
+    (_e, sessionId: string, input: { title: string; text: string }) => {
+      const s = requireStore();
+      const id = createContextText(s, sessionId, input);
+      return { view: buildSessionView(s, sessionId), key: `entry:${id}` };
+    },
+  );
 
   undoable(IPC.setDeviceOffset, "Uhrabweichung geändert", (_e, deviceId: string, offsetMs: number | null) => {
     const s = requireStore();

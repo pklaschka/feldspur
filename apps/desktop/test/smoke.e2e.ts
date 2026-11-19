@@ -41,6 +41,10 @@ makePdf(join(later, "Feldnotizen_Scan.pdf"), [
   ["Seite 2", "", "11:05  Abbau beginnt"],
 ]);
 writeFileSync(join(later, "Einkaufsliste.txt"), "Milch, Brot\n");
+// Kontext (Issue #108): eine Kartenzeichnung ohne jede Zeit, gilt für den ganzen Tag.
+const contextDir = join(dir, "Kontext");
+mkdirSync(contextDir, { recursive: true });
+makeDiaryPage(join(contextDir, "Lageplan.jpg"), 4);
 
 // FELDSPUR_E2E_APP=<Programmdatei> prüft statt des Entwicklungsstands das fertige Paket.
 const packaged = process.env.FELDSPUR_E2E_APP;
@@ -889,6 +893,57 @@ try {
   await shot("-geraetemenue");
   await page.getByRole("menuitemradio", { name: /^Wie der Einsatz/ }).click();
 
+  // Kontext (Issue #108): Lageplan ohne Uhrzeit als Kontext führen, Text ohne Scan anlegen, darauf verweisen.
+  await page.evaluate(async ([id, p]) => window.feldspur.importPaths(id!, [p!]), [sessionId, contextDir]);
+  await page.reload();
+  await page.getByRole("tab", { name: /Durchsehen/ }).click();
+  await page.getByTestId("context-strip").waitFor();
+  await page.getByTestId("tray-item").filter({ hasText: "Lageplan.jpg" }).click();
+  await page.getByTestId("not-in-chronology").getByRole("button").click();
+  await page.getByTestId("context-card").filter({ hasText: /T-|F-/ }).first().waitFor();
+  if ((await page.getByTestId("tray-item").filter({ hasText: "Lageplan.jpg" }).count()) > 0)
+    throw new Error("Kontext steht noch unter „Ohne Uhrzeit“");
+  await page.getByTestId("context-title").fill("Lageplan der Stände");
+  await page.getByTestId("context-title").press("Enter");
+  await page.getByTestId("context-card").filter({ hasText: "Lageplan der Stände" }).waitFor();
+  await page.getByTestId("context-new-text").click();
+  await page.getByTestId("context-text").waitFor();
+  await page.getByTestId("context-title").fill("Zwischenstand vom Abend");
+  await page.getByTestId("context-title").press("Enter");
+  await page.getByTestId("context-text").fill("Drei Stände mit Streit um Standgebühren, Marktaufsicht vermittelt.");
+  await page.getByTestId("context-text").blur();
+  await page.getByTestId("context-card").filter({ hasText: "Zwischenstand vom Abend" }).waitFor();
+  await page.getByTestId("context-card").filter({ hasText: "Lageplan der Stände" }).click();
+  await page.getByTestId("context-position").getByText("Stelle 1 von 2").waitFor();
+  await shot("-kontext");
+  // Umsortieren mit Alt+→ auf der gewählten Karte.
+  await page.getByTestId("context-card").filter({ hasText: "Lageplan der Stände" }).press("Alt+ArrowRight");
+  await page.getByTestId("context-position").getByText("Stelle 2 von 2").waitFor();
+  // Verweis aus einem datierten Tagebucheintrag.
+  await page
+    .getByTestId("tl-diary")
+    .filter({ hasText: "Eintrag 2" })
+    .first()
+    .evaluate((b) => (b as HTMLElement).click());
+  await page.getByTestId("inspector").getByRole("button", { name: "Abtippen…" }).click();
+  {
+    const ed = page.getByTestId("diary-editor");
+    await ed.waitFor();
+    const card2 = ed.getByTestId("diary-entry").filter({ has: page.getByLabel("Notierzeit Eintrag 2") });
+    await card2.getByRole("button", { name: "+ Kontext" }).click();
+    await card2.getByRole("button", { name: /Lageplan der Stände/ }).click();
+    await card2.getByTestId("entry-refs").getByText("Lageplan der Stände").waitFor();
+    await shot("-kontext-verweis");
+    await ed.getByRole("button", { name: "Fertig" }).click();
+    await ed.waitFor({ state: "detached" });
+  }
+  await page.getByTestId("context-card").filter({ hasText: "Lageplan der Stände" }).click();
+  await page
+    .getByTestId("context-panel")
+    .getByText(/Eintrag 2/)
+    .waitFor();
+  await shot("-kontext-erwaehnt");
+
   // Ausgeben: Ordnerwahl ersetzen, Video mit Einblendungen aus der Oberfläche.
   const out = join(dir, "Ausgabe");
   mkdirSync(out);
@@ -902,6 +957,9 @@ try {
     .first()
     .waitFor();
   console.log(`Einsatztranskript: ${await transcript.locator("li").count()} Zeilen`);
+  await transcript.getByText("Kontext · Lageplan der Stände").waitFor();
+  await transcript.getByText(/→ Kontext: Lageplan der Stände/).waitFor();
+  await page.getByTestId("export-context").getByText("Kontext (2)").waitFor();
   // Hinweis vom vorigen Rückgängig nicht mit aufs Bild nehmen.
   const toastClose = page.getByRole("button", { name: "Hinweis ausblenden" });
   if (await toastClose.isVisible()) await toastClose.click();

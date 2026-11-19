@@ -18,6 +18,7 @@ import {
   diaryPageLabel,
 } from "@feldspur/core";
 import { sessionEpisodes } from "./analyze.ts";
+import { contextBody, contextHeadDetails, contextPieces } from "./context.ts";
 
 export type SessionTranscriptKind = "card" | "episode" | "start" | "photo" | "diary" | "line" | "sync" | "end";
 
@@ -55,6 +56,24 @@ export interface SessionTranscriptHeader {
   montageId: string;
   /** „Episoden“ oder „Echtzeit“. */
   modeLabel: string;
+  /** Anzahl der Kontextstücke; fehlt, wenn es keine gibt (dann bleibt alles wie vor Issue #108). */
+  contextCount?: number;
+}
+
+/**
+ * Kontextstück im Einsatztranskript: steht vor der ersten Zeitmarke, ohne Zeitmarke und ohne Stelle im Video.
+ * Absichtlich kein SessionTranscriptEntry: Die tragen eine Stelle im Video und speisen die Einblendungen.
+ */
+export interface SessionTranscriptContext {
+  key: string;
+  position: number;
+  /** Fett: „Kontext · Karte 2: Standplan“. Der Wortlaut „Kontext · “ am Anfang ist fest (zum Suchen in MAXQDA). */
+  head: string;
+  /** Grau dahinter: Fundstelle, Person, entstanden, notiert, erwähnt um. */
+  details: string;
+  /** Text darunter („Kurzform: …“); leer bei Fotos ohne Text. */
+  body: string;
+  images: ImageRef[];
 }
 
 export interface SessionTranscript {
@@ -63,6 +82,8 @@ export interface SessionTranscript {
   /** Episoden benannt (Zeilen „Episode n“, Zwischenzeiten)? Sonst nur Uhrzeit, Quellen und Leerlauf. */
   episodes: boolean;
   entries: SessionTranscriptEntry[];
+  /** Kontextstücke in ihrer Reihenfolge, vor der Chronologie (leer, wenn es keine gibt). */
+  context: SessionTranscriptContext[];
   /** Grundlage für die Montage (Lagen, Quellen). */
   input: ResolveInput;
   resolved: ResolveResult;
@@ -210,6 +231,18 @@ export function buildSessionTranscript(
     }
   }
 
+  // Kontext: vor der Chronologie, ohne Zeitmarke (Issue #108).
+  const pieces = contextPieces(input, res, persons);
+  const pieceByKey = new Map(pieces.map((p) => [p.item.key, p]));
+  const context: SessionTranscriptContext[] = pieces.map((p) => ({
+    key: p.item.key,
+    position: p.item.position,
+    head: `Kontext · ${p.name}`,
+    details: contextHeadDetails(p),
+    body: contextBody(p),
+    images: p.images,
+  }));
+
   // Tagebuch: am Beginn des Bezugszeitraums.
   const numbered = input.diaryEntries.toSorted((a, b) => {
     const pa = res.diary.get(a.id)?.notedAtMs ?? Infinity;
@@ -225,13 +258,19 @@ export function buildSessionTranscript(
     const page = first?.partOf ? src.get(first.partOf) : first;
     const text = e.mode === "full" ? e.fullText : e.mode === "short" ? e.shortText : "";
     const modeLabel = e.mode === "full" ? "Volltext" : e.mode === "short" ? "Kurzform" : "nur Scan";
+    // Verweise auf Kontextstücke im selben Absatz, damit keine zweite Zeitmarke nötig wird. Ruhende fehlen.
+    const refs = [...new Set(e.contextRefs)].flatMap((k) => {
+      const p = pieceByKey.get(k);
+      return p ? [p.name] : [];
+    });
+    const refText = refs.length ? ` → Kontext: ${refs.join("; ")}` : "";
     push({
       montageMs: at,
       kind: "diary",
       clock: `${hm(dp.notedAtMs)} (notiert, bezieht sich auf ca. ${hm(dp.fromMs)}–${hm(dp.toMs)})`,
       clockMs: dp.notedAtMs,
       head: `Tagebuch ${first && e.regions[0] ? diaryPageLabel(first, e.regions[0]) : (page?.label ?? "?")}${page && who(page) ? ` (${who(page)})` : ""}`,
-      body: text ? `${modeLabel}: ${text}` : modeLabel,
+      body: (text ? `${modeLabel}: ${text}` : modeLabel) + refText,
       images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),
     });
   }
@@ -275,6 +314,14 @@ export function buildSessionTranscript(
   push({ montageMs: plan.durationMs, kind: "end", clock: "", head: "Ende", body: "Ende der Montage" });
   entries.sort((a, b) => a.montageMs - b.montageMs || ORDER[a.kind] - ORDER[b.kind]);
 
+  // Quellen, die Kontext tragen: Kontext-Quellen selbst und Tagebuchseiten mit Kontext-Einträgen.
+  const contextSources = new Set<Id>();
+  for (const p of pieces) {
+    if (p.source) contextSources.add(p.source.id);
+    for (const r of p.entry?.regions ?? []) contextSources.add(src.get(r.sourceId)?.partOf ?? r.sourceId);
+  }
+  const isContextSource = (id: Id) => contextSources.has(id);
+
   const researchers = [
     ...new Set(input.devices.flatMap((d) => (d.personId && persons.get(d.personId) ? [persons.get(d.personId)!] : []))),
   ];
@@ -286,14 +333,18 @@ export function buildSessionTranscript(
       place: input.session.place,
       researchers,
       reference: ref ? ref.label : null,
-      sources: input.sources.filter((s) => res.placements.has(s.id) && !s.partOf).map((s) => s.label),
+      sources: input.sources
+        .filter((s) => !s.partOf && (res.placements.has(s.id) || isContextSource(s.id)))
+        .map((s) => s.label),
       extra: input.session.extra,
       montageId: montageId(sessionId, plan, named, input.sources, res),
       modeLabel: plan.mode === "realtime" ? "Echtzeit" : "Episoden",
+      ...(context.length ? { contextCount: context.length } : {}),
     },
     plan,
     episodes: named,
     entries,
+    context,
     input,
     resolved: res,
   };

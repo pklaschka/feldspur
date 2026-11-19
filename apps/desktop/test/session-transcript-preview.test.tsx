@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vite-plus/test";
-import { SESSION_TRANSCRIPT_CLOCK_COLOR, SESSION_TRANSCRIPT_KIND_COLOR } from "@feldspur/media";
+import {
+  SESSION_TRANSCRIPT_CLOCK_COLOR,
+  SESSION_TRANSCRIPT_CONTEXT_COLOR,
+  SESSION_TRANSCRIPT_KIND_COLOR,
+} from "@feldspur/media";
 import { SessionTranscriptLine } from "../src/renderer/SessionTranscriptLine.tsx";
 import type { SessionTranscriptPreviewEntry } from "../src/shared/api.ts";
 
@@ -18,6 +22,8 @@ describe("Farben der Einsatztranskript-Vorschau", () => {
     expect(value("clock")?.toUpperCase()).toBe(SESSION_TRANSCRIPT_CLOCK_COLOR);
     for (const [kind, hex] of Object.entries(SESSION_TRANSCRIPT_KIND_COLOR))
       expect(value(kind)?.toUpperCase(), kind).toBe(hex);
+    // Kontext steht in der Vorschau in der Farbe der Episoden (text-st-episode), im .docx ebenso.
+    expect(value("episode")?.toUpperCase()).toBe(SESSION_TRANSCRIPT_CONTEXT_COLOR);
   });
 });
 

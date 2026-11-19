@@ -147,7 +147,8 @@ export function todos(view: SessionView): Todo[] {
       step: "sync",
       action: "Uhren abgleichen",
     });
-  const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote && !r.partOf);
+  // Eine Seite, die ganz Kontext ist, braucht keine Randnotiz.
+  const diaryOpen = view.rows.filter((r) => r.kind === "diary" && !r.diaryNote && !r.partOf && r.status !== "context");
   if (diaryOpen.length)
     out.push({
       text: `${diaryOpen.length} ${diaryOpen.length === 1 ? "Tagebuchseite" : "Tagebuchseiten"} ohne Randnotiz.`,

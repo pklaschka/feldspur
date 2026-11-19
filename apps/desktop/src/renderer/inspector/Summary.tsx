@@ -24,7 +24,8 @@ export function Summary({ view, onGo, compact }: { view: SessionView; onGo: (t: 
   const count = (s: SourceRow["status"]) => view.rows.filter((r) => r.status === s).length;
   const todo = todos(view);
   const total = view.rows.length;
-  const parts = (["ok", "check", "unplaced"] as const).filter((st) => count(st) > 0);
+  const parts = (["ok", "check", "unplaced", "context"] as const).filter((st) => count(st) > 0);
+  const nContext = view.context.length;
   return (
     <>
       <Eyebrow className="mt-0">Stand des Einsatzes</Eyebrow>
@@ -44,7 +45,18 @@ export function Summary({ view, onGo, compact }: { view: SessionView; onGo: (t: 
                 <b className="font-semibold">{count(st)}</b> {STATUS_TEXT[st]}
               </span>
             ))}
+        {count("context") > 0 && (
+          <span className={STATUS_TEXT_CLASS.context}>
+            <span className="text-muted"> · </span>
+            <b className="font-semibold">{count("context")}</b> {STATUS_TEXT.context}
+          </span>
+        )}
       </p>
+      {nContext > 0 && (
+        <p className="mt-1 text-[0.88rem] text-muted" data-testid="summary-context">
+          {nContext === 1 ? "1 Kontextstück steht" : `${nContext} Kontextstücke stehen`} vor der Chronologie.
+        </p>
+      )}
       {!compact && <Eyebrow>Als Nächstes</Eyebrow>}
       {compact ? null : todo.length ? (
         <TodoList items={todo} onGo={onGo} />
@@ -65,4 +77,4 @@ export function Summary({ view, onGo, compact }: { view: SessionView; onGo: (t: 
   );
 }
 
-export const STATUS_BAR = { ok: "bg-good/70", check: "bg-warn", unplaced: "bg-bad" } as const;
+export const STATUS_BAR = { ok: "bg-good/70", check: "bg-warn", unplaced: "bg-bad", context: "bg-ink-2/45" } as const;

@@ -5,7 +5,7 @@
 import { suggestPageNo } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
-import type { DiaryPatch, Region, SessionView } from "../shared/api.ts";
+import type { DiaryEntryRow, DiaryPatch, Region, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { loadPdf } from "./pdf.tsx";
 import { Button, cx, ErrorBanner, Notice } from "./ui.tsx";
@@ -309,8 +309,8 @@ export function DiaryEditor({
                 {/* Seitenangabe und Zählung je auf eine eigene Zeile, damit „S. 3–4“ nicht mitten im Bereich bricht. */}
                 <div className="flex items-baseline justify-between gap-2 text-[0.82rem]">
                   <b className="font-mono whitespace-nowrap">{p.label}</b>
-                  <span className="text-muted" title="Einträge auf dieser Seite">
-                    {entriesOn(p).length || "–"}
+                  <span className="text-muted" title="Einträge auf dieser Seite (K: Kontext)">
+                    {pageCount(entriesOn(p))}
                   </span>
                 </div>
                 {p.surfaces.length > 1 && <div className="text-[0.78rem] text-muted">{p.surfaces.length} Bilder</div>}
@@ -371,6 +371,14 @@ export function DiaryEditor({
               <EntryCard
                 key={e.id}
                 entry={e}
+                context={view.context}
+                onRole={(on) =>
+                  void track(guard(() => api.setContext(`entry:${e.id}`, on)).then((v) => v && onView(v)))
+                }
+                onDetails={(d) =>
+                  void track(guard(() => api.setContextDetails(`entry:${e.id}`, d)).then((v) => v && onView(v)))
+                }
+                onRefs={(refs) => void track(guard(() => api.setEntryRefs(e.id, refs)).then((v) => v && onView(v)))}
                 isHere={(r) => !!page?.surfaces.some((sf) => sKey(sf) === sKey(r))}
                 defaultLookback={view.diaryLookbackMin}
                 suggestPage={(i) => suggestions.get(`${e.id}#${i}`) ?? null}
@@ -396,4 +404,12 @@ export function DiaryEditor({
       </Dialog.Portal>
     </Dialog.Root>
   );
+}
+
+/** Zählung in der Seitenliste: „2, davon 1 K“, „ganz K“ oder „–“. */
+function pageCount(list: DiaryEntryRow[]): string {
+  if (!list.length) return "–";
+  const k = list.filter((e) => e.role === "context").length;
+  if (!k) return String(list.length);
+  return k === list.length ? "Kontext" : `${list.length}, davon ${k} K`;
 }

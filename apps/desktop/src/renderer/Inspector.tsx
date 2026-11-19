@@ -1,6 +1,7 @@
 import { formatDuration } from "@feldspur/core/time";
 import { useState, type ReactNode } from "react";
-import { mediaUrl, type SessionView, type SourceRow } from "../shared/api.ts";
+import { mediaUrl, type ContextRow, type SessionView, type SourceRow } from "../shared/api.ts";
+import { ContextPanel } from "./context/ContextPanel.tsx";
 import { bytes, clock, KIND_LABEL, lage, offsetText, STATUS_TEXT } from "./format.ts";
 import { NotesPanel } from "./Notes.tsx";
 import { PageNumbering } from "./PageNumbering.tsx";
@@ -22,9 +23,12 @@ import { LevelPanel } from "./inspector/LevelPanel.tsx";
 import { Player } from "./inspector/Player.tsx";
 import { TranscriptImport, TranscriptSummary } from "./inspector/Transcript.tsx";
 
+const api = window.feldspur;
+
 export function Inspector({
   view,
   row,
+  context = null,
   step,
   onClose,
   onGo,
@@ -32,6 +36,8 @@ export function Inspector({
 }: {
   view: SessionView;
   row: SourceRow | null;
+  /** Gewähltes Kontextstück (auch ein Kontext-Eintrag ohne eigene Quelle). */
+  context?: ContextRow | null;
   /** Aktueller Schritt: bestimmt, was oben steht. */
   step: Step;
   onClose: () => void;
@@ -42,7 +48,25 @@ export function Inspector({
     <aside className="min-w-0 overflow-x-hidden overflow-y-auto border-l border-line bg-panel" data-testid="inspector">
       <div className="px-4.5 pt-4 pb-6">
         {row ? (
-          <SourceDetails key={row.id} row={row} view={view} step={step} onClose={onClose} actions={actions} />
+          <SourceDetails
+            key={row.id}
+            row={row}
+            view={view}
+            step={step}
+            context={context}
+            onClose={onClose}
+            actions={actions}
+          />
+        ) : context ? (
+          <ContextPanel
+            key={context.key}
+            c={context}
+            view={view}
+            apply={actions.apply}
+            onOpenDiary={actions.openDiary}
+            onClose={onClose}
+            standalone
+          />
         ) : (
           <Summary view={view} onGo={onGo} compact={step === "export"} />
         )}
@@ -55,12 +79,14 @@ function SourceDetails({
   row,
   view,
   step,
+  context,
   onClose,
   actions,
 }: {
   row: SourceRow;
   view: SessionView;
   step: Step;
+  context: ContextRow | null;
   onClose: () => void;
   actions: InspectorActions;
 }) {
@@ -70,7 +96,9 @@ function SourceDetails({
     [
       "Lage",
       <>
-        <span className="whitespace-nowrap">{lage(row.startMs, row.endMs)}</span>
+        <span className="whitespace-nowrap">
+          {row.status === "context" ? "bewusst ohne Uhrzeit" : lage(row.startMs, row.endMs)}
+        </span>
         {row.uncertaintyMs !== null && row.uncertaintyMs > 0 && (
           <span className="block text-[0.85rem] text-muted">± {formatDuration(row.uncertaintyMs)}</span>
         )}
@@ -170,7 +198,14 @@ function SourceDetails({
           </div>
         </div>
       )}
-      {checkFirst && check}
+      {context && <ContextPanel c={context} view={view} apply={actions.apply} onOpenDiary={actions.openDiary} />}
+      {!context && row.status === "unplaced" && !row.partOf && row.kind !== "audio" && row.kind !== "video" && (
+        <NotInChronology
+          diary={row.kind === "diary"}
+          onContext={() => actions.apply(() => api.setContext(`source:${row.id}`, true))}
+        />
+      )}
+      {checkFirst && !context && check}
       {(row.kind === "audio" || row.kind === "video") && (
         <>
           <Player row={row} />
@@ -217,7 +252,7 @@ function SourceDetails({
         </button>
       )}
       <KV items={items} />
-      {!checkFirst && check}
+      {!checkFirst && !context && check}
 
       <div className="mt-3">
         <NotesPanel
@@ -260,7 +295,10 @@ function SourceDetails({
 
       <Eyebrow>Zeitbelege</Eyebrow>
       <EvidenceList row={row} actions={actions} />
-      {row.kind !== "diary" && !row.partOf && (
+      {row.status === "context" && row.evidence.length > 0 && (
+        <p className="mt-1.5 text-[0.85rem] text-muted">Die Zeitbelege ruhen, solange das Stück Kontext ist.</p>
+      )}
+      {row.kind !== "diary" && !row.partOf && row.status !== "context" && (
         <TimeForm key={manualAsk} row={row} onAdd={actions.addTime} initialOpen={manualAsk > 0} />
       )}
       {row.partOf && (
@@ -292,5 +330,20 @@ function SourceDetails({
         />
       </Fold>
     </>
+  );
+}
+
+/** Zweiter Weg bei „ohne Uhrzeit“: Karten, Listen und Zusammenfassungen gelten für den ganzen Tag. */
+function NotInChronology({ diary, onContext }: { diary: boolean; onContext: () => void }) {
+  return (
+    <div className="mt-3.5 rounded-lg border border-line p-3 text-[0.86rem]" data-testid="not-in-chronology">
+      <p>
+        <b className="font-semibold">Gehört nicht in die Chronologie?</b>{" "}
+        <span className="text-muted">Karten, Listen und Zusammenfassungen gelten für den ganzen Tag.</span>
+      </p>
+      <Button size="sm" className="mt-2" onClick={onContext}>
+        {diary ? "Seite als Kontext führen" : "Als Kontext führen"}
+      </Button>
+    </div>
   );
 }

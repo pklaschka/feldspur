@@ -17,6 +17,14 @@ const LocalMs = z.number().int();
 /** Position innerhalb einer Quelle in ms ab Dateianfang. */
 const MediaMs = z.number().int().nonnegative();
 
+/**
+ * Rolle einer Quelle oder eines Tagebucheintrags: „timeline“ = gehört auf die Zeitachse (Chronologie);
+ * „context“ = bewusst ohne Uhrzeit, gilt für den ganzen Tag (Karte, Personenliste, Zwischenzusammenfassung) und steht
+ * im Einsatztranskript vor der ersten Zeitmarke. Zeitbelege und Notierzeit bleiben gespeichert, ruhen aber.
+ */
+export const Role = z.enum(["timeline", "context"]);
+export type Role = z.infer<typeof Role>;
+
 export const SourceKind = z.enum(["video", "audio", "photo", "diary", "note", "gps", "other"]);
 export type SourceKind = z.infer<typeof SourceKind>;
 
@@ -132,6 +140,12 @@ export const Source = z.object({
   firstPage: z.number().int().nullable().default(null),
   /** Tagebuch-Scans: Ein Bild zeigt eine Doppelseite (links und rechts je eine Seite). */
   pageSpread: z.boolean().default(false),
+  /** Chronologie oder Kontext (siehe Role). Tagebuchseiten werden über ihre Einträge Kontext, nicht hier. */
+  role: Role.default("timeline"),
+  /** Gewünschte Stelle unter den Kontextstücken des Einsatzes; null = keine (dann nach Fundstelle ans Ende). */
+  contextOrder: z.number().int().nullable().default(null),
+  /** Freie Angabe, wann ein Kontextstück entstand („am Vorabend“). Nur Nachweis, keine Lage. */
+  contextMade: z.string().default(""),
 });
 export type Source = z.infer<typeof Source>;
 
@@ -245,6 +259,14 @@ export const DiaryEntry = z.object({
   mode: DiaryMode.default("scan"),
   shortText: z.string().default(""),
   fullText: z.string().default(""),
+  /** Chronologie oder Kontext (siehe Role). Ein Kontext-Eintrag ohne Rahmen ist ein Text ohne Scan. */
+  role: Role.default("timeline"),
+  contextOrder: z.number().int().nullable().default(null),
+  /** Titel, unter dem ein Kontextstück im Einsatztranskript steht („Karte 2: Standplan“); leer = Fundstelle. */
+  title: z.string().default(""),
+  contextMade: z.string().default(""),
+  /** Verweise auf Kontextstücke: „entry:<id>“ oder „source:<id>“. Ziele, die gerade kein Kontext sind, ruhen. */
+  contextRefs: z.array(z.string()).default([]),
 });
 export type DiaryEntry = z.infer<typeof DiaryEntry>;
 

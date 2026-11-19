@@ -544,7 +544,7 @@ function diaryTexts(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState, x:
       const left = Math.max(x0, i > 0 ? x(list[i - 1]!.t1) : -Infinity) + 8;
       const right = x1 - 9;
       const cy = trackTop(it.track) + BAR_Y + BAR_H / 2;
-      const label = `${it.row.label} · ${it.entry.number}`;
+      const label = `${it.row.label} · ${it.entry.number}${it.entry.refs.length ? " →K" : ""}`;
       ctx.font = `600 11px ${p.sans}`;
       const lw = ctx.measureText(label).width;
       if (right - left < lw) return;

@@ -13,6 +13,9 @@ Begleitprotokoll
 Bezugszeitraum
 : Zeitraum vor der Notierzeit, auf den sich ein Tagebucheintrag bezieht.
 
+Chronologie
+: Der Teil des Einsatztranskripts mit Zeitmarken, in zeitlicher Reihenfolge. Steht nach dem Kontext.
+
 Einsatz
 : Ein Feldtag an einem Ort. Wird zu einem Dokument in MAXQDA.
 
@@ -28,6 +31,11 @@ Folgeaufnahme
 
 Gerät
 : Alles mit einer eigenen Uhr: Kamera, Rekorder, Handy, aber auch das Tagebuch.
+
+Kontext
+: Material ohne Uhrzeit, das für den ganzen Einsatz gilt: Kartenzeichnungen, Listen, Zusammenfassungen. Steht im
+  Einsatztranskript vor der Chronologie, ohne Zeitmarke (@sec-kontext). Ein einzelnes Stück heißt
+  **Kontextstück**.
 
 Montage-ID
 : Kennung wie `FS-XXXX-XXXX`, die Montagevideo und Einsatztranskript einander zuordnet.

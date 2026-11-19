@@ -146,7 +146,7 @@ export function bytes(n: number): string {
   return `${(n / 1024 ** 3).toFixed(2).replace(".", ",")} GB`;
 }
 
-export const STATUS_TEXT = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
+export const STATUS_TEXT = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit", context: "Kontext" } as const;
 
 export const EVIDENCE_LABEL: Record<string, string> = {
   metadata: "Metadaten",
