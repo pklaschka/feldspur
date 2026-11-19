@@ -35,7 +35,7 @@
 #let sans = ("Source Sans 3", "DejaVu Sans")
 
 #set document(title: "Feldspur – Tastenkürzel", author: "Zuri Nimca Klaschka")
-#set page(paper: "a4", flipped: true, margin: (x: 4 * E + 2mm, y: 3 * E), fill: weiss)
+#set page(paper: "a4", flipped: true, margin: (x: 4 * E + 2mm, top: 4 * E, bottom: 3 * E), fill: weiss)
 #set text(font: sans, size: 9pt, fill: tinte, lang: "de", number-type: "lining")
 #set par(leading: 0.45em, spacing: 0.6em)
 
@@ -205,7 +205,7 @@
           if symbol != none { icon(symbol, farbe: farbe, groesse: 6mm, staerke: 1.4); h(1.2 * E) }
           text(size: if hervor { 18pt } else { 14pt }, weight: "bold", style: "italic", fill: farbe, titel)
         },
-        mini-tastatur(markiert, farbe: farbe, breite: if hervor { 52mm } else { 26mm }),
+        mini-tastatur(markiert, farbe: farbe, breite: if hervor { 52mm } else { 30mm }),
       )
       v(2 * E, weak: true)
       inhalt
@@ -254,10 +254,10 @@
 // Inhalt: links Mitschreiben (groß) und Tagebuch, rechts Überall, Montage, Feinabgleich, Maus
 // =====================================================================================================
 #let U = 17mm // Tastengröße in der Hauptkarte
-#let u = 9.5mm // Tastengröße in den kleinen Karten
+#let u = 10.5mm // Tastengröße in den kleinen Karten
 
 #grid(
-  columns: (1fr, 100mm),
+  columns: (1fr, 92mm),
   column-gutter: 4 * E,
   // ---------------------------------------------------------------- links
   {
@@ -403,8 +403,19 @@
       h(1.2 * E)
       text(size: 11pt, weight: "bold", style: "italic", fill: umbra)[Zeitachse]
       h(2 * E)
-      [*Rad* zoomt an der Maus #h(1.5mm)·#h(1.5mm) *⇧ + Rad* verschiebt #h(1.5mm)·#h(1.5mm)
+      [*Mausrad* zoomt an der Maus #h(1.5mm)·#h(1.5mm) *⇧ + Mausrad* verschiebt die Achse #h(1.5mm)·#h(1.5mm)
         *Rad gedrückt ziehen* verschiebt auch]
+    })
+    v(1.5 * E, weak: true)
+    // ---------------------------------------------------------------- Durchsehen (drei Kürzel)
+    block(inset: (x: 2 * E + 1mm), {
+      set text(fill: grau)
+      icon("suchen", farbe: umbra, groesse: 5mm, staerke: 1.4)
+      h(1.2 * E)
+      text(size: 11pt, weight: "bold", style: "italic", fill: umbra)[Durchsehen]
+      h(2 * E)
+      [*N* nächste Stelle #h(1.5mm)·#h(1.5mm) *⇧ + N* vorige Stelle #h(1.5mm)·#h(1.5mm)
+        *Strg + Enter* Lage passt, weiter]
     })
   },
   // ---------------------------------------------------------------- rechts
@@ -420,7 +431,7 @@
         grid(
           columns: (1fr, 1fr),
           column-gutter: 2 * E,
-          row-gutter: 1.5 * E,
+          row-gutter: 2.5 * E,
           kuerzel({ strg; plus; z("O", symbol: "ordner") }, [Projekt öffnen]),
           kuerzel({ strg; plus; z("K", symbol: "suchen") }, [Suchen], text-unten: [↑ ↓ wählen, Enter springt hin]),
           kuerzel({ strg; plus; z("Z", symbol: "rueckgaengig") }, [Rückgängig], text-unten: [im Textfeld erst der Text]),
@@ -436,57 +447,40 @@
     )
     v(3 * E, weak: true)
     karte(
-      [Durchsehen],
-      farbe: ocker.darken(25%),
-      symbol: "suchen",
-      markiert: ("n", "umschalt", "strg", "enter"),
+      [Montage ansehen],
+      farbe: video,
+      symbol: "video",
+      markiert: ("leer", "links", "rechts", "pos1", "ende"),
       {
-        let d(t, ..a) = ts(t, ocker.darken(25%), ..a)
+        let m(t, ..a) = ts(t, video, ..a)
+        let lm(t) = taste(t, u: u, aktiv: false)
         grid(
-          columns: (auto, auto, auto),
-          column-gutter: 2 * E,
-          kuerzel(d("N", mitte: true), [Nächste Stelle]),
-          kuerzel({ d("⇧", breite: 1.25, mitte: true); plus; d("N", mitte: true) }, [Vorige Stelle]),
+          columns: (auto, auto),
+          column-gutter: 4 * E,
+          stack(
+            spacing: 2.5 * E,
+            kuerzel(m("Leertaste", breite: 3, symbol: "spielen"), [Abspielen / Anhalten]),
+            kuerzel({ m("←", mitte: true); h(E); m("→", mitte: true) }, [10 s zurück / vor]),
+          ),
           kuerzel(
-            { d("Strg", breite: 1.25); plus; d("Enter", breite: 1.75) },
-            [Lage passt],
+            grid(columns: 3, gutter: E, lm("Einfg"), m("Pos1"), lm("Bild ↑"), lm("Entf"), m("Ende"), lm("Bild ↓")),
+            [Anfang / Ende],
           ),
         )
       },
     )
     v(3 * E, weak: true)
     karte(
-      [Montage und Feinabgleich],
-      farbe: video,
-      symbol: "video",
-      markiert: ("leer", "links", "rechts", "pos1", "ende", "umschalt"),
+      [Feinabgleich (Ton)],
+      farbe: gruen,
+      markiert: ("leer", "links", "rechts", "umschalt"),
       {
-        let m(t, ..a) = ts(t, video, ..a)
         let f(t, ..a) = ts(t, gruen, ..a)
-        zwischen[Montage ansehen]
-        v(1.5 * E, weak: true)
-        grid(
-          columns: (auto, auto, auto),
-          column-gutter: 2 * E,
-          kuerzel(m("Leertaste", breite: 3, symbol: "spielen"), [Abspielen / Anhalten]),
-          kuerzel({ m("←", mitte: true); h(E); m("→", mitte: true) }, [10 s zurück / vor]),
-          kuerzel(
-            stack(
-              spacing: E / 2,
-              m("Pos1", hoehe: (u - E / 2) / 2, groesse: 7pt, mitte: true),
-              m("Ende", hoehe: (u - E / 2) / 2, groesse: 7pt, mitte: true),
-            ),
-            [Anfang / Ende],
-          ),
-        )
-        v(2.5 * E, weak: true)
-        zwischen(farbe: gruen-5)[Feinabgleich (Ton)]
-        v(1.5 * E, weak: true)
         grid(
           columns: (auto, 1fr),
           column-gutter: 3 * E,
-          kuerzel({ f("←", mitte: true); h(E); f("→", mitte: true) }, [Spur verschieben], text-unten: [1 Bildpunkt, mit ⇧ 10]),
-          kuerzel(f("Leertaste", breite: 3, symbol: "spielen"), [Anhören], text-unten: [ab 1,5 s davor]),
+          kuerzel({ f("←", mitte: true); h(E); f("→", mitte: true) }, [Zweite Spur verschieben], text-unten: [um 1 Bildpunkt, mit ⇧ um 10]),
+          kuerzel(f("Leertaste", breite: 3, symbol: "spielen"), [Anhören], text-unten: [ab 1,5 s vor der Stelle]),
         )
       },
     )
