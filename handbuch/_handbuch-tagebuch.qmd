@@ -29,7 +29,8 @@ Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
 
 ### Blättern und Zoomen
 
-Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst.
+Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst;
+dein Text wird dabei gespeichert, ebenso beim Schließen mit **Esc**.
 Die Pfeile oben rechts tun dasselbe. Jede Seite steht zuerst ganz im Bild; kleine Scans werden dafür vergrößert. Zum
 Entziffern zoomst du mit **+** und **−** oben rechts, mit **Strg/⌘ + Mausrad** an der Stelle unter der Maus oder,
 wenn kein Textfeld den Fokus hat, mit den Tasten + und −. Ein Klick auf die Prozentzahl (oder die Taste 0) zeigt

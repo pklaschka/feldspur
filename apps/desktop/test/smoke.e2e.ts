@@ -314,6 +314,32 @@ try {
   if (w1 < w0 * 1.4) throw new Error(`Zoom wirkt nicht: ${w0} → ${w1}`);
   await shot("-tagebuch-zoom");
   await editor.getByTestId("diary-zoom").click();
+  // Getippter Text ohne Verlassen des Felds bleibt beim Blättern und beim Schließen mit Esc erhalten.
+  const shortField = editor.getByLabel("Kurzform Eintrag 3");
+  const typed = async (text: string) => {
+    await shortField.click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(text);
+  };
+  const expectShort = async (want: string, step: string) => {
+    for (let i = 0; i < 20 && (await shortField.inputValue()) !== want; i++) await page.waitForTimeout(100);
+    const got = await shortField.inputValue();
+    if (got !== want) throw new Error(`Kurzform nach ${step}: „${got}“ statt „${want}“`);
+  };
+  const shortBase = "Gespräch mit Testperson B über Standgebühren";
+  await typed(", Bild auf");
+  await page.keyboard.press("PageUp");
+  await pageOf.filter({ hasNotText: pageBefore }).waitFor();
+  await page.keyboard.press("PageDown");
+  await pageOf.filter({ hasText: pageBefore }).waitFor();
+  await expectShort(`${shortBase}, Bild auf`, "Bild ↑/↓");
+  await typed(", Esc");
+  await page.keyboard.press("Escape");
+  await editor.waitFor({ state: "detached" });
+  await page.getByTestId("inspector").getByRole("button", { name: "Abtippen…" }).click();
+  await editor.getByRole("navigation", { name: "Seiten" }).getByRole("button").nth(1).click();
+  await expectShort(`${shortBase}, Bild auf, Esc`, "Esc und Wiederöffnen");
+  console.log("Tagebuch: getippter Text übersteht Blättern und Esc");
   await editor.getByRole("button", { name: "Fertig" }).click();
   await editor.waitFor({ state: "detached" });
   const diaryItems = await page.getByTestId("tl-diary").count();
