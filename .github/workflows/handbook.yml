@@ -29,7 +29,7 @@ jobs:
   handbuch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - uses: ./.github/actions/quarto
@@ -47,7 +47,7 @@ jobs:
           cp handbuch/_site/Feldspur-Handbuch.pdf "dist/handbuch/Feldspur-Handbuch-$V.pdf"
           cp handbuch/_druck/Feldspur-Handbuch-Druck.pdf "dist/handbuch/Feldspur-Handbuch-$V-Druck.pdf"
           cp handbuch/_site/Feldspur-Tastenkuerzel.pdf "dist/handbuch/Feldspur-Tastenkuerzel-$V.pdf"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: handbuch
           path: dist/handbuch/*.pdf
