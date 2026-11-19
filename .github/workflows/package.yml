@@ -77,6 +77,9 @@ jobs:
           else
             node scripts/fetch-ffmpeg.mjs
           fi
+          # Auch ein ffmpeg aus dem Cache muss alles können, was die App braucht (z. B. PNG für die Einblendungen).
+          exe=""; [ "${{ runner.os }}" = "Windows" ] && exe=".exe"
+          node scripts/check-ffmpeg.mjs "apps/desktop/vendor/ffmpeg/${{ matrix.name }}/ffmpeg$exe"
 
       - run: vp run @feldspur/desktop#build
       - run: vp run @feldspur/desktop#native
