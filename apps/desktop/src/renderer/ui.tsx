@@ -15,6 +15,7 @@ import {
   type ReactNode,
 } from "react";
 import type { SourceKind } from "@feldspur/core/model";
+import { STATUS_TEXT } from "./format.ts";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -324,8 +325,24 @@ export function Notice({ children }: { children: ReactNode }) {
   return <p className="my-2 rounded-lg bg-accent-soft px-3 py-1.5 text-[0.9rem]">{children}</p>;
 }
 
-export function StatusDot({ status, className }: { status: "ok" | "check" | "unplaced"; className?: string }) {
-  return <span className={cx("inline-block size-2 flex-none rounded-full", STATUS_BG[status], className)} />;
+/**
+ * Statuspunkt. Die Farbe allein sagt Screenreadern nichts: Standardmäßig bekommt der Punkt eine
+ * Bezeichnung („sicher“, „prüfen“, „ohne Zeit“) samt Tooltip. Steht der Status schon als Text daneben,
+ * mit `decorative` verbergen.
+ */
+export function StatusDot({
+  status,
+  className,
+  decorative = false,
+}: {
+  status: "ok" | "check" | "unplaced";
+  className?: string;
+  decorative?: boolean;
+}) {
+  const cls = cx("inline-block size-2 flex-none rounded-full", STATUS_BG[status], className);
+  if (decorative) return <span aria-hidden="true" className={cls} />;
+  const label = `Zeit: ${STATUS_TEXT[status]}`;
+  return <span role="img" aria-label={label} title={label} className={cls} />;
 }
 export const STATUS_TEXT_CLASS = { ok: "text-good", check: "text-warn", unplaced: "text-bad" } as const;
 const STATUS_BG = { ok: "bg-good/60", check: "bg-warn", unplaced: "bg-bad" } as const;

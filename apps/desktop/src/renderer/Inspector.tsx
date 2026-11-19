@@ -81,7 +81,7 @@ function SourceDetails({
       "Status",
       <>
         <span className={cx("inline-flex items-center gap-1.5", STATUS_TEXT_CLASS[row.status])}>
-          <StatusDot status={row.status} />
+          <StatusDot status={row.status} decorative />
           {STATUS_TEXT[row.status]}
         </span>
         {row.notes.length > 0 && <span className="block text-[0.85rem] text-muted">{row.notes.join(" · ")}</span>}
