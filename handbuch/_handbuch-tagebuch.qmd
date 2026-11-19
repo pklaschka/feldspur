@@ -4,6 +4,9 @@ Feldnotizen entstehen selten genau dann, wenn etwas passiert. Ein Eintrag, der u
 schon, was um 14:16 geschah. Feldspur trennt deshalb die **Seite** (der Scan) vom **Eintrag** (ein Rahmen auf der
 Seite mit eigener Zeit).
 
+Hat Feldspur eine abfotografierte Seite beim Einsammeln für ein Foto gehalten, stellst du das im Menü der Quelle mit
+**Als Tagebuchseite behandeln** um (@sec-einsammeln).
+
 ![Abtipp-Ansicht mit zwei Einträgen auf einer erfundenen Seite](bilder/tagebuch.png){#fig-tagebuch}
 
 ### Randnotiz der Seite

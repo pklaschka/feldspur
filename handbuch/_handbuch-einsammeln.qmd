@@ -48,7 +48,15 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
   Feldspur meist selbst (gleiches Gerät, Beginn direkt am Ende der vorigen Datei, oder GoPro-Kapitel). Eine
   Folgeaufnahme ohne eigene Zeit beginnt am Ende der vorigen.
 - **Als weiteres Bild zu Seite …**: eine Rückseite oder ein zweiter Scan derselben Tagebuchseite. Das Bild übernimmt
-  die Zeit der Seite.
+  die Zeit der Seite, ihr Gerät und ihre Art (ein Foto an einer Tagebuchseite wird selbst zur Seite, `F-…` zu `T-…`).
+- **Als Tagebuchseite behandeln** / **Als Foto behandeln**: Ob ein Bild eine Tagebuchseite ist, schätzt Feldspur beim
+  Einsammeln am Dateinamen ("Tagebuch", "Scan", "Seite 3" …) und daran, ob Kameradaten (EXIF) fehlen. Mit dem Handy
+  abfotografierte Notizbuchseiten haben aber EXIF und landen deshalb bei den Fotos; umgekehrt kann ein Foto ohne EXIF
+  mit passendem Namen als Seite gelten. Beim Umstellen bekommt das Bild ein neues Kurzzeichen, kommt in das Gerät
+  „Tagebuch“ bzw. in das Fotogerät, das Feldspur beim Einsammeln gewählt hätte, und weitere Bilder der Seite gehen
+  mit. Ein dadurch leeres Gerät verschwindet. Eine Tagebuchseite liegt auf der Zeitachse nur nach ihren Randnotizen und
+  Einträgen, nicht nach der Aufnahmezeit des Fotos (@sec-tagebuch). Eine Seite mit Einträgen lässt sich erst wieder
+  als Foto behandeln, wenn die Einträge gelöscht sind.
 - **Zeitzone der Geräteuhr**, falls ein Gerät auf eine andere Zeitzone gestellt war als der Einsatz.
 - **Entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
 

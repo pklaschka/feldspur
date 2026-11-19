@@ -3,7 +3,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "../src/main/sources.ts";
+import { createEntry, patchEntry } from "../src/main/diary.ts";
+import {
+  linkFollowUps,
+  mergeDevices,
+  moveSource,
+  removeSource,
+  setFollows,
+  setPartOf,
+  setSourceKind,
+} from "../src/main/sources.ts";
+import { buildSessionView } from "../src/main/view.ts";
 
 let dir: string;
 let store: ProjectStore;
@@ -118,6 +128,26 @@ describe("Quellen pflegen", () => {
     expect(store.getSource(p1b.id).partOf).toBeNull();
   });
 
+  it("ein angehängtes Foto wird Tagebuchseite mit T-Kurzzeichen", () => {
+    const { p1, session } = seed();
+    const fotos = store.addDevice({ sessionId: session.id, label: "Fotos" });
+    const f = store.addSource({
+      sessionId: session.id,
+      deviceId: fotos.id,
+      kind: "photo",
+      originalPath: "/x",
+      fileName: "IMG_0001.jpg",
+      sizeBytes: 1,
+      sha256: sha(),
+      durationMs: null,
+      metadata: {},
+    });
+    expect(f.label).toBe("F-001");
+    setPartOf(store, f.id, p1.id);
+    expect(store.getSource(f.id)).toMatchObject({ kind: "diary", label: "T-03" });
+    expect(store.listDevices(session.id).some((d) => d.id === fotos.id)).toBe(false);
+  });
+
   it("erkennt Folgeaufnahmen an der Zeit und am GoPro-Namen, aber nicht über eine Lücke", () => {
     const { session, a1, a2, a3, g1, g2 } = seed();
     expect(linkFollowUps(store, session.id)).toBe(2);
@@ -136,5 +166,108 @@ describe("Quellen pflegen", () => {
     expect(() => setFollows(store, p1.id, a1.id)).toThrow(/Audio- und Video/);
     setFollows(store, a3.id, null);
     expect(store.getSource(a3.id).follows).toBeNull();
+  });
+});
+
+describe("Bild als Tagebuchseite oder Foto behandeln", () => {
+  const exif = { make: "Fairphone", model: "FP5", dateTimeOriginal: "2026:09:14 10:12:34" };
+
+  /** Ein abfotografiertes Notizbuch: Handyfoto mit EXIF, dazu ein weiteres Bild derselben Seite. */
+  function seedPhoto() {
+    const session = store.addSession({ title: "Testmarkt", date: "2026-09-14", place: "", extra: {} });
+    const phone = store.addDevice({
+      sessionId: session.id,
+      label: "Fairphone FP5",
+      matchKey: "model:fairphone fp5",
+      isReference: true,
+      offsetBasis: "reference",
+    });
+    const base = { sessionId: session.id, originalPath: "/x", sizeBytes: 1, durationMs: null, metadata: { exif } };
+    const photo = store.addSource({ ...base, deviceId: phone.id, kind: "photo", fileName: "IMG_1.jpg", sha256: sha() });
+    store.addEvidence({
+      sourceId: photo.id,
+      kind: "metadata",
+      clock: "device",
+      localMs: Date.UTC(2026, 8, 14, 10, 12, 34),
+      uncertaintyMs: 1000,
+      detail: "EXIF",
+    });
+    const part = store.addSource({ ...base, deviceId: phone.id, kind: "photo", fileName: "IMG_2.jpg", sha256: sha() });
+    setPartOf(store, part.id, photo.id);
+    return { session, phone, photo, part };
+  }
+
+  it("Foto wird Tagebuchseite: Kurzzeichen F→T, Gerät Tagebuch, leeres Altgerät weg, Rückgängig", () => {
+    const { session, phone, photo, part } = seedPhoto();
+    expect(store.getSource(photo.id).label).toBe("F-001");
+    store.history.record("Bildart geändert", () => setSourceKind(store, photo.id, "diary"));
+    const page = store.getSource(photo.id);
+    const devices = store.listDevices(session.id);
+    expect(devices).toHaveLength(1);
+    expect(devices[0]).toMatchObject({ label: "Tagebuch", matchKey: "diary" });
+    expect(page).toMatchObject({ kind: "diary", label: "T-01", deviceId: devices[0]!.id });
+    expect(store.getSource(part.id)).toMatchObject({ kind: "diary", label: "T-02", deviceId: devices[0]!.id });
+    expect(() => setSourceKind(store, part.id, "photo")).toThrow(/Hauptseite/);
+
+    expect(store.history.undo()).toBe("Bildart geändert");
+    expect(store.getSource(photo.id)).toMatchObject({ kind: "photo", label: "F-001", deviceId: phone.id });
+    expect(store.getSource(part.id)).toMatchObject({ kind: "photo", deviceId: phone.id });
+    expect(store.getDevice(phone.id).isReference).toBe(true);
+  });
+
+  it("nutzt ein vorhandenes Tagebuch-Gerät", () => {
+    const { session, photo } = seedPhoto();
+    const diary = store.addDevice({ sessionId: session.id, label: "Tagebuch", matchKey: "diary" });
+    setSourceKind(store, photo.id, "diary");
+    expect(store.getSource(photo.id).deviceId).toBe(diary.id);
+  });
+
+  it("Tagebuchseite liegt nur nach ihren Randnotizen; als Foto wieder nach EXIF", () => {
+    const { session, photo } = seedPhoto();
+    const row = () => buildSessionView(store, session.id).rows.find((r) => r.id === photo.id)!;
+    expect(row().startMs).toBe(Date.UTC(2026, 8, 14, 10, 12, 34));
+    setSourceKind(store, photo.id, "diary");
+    // Die Aufnahmezeit des Fotos ist keine Notierzeit: ohne Randnotiz bleibt die Seite unverortet.
+    expect(row().startMs).toBeNull();
+    expect(store.listEvidence(session.id).filter((e) => e.sourceId === photo.id)).toHaveLength(1);
+    const e = createEntry(store, photo.id, { x: 0, y: 0, w: 1, h: 1 }).entry;
+    patchEntry(store, e.id, { notedAt: "14:30" });
+    expect(row().startMs).toBe(Date.UTC(2026, 8, 14, 14, 30));
+    expect(() => setSourceKind(store, photo.id, "photo")).toThrow(/einen Tagebucheintrag/);
+
+    store.deleteDiaryEntry(e.id);
+    setSourceKind(store, photo.id, "photo");
+    const back = store.getSource(photo.id);
+    expect(back).toMatchObject({ kind: "photo", label: "F-001" }); // F-001 ist wieder frei
+    // Gerät wie beim Einsammeln: nach dem Modell aus den EXIF-Daten.
+    expect(store.getDevice(back.deviceId!)).toMatchObject({ matchKey: "model:fairphone fp5", label: "Fairphone FP5" });
+    expect(row().startMs).toBe(Date.UTC(2026, 8, 14, 10, 12, 34));
+  });
+
+  it("eine als Tagebuch eingesammelte Datei bekommt als Foto ihre Zeitbelege nach", () => {
+    const { session, diaryA } = seed();
+    const scan = store.addSource({
+      sessionId: session.id,
+      deviceId: diaryA.id,
+      kind: "diary",
+      originalPath: "/x",
+      fileName: "pics_20260914_101500.png",
+      sizeBytes: 1,
+      sha256: sha(),
+      durationMs: null,
+      metadata: {},
+    });
+    setSourceKind(store, scan.id, "photo");
+    const src = store.getSource(scan.id);
+    expect(src.label).toBe("F-001");
+    expect(store.getDevice(src.deviceId!).label).toMatch(/^Fotos/);
+    expect(store.getDevice(diaryA.id).id).toBe(diaryA.id); // hat noch S01.jpg
+    const evs = store.listEvidence(session.id).filter((e) => e.sourceId === scan.id);
+    expect(evs.map((e) => e.kind)).toEqual(["filename"]);
+  });
+
+  it("lehnt andere Arten ab", () => {
+    const { a1 } = seed();
+    expect(() => setSourceKind(store, a1.id, "diary")).toThrow(/Nur Fotos/);
   });
 });

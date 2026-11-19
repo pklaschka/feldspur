@@ -1,6 +1,6 @@
 /**
  * Menüs zum Pflegen von Quellen und Geräten: verschieben, zu einer Seite verbinden,
- * als Folgeaufnahme markieren, aus dem Projekt nehmen, Geräte zusammenlegen.
+ * als Tagebuchseite oder Foto behandeln, als Folgeaufnahme markieren, aus dem Projekt nehmen, Geräte zusammenlegen.
  */
 import { AlertDialog, DropdownMenu } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
@@ -15,6 +15,8 @@ export interface SourceActions {
   setDeviceUtc(deviceId: string, utc: boolean): void;
   setDeviceTimeZone(deviceId: string, timeZone: string | null): void;
   setPartOf(sourceId: string, mainId: string | null): void;
+  /** Bild als Tagebuchseite oder als Foto behandeln. */
+  setSourceKind(sourceId: string, kind: "diary" | "photo"): void;
   setFollows(sourceId: string, prevId: string | null): void;
   preview(sourceId: string): void;
   /** Mitschreiben für eine Audio- oder Videoquelle öffnen. */
@@ -136,6 +138,14 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
                   ))}
                 </Sub>
               ))}
+            {IMAGE.has(row.kind) && !row.partOf && (
+              <DropdownMenu.Item
+                className={item}
+                onSelect={() => a.setSourceKind(row.id, row.kind === "photo" ? "diary" : "photo")}
+              >
+                {row.kind === "photo" ? "Als Tagebuchseite behandeln" : "Als Foto behandeln"}
+              </DropdownMenu.Item>
+            )}
             {AV.has(row.kind) &&
               (prev ? (
                 <DropdownMenu.Item className={item} onSelect={() => a.setFollows(row.id, null)}>

@@ -37,6 +37,7 @@ const api: FeldspurApi = {
   moveSource: (id, target) => ipcRenderer.invoke(IPC.moveSource, id, target),
   mergeDevices: (from, into) => ipcRenderer.invoke(IPC.mergeDevices, from, into),
   setPartOf: (id, mainId) => ipcRenderer.invoke(IPC.setPartOf, id, mainId),
+  setSourceKind: (id, kind) => ipcRenderer.invoke(IPC.setSourceKind, id, kind),
   setFollows: (id, prevId) => ipcRenderer.invoke(IPC.setFollows, id, prevId),
   addTranscriptLine: (id, line) => ipcRenderer.invoke(IPC.addTranscriptLine, id, line),
   updateTranscriptLine: (id, patch) => ipcRenderer.invoke(IPC.updateTranscriptLine, id, patch),

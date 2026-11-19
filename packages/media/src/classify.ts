@@ -62,7 +62,7 @@ export function isIgnored(fileName: string): boolean {
 /**
  * Erste Einschätzung der Quellenart aus dem Dateinamen. Ein Bild gilt als
  * Tagebuchseite, wenn der Name danach klingt und es keine Kamera-EXIF-Daten hat;
- * alles lässt sich nach dem Import umstellen.
+ * nach dem Import lässt sich das im Quellenmenü umstellen („Als Tagebuchseite/Foto behandeln“).
  */
 export function classify(fileName: string, opts: { hasCameraExif?: boolean } = {}): SourceKind {
   const kind = EXT[extensionOf(fileName)] ?? "other";
