@@ -1,7 +1,9 @@
 /** Zeitbelege einer Quelle und Uhrzeit von Hand. */
 import { useState } from "react";
 import type { Precision, SourceRow, TimeInput } from "../../shared/api.ts";
-import { EVIDENCE_LABEL } from "../format.ts";
+import { EVIDENCE_LABEL, normalizeClock } from "../format.ts";
+import { ClockField } from "../ClockField.tsx";
+import { digitsDurationText } from "../../shared/duration-digits.ts";
 import { positionText, usePlayback } from "../playback.tsx";
 import { Button, Choice, cx, Pill, PRECISION_OPTIONS, Toggle } from "../ui.tsx";
 import type { InspectorActions } from "./actions.ts";
@@ -135,7 +137,7 @@ export function TimeForm({
     const ok = await onAdd({
       sourceId: row.id,
       kind,
-      clock: time,
+      clock: normalizeClock(time, { seconds: true }) || time,
       atMedia: av ? at : "",
       precision,
       note,
@@ -171,24 +173,17 @@ export function TimeForm({
       )}
       <div className="grid gap-2 text-[0.9rem]">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="grid gap-0.5">
-            <span className="text-muted">Uhrzeit</span>
-            <input
-              className="w-24 font-mono"
-              placeholder="hh:mm:ss"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              aria-label="Uhrzeit"
-            />
-          </label>
+          <ClockField label="Uhrzeit" ariaLabel="Uhrzeit" seconds value={time} onChange={setTime} />
           {av && (
             <label className="grid gap-0.5">
               <span className="text-muted">an Stelle</span>
               <input
                 className="w-24 font-mono"
                 placeholder="m:ss"
+                title="Stelle in der Aufnahme, auch ohne Doppelpunkt: 320 für 3:20, 10320 für 1:03:20"
                 value={at}
                 onChange={(e) => setAt(e.target.value)}
+                onBlur={() => setAt(digitsDurationText(at))}
                 aria-label="Stelle in der Aufnahme"
               />
             </label>

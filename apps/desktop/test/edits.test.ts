@@ -161,6 +161,10 @@ describe("Zeiten von Hand", () => {
     expect(parseMediaPos("3:20")).toBe(200_000);
     expect(parseMediaPos("1:03:20")).toBe(3_800_000);
     expect(parseMediaPos("12,5")).toBe(12_500);
+    expect(parseMediaPos("320")).toBe(200_000);
+    expect(parseMediaPos("10320")).toBe(3_800_000);
+    expect(parseMediaPos("45")).toBe(45_000);
+    expect(() => parseMediaPos("390")).toThrow(/Sekunden/);
     expect(() => parseMediaPos("drei")).toThrow();
   });
 

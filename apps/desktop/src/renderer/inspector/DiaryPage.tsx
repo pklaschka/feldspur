@@ -2,23 +2,21 @@ import type { DiaryEntryRow, SourceRow } from "../../shared/api.ts";
 import { hm } from "../format.ts";
 import { Button, Eyebrow } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
-import { isEnter } from "../keys.js";
+import { ClockInput } from "../ClockField.tsx";
 
 export function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
   const [text, setText] = useDraft(row.diaryNote ?? "", row.id);
-  const commit = () => text !== (row.diaryNote ?? "") && onCommit(text);
+  const commit = (v: string) => v !== (row.diaryNote ?? "") && onCommit(v);
   return (
     <div className="mt-3.5 rounded-lg bg-k-diary/10 p-3">
       <label className="flex items-center gap-3">
         <span className="text-[0.78rem] font-semibold text-k-diary">Randnotiz</span>
-        <input
-          className="w-[5.5rem] font-mono"
+        <ClockInput
+          ariaLabel={`Randnotiz ${row.label}`}
           value={text}
-          placeholder="hh:mm"
-          aria-label={`Randnotiz ${row.label}`}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => isEnter(e) && commit()}
+          onChange={setText}
+          onCommit={commit}
+          advance={false}
         />
       </label>
       <p className="mt-1.5 text-[0.85rem] text-muted">

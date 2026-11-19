@@ -11,7 +11,7 @@ Hat Feldspur eine abfotografierte Seite beim Einsammeln für ein Foto gehalten, 
 
 ### Randnotiz der Seite
 
-Steht am Rand einer Seite eine Uhrzeit, trägst du sie in der Detailleiste als **Randnotiz** ein. Daraus ergibt sich,
+Steht am Rand einer Seite eine Uhrzeit, trägst du sie in der Detailleiste als **Randnotiz** ein (nur Ziffern, "1012" wird 10:12). Daraus ergibt sich,
 auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
 
 ### Einträge

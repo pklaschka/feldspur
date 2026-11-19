@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { offsetText, readOffsetInput } from "./format.ts";
+import { digitsDurationText } from "../shared/duration-digits.ts";
 import { positionText, usePlayback } from "./playback.tsx";
 import {
   Button,
@@ -341,7 +342,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
         className={cx("w-[5.5rem] text-right font-mono disabled:bg-sunken", invalid && "border-bad text-bad")}
         value={text}
         placeholder="z. B. +2:47"
-        title="Wie weit diese Uhr von der Referenz abweicht: +2:47 = geht 2 Minuten 47 vor, −0:30 = geht 30 Sekunden nach"
+        title="Wie weit diese Uhr von der Referenz abweicht: +2:47 = geht 2 Minuten 47 vor, −0:30 = geht 30 Sekunden nach. Ohne Doppelpunkt geht auch: +247, −30"
         aria-label={`Abweichung ${device.label}`}
         aria-invalid={invalid}
         aria-describedby={invalid ? hintId : undefined}
@@ -362,7 +363,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
       />
       {invalid ? (
         <span id={hintId} className="text-[0.85rem] text-bad">
-          Nicht lesbar. Beispiel: +2:47 oder −0:30
+          Nicht lesbar. Beispiel: +2:47 (oder +247) oder −0:30
         </span>
       ) : (
         <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
@@ -489,8 +490,10 @@ function ManualAnchors({
         <input
           className="w-24 font-mono"
           placeholder="m:ss"
+          title="Stelle in der Aufnahme, auch ohne Doppelpunkt: 320 für 3:20, 10320 für 1:03:20"
           value={at}
           onChange={(e) => setAt(e.target.value)}
+          onBlur={() => setAt(digitsDurationText(at))}
           aria-label={`${label}, Stelle`}
         />
         {value && position?.sourceId === value && (

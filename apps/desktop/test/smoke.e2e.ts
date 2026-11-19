@@ -130,7 +130,11 @@ try {
   };
   await page.getByRole("button", { name: "+ Neuer Anker" }).click();
   await pick("Erste Aufnahme", /A-01/);
-  await page.getByLabel("Erste Aufnahme, Stelle").fill("9:00");
+  // Stelle ohne Doppelpunkt: „900“ wird beim Verlassen zu 9:00.
+  await page.getByLabel("Erste Aufnahme, Stelle").fill("900");
+  await page.getByLabel("Erste Aufnahme, Stelle").blur();
+  if ((await page.getByLabel("Erste Aufnahme, Stelle").inputValue()) !== "9:00")
+    throw new Error(`Stelle: ${await page.getByLabel("Erste Aufnahme, Stelle").inputValue()} statt 9:00`);
   await pick("Zweite Aufnahme", /IMG_20260914_104050/);
   await page.getByLabel("Notiz zum Anker").fill("Glocke");
   await page.getByRole("button", { name: "Anker setzen" }).click();
@@ -222,7 +226,10 @@ try {
 
   // Randnotiz auf der ersten Tagebuchseite: 10:12, Bezug reicht 15 Min. zurück.
   await page.getByTestId("tray-item").filter({ hasText: "Tagebuch_S01.jpg" }).click();
-  await page.getByLabel("Randnotiz T-01").fill("10:12");
+  // Nur Ziffern tippen, der Doppelpunkt kommt von selbst.
+  await page.getByLabel("Randnotiz T-01").pressSequentially("1012");
+  if ((await page.getByLabel("Randnotiz T-01").inputValue()) !== "10:12")
+    throw new Error(`Randnotiz: ${await page.getByLabel("Randnotiz T-01").inputValue()} statt 10:12`);
   await page.getByLabel("Randnotiz T-01").press("Enter");
   await page.getByTestId("tl-diary").first().waitFor({ state: "attached" });
   await page
@@ -382,7 +389,11 @@ try {
   // Foto ohne Zeit: Uhrzeit von Hand eintragen, Beleg ab- und wieder einschalten.
   await page.getByTestId("tray-item").filter({ hasText: "Marktstand.jpg" }).click();
   const form = page.getByTestId("time-form");
-  await form.getByLabel("Uhrzeit").fill("10:30");
+  // Uhrzeit mit Sekunden, nur Ziffern: „103000“ → 10:30:00.
+  await form.getByLabel("Uhrzeit").pressSequentially("103000");
+  if ((await form.getByLabel("Uhrzeit").inputValue()) !== "10:30:00")
+    throw new Error(`Uhrzeit: ${await form.getByLabel("Uhrzeit").inputValue()} statt 10:30:00`);
+  await shot("-uhrzeit-eintragen");
   await form.getByRole("radio", { name: "ungefähr" }).click();
   await form.getByLabel("Notiz").fill("geschätzt");
   await form.getByRole("button", { name: "Eintragen" }).click();

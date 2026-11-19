@@ -15,6 +15,7 @@ import {
   type Id,
   type ProjectStore,
 } from "@feldspur/core";
+import { digitsDurationMs } from "../shared/duration-digits.ts";
 import { kindHolds, kindName, kindVerb } from "../shared/conflict-text.ts";
 import type { AnchorInput, DecideInput, LevelInput, PageNumberingInput, TimeInput } from "../shared/api.ts";
 
@@ -42,10 +43,13 @@ export function parseClockOnDate(date: string, text: string, opts: { seconds?: b
   return localMs(y, mo, d, h, mi, se);
 }
 
-/** Stelle in einer Aufnahme: "3:20", "1:03:20", "200" (Sekunden), leer = Anfang. */
+/** Stelle in einer Aufnahme: "3:20", "1:03:20", "320" (= 3:20), "45" (Sekunden), "12,5", leer = Anfang. */
 export function parseMediaPos(text: string): number {
   const t = text.trim().replace(",", ".");
   if (!t) return 0;
+  const digits = digitsDurationMs(t);
+  if (digits === null) throw new Error(`„${text}“ ist keine gültige Stelle (Sekunden über 59)`);
+  if (digits !== undefined) return digits;
   const m = /^(?:(\d+):)?(?:(\d+):)?(\d+(?:\.\d+)?)$/.exec(t);
   if (!m) throw new Error(`Stelle bitte als m:ss oder h:mm:ss, nicht „${text}“`);
   const parts = [m[1], m[2], m[3]].filter((x) => x !== undefined).map(Number);

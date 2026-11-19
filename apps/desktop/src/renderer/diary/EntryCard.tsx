@@ -1,7 +1,8 @@
 /** Ein Eintrag im Tagebuch: Notierzeit, Kurzform, Volltext und Seitenzahl. */
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import type { DiaryEntryRow, DiaryMode, DiaryPatch } from "../../shared/api.ts";
-import { hm, maskClockAt, normalizeClock, stepClock } from "../format.ts";
+import { hm } from "../format.ts";
+import { ClockField } from "../ClockField.tsx";
 import { Button, Choice, cx } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import { isEnter } from "../keys.js";
@@ -220,76 +221,5 @@ export function EntryCard({
         </Button>
       </div>
     </div>
-  );
-}
-/** Uhrzeit „hh:mm“ als Maskenfeld: nur Ziffern, Doppelpunkt von selbst, ↑/↓ verschieben um eine Minute. */
-export function ClockField({
-  label,
-  ariaLabel,
-  value,
-  onChange,
-  onCommit,
-  autoFocus = false,
-}: {
-  label: ReactNode;
-  ariaLabel: string;
-  autoFocus?: boolean;
-  value: string;
-  onChange: (v: string) => void;
-  onCommit: (v: string) => void;
-}) {
-  const valid = normalizeClock(value) !== null;
-  const input = useRef<HTMLInputElement>(null);
-  const caret = useRef<number | null>(null);
-  // Nach der Maske die Schreibmarke dorthin setzen, wo getippt wurde, statt ans Ende.
-  useLayoutEffect(() => {
-    if (caret.current === null || document.activeElement !== input.current) return;
-    input.current!.setSelectionRange(caret.current, caret.current);
-    caret.current = null;
-  }, [value]);
-  useEffect(() => {
-    if (autoFocus) input.current?.focus();
-  }, [autoFocus]);
-  return (
-    <label className="grid gap-0.5">
-      <span className="text-muted">{label}</span>
-      <input
-        className={cx("w-20 font-mono", !valid && "border-bad text-bad")}
-        placeholder="hh:mm"
-        inputMode="numeric"
-        maxLength={6}
-        ref={input}
-        value={value}
-        aria-label={ariaLabel}
-        aria-invalid={!valid}
-        title={valid ? "Uhrzeit, z. B. 1030 für 10:30. ↑/↓: eine Minute, mit Umschalt zehn." : "Keine gültige Uhrzeit"}
-        onChange={(e) => {
-          const el = e.target;
-          const m = maskClockAt(el.value, el.selectionStart ?? el.value.length);
-          caret.current = m.caret;
-          onChange(m.value);
-          // Uhrzeit vollständig am Ende getippt: gleich ins nächste Feld (das Verlassen speichert sie).
-          if (m.value.length === 5 && m.caret === 5 && normalizeClock(m.value) && m.value !== value) {
-            const fields = [...document.querySelectorAll<HTMLElement>("input, textarea, select")].filter(
-              (f) => !(f as HTMLInputElement).disabled && f.offsetParent !== null,
-            );
-            requestAnimationFrame(() => fields[fields.indexOf(el) + 1]?.focus());
-          }
-        }}
-        onKeyDown={(e) => {
-          if (isEnter(e)) e.currentTarget.blur();
-          else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-            e.preventDefault();
-            onChange(stepClock(value, (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1)));
-          }
-        }}
-        onBlur={() => {
-          const n = normalizeClock(value);
-          if (n === null) return; // ungültig: stehen lassen und rot zeigen, nichts speichern
-          onChange(n);
-          onCommit(n);
-        }}
-      />
-    </label>
   );
 }
