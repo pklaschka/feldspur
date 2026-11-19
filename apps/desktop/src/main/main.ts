@@ -67,6 +67,7 @@ import {
 import {
   cancelExport,
   exportRunning,
+  exportingSession,
   exportStatus,
   montagePlan,
   previewExport,
@@ -88,6 +89,8 @@ import { AUTO_BACKUP_CHECK_MS, AutoBackup } from "./backup.ts";
 let store: ProjectStore | null = null;
 /** Laufendes Einsammeln je Einsatz, zum Abbrechen. */
 const importing = new Map<string, AbortController>();
+/** Einsätze, deren Tonspuren gerade analysiert werden. */
+const analyzing = new Set<string>();
 /** Schon vollständig gelesene Dateien: Ein zweiter Versuch nach einem Abbruch muss sie nicht erneut lesen. */
 const scanCache = new ScanCache();
 let win: BrowserWindow | null = null;
@@ -449,6 +452,17 @@ function registerIpc(): void {
     updateSessionDetails(s, sessionId, patch);
     return { view: buildSessionView(s, sessionId), project: projectInfo()! };
   });
+  undoable(IPC.deleteSession, "Einsatz gelöscht", (_e, sessionId: string) => {
+    const s = requireStore();
+    if (importing.has(sessionId))
+      throw new Error("In diesen Einsatz wird gerade eingesammelt. Bitte warten oder abbrechen, dann löschen.");
+    if (exportingSession() === sessionId)
+      throw new Error("Für diesen Einsatz läuft gerade eine Ausgabe. Bitte warten oder abbrechen, dann löschen.");
+    if (analyzing.has(sessionId))
+      throw new Error("Die Tonspuren dieses Einsatzes werden gerade analysiert. Bitte warten, dann löschen.");
+    s.deleteSession(sessionId);
+    return projectInfo()!;
+  });
   undoable(IPC.removeSource, "Quelle entfernt", (_e, sourceId: string) => {
     const s = requireStore();
     return buildSessionView(s, removeSource(s, sourceId));
@@ -629,10 +643,16 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC.analyze, async (e, sessionId: string) => {
     const s = requireStore();
-    const r = await analyzeSession(s, sessionId, {
-      skip: unreachableForAnalysis(s, sessionId),
-      onProgress: (done, total, fileName) => e.sender.send(IPC.progress, { done, total, fileName }),
-    });
+    analyzing.add(sessionId);
+    let r;
+    try {
+      r = await analyzeSession(s, sessionId, {
+        skip: unreachableForAnalysis(s, sessionId),
+        onProgress: (done, total, fileName) => e.sender.send(IPC.progress, { done, total, fileName }),
+      });
+    } finally {
+      analyzing.delete(sessionId);
+    }
     return {
       view: buildSessionView(s, sessionId),
       analyzed: r.analyzed,

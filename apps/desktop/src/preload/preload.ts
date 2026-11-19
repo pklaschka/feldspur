@@ -33,6 +33,7 @@ const api: FeldspurApi = {
   setDeviceTimeZone: (id, tz) => ipcRenderer.invoke(IPC.setDeviceTimeZone, id, tz),
   renameDevice: (id, label) => ipcRenderer.invoke(IPC.renameDevice, id, label),
   updateSession: (id, patch) => ipcRenderer.invoke(IPC.updateSession, id, patch),
+  deleteSession: (id) => ipcRenderer.invoke(IPC.deleteSession, id),
   removeSource: (id) => ipcRenderer.invoke(IPC.removeSource, id),
   moveSource: (id, target) => ipcRenderer.invoke(IPC.moveSource, id, target),
   mergeDevices: (from, into) => ipcRenderer.invoke(IPC.mergeDevices, from, into),
