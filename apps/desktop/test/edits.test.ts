@@ -17,6 +17,7 @@ import {
   setLevel,
   toggleEvidence,
 } from "../src/main/edits.ts";
+import { updateSessionDetails } from "../src/main/session.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
 let dir: string;
@@ -124,6 +125,31 @@ describe("Lage prüfen", () => {
     const { session, video } = seed();
     const r = row(session.id, video.id);
     expect(() => confirmPlacement(store, video.id, r.startMs! + 1000)).toThrow(/geändert/);
+  });
+});
+
+describe("Einsatzdatum ändern", () => {
+  it("geprüfte Lage aus Metadaten bleibt auf dem Tag der Datei, Prüfung einer Handeingabe wandert mit", () => {
+    const { session, video, photo } = seed();
+    const before = row(session.id, video.id);
+    confirmPlacement(store, video.id, before.startMs!);
+    addTimeEvidence(store, {
+      sourceId: photo.id,
+      kind: "manual",
+      clock: "10:40",
+      atMedia: "",
+      precision: "approx",
+      note: "",
+    });
+    const photoBefore = row(session.id, photo.id);
+    confirmPlacement(store, photo.id, photoBefore.startMs!);
+
+    updateSessionDetails(store, session.id, { date: "2026-09-15" });
+
+    const videoAfter = row(session.id, video.id);
+    expect(videoAfter.startMs).toBe(before.startMs);
+    expect(videoAfter.evidence.find((e) => e.chosen)?.kind).toBe("checked");
+    expect(row(session.id, photo.id).startMs).toBe(photoBefore.startMs! + 86_400_000);
   });
 });
 
