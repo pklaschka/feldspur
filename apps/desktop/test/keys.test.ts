@@ -13,12 +13,16 @@ describe("isEnter", () => {
 });
 
 describe("reviewKey", () => {
-  const ev = (k: string, mods: Partial<Record<"shiftKey" | "ctrlKey" | "metaKey" | "altKey", boolean>> = {}) => ({
+  const ev = (
+    k: string,
+    mods: Partial<Record<"shiftKey" | "ctrlKey" | "metaKey" | "altKey" | "repeat", boolean>> = {},
+  ) => ({
     key: k,
     shiftKey: false,
     ctrlKey: false,
     metaKey: false,
     altKey: false,
+    repeat: false,
     isComposing: false,
     defaultPrevented: false,
     ...mods,
@@ -40,6 +44,13 @@ describe("reviewKey", () => {
     expect(reviewKey(ev("n", { ctrlKey: true }), at(), false)).toBeNull();
     expect(reviewKey(ev("n", { altKey: true }), at(), false)).toBeNull();
     expect(reviewKey(ev("m"), at(), false)).toBeNull();
+  });
+
+  it("gehaltenes Strg/⌘+Enter bestätigt nur einmal, N darf wiederholen", () => {
+    expect(reviewKey(ev("Enter", { ctrlKey: true, repeat: true }), at(), false)).toBeNull();
+    expect(reviewKey(ev("Enter", { metaKey: true, repeat: true }), at(), false)).toBeNull();
+    expect(reviewKey(ev("n", { repeat: true }), at(), false)).toBe("next");
+    expect(reviewKey(ev("N", { shiftKey: true, repeat: true }), at(), false)).toBe("prev");
   });
 
   it("nicht in Textfeldern, Menüs oder bei offenem Dialog", () => {

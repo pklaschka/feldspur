@@ -1,14 +1,24 @@
 /** Einsatzdaten nachträglich bearbeiten. */
-import type { ProjectStore } from "@feldspur/core";
+import type { ProjectStore, TimeEvidence } from "@feldspur/core";
 import type { SessionPatch } from "../shared/api.ts";
 
 const DAY = 86_400_000;
 
 /**
+ * Hängt die Zeit dieses Belegs am Einsatzdatum? Von Hand gesetzte und angesagte Uhrzeiten ja; eine Prüfung nur,
+ * wenn sie einer solchen folgte. Eine geprüfte Lage aus Metadaten oder Dateiname bleibt auf dem Tag der Datei.
+ */
+function followsSessionDate(e: TimeEvidence): boolean {
+  if (e.kind === "manual" || e.kind === "spoken") return true;
+  const basis = e.kind === "checked" ? e.decision?.basisKind : undefined;
+  return basis === "manual" || basis === "spoken";
+}
+
+/**
  * Titel, Datum, Ort, Zeitzone, Standard-Bezugszeitraum, Episoden und Zusatzfelder ändern.
  * Wird das Datum verschoben, wandern alle von Hand eingetragenen Uhrzeiten (Zeitbelege von Hand,
  * angesagte Zeiten, Notierzeiten im Tagebuch) mit, weil sie als Uhrzeit an diesem Tag gemeint waren.
- * Zeiten aus Metadaten und Dateinamen bleiben, wie sie sind.
+ * Zeiten aus Metadaten und Dateinamen bleiben, wie sie sind, auch wenn ihre Lage geprüft wurde.
  */
 export function updateSessionDetails(s: ProjectStore, sessionId: string, patch: SessionPatch): void {
   const before = s.getSession(sessionId);
@@ -50,7 +60,7 @@ export function updateSessionDetails(s: ProjectStore, sessionId: string, patch: 
     s.updateSession(sessionId, next);
     if (!shift) return;
     for (const e of s.listEvidence(sessionId)) {
-      if (e.kind !== "manual" && e.kind !== "spoken" && e.kind !== "checked") continue;
+      if (!followsSessionDate(e)) continue;
       s.updateEvidenceTime(e.id, e.localMs + shift);
     }
     for (const d of s.listDiaryEntries(sessionId)) {

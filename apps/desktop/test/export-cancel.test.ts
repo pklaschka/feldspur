@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WebContents } from "electron";
@@ -15,7 +15,7 @@ vi.mock("electron", () => ({
 }));
 const { cancelExport, exportRunning, runExport } = await import("../src/main/export.ts");
 
-describe.skipIf(!hasFfmpeg())("Ausgabe abbrechen", () => {
+describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler", () => {
   let dir: string;
   let store: ProjectStore;
   let sessionId: string;
@@ -54,6 +54,34 @@ describe.skipIf(!hasFfmpeg())("Ausgabe abbrechen", () => {
     // Dort liegen womöglich halbe Dateien: Der alte Stand gilt nicht mehr, ein Video gibt es nicht.
     expect(store.getExportRecord(sessionId)).toBeNull();
     expect(readdirSync(join(out, readdirSync(out)[0]!)).some((f) => f.endsWith(".mp4"))).toBe(false);
+    expect(exportRunning()).toBe(false);
+  });
+
+  it("behält den Stand der alten Ausgabe, wenn schon die Vorabprüfung scheitert", async () => {
+    const out = join(dir, "vorab");
+    const quiet = { send: () => {} } as unknown as WebContents;
+    await runExport(store, quiet, sessionId, out, { video: false });
+    const record = store.getExportRecord(sessionId);
+    expect(record).not.toBeNull();
+
+    // Zieldatei nicht beschreibbar (wie eine in Word geöffnete .docx; als Verzeichnis, damit es auch als root scheitert).
+    const docx = join(
+      record!.dir,
+      record!.files.find((f) => f.endsWith(".docx"))!,
+    );
+    rmSync(docx);
+    mkdirSync(docx);
+    await expect(runExport(store, quiet, sessionId, out, { video: false })).rejects.toThrow();
+    // Geschrieben wurde nichts: Status und „Erneut ausgeben…“ samt Ordner bleiben.
+    expect(store.getExportRecord(sessionId)).toEqual(record);
+    expect(
+      existsSync(
+        join(
+          record!.dir,
+          record!.files.find((f) => f.endsWith(".xlsx"))!,
+        ),
+      ),
+    ).toBe(true);
     expect(exportRunning()).toBe(false);
   });
 });
