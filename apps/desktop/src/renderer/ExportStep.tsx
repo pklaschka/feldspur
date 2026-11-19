@@ -2,7 +2,7 @@
  * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Zeitgerüst (.docx), Dokumentvariablen und
  * Begleitprotokoll.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ExportStatus, OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
 import { cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
@@ -16,6 +16,8 @@ import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 const api = window.feldspur;
 
 const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
+/** Übergeordneter Ordner eines Pfads (Windows oder sonst). */
+const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || p;
 const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
   [/\.docx$/, "Zeitgerüst für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
@@ -123,12 +125,15 @@ export function ExportStep({
   const paths = view.rows.map((r) => r.originalPath).join("\n");
   const found = pre?.phase === "found" && pre.video === video && pre.paths === paths ? pre : null;
   const running = pre?.phase === "running" ? pre : null;
+  // Ob die Ausgabe in den Ordner der letzten gehen soll (gilt auch, wenn erst die Originale-Prüfung nachfragt).
+  const reuseDir = useRef(false);
   const start = () => {
     setPre(null);
-    ex.start(sessionId, settings);
+    ex.start(sessionId, { ...settings, reuseDir: reuseDir.current });
   };
   /** Erst die Originale prüfen (Prüfsummen schon geprüfter Dateien merkt sich die App), dann ausgeben. */
-  const run = async () => {
+  const run = async (reuse = false) => {
+    reuseDir.current = reuse;
     setPre({ phase: "running", progress: null });
     let result: OriginalsCheck;
     try {
@@ -219,7 +224,8 @@ export function ExportStep({
               status={result}
               fresh={!!justDone && !stale}
               disabled={!!ex.job || !!running || !!found}
-              onRerun={() => void run()}
+              onRerun={() => void run(true)}
+              onRerunElsewhere={() => void run()}
             />
           )}
         </Panel>
@@ -348,16 +354,42 @@ export function ExportStep({
  * Letzte Ausgabe: wann, wohin, welche Dateien, und ob sie noch zum Einsatz passt. Passt sie nicht, steht dabei,
  * was sich geändert hat, damit niemand eine veraltete Fassung in MAXQDA weiterverwendet.
  */
+/** „Erneut ausgeben…“ geht in den bisherigen Ordner; der zweite Knopf fragt nach einem anderen. */
+function RerunButtons({
+  disabled,
+  dir,
+  onRerun,
+  onRerunElsewhere,
+}: {
+  disabled: boolean;
+  dir: string;
+  onRerun: () => void;
+  onRerunElsewhere: () => void;
+}) {
+  return (
+    <>
+      <Button size="sm" disabled={disabled} onClick={onRerun} title={`Ausgeben nach: ${parentDir(dir)}`}>
+        Erneut ausgeben…
+      </Button>
+      <Button size="sm" disabled={disabled} onClick={onRerunElsewhere}>
+        In anderen Ordner ausgeben…
+      </Button>
+    </>
+  );
+}
+
 function ExportResult({
   status,
   fresh,
   disabled,
   onRerun,
+  onRerunElsewhere,
 }: {
   status: ExportStatus;
   fresh: boolean;
   disabled: boolean;
   onRerun: () => void;
+  onRerunElsewhere: () => void;
 }) {
   const { record, differences, missingFiles } = status;
   const stale = differences.length > 0;
@@ -399,9 +431,7 @@ function ExportResult({
             ))}
           </ul>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button size="sm" disabled={disabled} onClick={onRerun}>
-              Erneut ausgeben…
-            </Button>
+            <RerunButtons disabled={disabled} dir={record.dir} onRerun={onRerun} onRerunElsewhere={onRerunElsewhere} />
             <span className="text-[0.85rem] text-muted">Nur Geändertes wird neu gerechnet.</span>
           </div>
         </div>
@@ -414,9 +444,12 @@ function ExportResult({
                 : `${missingFiles.length} Dateien fehlen im Ausgabeordner`}
             </b>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <Button size="sm" disabled={disabled} onClick={onRerun}>
-                Erneut ausgeben…
-              </Button>
+              <RerunButtons
+                disabled={disabled}
+                dir={record.dir}
+                onRerun={onRerun}
+                onRerunElsewhere={onRerunElsewhere}
+              />
               <span className="text-[0.85rem] text-muted">Verschoben oder gelöscht? Das legt sie wieder an.</span>
             </div>
           </div>

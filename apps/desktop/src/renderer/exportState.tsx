@@ -30,7 +30,10 @@ interface ExportState {
   cancelled: Record<string, CancelledExport>;
   /** Laufende Ausgabe abbrechen. */
   cancel(): void;
-  start(sessionId: string, opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean }): void;
+  start(
+    sessionId: string,
+    opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean; reuseDir?: boolean },
+  ): void;
 }
 
 const Ctx = createContext<ExportState | null>(null);
@@ -53,7 +56,7 @@ export function ExportProvider({ children }: { children: ReactNode }) {
   );
   const start = (
     sessionId: string,
-    opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean },
+    opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean; reuseDir?: boolean },
   ) => {
     if (job) return;
     setJob({ sessionId, video: opts.video, progress: null, videoFrom: null, cancelling: false });

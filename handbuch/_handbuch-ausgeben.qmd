@@ -15,7 +15,10 @@ steht dann, wann und wohin ausgegeben wurde, und ob die Ausgabe noch passt:
 
 ![Veraltete Ausgabe nach einem Neustart, mit den Gründen](bilder/ausgeben-veraltet.png){#fig-ausgeben-veraltet}
 
-**Erneut ausgeben…** rechnet nur das Geänderte neu. Feldspur ist dabei vorsichtig: Lieber einmal zu oft „Veraltet“ als
+**Erneut ausgeben…** rechnet nur das Geänderte neu und geht ohne Nachfrage in den Ordner der letzten Ausgabe (der
+Knopf nennt ihn als Hinweis). Für einen anderen Ordner gibt es **In anderen Ordner ausgeben…**; der Ordnerdialog
+beginnt dann beim bisherigen Ordner. Ist eine Datei der letzten Ausgabe noch in Word, Excel oder MAXQDA geöffnet, meldet
+Feldspur das gleich zu Beginn („… ist noch in einem anderen Programm geöffnet“) und nicht erst nach dem Video. Feldspur ist dabei vorsichtig: Lieber einmal zu oft „Veraltet“ als
 eine alte Ausgabe, die als aktuell gilt.
 
 Vor jeder Ausgabe prüft Feldspur die Originale mit ihrer Prüfsumme (@sec-originale). Ist alles da und unverändert,
