@@ -66,6 +66,7 @@ export function Collect({
 
   return (
     <div
+      data-dropzone
       onDragOver={(e) => {
         e.preventDefault();
         setHover(true);

@@ -11,6 +11,7 @@ import { renderImageRefJpeg } from "./stillRender.ts";
 import { Button, cx, ErrorBanner, ErrorProvider, Panel, TooltipProvider } from "./ui.tsx";
 import { HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
 import { SessionPane } from "./app/SessionPane.tsx";
+import { StrayDropHint, useStrayDrop } from "./app/strayDrop.tsx";
 import { DeletedToast, SESSION_DELETED } from "./app/history.tsx";
 
 const api = window.feldspur;
@@ -28,6 +29,8 @@ export function App() {
   const [projectMenu, setProjectMenu] = useState(false);
   const [changeLog, setChangeLog] = useState(false);
   const [backups, setBackups] = useState(false);
+  // Dateien neben „Einsammeln“ abgelegt: Hinweis statt Stille.
+  const strayDrop = useStrayDrop();
   /** Zuletzt gelöschter Einsatz: Hinweis mit „Rückgängig“, auch wenn danach kein Einsatz mehr offen ist. */
   const [deleted, setDeleted] = useState<{ id: string; title: string } | null>(null);
   /** Oberster Rückgängig-Schritt, wie ihn der offene Einsatz zuletzt gelesen hat (undefined: noch keiner). */
@@ -152,6 +155,10 @@ export function App() {
             </ErrorBanner>
           </Panel>
         </main>
+        <StrayDropHint
+          n={strayDrop}
+          text="Öffne zuerst ein Projekt; Dateien kommen dann über „Einsammeln“ in einen Einsatz."
+        />
       </ErrorProvider>
     );
   }
@@ -215,6 +222,7 @@ export function App() {
                 key={sessionId}
                 sessionId={sessionId}
                 guard={guard}
+                strayDrop={strayDrop}
                 onProject={(p) => {
                   setProject(p);
                   // Rückgängig kann den offenen Einsatz entfernen (Anlegen rückgängig): dann einen anderen zeigen.
@@ -238,6 +246,12 @@ export function App() {
                   sammle dann alles ein, was an diesem Tag aufgezeichnet wurde.
                 </p>
                 <NewSessionForm hero onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
+                <StrayDropHint
+                  n={strayDrop}
+                  text="Lege zuerst einen Einsatz an; Dateien kommen dann über „Einsammeln“ hinein."
+                  action="Einsatz anlegen"
+                  onAction={() => document.getElementById(HERO_TITLE_ID)?.focus()}
+                />
               </main>
             )}
             {deleted && !project.sessions.some((s) => s.id === deleted.id) && (
