@@ -199,6 +199,12 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   }
   ctxBtn?.addEventListener("click", () => toggleContext());
   $("ctx-close").addEventListener("click", () => toggleContext(false));
+  document.querySelectorAll<HTMLElement>(".det button[data-m]").forEach((b) =>
+    b.addEventListener("click", () => {
+      seek(Number(b.dataset.m) / 1000, true);
+      if (innerWidth <= 860) toggleContext(false);
+    }),
+  );
   document.querySelectorAll<HTMLElement>(".ref[data-ctx]").forEach((b) =>
     b.addEventListener("click", (ev) => {
       ev.stopPropagation();
@@ -261,6 +267,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   const IC_AUDIO = "M8 2.5a2 2 0 0 1 2 2v3.5a2 2 0 0 1-4 0V4.5a2 2 0 0 1 2-2ZM4 8a4 4 0 0 0 8 0M8 12v2.5";
   const IC_VIDEO =
     "M3 5.5h7.5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1ZM11.5 8.2 15 6v6l-3.5-2.2";
+  const waves: { path: Element; data: Uint8Array; step: number; t0: number; dur: number }[] = [];
   const lanes = D.lanes.map((lane, n) => {
     const row = el("div", `tl-row lane k-${lane.kind}`);
     const lab = el("div", "tl-lab");
@@ -306,6 +313,21 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
       d.style.left = pct(c.m0 / 1000);
       d.style.width = pct((c.m1 - c.m0) / 1000);
       d.title = `${c.label} · ${c.file} · ${clock(c.m0 / 1000)}–${clock(c.m1 / 1000 - 0.001)}`;
+      if (c.w && c.ws) {
+        // Hüllkurve der Aufnahme; gezeichnet wird nur der sichtbare Ausschnitt (drawWaves).
+        const bin = atob(c.w);
+        const data = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+        const t0 = c.m0 / 1000;
+        const dur = Math.max(0.001, (c.m1 - c.m0) / 1000);
+        d.insertAdjacentHTML(
+          "beforeend",
+          '<svg preserveAspectRatio="none" aria-hidden="true"><path fill="none" stroke="currentColor" vector-effect="non-scaling-stroke" style="stroke-width:1.5px"/></svg>',
+        );
+        const svg = d.firstElementChild!;
+        svg.setAttribute("viewBox", `0 0 ${dur} 100`);
+        waves.push({ path: svg.firstElementChild!, data, step: c.ws / 1000, t0, dur });
+      }
       d.append(el("span", "", c.label));
       zin.append(d);
     }
@@ -338,13 +360,14 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     tl.style.setProperty("--zw", `${(DUR / span) * 100}%`);
     const z = DUR / span;
     tl.dataset.zoom = z < 1.01 ? "1" : "n";
-    $("zoom-lvl").textContent = `${z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)}×`;
+    $("zoom-lvl").textContent = ` · ${z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)}×`;
     // Beschriftung der Episoden bleibt sichtbar, auch wenn ihr Anfang links aus dem Ausschnitt ragt.
     eps.querySelectorAll<HTMLElement>(".seg.ep").forEach((b) => {
       const cut = ((S.v0 - Number(b.dataset.m0) / 1000) / span) * S.tlW;
       b.style.paddingLeft = cut > 0 ? `${cut + 11}px` : "";
     });
     drawGrid();
+    queueWaves();
     placeHead();
   }
   function zoomAt(factor: number, at: number) {
@@ -353,6 +376,38 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     const f = (at - S.v0) / span;
     setView(at - f * next, at - f * next + next);
   }
+  /** Wellenformen: ein Strich je BAR_PX, nur im sichtbaren Ausschnitt (und etwas darüber hinaus). */
+  const BAR_PX = 1.6;
+  function drawWaves() {
+    if (!S.tlW) return;
+    const span = S.v1 - S.v0;
+    for (const w of waves) {
+      // Strichbreite in Sekunden: an ein festes Raster gebunden, damit beim Verschieben nichts flimmert.
+      const bar = Math.max(w.step, (span / S.tlW) * BAR_PX);
+      const a = Math.max(0, Math.floor((S.v0 - span * 0.5 - w.t0) / bar));
+      const b = Math.min(Math.ceil(w.dur / bar), Math.ceil((S.v1 + span * 0.5 - w.t0) / bar));
+      let d = "";
+      for (let k = a; k < b; k++) {
+        const i0 = Math.floor((k * bar) / w.step);
+        const i1 = Math.min(w.data.length, Math.max(i0 + 1, Math.floor(((k + 1) * bar) / w.step)));
+        let v = 0;
+        for (let i = i0; i < i1; i++) if (w.data[i]! > v) v = w.data[i]!;
+        const h = (0.05 + (v / 255) * 0.95) * 46;
+        d += `M${((k + 0.5) * bar).toFixed(3)} ${(50 - h).toFixed(1)}V${(50 + h).toFixed(1)}`;
+      }
+      w.path.setAttribute("d", d);
+      // Weit vergrößert werden die Striche breiter, damit kein Kamm entsteht.
+      (w.path as SVGElement).style.strokeWidth = `${Math.max(1.5, (bar / span) * S.tlW - 0.6).toFixed(2)}px`;
+    }
+  }
+  let waveFrame = 0;
+  const queueWaves = () => {
+    if (waveFrame) return;
+    waveFrame = requestAnimationFrame(() => {
+      waveFrame = 0;
+      drawWaves();
+    });
+  };
   const STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400];
   function drawGrid() {
     const g = $("grid");
@@ -382,6 +437,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     tl.style.setProperty("--tlw", `${S.tlW}px`);
     $("stage").style.setProperty("--lab", `${S.tlLab}px`);
     drawGrid();
+    queueWaves();
     placeHead();
   }
   function placeHead() {
@@ -949,7 +1005,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
             ? `Stumm: ${names(mutes)}`
             : S.ton === "frei"
               ? "Zu hören: alle Geräte"
-              : `Zu hören: ${D.audio[0] ?? "Mischung"}`;
+              : "Zu hören: Mischung";
     if (nativeOk && S.ton === "frei") {
       const list = nativeTracks();
       if (list) {
@@ -999,7 +1055,10 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     $("ton-unsupported").hidden = supported;
     $("ton-next").hidden = !supported;
     if (!ton.open) ton.showModal();
-    (ton.querySelector<HTMLElement>(`.wiz-foot[data-step="${n}"] .fill`) ?? $("ton-pick")).focus();
+    // focusVisible kennt noch nicht jeder Browser; ohne zeigt er nach einem Tastendruck den Fokusring, das ist recht.
+    (ton.querySelector<HTMLElement>(`.wiz-foot[data-step="${n}"] .fill`) ?? $("ton-pick")).focus({
+      focusVisible: false,
+    } as FocusOptions);
   }
   function tonError(head: string, got: string) {
     $("ton-err-h").textContent = head;

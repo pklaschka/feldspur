@@ -475,10 +475,15 @@ kbd { font: 600 0.82rem/1 "Source Sans 3", system-ui, sans-serif; border: 1px so
 .grid { overflow: clip; }
 .tl-row.ruler .tl-track { cursor: grab; }
 .tl.panning, .tl.panning .tl-track { cursor: grabbing; }
-.zoom { gap: 2px; }
-.zoom .btn.small { min-width: 24px; padding: 0 6px; justify-content: center; }
-.zoom .lvl { color: var(--muted); font-size: 0.76rem; min-width: 3.4em; text-align: right; }
-.tl[data-zoom="1"] .zoom .lvl, .tl[data-zoom="1"] #zoom-all { visibility: hidden; }
+/* Die Knöpfe dazu sitzen im leeren Feld links von Lineal und Marken und brauchen keine eigene Zeilenhöhe. */
+.tl-row.ruler .tl-lab { position: relative; align-self: stretch; }
+.zoom { position: absolute; left: 0; top: 1px; z-index: 2; display: flex; align-items: center; gap: 4px; }
+.zoom .btn.small { min-height: 22px; min-width: 24px; padding: 0 5px; justify-content: center; background: var(--panel); }
+.zoom .btn.small:hover { background: color-mix(in srgb, var(--ink) 8%, var(--panel)); }
+.zoom .btn.small .ic { width: 12px; height: 12px; }
+.zoom #zoom-all { padding: 0 7px; gap: 0; color: var(--muted); }
+.zoom .lvl { white-space: pre; }
+.tl[data-zoom="1"] #zoom-all { visibility: hidden; }
 /* Vollbild: Bild und Steuerleiste, sonst nichts */
 .proj:fullscreen { justify-content: center; padding: 14px 24px; }
 .proj:fullscreen .title { display: none; }
@@ -487,8 +492,16 @@ kbd { font: 600 0.82rem/1 "Source Sans 3", system-ui, sans-serif; border: 1px so
 .ic-fs-off { display: none; }
 .proj:fullscreen .ic-fs-on { display: none; } .proj:fullscreen .ic-fs-off { display: block; }
 .proj { container: proj / inline-size; }
-@container proj (max-width: 700px) { .now small { display: none; } }
-@container proj (max-width: 620px) { #now-dur { display: none; } }
+/* Der Vollbild-Knopf braucht Platz: erst wird der Lautstärkeregler kürzer, dann fallen die Beiworte der Uhr weg. */
+.now .clock { flex: none; }
+@container proj (max-width: 680px) { .vol input { width: 48px; } }
+@container proj (max-width: 614px) { .now small { display: none; } }
+@container proj (max-width: 568px) { #now-dur { display: none; } }
+@container proj (max-width: 496px) { .now .vt { display: none; } }
+@container proj (max-width: 406px) { .vol input { display: none; } }
 @media (max-width: 860px) { .zoom { display: none; } .warn-bar { font-size: 0.8rem; } }
+/* Hochformate (ganze Tagebuchseiten, Handyfotos) nicht über die halbe Spalte ziehen. */
+.img img { width: auto; max-width: 100%; max-height: 320px; }
+.c-item .img img { max-height: 420px; }
 @media print { .ln:not(.k-episode) { content-visibility: visible; } }
 `;

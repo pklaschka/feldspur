@@ -94,6 +94,12 @@ describe.skipIf(!hasFfmpeg())("Viewer neben dem Montagevideo", () => {
     expect(data.audio).toEqual(["Mischung aller Geräte", ...devices.map((d) => d.title)]);
     expect(data.lanes.map((l) => [l.title, l.audio])).toEqual(devices.map((d, k) => [d.title, k + 1]));
     expect(data.lanes[0]!.ref).toBe(true);
+    // Wellenform je Aufnahme aus der Tonspur-Analyse: ein Byte je Wert, über die ganze Länge.
+    for (const c of data.lanes.flatMap((l) => l.clips)) {
+      expect(c.ws).toBeGreaterThanOrEqual(250);
+      expect(Buffer.from(c.w!, "base64").length).toBe(Math.ceil((c.m1 - c.m0) / c.ws!));
+    }
+    expect(Math.max(...Buffer.from(data.lanes[0]!.clips[0]!.w!, "base64"))).toBeGreaterThan(100);
     expect(data.durationMs).toBe(Math.round(transcript.plan.durationMs));
   });
 

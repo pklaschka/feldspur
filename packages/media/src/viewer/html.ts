@@ -7,6 +7,7 @@
  * jedem heutigen Browser laufen, nicht nur in Chromium (siehe AGENTS.md).
  */
 import { formatClock, type Id, type MontagePlan } from "@feldspur/core";
+import type { Envelope } from "../audio.ts";
 import { FPS } from "../layout.ts";
 import { deviceTracksOf, planPieces } from "../montage-video.ts";
 import {
@@ -31,6 +32,8 @@ export interface ViewerOptions {
   contextStills?: Map<SessionTranscriptContext, (Still | null)[]>;
   /** Tonspuren im Montagevideo, in ihrer Reihenfolge (Spur 1: Mischung). Ohne Angabe nur die Mischung. */
   audioTracks?: { title: string; deviceId?: Id }[];
+  /** Hüllkurven der Aufnahmen (Tonspur-Analyse), je Quelle. Daraus die Wellenform in den Gerätespuren. */
+  envelopes?: Map<Id, Envelope>;
 }
 
 /** Daten für das Skript; alles Übrige steht als HTML in der Seite. Zeiten in ms Videozeit. */
@@ -52,7 +55,8 @@ export interface ViewerData {
     ref: boolean;
     /** Index der eigenen Tonspur im Video, sonst -1. */
     audio: number;
-    clips: { label: string; file: string; m0: number; m1: number }[];
+    /** w: Hüllkurve als Base64 (ein Byte je Wert, 0 = still), ws: Abstand der Werte in ms. */
+    clips: { label: string; file: string; m0: number; m1: number; w?: string; ws?: number }[];
   }[];
 }
 
@@ -102,11 +106,51 @@ function displayDate(iso: string): string {
   return y && m && d ? `${d}.${m}.${y}` : iso;
 }
 
+/** Wellenform: höchstens so viele Werte je Aufnahme, nicht feiner als WAVE_STEP_MS. */
+const WAVE_MAX = 4000;
+const WAVE_STEP_MS = 250;
+/** Leiser als das zählt in der Wellenform als Stille (wie WAVEFORM_FLOOR_DB in der App). */
+const WAVE_FLOOR_DB = -60;
+
+/** Anhebung in dB, damit auch leise Aufnahmen eine lesbare Wellenform bekommen (laute Stellen bei etwa −6 dB). */
+function waveBoost(env: Envelope): number {
+  if (!env.db.length) return 0;
+  const sorted = env.db.toSorted();
+  const loud = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.98))]!;
+  return Math.min(30, Math.max(0, -6 - loud));
+}
+
+/** Hüllkurve eines Ausschnitts für die Zeitleiste: je Wert der lauteste Pegel, 0 … 255. */
+export function waveOf(env: Envelope, fromMs: number, durMs: number, boostDb = 0): { w: string; ws: number } {
+  const stepMs = Math.max(WAVE_STEP_MS, durMs / WAVE_MAX);
+  const n = Math.max(1, Math.ceil(durMs / stepMs));
+  const out = Buffer.alloc(n);
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, Math.floor(((fromMs + i * stepMs) / 1000) * env.rate));
+    const b = Math.min(env.db.length, Math.max(a + 1, Math.floor(((fromMs + (i + 1) * stepMs) / 1000) * env.rate)));
+    let db = -Infinity;
+    for (let k = a; k < b; k++) if (env.db[k]! > db) db = env.db[k]!;
+    out[i] = Math.round(Math.min(1, Math.max(0, 1 - (db + boostDb) / WAVE_FLOOR_DB)) * 255);
+  }
+  return { w: out.toString("base64"), ws: Math.round(stepMs) };
+}
+
 /** Spuren je Gerät mit ihren Aufnahmen in Videozeit, in derselben Reihenfolge wie die Gerätespuren im Video. */
-function lanesOf(transcript: SessionTranscript, audioTracks: { title: string; deviceId?: Id }[]): ViewerData["lanes"] {
+function lanesOf(
+  transcript: SessionTranscript,
+  audioTracks: { title: string; deviceId?: Id }[],
+  envelopes?: Map<Id, Envelope>,
+): ViewerData["lanes"] {
   const pieces = planPieces(transcript);
   const frameMs = 1000 / FPS;
-  const clips = new Map<Id, { label: string; file: string; f0: number; f1: number }[]>();
+  const clips = new Map<Id, { label: string; file: string; f0: number; f1: number; source: Id; fromMs: number }[]>();
+  const boosts = new Map<Id, number>();
+  const wave = (c: { source: Id; fromMs: number; f0: number; f1: number }) => {
+    const env = envelopes?.get(c.source);
+    if (!env) return {};
+    if (!boosts.has(c.source)) boosts.set(c.source, waveBoost(env));
+    return waveOf(env, c.fromMs, (c.f1 - c.f0) * frameMs, boosts.get(c.source));
+  };
   const kinds = new Map<Id, Set<string>>();
   for (const p of pieces)
     for (const a of p.audios) {
@@ -118,7 +162,15 @@ function lanesOf(transcript: SessionTranscript, audioTracks: { title: string; de
       clips.set(dev, list);
       const last = list.findLast((c) => c.label === a.source.label);
       if (last && last.f1 === p.f0) last.f1 = p.f1;
-      else list.push({ label: a.source.label, file: a.source.fileName, f0: p.f0, f1: p.f1 });
+      else
+        list.push({
+          label: a.source.label,
+          file: a.source.fileName,
+          f0: p.f0,
+          f1: p.f1,
+          source: a.source.id,
+          fromMs: a.fromMs,
+        });
     }
   const ref = transcript.input.devices.find((d) => d.isReference)?.id;
   return deviceTracksOf(transcript, pieces).map((d) => ({
@@ -128,13 +180,19 @@ function lanesOf(transcript: SessionTranscript, audioTracks: { title: string; de
     audio: audioTracks.findIndex((t, k) => k > 0 && t.deviceId === d.deviceId),
     clips: (clips.get(d.deviceId) ?? [])
       .toSorted((a, b) => a.f0 - b.f0)
-      .map((c) => ({ label: c.label, file: c.file, m0: Math.round(c.f0 * frameMs), m1: Math.round(c.f1 * frameMs) })),
+      .map((c) => ({
+        label: c.label,
+        file: c.file,
+        m0: Math.round(c.f0 * frameMs),
+        m1: Math.round(c.f1 * frameMs),
+        ...wave(c),
+      })),
   }));
 }
 
 export function viewerData(
   transcript: SessionTranscript,
-  opts: Pick<ViewerOptions, "mediaFileName" | "audioTracks">,
+  opts: Pick<ViewerOptions, "mediaFileName" | "audioTracks" | "envelopes">,
 ): ViewerData {
   const { plan, header } = transcript;
   const audioTracks = opts.audioTracks ?? [{ title: "Ton" }];
@@ -155,7 +213,7 @@ export function viewerData(
       c1: Math.round(s.toMs),
     })),
     audio: audioTracks.map((t) => t.title),
-    lanes: lanesOf(transcript, audioTracks),
+    lanes: lanesOf(transcript, audioTracks, opts.envelopes),
   };
 }
 
@@ -256,9 +314,23 @@ function entryHtml(
   return `<li class="ln k-${e.kind}" data-i="${i}" data-m="${Math.round(e.montageMs)}">${tm}${gl}<div class="tx">${tx}</div></li>`;
 }
 
-function contextHtml(c: SessionTranscriptContext, id: string, stills: (Still | null)[]): string {
+/** Angaben zum Kontextstück; die Uhrzeiten hinter „erwähnt um“ springen zur erwähnenden Zeile. */
+function contextDetails(details: string, mentions: number[]): string {
+  const text = details.replace(/^[\s·,]+/, "");
+  const m = /^(.*erwähnt um )(.+)$/s.exec(text);
+  const times = m?.[2]!.split(", ") ?? [];
+  if (!m || times.length !== mentions.length) return esc(text);
+  return `${esc(m[1]!)}${times
+    .map(
+      (t, i) =>
+        `<button class="num" type="button" data-m="${Math.round(mentions[i]!)}" title="Zur Stelle im Einsatztranskript">${esc(t)}</button>`,
+    )
+    .join(", ")}`;
+}
+
+function contextHtml(c: SessionTranscriptContext, id: string, stills: (Still | null)[], mentions: number[]): string {
   const name = c.head.replace(/^Kontext · /, "");
-  return `<li class="c-item" id="${id}"><h3>${esc(name)}</h3>${c.details ? `<p class="det">${esc(c.details.replace(/^[\s·,]+/, ""))}</p>` : ""}${images(c.images, stills, `Kontext · ${name}`, false)}${c.body ? `<p class="body">${esc(c.body)}</p>` : ""}</li>`;
+  return `<li class="c-item" id="${id}"><h3>${esc(name)}</h3>${c.details ? `<p class="det">${contextDetails(c.details, mentions)}</p>` : ""}${images(c.images, stills, `Kontext · ${name}`, false)}${c.body ? `<p class="body">${esc(c.body)}</p>` : ""}</li>`;
 }
 
 function fontCss(): string {
@@ -287,7 +359,14 @@ export function sessionTranscriptHtml(transcript: SessionTranscript, opts: Viewe
     .map((e, i) => entryHtml(transcript, e, i, opts.stills.get(e) ?? [], { keyToId, names }, lastSrc))
     .join("\n");
   const ctxItems = transcript.context
-    .map((c) => contextHtml(c, keyToId.get(c.key)!, opts.contextStills?.get(c) ?? []))
+    .map((c) =>
+      contextHtml(
+        c,
+        keyToId.get(c.key)!,
+        opts.contextStills?.get(c) ?? [],
+        transcript.entries.filter((e) => e.contextRefs?.includes(c.key)).map((e) => e.montageMs),
+      ),
+    )
     .join("\n");
   const extra = Object.entries(h.extra).filter(([k, v]) => k.trim() && v.trim());
   const facts: [string, string][] = [
@@ -367,7 +446,7 @@ ${VIEWER_CSS}
     <p class="warn-bar" id="warn" role="status" hidden>${svg("M8 2.5 14 13H2ZM8 6.5v3M8 11.3h.01")}<span id="warn-t"></span></p>
     <div class="tl" id="tl" data-zoom="1">
       <div class="grid" id="grid" aria-hidden="true"></div>
-      <div class="tl-row ruler"><div class="tl-lab zoom"><button class="btn small" id="zoom-out" type="button" aria-label="Zeitleiste verkleinern" title="Verkleinern (Mausrad über der Zeitleiste)">−</button><button class="btn small" id="zoom-in" type="button" aria-label="Zeitleiste vergrößern" title="Vergrößern (Mausrad über der Zeitleiste)">+</button><span class="lvl num" id="zoom-lvl"></span><button class="btn small" id="zoom-all" type="button" title="Ganzen Einsatz zeigen">Alles</button></div><div class="tl-track" id="ruler" title="Ziehen verschiebt den Ausschnitt"></div></div>
+      <div class="tl-row ruler"><div class="tl-lab"><div class="zoom" role="group" aria-label="Ausschnitt der Zeitleiste"><button class="btn small line" id="zoom-out" type="button" aria-label="Zeitleiste verkleinern" title="Verkleinern (−, Mausrad über der Zeitleiste; Umschalt+Mausrad verschiebt)">${svg("M3.5 8h9")}</button><button class="btn small line" id="zoom-in" type="button" aria-label="Zeitleiste vergrößern" title="Vergrößern (+, Mausrad über der Zeitleiste; Umschalt+Mausrad verschiebt)">${svg("M3.5 8h9M8 3.5v9")}</button><button class="btn small" id="zoom-all" type="button" title="Ganzen Einsatz zeigen">Alles<span class="lvl num" id="zoom-lvl"></span></button></div></div><div class="tl-track" id="ruler" title="Ziehen verschiebt den Ausschnitt"></div></div>
       <div class="tl-row marks"><div class="tl-lab"></div><div class="tl-track"><div class="zin" id="marks"></div></div></div>
       <div class="tl-row eps"><div class="tl-lab"><span class="cap">${transcript.episodes ? "Episoden" : "Montage"}</span></div><div class="tl-track"><div class="zclip"><div class="zin" id="eps"></div></div><input type="range" id="seek" min="0" step="1" aria-label="Stelle im Video"><div class="focusring"></div></div></div>
       <div class="tl-row tl-head" id="tl-head"><div class="tl-lab"><span class="cap">Tonspuren</span></div><div class="tl-lab"><span id="mix-state"></span><span class="grow"></span><button class="btn small" id="mix-reset" type="button" hidden>Alle hören</button><button class="btn small line ton-btn" id="ton-btn" type="button" aria-haspopup="dialog" hidden><svg class="ic mx" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11M8 2.5v11M12 2.5v11M2.6 5.5h2.8M6.6 10h2.8M10.6 7h2.8"/></svg><svg class="ic ok" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"/></svg><span id="ton-lbl">Erweiterte Tonspurkontrolle</span></button></div></div>
@@ -376,7 +455,7 @@ ${VIEWER_CSS}
       <div class="playhead" id="ph"><i></i><svg viewBox="0 0 14 11" aria-hidden="true"><path d="M1 0.6 13 4.4 1 8.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
       <div class="tip num" id="tip"></div>
     </div>
-    <div class="tl-foot"><span><i class="i-photo"></i>Foto</span><span><i class="i-diary"></i>Tagebuch</span><span id="hit-legend" hidden><i class="i-hit"></i>Treffer</span><span><i class="i-gap"></i>Zwischenzeit</span><span>${FLAG}Referenzuhr</span><span>Mausrad zoomt, Umschalt+Mausrad verschiebt</span></div>
+    <div class="tl-foot"><span><i class="i-photo"></i>Foto</span><span><i class="i-diary"></i>Tagebuch</span><span id="hit-legend" hidden><i class="i-hit"></i>Treffer</span><span><i class="i-gap"></i>Zwischenzeit</span><span>${FLAG}Referenzuhr</span></div>
     <dl class="facts" id="facts">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd${k === "Montage" ? ' class="num"' : ""}>${esc(v)}</dd>`).join("")}</dl>
     </div>
   </section>

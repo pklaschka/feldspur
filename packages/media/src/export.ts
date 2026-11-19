@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
 import { levelText, sessionLevels } from "./analyze.ts";
-import type { AudioLevel } from "./audio.ts";
+import { unpackEnvelope, type AudioLevel } from "./audio.ts";
 import { sessionTranscriptDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type MontageResult, type OverlayRenderer } from "./montage-video.ts";
@@ -338,6 +338,10 @@ export async function exportSession(
         stills,
         contextStills,
         audioTracks: montage.audioTracks,
+        // Wellenform der Gerätespuren aus der Tonspur-Analyse; ohne Analyse bleibt die Aufnahme ein glatter Balken.
+        envelopes: new Map(
+          store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, unpackEnvelope(a.envelope, a.envelopeRate)]),
+        ),
       });
       await writeFile(outPath(outDir, `${base}.html`), html, "utf8");
       files.push(`${base}.html`);
