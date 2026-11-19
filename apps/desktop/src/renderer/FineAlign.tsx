@@ -12,7 +12,7 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { mediaUrl, type AlignResult, type SessionView, type SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { prepareCanvas, useElementWidth } from "./canvas.ts";
-import { Button, Choice, CloseButton, cx, Picker } from "./ui.tsx";
+import { Button, Choice, CloseButton, cx, ErrorBanner, Picker } from "./ui.tsx";
 import { usePeakTiles } from "./Waveform.tsx";
 import { applyLevel, LEVEL_MEDIA_PROPS, resumeAudio, setPan } from "./level.ts";
 
@@ -78,6 +78,7 @@ export function FineAlign({
           aria-describedby={undefined}
           data-testid="fine-align"
         >
+          <ErrorBanner dialog className="mb-3" />
           {start && (
             <Editor
               key={`${start.aSourceId}:${start.bSourceId}:${start.replaceAnchorId ?? ""}`}

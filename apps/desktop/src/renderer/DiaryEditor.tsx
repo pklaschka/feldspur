@@ -8,7 +8,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "re
 import type { DiaryPatch, Region, SessionView } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { loadPdf } from "./pdf.tsx";
-import { Button, cx, Notice } from "./ui.tsx";
+import { Button, cx, ErrorBanner, Notice } from "./ui.tsx";
 import { useLatest } from "./hooks.ts";
 import { type NavPage, type Surface, ZOOM_MAX, fitBox, navPages, sKey } from "./diary/pages.ts";
 import { PageCanvas, Thumb } from "./diary/PageCanvas.tsx";
@@ -367,6 +367,7 @@ export function DiaryEditor({
               />
             ))}
           </aside>
+          <ErrorBanner dialog floating />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

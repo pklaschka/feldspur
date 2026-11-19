@@ -1,6 +1,19 @@
 /** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
 import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
-import { Fragment, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  createContext,
+  Fragment,
+  use,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from "react";
 import type { SourceKind } from "@feldspur/core/model";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -192,6 +205,90 @@ export function CloseButton({
         </svg>
       )}
     </button>
+  );
+}
+
+type ErrorState = {
+  message: string | null;
+  dismiss: () => void;
+  /** Offene Dialoge mit eigener Fehlerzeile, der oberste zuletzt. */
+  layers: string[];
+  /** Meldet eine Dialog-Ebene an; gibt die Abmeldung zurück. */
+  addLayer: (id: string) => () => void;
+};
+const ErrorContext = createContext<ErrorState>({
+  message: null,
+  dismiss: () => {},
+  layers: [],
+  addLayer: () => () => {},
+});
+
+/** Stellt die letzte Fehlermeldung (aus `guard`) für alle `ErrorBanner` darunter bereit. */
+export function ErrorProvider({
+  message,
+  onDismiss,
+  children,
+}: {
+  message: string | null;
+  onDismiss: () => void;
+  children: ReactNode;
+}) {
+  const [layers, setLayers] = useState<string[]>([]);
+  const dismissRef = useRef(onDismiss);
+  useLayoutEffect(() => {
+    dismissRef.current = onDismiss;
+  }, [onDismiss]);
+  const addLayer = useCallback((id: string) => {
+    // Ein älterer Fehler gehört zur Seite oder zum Dialog darunter, nicht in den frisch geöffneten Dialog.
+    dismissRef.current();
+    setLayers((l) => [...l, id]);
+    return () => setLayers((l) => l.filter((x) => x !== id));
+  }, []);
+  const value = useMemo(
+    () => ({ message, dismiss: onDismiss, layers, addLayer }),
+    [message, onDismiss, layers, addLayer],
+  );
+  return <ErrorContext value={value}>{children}</ErrorContext>;
+}
+
+/**
+ * Zeigt die aktuelle Fehlermeldung mit Schließen-Knopf. Mit `dialog` gehört die Zeile in einen
+ * `Dialog.Content`: Dann erscheint der Fehler nur im obersten offenen Dialog (alles dahinter ist
+ * verdeckt und für Screenreader ausgeblendet), ohne `dialog` nur, solange kein solcher Dialog offen ist.
+ */
+export function ErrorBanner({
+  dialog = false,
+  floating = false,
+  className,
+  children,
+}: {
+  dialog?: boolean;
+  /** Über dem Inhalt schwebend, unten mittig, für bildschirmfüllende Dialoge mit festem Raster. */
+  floating?: boolean;
+  className?: string;
+  /** Weitere Knöpfe unter der Meldung. */
+  children?: ReactNode;
+}) {
+  const { message, dismiss, layers, addLayer } = use(ErrorContext);
+  const id = useId();
+  useLayoutEffect(() => (dialog ? addLayer(id) : undefined), [dialog, id, addLayer]);
+  const visible = dialog ? layers.at(-1) === id : layers.length === 0;
+  if (!message || !visible) return null;
+  return (
+    <div
+      role="alert"
+      className={cx(
+        "flex items-start gap-2 rounded-lg border border-bad/40 bg-[color-mix(in_srgb,var(--bad)_10%,var(--panel))] py-1.5 pr-1.5 pl-3 text-[0.9rem]",
+        floating && "absolute inset-x-4 bottom-4 z-10 mx-auto max-w-xl shadow-lg",
+        className,
+      )}
+    >
+      <div className="min-w-0 flex-1 py-0.5">
+        <p className="text-bad">{message}</p>
+        {children}
+      </div>
+      <CloseButton label="Meldung schließen" onClick={dismiss} />
+    </div>
   );
 }
 
