@@ -17,6 +17,8 @@ export interface KeyLike {
   ctrlKey: boolean;
   metaKey: boolean;
   altKey: boolean;
+  /** Taste wird gehalten (automatische Wiederholung). */
+  repeat: boolean;
   isComposing: boolean;
   defaultPrevented: boolean;
 }
@@ -38,12 +40,14 @@ export type ReviewKey = "next" | "prev" | "confirm" | null;
 
 /**
  * Tastenkürzel in Durchsehen: N nächste, Umschalt+N vorige zu prüfende Stelle, Strg/⌘+Enter „Lage passt“.
- * Nicht in Textfeldern, aufgeklappten Menüs oder bei offenem Dialog (`dialogOpen`).
+ * Nicht in Textfeldern, aufgeklappten Menüs oder bei offenem Dialog (`dialogOpen`). Gehaltenes Strg/⌘+Enter
+ * bestätigt nur einmal: danach springt die Auswahl weiter, jede Wiederholung bestätigte sonst ungesehen die
+ * nächste Stelle. N darf wiederholen.
  */
 export function reviewKey(e: KeyLike, target: TargetLike | null, dialogOpen: boolean): ReviewKey {
   if (e.defaultPrevented || e.isComposing || dialogOpen) return null;
   if (target?.closest(EDITABLE) || target?.closest(POPUP) || target?.closest(DIALOG)) return null;
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) return "confirm";
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) return e.repeat ? null : "confirm";
   if (e.key.toLowerCase() === "n" && !e.ctrlKey && !e.metaKey && !e.altKey) return e.shiftKey ? "prev" : "next";
   return null;
 }

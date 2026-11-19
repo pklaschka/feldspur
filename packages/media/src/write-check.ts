@@ -2,7 +2,14 @@
  * Schreiben für die Ausgabe: Vorabprüfung bestehender Zieldateien und verständliche Meldungen zu Schreibfehlern.
  */
 import { open } from "node:fs/promises";
-import { basename, dirname } from "node:path";
+import { basename, dirname, resolve, sep } from "node:path";
+
+/**
+ * Die Ausgabe scheiterte schon in der Vorabprüfung (Ordner anlegen, Zieldateien beschreibbar): Geschrieben wurde
+ * noch nichts, eine frühere Ausgabe im selben Ordner ist unversehrt. Der Name bleibt „Error“, damit die Meldung
+ * in der Oberfläche ohne Vorsatz erscheint.
+ */
+export class ExportPrecheckError extends Error {}
 
 /**
  * Schreibfehler in einen Satz für Nutzer*innen übersetzen (EBUSY/EPERM, ENOSPC, EACCES); sonst die Originalmeldung.
@@ -31,6 +38,20 @@ export function friendlyWriteError(e: unknown, fallbackDir = ""): unknown {
   const code = (e as NodeJS.ErrnoException)?.code;
   if (!code || !FRIENDLY.has(code)) return e;
   return new Error(writeErrorText(e, fallbackDir), { cause: e });
+}
+
+/**
+ * Wie friendlyWriteError, aber nur für Fehler an Dateien unter `dir` (oder ohne Pfad); ein gesperrter
+ * Zwischenspeicher oder Arbeitsordner ist kein Problem des Ausgabeordners. Ein voller Datenträger bleibt verständlich.
+ */
+export function friendlyWriteErrorIn(e: unknown, dir: string): unknown {
+  const err = e as NodeJS.ErrnoException;
+  if (typeof err?.path === "string" && err.code !== "ENOSPC") {
+    const root = resolve(dir);
+    const path = resolve(err.path);
+    if (path !== root && !path.startsWith(root + sep)) return e;
+  }
+  return friendlyWriteError(e, dir);
 }
 
 /**
