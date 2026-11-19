@@ -94,14 +94,18 @@ const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
   video: ["mit Montagevideo", "ohne Montagevideo"],
   resolve: ["mit Schnittliste für Resolve", "ohne Schnittliste für Resolve"],
   mixAudio: ["Ton aller Geräte gemischt", "nur Ton der Hauptquelle"],
+  deviceTracks: ["mit einer Tonspur je Gerät", "ohne Tonspuren je Gerät"],
   realtime: ["in Echtzeit", "nach Episoden geschnitten"],
 };
 
 /** Die Einstellungen, die sich unterscheiden, als „damals …, jetzt …“. */
 export function settingsDifference(was: ExportSettings, now: ExportSettings): string[] {
-  return (Object.keys(SETTING_TEXT) as (keyof ExportSettings)[])
-    .filter((k) => was[k] !== now[k])
-    .map((k) => `damals ${SETTING_TEXT[k][was[k] ? 0 : 1]}, jetzt ${SETTING_TEXT[k][now[k] ? 0 : 1]}`);
+  return (
+    (Object.keys(SETTING_TEXT) as (keyof ExportSettings)[])
+      // Fehlt eine Einstellung in einer älteren Ausgabe, galt sie als aus.
+      .filter((k) => !!was[k] !== !!now[k])
+      .map((k) => `damals ${SETTING_TEXT[k][was[k] ? 0 : 1]}, jetzt ${SETTING_TEXT[k][now[k] ? 0 : 1]}`)
+  );
 }
 
 /**

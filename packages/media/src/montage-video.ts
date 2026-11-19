@@ -12,6 +12,10 @@
  * Das Video entsteht stückweise mit festen Parametern und wird ohne Neukodierung verbunden.
  * Der Ton wird als PCM je Stück erzeugt und am Ende einmal kodiert, damit er auf die
  * Probe genau zur Bildzeit passt.
+ *
+ * Tonspuren: Spur 1 ist immer die Mischung (oder nur die Hauptquelle) und als Standard markiert; das hören
+ * MAXQDA und jeder Player. Auf Wunsch folgt je Gerät eine eigene Spur, so lang wie das Video und stumm, wo
+ * das Gerät nicht läuft (Issue #122). Schnittprogramme, VLC und der Viewer können sie einzeln abspielen.
  */
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -229,6 +233,39 @@ export function planPieces(transcript: SessionTranscript): Piece[] {
 
 const span = (p: Placement) => p.endMs - p.startMs;
 
+/** Eine eigene Tonspur je Gerät im Montagevideo. */
+export interface DeviceTrack {
+  deviceId: Id;
+  /** Name der Spur, wie Player ihn zeigen: das Gerät, z. B. „Audiorekorder ZOOM“. */
+  title: string;
+  /** Kurzzeichen der Aufnahmen dieses Geräts in der Montage, z. B. ["A-01", "A-02"]. */
+  labels: string[];
+}
+
+/**
+ * Geräte mit Ton in der Montage, in der Reihenfolge der Spuren: das Referenzgerät zuerst, dann wie im Einsatz.
+ * Ob eine Videodatei wirklich Ton hat, weiß erst ffprobe; hier zählt jede Ton- und Videoquelle.
+ */
+export function deviceTracksOf(transcript: SessionTranscript, pieces: Piece[] = planPieces(transcript)): DeviceTrack[] {
+  const sounding = new Map<Id, Set<string>>();
+  for (const p of pieces)
+    for (const a of p.audios) {
+      const id = a.source.deviceId;
+      if (!id) continue;
+      if (!sounding.has(id)) sounding.set(id, new Set());
+      sounding.get(id)!.add(a.source.label);
+    }
+  return transcript.input.devices
+    .filter((d) => sounding.has(d.id))
+    .toSorted((a, b) => Number(b.isReference) - Number(a.isReference))
+    .map((d) => ({ deviceId: d.id, title: d.label, labels: [...sounding.get(d.id)!].sort() }));
+}
+
+/** Name der ersten Tonspur, je nach Mischung. */
+export function mixTrackTitle(audioMix: "all" | "main" = "all"): string {
+  return audioMix === "main" ? "Hauptquelle" : "Mischung aller Geräte";
+}
+
 export function overlayHeader(transcript: SessionTranscript): OverlayHeader {
   const h = transcript.header;
   return { title: h.title, date: h.date, montageId: h.montageId, modeLabel: h.modeLabel };
@@ -270,6 +307,11 @@ export interface MontageVideoOptions {
   cacheDir?: string;
   /** Ton: alle laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
+  /**
+   * Zusätzlich je Gerät eine eigene Tonspur nach der Mischung (siehe deviceTracks). Nur, wenn mindestens zwei
+   * Geräte Ton haben; sonst wäre die Gerätespur dasselbe wie Spur 1.
+   */
+  deviceTracks?: boolean;
   /** Wie viele Abschnitte gleichzeitig; Standard: halbe Kernzahl, höchstens 4. */
   parallel?: number;
   /** Lautstärke-Angleichung je Quelle (audioLevelOf); fehlt eine Quelle, bleibt ihr Ton unverändert. */
@@ -377,8 +419,8 @@ export async function renderMontage(
   };
 
   // Ton nebenher: je Stück PCM mit exakter Länge, am Ende einmal AAC. Unverändert: aus dem Zwischenspeicher.
-  const audioDone = (async () => {
-    const sounds = await Promise.all(pieces.map(soundOf));
+  // Eine Spur entsteht aus den Tonquellen je Stück (sounds[i]); mehrere Quellen werden gleich laut addiert.
+  const renderTrack = async (tag: string, sounds: MediaRef[][], bitrate: string): Promise<string> => {
     const audioKey = createHash("sha1")
       .update(
         JSON.stringify(
@@ -394,7 +436,7 @@ export async function renderMontage(
               ),
             ]),
           ),
-        ),
+        ) + bitrate,
       )
       .digest("hex");
     const cached = join(cacheDir, `ton-${audioKey}.m4a`);
@@ -404,7 +446,7 @@ export async function renderMontage(
     for (const [i, p] of pieces.entries()) {
       signal?.throwIfAborted();
       const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
-      const aOut = join(dir, `a${i}.wav`);
+      const aOut = join(dir, `${tag}-${i}.wav`);
       const samples = Math.round(durS * RATE);
       const fit = `apad,atrim=end_sample=${samples}`;
       const src = sounds[i]!;
@@ -443,12 +485,39 @@ export async function renderMontage(
       }
       aList.push(aOut);
     }
-    await writeFile(join(dir, "a.txt"), aList.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
-    const m4a = join(dir, "a.m4a");
-    await ff(["-f", "concat", "-safe", "0", "-i", join(dir, "a.txt"), "-c:a", "aac", "-b:a", "160k", m4a], signal);
+    const listFile = join(dir, `${tag}.txt`);
+    await writeFile(listFile, aList.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
+    const m4a = join(dir, `${tag}.m4a`);
+    await ff(["-f", "concat", "-safe", "0", "-i", listFile, "-c:a", "aac", "-b:a", bitrate, m4a], signal);
     await rename(m4a, cached).catch(() => copyFile(m4a, cached));
     for (const f of aList) await rm(f, { force: true });
     return cached;
+  };
+
+  // Spur 1: Mischung oder Hauptquelle. Danach, falls gewünscht, je Gerät eine Spur. Nacheinander statt
+  // gleichzeitig: Die Bildabschnitte brauchen die Rechenleistung, der Ton ist daneben schnell fertig.
+  const devices = opts.deviceTracks ? deviceTracksOf(transcript, pieces) : [];
+  const audioDone = (async () => {
+    const all = await Promise.all(
+      pieces.map(async (p) => {
+        const ok = await Promise.all(p.audios.map((a) => hasSound(a.source)));
+        return p.audios.filter((_, k) => ok[k]);
+      }),
+    );
+    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), "160k");
+    const perDevice: { track: DeviceTrack; file: string }[] = [];
+    const withSound = devices.filter((d) => all.some((list) => list.some((a) => a.source.deviceId === d.deviceId)));
+    if (withSound.length >= 2)
+      for (const [k, d] of withSound.entries())
+        perDevice.push({
+          track: d,
+          file: await renderTrack(
+            `g${k}`,
+            all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
+            "128k",
+          ),
+        });
+    return { mix, perDevice };
   })();
   // Fehler im Ton erst beim Zusammenfügen melden, aber nicht unbehandelt lassen.
   audioDone.catch(() => {});
@@ -570,8 +639,14 @@ export async function renderMontage(
 
   await writeFile(join(dir, "v.txt"), vFiles.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
   await writeFile(join(dir, "meta.txt"), chapterFile(transcript));
-  const m4a = await audioDone;
+  const audio = await audioDone;
   signal?.throwIfAborted();
+  // Spur 1 trägt die Mischung und ist Standard; die Gerätespuren folgen, nicht als Standard markiert.
+  const tracks = [
+    { file: audio.mix, title: mixTrackTitle(opts.audioMix) },
+    ...audio.perDevice.map((d) => ({ file: d.file, title: d.track.title })),
+  ];
+  const meta = 1 + tracks.length;
   // Abgebrochen oder gescheitert: keine halbe Videodatei im Ausgabeordner liegen lassen.
   await ff(
     [
@@ -581,18 +656,24 @@ export async function renderMontage(
       "0",
       "-i",
       join(dir, "v.txt"),
-      "-i",
-      m4a,
+      ...tracks.flatMap((t) => ["-i", t.file]),
       "-i",
       join(dir, "meta.txt"),
       "-map",
       "0:v",
-      "-map",
-      "1:a",
+      ...tracks.flatMap((_, k) => ["-map", `${k + 1}:a`]),
+      ...tracks.flatMap((t, k) => [
+        `-metadata:s:a:${k}`,
+        `title=${t.title}`,
+        `-metadata:s:a:${k}`,
+        `handler_name=${t.title}`,
+        `-disposition:a:${k}`,
+        k === 0 ? "default" : "0",
+      ]),
       "-map_metadata",
-      "2",
+      String(meta),
       "-map_chapters",
-      "2",
+      String(meta),
       "-c",
       "copy",
       "-movflags",

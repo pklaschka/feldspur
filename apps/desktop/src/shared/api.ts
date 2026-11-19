@@ -498,6 +498,8 @@ export interface ExportRequestOptions {
   resolve: boolean;
   mixAudio: boolean;
   realtime: boolean;
+  /** Je Gerät eine eigene Tonspur im Montagevideo. */
+  deviceTracks: boolean;
   /** Ohne Ordnerdialog in den Ordner der letzten Ausgabe. */
   reuseDir?: boolean;
   /** Ohne Ordnerdialog in diesen Ordner (z. B. nach „Trotzdem ausgeben“). */
@@ -778,6 +780,7 @@ export interface FeldspurApi {
       resolve?: boolean;
       mixAudio?: boolean;
       realtime?: boolean;
+      deviceTracks?: boolean;
       dir?: string;
       reuseDir?: boolean;
       acceptOriginals?: boolean;

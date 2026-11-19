@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { analyzeSession } from "../src/analyze.ts";
 import { exportSession } from "../src/export.ts";
 import { montagePreview } from "../src/montage-preview.ts";
+import { deviceTracksOf } from "../src/montage-video.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { buildSessionTranscript, entryText, timestamp } from "../src/session-transcript.ts";
 import { unzip } from "./xlsx.test.ts";
@@ -102,7 +103,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
 
   it("schreibt Video, Einsatztranskript und Begleitprotokoll", { timeout: 180_000 }, async () => {
     const out = join(dir, "export");
-    const r = await exportSession(store, sessionId, out);
+    const r = await exportSession(store, sessionId, out, { deviceTracks: true });
     expect(r.files).toEqual([
       "Feldtag_2026-09-14_Testmarkt.mp4",
       "Feldtag_2026-09-14_Testmarkt.docx",
@@ -130,6 +131,30 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     expect(Math.abs(v! - a!)).toBeLessThan(80);
     // Echtzeit ohne Episoden: keine Kapitel.
     expect(probe.chapters.length).toBe(0);
+    // Tonspuren: zuerst die Mischung als Standard, danach je Gerät eine Spur, alle so lang wie das Bild.
+    // MP4 speichert den Spurnamen als handler_name; VLC und Schnittprogramme zeigen ihn an.
+    const tracks = JSON.parse(
+      execFileSync("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a",
+        "-show_entries",
+        "stream=duration:stream_tags=title,handler_name:stream_disposition=default",
+        "-of",
+        "json",
+        join(out, r.files[0]!),
+      ]).toString(),
+    ) as { streams: { duration: string; tags: { handler_name?: string }; disposition: { default: number } }[] };
+    const devices = deviceTracksOf(buildSessionTranscript(store, sessionId));
+    expect(devices.length).toBeGreaterThanOrEqual(2);
+    expect(devices[0]!.title).toBe(store.listDevices(sessionId).find((d) => d.isReference)!.label);
+    expect(tracks.streams.map((t) => t.tags.handler_name)).toEqual([
+      "Mischung aller Geräte",
+      ...devices.map((d) => d.title),
+    ]);
+    expect(tracks.streams.map((t) => t.disposition.default)).toEqual([1, ...devices.map(() => 0)]);
+    for (const t of tracks.streams) expect(Math.abs(Number(t.duration) * 1000 - v!)).toBeLessThan(80);
     const docx = readFileSync(join(out, r.files[1]!));
     expect(docx.subarray(0, 2).toString()).toBe("PK");
     const vars = unzip(readFileSync(join(out, r.files[2]!)))["xl/worksheets/sheet1.xml"]!;

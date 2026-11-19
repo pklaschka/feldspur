@@ -111,7 +111,7 @@ describe("Rückgängig und Wiederholen", () => {
       dir: "/aus",
       files: ["a.docx"],
       durationMs: 1000,
-      options: { video: false, resolve: false, mixAudio: true, realtime: true },
+      options: { video: false, resolve: false, mixAudio: true, realtime: true, deviceTracks: false },
       fingerprint: { version: 1, content: "x", originals: {} },
     });
     expect(store.history.state().undo).toBe("A");
@@ -279,7 +279,7 @@ describe("Einsatz löschen", () => {
       dir: "/aus",
       files: ["a.docx"],
       durationMs: 1000,
-      options: { video: false, resolve: false, mixAudio: true, realtime: true },
+      options: { video: false, resolve: false, mixAudio: true, realtime: true, deviceTracks: false },
       fingerprint: { version: 1, content: "x", originals: {} },
     });
     const other = store.addSession({ title: "Anderer Tag", date: "2026-09-15", place: "", extra: {} });

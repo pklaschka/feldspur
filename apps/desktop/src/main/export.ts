@@ -129,13 +129,15 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
 export function exportSettings(
   s: ProjectStore,
   sessionId: string,
-  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
+  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; deviceTracks?: boolean },
 ): ExportSettings {
   return {
     video: opts.video,
     resolve: opts.resolve === true,
     mixAudio: opts.mixAudio !== false,
     realtime: modeOf(s, sessionId, opts.realtime).mode === "realtime",
+    // Ohne Video gibt es keine Tonspuren: dann zählt die Einstellung nicht.
+    deviceTracks: opts.video && opts.deviceTracks !== false,
   };
 }
 
@@ -143,7 +145,7 @@ export function exportSettings(
 export function exportStatus(
   s: ProjectStore,
   sessionId: string,
-  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
+  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; deviceTracks?: boolean },
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
@@ -164,6 +166,7 @@ export async function runExport(
     resolve?: boolean;
     mixAudio?: boolean;
     realtime?: boolean;
+    deviceTracks?: boolean;
     /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */
     acceptOriginals?: boolean;
   },
@@ -203,6 +206,7 @@ export async function runExport(
       overlay: overlayVia(wc),
       renderImage: stillVia(wc),
       audioMix: opts.mixAudio === false ? "main" : "all",
+      deviceTracks: opts.deviceTracks !== false,
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),

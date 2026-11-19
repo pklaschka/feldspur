@@ -38,6 +38,8 @@ export interface ExportOptions {
   episodes?: boolean;
   /** Ton aller laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
+  /** Nach der Mischung je Gerät eine eigene Tonspur ins Montagevideo (ab zwei Geräten mit Ton). */
+  deviceTracks?: boolean;
   /**
    * Bilder, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG liefern. In der App zeichnet
    * die Oberfläche sie mit pdf.js; ohne diese Hilfe fehlen solche Ausschnitte.
@@ -305,6 +307,7 @@ export async function exportSession(
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
         audioMix: opts.audioMix,
+        deviceTracks: opts.deviceTracks,
         levels,
         signal,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
