@@ -74,7 +74,7 @@ export function App() {
     [],
   );
 
-  // Ausschnitte aus PDF-Scans für Montage und Zeitgerüst zeichnet ebenfalls die Oberfläche.
+  // Ausschnitte aus PDF-Scans für Montage und Einsatztranskript zeichnet ebenfalls die Oberfläche.
   useEffect(
     () => api.onStillRequest((ref, pdf) => renderImageRefJpeg(ref as Parameters<typeof renderImageRefJpeg>[0], pdf)),
     [],

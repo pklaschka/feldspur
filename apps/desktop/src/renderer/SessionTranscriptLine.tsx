@@ -1,20 +1,20 @@
 /**
- * Eine Zeile der Zeitgerüst-Vorschau, gesetzt wie im .docx: Uhrzeit grau, Überschrift fett in der Farbe
+ * Eine Zeile der Einsatztranskript-Vorschau, gesetzt wie im .docx: Uhrzeit grau, Überschrift fett in der Farbe
  * ihrer Art, Zwischentafeln kursiv, vor Episoden etwas Abstand.
  */
-import type { ScaffoldPreviewEntry } from "../shared/api.ts";
+import type { SessionTranscriptPreviewEntry } from "../shared/api.ts";
 
 /** Feste Klassennamen, damit Tailwind sie findet. Ohne Eintrag: Textfarbe. */
-const HEAD_CLASS: Partial<Record<ScaffoldPreviewEntry["kind"], string>> = {
-  card: "text-sc-card",
-  episode: "text-sc-episode",
-  start: "text-sc-start",
-  photo: "text-sc-photo",
-  diary: "text-sc-diary",
-  sync: "text-sc-sync",
+const HEAD_CLASS: Partial<Record<SessionTranscriptPreviewEntry["kind"], string>> = {
+  card: "text-st-card",
+  episode: "text-st-episode",
+  start: "text-st-start",
+  photo: "text-st-photo",
+  diary: "text-st-diary",
+  sync: "text-st-sync",
 };
 
-export function ScaffoldLine({ entry: e }: { entry: ScaffoldPreviewEntry }) {
+export function SessionTranscriptLine({ entry: e }: { entry: SessionTranscriptPreviewEntry }) {
   const line = e.kind === "line";
   return (
     <li
@@ -22,7 +22,7 @@ export function ScaffoldLine({ entry: e }: { entry: ScaffoldPreviewEntry }) {
       data-kind={e.kind}
     >
       <span className="text-ink">{e.stamp}</span>{" "}
-      {e.clock && <span className="text-sc-clock">Uhrzeit {e.clock} · </span>}
+      {e.clock && <span className="text-st-clock">Uhrzeit {e.clock} · </span>}
       {e.head && (
         <span className={`${line ? "" : "font-semibold"} ${HEAD_CLASS[e.kind] ?? ""}`}>
           {e.head}

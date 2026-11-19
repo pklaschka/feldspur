@@ -4,7 +4,7 @@
  *
  * Aufbau (1280×720, 25 fps): oben Uhrzeit, Einsatz und Montage-ID; in der Mitte die laufenden
  * Videos (gleichzeitige nebeneinander) mit Kurzzeichen, Datei und Stelle im Original; unten die
- * laufenden Tonquellen. Fotos und Tagebuch stehen im Zeitgerüst, nicht im Video.
+ * laufenden Tonquellen. Fotos und Tagebuch stehen im Einsatztranskript, nicht im Video.
  * Text zeichnet ein OverlayRenderer (in der App: die Oberfläche per Canvas), weil die
  * LGPL-Fassung von ffmpeg nicht überall Schrift setzen kann. Ohne Renderer entsteht das Video
  * trotzdem, nur ohne Einblendungen.
@@ -20,7 +20,7 @@ import { availableParallelism } from "node:os";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
-import type { Scaffold } from "./scaffold.ts";
+import type { SessionTranscript } from "./session-transcript.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
 import { probeMedia } from "./probe.ts";
@@ -35,7 +35,7 @@ const RATE = 48_000;
 export interface OverlayHeader {
   title: string;
   date: string;
-  /** Ordnet Video und Zeitgerüst einander zu, z. B. „FS-7KQ2-M9XD“. */
+  /** Ordnet Video und Einsatztranskript einander zu, z. B. „FS-7KQ2-M9XD“. */
   montageId: string;
   modeLabel: string;
 }
@@ -144,8 +144,8 @@ export async function videoEncoder(): Promise<string[]> {
 }
 
 /** Stücke der Montage: Grenzen dort, wo eine Aufnahme beginnt oder endet. */
-export function planPieces(sc: Scaffold): Piece[] {
-  const { input, resolved, plan } = sc;
+export function planPieces(transcript: SessionTranscript): Piece[] {
+  const { input, resolved, plan } = transcript;
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const place = (id: Id) => resolved.placements.get(id);
   const av = input.sources.filter((s) => (s.kind === "audio" || s.kind === "video") && place(s.id));
@@ -164,7 +164,7 @@ export function planPieces(sc: Scaffold): Piece[] {
   for (const seg of plan.segments) {
     // Kurze Tafel für eine übersprungene Zwischenzeit.
     if (seg.kind === "card" && plan.mode !== "realtime") {
-      const card = sc.entries.find((e) => e.kind === "card" && e.montageMs === seg.montageStartMs);
+      const card = transcript.entries.find((e) => e.kind === "card" && e.montageMs === seg.montageStartMs);
       pieces.push({
         f0: frame(seg.montageStartMs),
         f1: frame(seg.montageStartMs + seg.montageMs),
@@ -214,7 +214,7 @@ export function planPieces(sc: Scaffold): Piece[] {
         f1,
         kind: seg.kind === "episode" ? "episode" : "gap",
         clock0: a,
-        title: !sc.episodes ? "" : seg.kind === "episode" ? `Episode ${seg.episode.index}` : "Zwischenzeit",
+        title: !transcript.episodes ? "" : seg.kind === "episode" ? `Episode ${seg.episode.index}` : "Zwischenzeit",
         body: "",
         videos: videos.map(ref),
         audios: audios.map(ref),
@@ -229,8 +229,8 @@ export function planPieces(sc: Scaffold): Piece[] {
 
 const span = (p: Placement) => p.endMs - p.startMs;
 
-export function overlayHeader(sc: Scaffold): OverlayHeader {
-  const h = sc.header;
+export function overlayHeader(transcript: SessionTranscript): OverlayHeader {
+  const h = transcript.header;
   return { title: h.title, date: h.date, montageId: h.montageId, modeLabel: h.modeLabel };
 }
 
@@ -331,15 +331,19 @@ async function pool<T>(
   if (err) throw err.reason;
 }
 
-export async function renderMontage(sc: Scaffold, outFile: string, opts: MontageVideoOptions): Promise<void> {
+export async function renderMontage(
+  transcript: SessionTranscript,
+  outFile: string,
+  opts: MontageVideoOptions,
+): Promise<void> {
   const { signal } = opts;
   signal?.throwIfAborted();
   const dir = join(opts.workDir, "montage");
   await mkdir(dir, { recursive: true });
   // Erstes darstellbares Bild je Eintrag als Datei für ffmpeg, benannt nach Inhalt (für den Zwischenspeicher).
-  const pieces = planPieces(sc);
+  const pieces = planPieces(transcript);
   const parts = chunks(pieces);
-  const header = overlayHeader(sc);
+  const header = overlayHeader(transcript);
   const enc = await videoEncoder();
   const cacheDir = opts.cacheDir ?? join(dir, "abschnitte");
   await mkdir(cacheDir, { recursive: true });
@@ -563,7 +567,7 @@ export async function renderMontage(sc: Scaffold, outFile: string, opts: Montage
   );
 
   await writeFile(join(dir, "v.txt"), vFiles.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
-  await writeFile(join(dir, "meta.txt"), chapterFile(sc));
+  await writeFile(join(dir, "meta.txt"), chapterFile(transcript));
   const m4a = await audioDone;
   signal?.throwIfAborted();
   // Abgebrochen oder gescheitert: keine halbe Videodatei im Ausgabeordner liegen lassen.
@@ -614,16 +618,16 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /** Kapitel je Episode und Tafel (nur mit Episoden), dazu Titel und Herkunft als Metadaten. */
-function chapterFile(sc: Scaffold): string {
+function chapterFile(transcript: SessionTranscript): string {
   const esc = (s: string) => s.replace(/[=;#\\\n]/g, (c) => `\\${c}`);
-  const h = sc.header;
+  const h = transcript.header;
   const lines = [
     ";FFMETADATA1",
     `title=${esc(`${h.title} ${h.date}`)}`,
-    `comment=${esc(`Feldspur-Montage. Quellen: ${h.sources.join(", ")}. Zeitmarken im Zeitgerüst beziehen sich auf dieses Video.`)}`,
+    `comment=${esc(`Feldspur-Montage. Quellen: ${h.sources.join(", ")}. Zeitmarken im Einsatztranskript beziehen sich auf dieses Video.`)}`,
     `date=${esc(h.date)}`,
   ];
-  for (const s of sc.episodes ? sc.plan.segments : []) {
+  for (const s of transcript.episodes ? transcript.plan.segments : []) {
     const title =
       s.kind === "episode"
         ? `Episode ${s.episode.index} · ${formatClock(s.fromMs)}–${formatClock(s.toMs)}`

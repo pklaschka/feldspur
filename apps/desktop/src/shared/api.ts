@@ -16,7 +16,14 @@ import type {
   PlacementStatus,
   SourceKind,
 } from "@feldspur/core";
-import type { ExportStatus, FileCheck, FileState, MontagePreview, ScaffoldKind, ScanProgress } from "@feldspur/media";
+import type {
+  ExportStatus,
+  FileCheck,
+  FileState,
+  MontagePreview,
+  SessionTranscriptKind,
+  ScanProgress,
+} from "@feldspur/media";
 
 /** Sicherungen des offenen Projekts (Dialog „Sicherungen“). */
 export interface BackupOverview {
@@ -424,12 +431,12 @@ export interface ExportProgress {
   total: number;
 }
 
-/** Zeitgerüst ohne Video, zur Vorschau im Schritt „Ausgeben“. */
+/** Einsatztranskript ohne Video, zur Vorschau im Schritt „Ausgeben“. */
 export type { MontagePreview, PreviewMedia, PreviewPiece } from "@feldspur/media";
 
 /** Eine Zeile der Vorschau, in Teilen, damit sie wie im .docx eingefärbt werden kann. */
-export interface ScaffoldPreviewEntry {
-  kind: ScaffoldKind;
+export interface SessionTranscriptPreviewEntry {
+  kind: SessionTranscriptKind;
   /** Zeitmarke, „#00:12:04-0#“. */
   stamp: string;
   clock: string;
@@ -437,14 +444,14 @@ export interface ScaffoldPreviewEntry {
   body: string;
 }
 
-export interface ScaffoldPreview {
+export interface SessionTranscriptPreview {
   base: string;
   durationMs: number;
   episodes: number;
   cards: number;
   /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
-  entries: ScaffoldPreviewEntry[];
+  entries: SessionTranscriptPreviewEntry[];
 }
 
 /** Einsammeln abgebrochen: Nichts wurde übernommen. */
@@ -646,15 +653,15 @@ export interface FeldspurApi {
   updateSourceNote(noteId: string, patch: SourceNoteInput): Promise<SessionView>;
   deleteSourceNote(noteId: string): Promise<SessionView>;
   waveformPeaks(sourceId: string, fromMs: number, toMs: number, buckets: number): Promise<Peaks>;
-  /** Zeitgerüst ohne Bilder und Video, wie es im Dokument stehen wird. */
+  /** Einsatztranskript ohne Bilder und Video, wie es im Dokument stehen wird. */
   /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
-  previewExport(sessionId: string, realtime?: boolean): Promise<ScaffoldPreview>;
+  previewExport(sessionId: string, realtime?: boolean): Promise<SessionTranscriptPreview>;
   /** Letzte Ausgabe im Vergleich zum jetzigen Stand und den gewählten Einstellungen; null = noch nie ausgegeben. */
   exportStatus(sessionId: string, opts: ExportRequestOptions): Promise<ExportStatus | null>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
-   * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
+   * Montagevideo, Einsatztranskript und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = kein Ordner gewählt; { cancelled } = mit
    * cancelExport abgebrochen. Mit reuseDir ohne Dialog in den Ordner der letzten Ausgabe, falls er noch
    * existiert; der Dialog beginnt sonst dort.

@@ -663,7 +663,7 @@ function Body({
             Jede Zeile speichert die Stelle in {row.label}. Die Uhrzeit folgt dem Abgleich, auch wenn du ihn später
             änderst. ▪ Zeilen zeigen, was gleichzeitig in anderen Quellen passiert. Grau hinterlegte Zeilen mit
             Kurzzeichen stammen aus der Mitschrift einer anderen Spur, die zur selben Zeit lief: Was dort schon steht,
-            musst du hier nicht noch einmal abtippen. Notizen sind Arbeitsstand und gehen nicht ins Zeitgerüst.
+            musst du hier nicht noch einmal abtippen. Notizen sind Arbeitsstand und gehen nicht ins Einsatztranskript.
           </p>
           {row.kind === "video" && (
             <p className="text-[0.85rem] text-muted">{KIND_LABEL.video}: Ton und Bild aus der Datei.</p>

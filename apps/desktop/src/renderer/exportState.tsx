@@ -109,7 +109,7 @@ export function percent(p: ExportProgress | null): number {
   const steps: [string, number, number][] = [
     ["Standbilder", 0, 5],
     ["Montagevideo", 5, 95],
-    ["Zeitgerüst", 95, 99],
+    ["Einsatztranskript", 95, 99],
     ["Fertig", 100, 100],
   ];
   const s = steps.find(([name]) => name === p.step);

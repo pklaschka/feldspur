@@ -1,7 +1,7 @@
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vite-plus/test";
 import { documentVariables } from "../src/export.ts";
-import type { Scaffold } from "../src/scaffold.ts";
+import type { SessionTranscript } from "../src/session-transcript.ts";
 import { columnName, xlsx } from "../src/xlsx.ts";
 
 /** ZIP lesen (nur, was xlsx() schreibt): Name → Text. */
@@ -43,7 +43,7 @@ describe("Excel-Datei", () => {
 });
 
 describe("Dokumentvariablen für MAXQDA", () => {
-  const sc = {
+  const transcript = {
     header: {
       title: "Testmarkt",
       date: "2026-09-14",
@@ -68,10 +68,10 @@ describe("Dokumentvariablen für MAXQDA", () => {
       ],
     },
     resolved: { placements: new Map([["s1", {}]]) },
-  } as unknown as Scaffold;
+  } as unknown as SessionTranscript;
 
   it("beginnt mit Dokumentgruppe und Dokumentname, danach eine Spalte je Variable", () => {
-    const [head, row] = documentVariables(sc, "Feldtag_2026-09-14_Testmarkt");
+    const [head, row] = documentVariables(transcript, "Feldtag_2026-09-14_Testmarkt");
     expect(head!.slice(0, 2)).toEqual(["Dokumentgruppe", "Dokumentname"]);
     expect(row!.slice(0, 2)).toEqual(["", "Feldtag_2026-09-14_Testmarkt"]);
     const v = Object.fromEntries(head!.map((k, i) => [k, row![i]]));

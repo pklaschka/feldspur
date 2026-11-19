@@ -1,5 +1,5 @@
 /**
- * Ausgeben: Zeitgerüst (.docx), Dokumentvariablen (.xlsx), Begleitprotokoll (.csv) und Montagevideo in einen Ordner.
+ * Ausgeben: Einsatztranskript (.docx), Dokumentvariablen (.xlsx), Begleitprotokoll (.csv) und Montagevideo in einen Ordner.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -7,17 +7,22 @@ import { join, resolve, sep } from "node:path";
 import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
 import { levelText, sessionLevels } from "./analyze.ts";
 import type { AudioLevel } from "./audio.ts";
-import { scaffoldDocx } from "./docx.ts";
+import { sessionTranscriptDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
-import { buildScaffold, type ImageRef, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
+import {
+  buildSessionTranscript,
+  type ImageRef,
+  type SessionTranscript,
+  type SessionTranscriptEntry,
+} from "./session-transcript.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 import { excelCsv } from "./csv.ts";
 import { xlsx, type Cell } from "./xlsx.ts";
 import { ensureWritable, ExportPrecheckError, friendlyWriteError, friendlyWriteErrorIn } from "./write-check.ts";
 
 export interface ExportOptions {
-  /** Ohne Video geht es schnell; nützlich zum Prüfen des Gerüsts. */
+  /** Ohne Video geht es schnell; nützlich zum Prüfen des Einsatztranskripts. */
   video?: boolean;
   /** Zeichnet Uhrzeit, Leisten und Tafeltexte ins Video (in der App über die Oberfläche). */
   overlay?: OverlayRenderer;
@@ -28,7 +33,7 @@ export interface ExportOptions {
   cacheDir?: string;
   /** Alles in Echtzeit (Standard) oder Episoden mit kurzen Tafeln dazwischen. */
   mode?: MontageMode;
-  /** Episoden auch in Echtzeit benennen (siehe ScaffoldOptions.episodes). */
+  /** Episoden auch in Echtzeit benennen (siehe SessionTranscriptOptions.episodes). */
   episodes?: boolean;
   /** Ton aller laufenden Geräte übereinander (Standard) oder nur die Hauptquelle. */
   audioMix?: "all" | "main";
@@ -67,26 +72,28 @@ export function safeName(s: string): string {
 /**
  * Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren): erste Spalten Dokumentgruppe und
  * Dokumentname, danach je Variable eine Spalte. Der Dokumentname ist der Name, den MAXQDA beim Import des
- * Zeitgerüsts vergibt (Dateiname ohne Endung); die Gruppe bleibt leer und lässt sich in Excel nachtragen.
+ * Einsatztranskripts vergibt (Dateiname ohne Endung); die Gruppe bleibt leer und lässt sich in Excel nachtragen.
  */
-export function documentVariables(sc: Scaffold, documentName: string): Cell[][] {
-  const h = sc.header;
-  const placed = new Set(sc.input.sources.filter((s) => sc.resolved.placements.has(s.id)).map((s) => s.deviceId));
-  const devices = sc.input.devices.filter((d) => placed.has(d.id)).map((d) => d.label);
-  const first = sc.plan.segments[0];
-  const last = sc.plan.segments.at(-1);
+export function documentVariables(transcript: SessionTranscript, documentName: string): Cell[][] {
+  const h = transcript.header;
+  const placed = new Set(
+    transcript.input.sources.filter((s) => transcript.resolved.placements.has(s.id)).map((s) => s.deviceId),
+  );
+  const devices = transcript.input.devices.filter((d) => placed.has(d.id)).map((d) => d.label);
+  const first = transcript.plan.segments[0];
+  const last = transcript.plan.segments.at(-1);
   const vars: [string, Cell][] = [
     ["Einsatz", h.title],
     ["Datum", h.date],
     ["Ort", h.place],
-    ["Zeitzone", sc.input.session.timeZone],
+    ["Zeitzone", transcript.input.session.timeZone],
     ["Forschende", h.researchers.join(", ")],
     ["Geräte", devices.join(", ")],
     ["Referenzuhr", h.reference ?? ""],
     ["Quellen", h.sources.length],
     ["Beginn", first ? formatClock(first.fromMs) : ""],
     ["Ende", last ? formatClock(last.toMs) : ""],
-    ["Videolänge (Min.)", Math.round(sc.plan.durationMs / 6000) / 10],
+    ["Videolänge (Min.)", Math.round(transcript.plan.durationMs / 6000) / 10],
     ["Montage", h.modeLabel],
     ["Montage-ID", h.montageId],
   ];
@@ -101,14 +108,18 @@ export function documentVariables(sc: Scaffold, documentName: string): Cell[][] 
   ];
 }
 
-export function baseName(sc: Scaffold): string {
-  const base = `Feldtag_${sc.header.date}_${safeName(sc.header.title)}`;
-  return sc.plan.mode === "episodes" ? `${base}_Episoden` : base;
+export function baseName(transcript: SessionTranscript): string {
+  const base = `Feldtag_${transcript.header.date}_${safeName(transcript.header.title)}`;
+  return transcript.plan.mode === "episodes" ? `${base}_Episoden` : base;
 }
 
 /** Begleitprotokoll: Nachweis je Quelle (Semikolon, UTF-8 mit BOM für Excel). */
-export function protocolCsv(store: ProjectStore, sc: Scaffold, levels: Map<Id, AudioLevel | null> = new Map()): string {
-  const { input, resolved } = sc;
+export function protocolCsv(
+  store: ProjectStore,
+  transcript: SessionTranscript,
+  levels: Map<Id, AudioLevel | null> = new Map(),
+): string {
+  const { input, resolved } = transcript;
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const persons = new Map(store.listPersons().map((p) => [p.id, p.name]));
   const head = [
@@ -133,7 +144,7 @@ export function protocolCsv(store: ProjectStore, sc: Scaffold, levels: Map<Id, A
   const rows = input.sources.map((s) => {
     const p = resolved.placements.get(s.id);
     const d = s.deviceId ? devices.get(s.deviceId) : undefined;
-    const at = p ? sc.plan.toMontage(p.startMs, s.id) : null;
+    const at = p ? transcript.plan.toMontage(p.startMs, s.id) : null;
     return [
       s.label,
       s.kind,
@@ -187,9 +198,9 @@ export async function exportSession(
 ): Promise<ExportResult> {
   const { signal } = opts;
   signal?.throwIfAborted();
-  const sc = buildScaffold(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
-  if (sc.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
-  const base = baseName(sc);
+  const transcript = buildSessionTranscript(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
+  if (transcript.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
+  const base = baseName(transcript);
   try {
     await mkdir(outDir, { recursive: true });
     // Gesperrte oder schreibgeschützte Dateien (z. B. noch in Word offen) sofort melden, nicht erst nach dem Video.
@@ -209,9 +220,9 @@ export async function exportSession(
   }
   const work = await mkdtemp(join(tmpdir(), "feldspur-export-"));
   try {
-    const sources = new Map(sc.input.sources.map((s) => [s.id, s]));
-    const withImages = sc.entries.filter((e) => e.images.length);
-    const stills = new Map<ScaffoldEntry, (Still | null)[]>();
+    const sources = new Map(transcript.input.sources.map((s) => [s.id, s]));
+    const withImages = transcript.entries.filter((e) => e.images.length);
+    const stills = new Map<SessionTranscriptEntry, (Still | null)[]>();
     let n = 0;
     for (const [i, e] of withImages.entries()) {
       signal?.throwIfAborted();
@@ -232,7 +243,7 @@ export async function exportSession(
       onProgress: (done, total) => opts.onProgress?.("Lautstärke messen", done, total),
     });
     if (opts.video !== false) {
-      await renderMontage(sc, outPath(outDir, media), {
+      await renderMontage(transcript, outPath(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
@@ -245,22 +256,25 @@ export async function exportSession(
     }
 
     if (opts.resolve) {
-      const xml = montageFcpxml(sc, planPieces(sc), { projectName: base, audioMix: opts.audioMix });
+      const xml = montageFcpxml(transcript, planPieces(transcript), { projectName: base, audioMix: opts.audioMix });
       await writeFile(outPath(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
       files.push(`${base}_Resolve.fcpxml`);
     }
 
     signal?.throwIfAborted();
-    opts.onProgress?.("Zeitgerüst", 0, 1);
-    const docx = await scaffoldDocx(sc, { mediaFileName: media, stills });
+    opts.onProgress?.("Einsatztranskript", 0, 1);
+    const docx = await sessionTranscriptDocx(transcript, { mediaFileName: media, stills });
     await writeFile(outPath(outDir, `${base}.docx`), docx);
     files.push(`${base}.docx`);
-    await writeFile(outPath(outDir, `${base}_Variablen.xlsx`), xlsx(documentVariables(sc, base), "Dokumentvariablen"));
+    await writeFile(
+      outPath(outDir, `${base}_Variablen.xlsx`),
+      xlsx(documentVariables(transcript, base), "Dokumentvariablen"),
+    );
     files.push(`${base}_Variablen.xlsx`);
-    await writeFile(outPath(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, sc, levels), "utf8");
+    await writeFile(outPath(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, transcript, levels), "utf8");
     files.push(`${base}_Begleitprotokoll.csv`);
     opts.onProgress?.("Fertig", 1, 1);
-    return { dir: outDir, files, durationMs: sc.plan.durationMs };
+    return { dir: outDir, files, durationMs: transcript.plan.durationMs };
   } catch (e) {
     throw friendlyWriteErrorIn(e, outDir);
   } finally {

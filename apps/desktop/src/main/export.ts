@@ -6,7 +6,7 @@ import { app, ipcMain, type WebContents } from "electron";
 import type { ExportSettings, ProjectStore } from "@feldspur/core";
 import {
   baseName,
-  buildScaffold,
+  buildSessionTranscript,
   compareExport,
   exportFingerprint,
   type ExportStatus,
@@ -21,7 +21,7 @@ import {
   type OverlayHeader,
   timestamp,
 } from "@feldspur/media";
-import { IPC, type ExportRunResult, type ScaffoldPreview } from "../shared/api.ts";
+import { IPC, type ExportRunResult, type SessionTranscriptPreview } from "../shared/api.ts";
 import { exportBlocker } from "./originals.ts";
 
 const CHUNK = 60;
@@ -92,18 +92,18 @@ function modeOf(s: ProjectStore, sessionId: string, realtime?: boolean) {
 }
 
 export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
-  return montagePreview(buildScaffold(s, sessionId, modeOf(s, sessionId, realtime)));
+  return montagePreview(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime)));
 }
 
-export function previewExport(s: ProjectStore, sessionId: string, realtime?: boolean): ScaffoldPreview {
-  const sc = buildScaffold(s, sessionId, modeOf(s, sessionId, realtime));
+export function previewExport(s: ProjectStore, sessionId: string, realtime?: boolean): SessionTranscriptPreview {
+  const transcript = buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime));
   return {
-    base: baseName(sc),
-    durationMs: sc.plan.durationMs,
-    episodes: sc.episodes ? sc.plan.segments.filter((x) => x.kind === "episode").length : 0,
-    cards: sc.episodes ? sc.plan.segments.filter((x) => x.kind === "card").length : 0,
-    lines: sc.entries.map(entryText),
-    entries: sc.entries.map((e) => ({
+    base: baseName(transcript),
+    durationMs: transcript.plan.durationMs,
+    episodes: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "episode").length : 0,
+    cards: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "card").length : 0,
+    lines: transcript.entries.map(entryText),
+    entries: transcript.entries.map((e) => ({
       kind: e.kind,
       stamp: timestamp(e.montageMs),
       clock: e.clock,
@@ -160,7 +160,7 @@ export async function runExport(
     // Stand beim Start: Was sich während der Ausgabe ändert, kommt in die nächste (und macht diese veraltet).
     const settings = exportSettings(s, sessionId, opts);
     const fingerprint = exportFingerprint(s, sessionId, settings);
-    const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(s, sessionId, opts.realtime))));
+    const dir = join(parent, baseName(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, opts.realtime))));
     // Schlägt die Ausgabe in denselben Ordner fehl oder wird abgebrochen, liegen dort womöglich halbe Dateien:
     // dann gilt der alte Stand nicht. Scheitert schon die Vorabprüfung, ist noch nichts geschrieben: Stand behalten.
     const r = await exportSession(s, sessionId, dir, {

@@ -35,14 +35,14 @@
   --bad: #a3302f;
   --warn-soft: #f6e7c9;
   --shadow: 30 32 24;
-  /* Zeitgerüst-Vorschau: genau die Farben aus dem .docx (packages/media/src/docx.ts, per Test abgeglichen). */
-  --sc-clock: #5f6b73;
-  --sc-card: #6b7a80;
-  --sc-episode: #1d2b33;
-  --sc-start: #2a52be;
-  --sc-photo: #8a4fbf;
-  --sc-diary: #a8571f;
-  --sc-sync: #107a5f;
+  /* Einsatztranskript-Vorschau: genau die Farben aus dem .docx (packages/media/src/docx.ts, per Test abgeglichen). */
+  --st-clock: #5f6b73;
+  --st-card: #6b7a80;
+  --st-episode: #1d2b33;
+  --st-start: #2a52be;
+  --st-photo: #8a4fbf;
+  --st-diary: #a8571f;
+  --st-sync: #107a5f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -76,13 +76,13 @@
     --warn-soft: #3b2e15;
     --shadow: 0 0 0;
     /* Dieselben Farbtöne, aufgehellt für den dunklen Grund (Kontrast mindestens 7:1). */
-    --sc-clock: #a9b2b7;
-    --sc-card: #a3b0b5;
-    --sc-episode: #efe8dc;
-    --sc-start: #9fb6f2;
-    --sc-photo: #cfa6ee;
-    --sc-diary: #e8a672;
-    --sc-sync: #79cfb2;
+    --st-clock: #a9b2b7;
+    --st-card: #a3b0b5;
+    --st-episode: #efe8dc;
+    --st-start: #9fb6f2;
+    --st-photo: #cfa6ee;
+    --st-diary: #e8a672;
+    --st-sync: #79cfb2;
     color-scheme: dark;
   }
 }
@@ -114,13 +114,13 @@
   --color-k-audio: var(--k-audio);
   --color-k-photo: var(--k-photo);
   --color-k-diary: var(--k-diary);
-  --color-sc-clock: var(--sc-clock);
-  --color-sc-card: var(--sc-card);
-  --color-sc-episode: var(--sc-episode);
-  --color-sc-start: var(--sc-start);
-  --color-sc-photo: var(--sc-photo);
-  --color-sc-diary: var(--sc-diary);
-  --color-sc-sync: var(--sc-sync);
+  --color-st-clock: var(--st-clock);
+  --color-st-card: var(--st-card);
+  --color-st-episode: var(--st-episode);
+  --color-st-start: var(--st-start);
+  --color-st-photo: var(--st-photo);
+  --color-st-diary: var(--st-diary);
+  --color-st-sync: var(--st-sync);
   --font-sans: "Source Sans 3 Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "Source Serif 4 Variable", Charter, Georgia, serif;
   /* Zeiten und Kürzel: dieselbe Schrift mit gleich breiten Ziffern statt einer technischen Festbreitenschrift. */

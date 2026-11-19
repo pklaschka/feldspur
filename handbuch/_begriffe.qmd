@@ -16,6 +16,10 @@ Bezugszeitraum
 Einsatz
 : Ein Feldtag an einem Ort. Wird zu einem Dokument in MAXQDA.
 
+Einsatztranskript
+: Das kombinierte Transkript eines Einsatzes: Mitschriften aller Aufnahmen, Fotos und Tagebucheinträge in zeitlicher
+  Reihenfolge, als .docx für MAXQDA mit Zeitmarken ins Montagevideo. Hieß bis Version 0.2 "Zeitgerüst".
+
 Episode
 : Zeitraum, in dem eine Aufnahme läuft und nicht nur Stille ist.
 
@@ -26,7 +30,7 @@ Gerät
 : Alles mit einer eigenen Uhr: Kamera, Rekorder, Handy, aber auch das Tagebuch.
 
 Montage-ID
-: Kennung wie `FS-XXXX-XXXX`, die Montagevideo und Zeitgerüst einander zuordnet.
+: Kennung wie `FS-XXXX-XXXX`, die Montagevideo und Einsatztranskript einander zuordnet.
 
 Quelle
 : Eine Originaldatei mit Prüfsumme und Kurzzeichen (`V-01`, `A-01`, `F-001`, `T-01`).
@@ -34,12 +38,13 @@ Quelle
 Referenzuhr
 : Das Gerät, dessen Uhr als richtig gilt. Genau eins pro Einsatz.
 
+Transkript
+: Mitschrift einer einzelnen Aufnahme, im Tool getippt oder importiert (etwa aus Whisper). Alle Transkripte eines
+  Einsatzes stehen zusammen im Einsatztranskript.
+
 Widerspruch
 : Zwei Zeitbelege einer Quelle liegen weiter auseinander, als ihre Genauigkeit erklärt. Deutlich unter, stark ab
   5 Minuten. Du entscheidest bewusst, welcher gilt (@sec-widersprueche).
 
 Zeitbeleg
 : Eine Angabe, wann eine Stelle einer Quelle war: Metadaten, Dateiname, angesagte Uhrzeit, Anker oder von Hand.
-
-Zeitgerüst
-: Das .docx-Dokument für MAXQDA mit Zeitmarken ins Montagevideo.

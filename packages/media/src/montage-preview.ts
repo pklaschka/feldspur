@@ -11,7 +11,7 @@ import {
   type OverlayHeader,
   type Piece,
 } from "./montage-video.ts";
-import type { Scaffold } from "./scaffold.ts";
+import type { SessionTranscript } from "./session-transcript.ts";
 
 const FRAME_MS = 1000 / FPS;
 
@@ -61,7 +61,7 @@ const toPreview = (p: Piece): PreviewPiece => ({
   audios: p.audios.map(media),
 });
 
-export function montagePreview(sc: Scaffold): MontagePreview {
-  const pieces = planPieces(sc).map(toPreview);
-  return { durationMs: pieces.at(-1)?.toMs ?? 0, header: overlayHeader(sc), pieces };
+export function montagePreview(transcript: SessionTranscript): MontagePreview {
+  const pieces = planPieces(transcript).map(toPreview);
+  return { durationMs: pieces.at(-1)?.toMs ?? 0, header: overlayHeader(transcript), pieces };
 }

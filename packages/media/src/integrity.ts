@@ -287,7 +287,7 @@ export function exportVerdict(
   for (const c of checks) {
     if (c.state === "ok" || c.state === "unchecked") continue;
     const k = kind.get(c.sourceId);
-    // Ohne die Datei bricht die Ausgabe ab: Bilder braucht das Zeitgerüst, Ton und Video das Montagevideo.
+    // Ohne die Datei bricht die Ausgabe ab: Bilder braucht das Einsatztranskript, Ton und Video das Montagevideo.
     const needed = k === "photo" || k === "diary" || (opts.video && (k === "audio" || k === "video"));
     if ((c.state === "missing" || c.state === "unreadable") && needed) blocking.push(c);
     else warnings.push(c);

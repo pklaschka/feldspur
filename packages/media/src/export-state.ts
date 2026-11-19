@@ -2,7 +2,7 @@
  * Stand einer Ausgabe über Neustarts hinweg (Issue #72).
  *
  * Beim Ausgeben wird ein Fingerabdruck in die Projektdatei geschrieben: ein SHA-256 über alles aus dem Projekt, was
- * in Zeitgerüst, Dokumentvariablen, Begleitprotokoll und Montagevideo eingeht, dazu Größe und Änderungszeit jeder
+ * in Einsatztranskript, Dokumentvariablen, Begleitprotokoll und Montagevideo eingeht, dazu Größe und Änderungszeit jeder
  * Originaldatei und die gewählten Einstellungen. Später wird derselbe Abdruck neu gerechnet und verglichen. Weicht
  * ein Teil ab, ist die Ausgabe veraltet, und es lässt sich sagen, welcher Teil.
  *
@@ -13,7 +13,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ExportFingerprint, ExportRecord, ExportSettings, Id, ProjectStore, Source } from "@feldspur/core";
 import { baseName, documentVariables, protocolCsv } from "./export.ts";
-import { buildScaffold, entryText, type Scaffold } from "./scaffold.ts";
+import { buildSessionTranscript, entryText, type SessionTranscript } from "./session-transcript.ts";
 
 /** Verfahren des Fingerabdrucks. Erhöhen, wenn sich ändert, was in eine Ausgabe eingeht. */
 export const FINGERPRINT_VERSION = 1;
@@ -40,22 +40,22 @@ export function fileStampText(path: string): string {
   }
 }
 
-function contentHash(store: ProjectStore, sessionId: Id, sc: Scaffold): string {
+function contentHash(store: ProjectStore, sessionId: Id, transcript: SessionTranscript): string {
   const levels = store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, a.speechLevelDb, a.version]);
   return sha(
     stable({
-      base: baseName(sc),
-      header: sc.header,
-      entries: sc.entries.map((e) => [e.montageMs, e.kind, entryText(e), e.images]),
-      segments: sc.plan.segments,
-      durationMs: sc.plan.durationMs,
-      placements: sc.resolved.placements,
-      sources: sc.input.sources,
-      devices: sc.input.devices,
+      base: baseName(transcript),
+      header: transcript.header,
+      entries: transcript.entries.map((e) => [e.montageMs, e.kind, entryText(e), e.images]),
+      segments: transcript.plan.segments,
+      durationMs: transcript.plan.durationMs,
+      placements: transcript.resolved.placements,
+      sources: transcript.input.sources,
+      devices: transcript.input.devices,
       persons: store.listPersons(),
       levels,
-      protocol: protocolCsv(store, sc),
-      variables: documentVariables(sc, baseName(sc)),
+      protocol: protocolCsv(store, transcript),
+      variables: documentVariables(transcript, baseName(transcript)),
     }),
   );
 }
@@ -63,13 +63,13 @@ function contentHash(store: ProjectStore, sessionId: Id, sc: Scaffold): string {
 /** Fingerabdruck des jetzigen Stands für die Einstellungen `settings`. */
 export function exportFingerprint(store: ProjectStore, sessionId: Id, settings: ExportSettings): ExportFingerprint {
   const episodes = store.getSession(sessionId).episodes;
-  const sc = buildScaffold(store, sessionId, {
+  const transcript = buildSessionTranscript(store, sessionId, {
     mode: episodes && !settings.realtime ? "episodes" : "realtime",
     episodes,
   });
   const originals: Record<string, string> = {};
-  for (const s of sc.input.sources) originals[s.id] = fileStampText(s.originalPath);
-  return { version: FINGERPRINT_VERSION, content: contentHash(store, sessionId, sc), originals };
+  for (const s of transcript.input.sources) originals[s.id] = fileStampText(s.originalPath);
+  return { version: FINGERPRINT_VERSION, content: contentHash(store, sessionId, transcript), originals };
 }
 
 /** Warum eine Ausgabe nicht mehr zum Projekt passt; leer = aktuell. */

@@ -7,7 +7,7 @@
 import { pathToFileURL } from "node:url";
 import { FPS, H, videoTiles, W, type Box } from "./layout.ts";
 import type { Piece } from "./montage-video.ts";
-import { entryText, type Scaffold } from "./scaffold.ts";
+import { entryText, type SessionTranscript } from "./session-transcript.ts";
 import { xmlEscape } from "./xml.ts";
 
 /** Rationale Zeit in Bildern der Sequenz. */
@@ -29,7 +29,7 @@ export interface FcpxmlOptions {
   audioMix?: "all" | "main";
 }
 
-export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions): string {
+export function montageFcpxml(transcript: SessionTranscript, pieces: Piece[], opts: FcpxmlOptions): string {
   const assets = new Map<string, { id: string; xml: string }>();
   const asset = (path: string, name: string, kind: "av" | "audio", durationMs: number | null) => {
     const got = assets.get(path);
@@ -47,9 +47,9 @@ export function montageFcpxml(sc: Scaffold, pieces: Piece[], opts: FcpxmlOptions
     return id;
   };
 
-  // Marker je Zeile des Zeitgerüsts, an die passende Stelle im passenden Stück.
+  // Marker je Zeile des Einsatztranskripts, an die passende Stelle im passenden Stück.
   const markersIn = (p: Piece, localStart: number) =>
-    sc.entries
+    transcript.entries
       .filter((e) => e.kind !== "end" && msFrames(e.montageMs) >= p.f0 && msFrames(e.montageMs) < p.f1)
       .map((e) => {
         const at = localStart + msFrames(e.montageMs) - p.f0;

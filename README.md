@@ -161,7 +161,7 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   oder Videos ohne ffprobe-Zeit gebraucht werden.
 - **Eigene Lautstärkekurve** statt FFmpeg-silencedetect: dieselbe Hüllkurve liefert Stille, laute Stellen und
   Klatscher für den Abgleich, ein Durchlauf statt zwei.
-- **docx** (9.15.0, MIT) schreibt das Zeitgerüst als Word-Datei, mit eingebetteten Bildern. Kein Zusatzprogramm
+- **docx** (9.15.0, MIT) schreibt das Einsatztranskript als Word-Datei, mit eingebetteten Bildern. Kein Zusatzprogramm
   nötig; Pandoc oder LibreOffice wären schwerer mitzuliefern.
 - **pdf.js** (`pdfjs-dist`, 6.x) für PDF-Scans in Vorschau und Abtipp-Ansicht.
 - **Schriften Source Sans 3 und Source Serif 4** (`@fontsource-variable/…`, SIL OFL 1.1) liegen in der App, damit sie
@@ -193,18 +193,18 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Zeit in einem Clip kann die Uhr des ganzen Geräts richten; die übrigen Clips rücken dann mit.
 - **Mitschrift** (`TranscriptLine`): von Hand mitgetippte Zeilen zu einer Ton- oder Videoquelle, mit Sprecherkürzel.
   Gespeichert wird die Stelle in der Aufnahme; die Uhrzeit folgt aus dem Abgleich. Kein automatisches Transkript.
-- **Ausgabe**: ein Ordner pro Einsatz. Das **Zeitgerüst** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins
+- **Ausgabe**: ein Ordner pro Einsatz. Das **Einsatztranskript** (.docx) hat je Zeile eine Zeitmarke `#hh:mm:ss-z#` ins
   Montagevideo und die Uhrzeit dahinter, mit Mitschrift, Fotos und Tagebuch-Ausschnitten (auch aus PDFs). Das
   **Montagevideo** enthält Bild und Ton aller Aufnahmen auf der gemeinsamen Zeitachse (auch, was nicht mitgeschrieben ist; das lässt sich
   in MAXQDA direkt im Video codieren) und blendet ein: Uhrzeit, die laufenden Videos (bis zu vier nebeneinander) mit
   Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und eine **Montage-ID**, die auch im Kopf des
-  Zeitgerüsts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
+  Einsatztranskripts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
   nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
   weil die LGPL-Fassung von FFmpeg keine Schrift setzt; „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den
   Originalen ab. Dazu **Dokumentvariablen** (.xlsx) für MAXQDA und ein **Begleitprotokoll** (.csv) mit Herkunft und
   Zeitnachweis jeder Datei.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
-  **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Zeitgerüst, Montage, Mitschrift
+  **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Einsatztranskript, Montage, Mitschrift
   und Suche führen den Eintrag an der Notierzeit; der Bezugszeitraum steht als Hinweis dabei.
 
 Alle Uhrzeiten sind Ortszeit des Einsatzes, intern als `LocalMs` (Wanduhrzeit in ms, gelesen als UTC). Unsicherheiten

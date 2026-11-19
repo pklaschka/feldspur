@@ -7,7 +7,7 @@ export * from "./tools.ts";
 export * from "./audio.ts";
 export * from "./sync.ts";
 export * from "./analyze.ts";
-export * from "./scaffold.ts";
+export * from "./session-transcript.ts";
 export * from "./stills.ts";
 export * from "./docx.ts";
 export * from "./montage-video.ts";
