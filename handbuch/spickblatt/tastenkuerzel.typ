@@ -8,7 +8,8 @@
 //
 // Die Kürzel stammen aus dem Code (apps/desktop/src/renderer: transcribe.ts, Transcriber.tsx, transcriber/Line.tsx,
 // app/history.tsx, app/SessionPane.tsx, App.tsx, DiaryEditor.tsx, diary/EntryCard.tsx, MontageView.tsx,
-// FineAlign.tsx, SearchDialog.tsx, Notes.tsx, Review.tsx, keys.ts). Ändert sich dort etwas, hier nachziehen.
+// FineAlign.tsx, SearchDialog.tsx, Notes.tsx, Review.tsx, context/ContextStrip.tsx, keys.ts). Ändert sich dort
+// etwas, hier nachziehen.
 //
 // Bauen: läuft mit `quarto render handbuch` (post-render spickblatt.ts) und landet als
 // Feldspur-Tastenkuerzel.pdf neben dem Handbuch. Von Hand:
@@ -342,7 +343,7 @@
       [Tagebuch abtippen],
       farbe: gruen-5,
       symbol: "tagebuch",
-      markiert: ("bildauf", "bildab", "+", "-", "0", "strg", "alt", "hoch", "runter", "links", "rechts", "umschalt"),
+      markiert: ("bildauf", "bildab", "+", "-", "0", "strg", "alt", "hoch", "runter", "links", "rechts", "umschalt", "k"),
       {
         let tg(n, ..a) = taste(n, u: u, farbe: gruen-5, ..a)
         let lg(n, ..a) = taste(n, u: u, aktiv: false, ..a)
@@ -422,7 +423,7 @@
                   )
                 },
                 [„Notiert um“: ± 1 Minute],
-                text-unten: [mit ⇧ ± 10 Minuten],
+                text-unten: [mit ⇧ ± 10 Min. · leer: *K* = Kontext],
               ),
             )
             v(2.5 * E, weak: true)
@@ -474,7 +475,7 @@
       text(size: 11pt, weight: "bold", style: "italic", fill: umbra)[Durchsehen]
       h(2 * E)
       [*N* nächste Stelle #h(1.5mm)·#h(1.5mm) *⇧ + N* vorige Stelle #h(1.5mm)·#h(1.5mm)
-        *Strg + Enter* Lage passt, weiter]
+        *Strg + Enter* Lage passt #h(1.5mm)·#h(1.5mm) *Alt + ← →* Kontext umsortieren]
     })
   },
   // ---------------------------------------------------------------- rechts
