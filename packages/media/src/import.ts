@@ -169,7 +169,8 @@ function familyPrefix(family: string): string {
   );
 }
 
-function deviceGuess(
+/** Gerätevermutung wie beim Einsammeln: Modell aus den Metadaten, sonst Dateinamen-Familie; Tagebuch eigenes Gerät. */
+export function deviceGuess(
   fileName: string,
   kind: SourceKind,
   exif: ImageExif | null,

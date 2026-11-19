@@ -84,6 +84,7 @@ export function SessionPane({
     setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),
     setDeviceTimeZone: (id, tz) => update(guard(() => api.setDeviceTimeZone(id, tz))),
     setPartOf: (id, mainId) => update(guard(() => api.setPartOf(id, mainId))),
+    setSourceKind: (id, kind) => update(guard(() => api.setSourceKind(id, kind))),
     setFollows: (id, prevId) => update(guard(() => api.setFollows(id, prevId))),
     preview: setPreviewId,
     transcribe: setTranscribeId,

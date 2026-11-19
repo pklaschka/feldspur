@@ -76,7 +76,15 @@ import {
 } from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
-import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
+import {
+  linkFollowUps,
+  mergeDevices,
+  moveSource,
+  removeSource,
+  setFollows,
+  setPartOf,
+  setSourceKind,
+} from "./sources.ts";
 import { resolveToolPaths } from "./tools.ts";
 import { addNote, deleteNote, updateNote } from "./notes.ts";
 import { addLine, deleteLine, importLines, updateLine } from "./transcript.ts";
@@ -478,6 +486,10 @@ function registerIpc(): void {
   undoable(IPC.setPartOf, "Seite zugeordnet", (_e, sourceId: string, mainId: string | null) => {
     const s = requireStore();
     return buildSessionView(s, setPartOf(s, sourceId, mainId));
+  });
+  undoable(IPC.setSourceKind, "Bildart geändert", (_e, sourceId: string, kind: "diary" | "photo") => {
+    const s = requireStore();
+    return buildSessionView(s, setSourceKind(s, sourceId, kind));
   });
   undoable(IPC.setFollows, "Folgeaufnahme gesetzt", (_e, sourceId: string, prevId: string | null) => {
     const s = requireStore();

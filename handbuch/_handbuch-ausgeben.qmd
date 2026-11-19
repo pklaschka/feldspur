@@ -36,7 +36,8 @@ geht es gleich weiter. Sonst steht da, was auffällt:
 
 Das **Zeitgerüst** ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format `#hh:mm:ss-z#`, die
 auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. Dazu kommen Mitschrift, Fotos und
-Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdaten und die **Montage-ID**.
+Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdaten und die **Montage-ID**. Zeilenumbrüche in einem abgetippten Tagebuchtext bleiben
+erhalten; der Eintrag bleibt dabei ein Absatz mit einer einzigen Zeitmarke.
 
 ### Montagevideo (.mp4)
 

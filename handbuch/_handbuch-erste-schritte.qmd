@@ -20,7 +20,9 @@ eine Projektdatei Feldspur; die Dateien tragen dann ein eigenes Symbol. Unter Li
 ins System eingebunden ist (etwa mit AppImageLauncher).
 
 Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
-genau einem Dokument in MAXQDA. Lege ihn in der linken Leiste mit **+ neuer Einsatz** an und gib Titel und Datum ein.
+genau einem Dokument in MAXQDA. Ein neues Projekt zeigt dafür gleich ein Formular: Gib Titel, Datum und Ort ein und wähle **Einsatz anlegen**. Weitere
+Einsätze legst du in der linken Leiste mit **+ neuer Einsatz** an; der Ort ist dort optional und lässt sich später in
+den Einsatz-Details ändern.
 
 Das Datum ist vorbelegt mit dem heutigen Tag am Rechner. Feldspur vergleicht es beim Einsammeln mit den Dateien: Stammen
 die meisten nach ihren Metadaten oder Dateinamen von einem anderen Tag, steht über der Geräteliste ein Hinweis mit dem

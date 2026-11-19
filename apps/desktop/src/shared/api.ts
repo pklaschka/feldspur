@@ -572,6 +572,8 @@ export interface FeldspurApi {
   mergeDevices(fromDeviceId: string, intoDeviceId: string): Promise<SessionView>;
   /** Bild als weiteren Teil einer Seite an mainId hängen; null löst es. */
   setPartOf(sourceId: string, mainId: string | null): Promise<SessionView>;
+  /** Bild als Tagebuchseite oder als Foto behandeln (neues Kurzzeichen, passendes Gerät). */
+  setSourceKind(sourceId: string, kind: "diary" | "photo"): Promise<SessionView>;
   /** Aufnahme als Fortsetzung von prevId markieren; null löst es. */
   setFollows(sourceId: string, prevId: string | null): Promise<SessionView>;
   /** null = Abweichung unbekannt */
@@ -742,6 +744,7 @@ export const IPC = {
   moveSource: "source:move",
   mergeDevices: "device:merge",
   setPartOf: "source:part-of",
+  setSourceKind: "source:kind",
   setFollows: "source:follows",
   addTranscriptLine: "transcript:add",
   importTranscript: "transcript:import",
