@@ -27,6 +27,10 @@ Ein Eintrag kann auf einer anderen Seite weitergehen.
 
 ![Abtipp-Ansicht mit zwei Einträgen auf einer erfundenen Seite](docs/tagebuch.png)
 
+# Installieren
+
+{{< include handbuch/_installieren.qmd >}}
+
 # Entstehung mit generativer KI
 
 {{< include handbuch/_ki-kern.qmd >}}

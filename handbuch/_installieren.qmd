@@ -1,0 +1,8 @@
+Am einfachsten installierst du Feldspur mit [Lieferling](https://github.com/pklaschka/lieferling), derzeit nur
+unter macOS (Windows und Linux folgen):
+**[In Lieferling installieren](https://pklaschka.github.io/lieferling/?repo=pklaschka/feldspur&install=1)**.
+Lieferling fragt nach, bevor es Feldspur auf seine Liste setzt, installiert die neueste Version, sucht im Hintergrund
+nach Updates und spielt sie mit einem Klick ein. Um die noch nicht signierten Pakete musst du dich dabei nicht kümmern.
+
+Ohne Lieferling liegen die Installationsdateien für Windows, macOS und Linux bei jedem
+[Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch das Handbuch als PDF.

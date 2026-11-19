@@ -2,13 +2,13 @@
 
 ### Installieren
 
-Feldspur gibt es für Windows, macOS und Linux. Die Installationsdateien liegen bei jedem
-[Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch dieses Handbuch als PDF.
+{{< include _installieren.qmd >}}
+
 FFmpeg [@ffmpeg] (in der LGPL-Fassung) ist bereits enthalten, du musst nichts weiter installieren.
 
 ::: {.callout-note}
-Die Pakete sind noch nicht signiert. Windows und macOS warnen deshalb beim ersten Start. Unter macOS öffnest du die
-App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über "Weitere Informationen" › "Trotzdem ausführen".
+Die Pakete sind noch nicht signiert. Ohne Lieferling warnen Windows und macOS deshalb beim ersten Start. Unter macOS
+öffnest du die App beim ersten Mal per Rechtsklick › Öffnen, unter Windows über "Weitere Informationen" › "Trotzdem ausführen".
 :::
 
 ### Projekt und Einsatz
