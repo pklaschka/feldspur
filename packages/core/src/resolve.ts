@@ -417,8 +417,22 @@ function summarizeConflicts(best: Candidate, comparison: EvidenceComparison[]): 
       else if (Math.abs(seen.differenceMs - c.differenceMs) > c.allowedMs)
         staleBecause.push({ evidenceId: c.evidenceId, wasMs: seen.differenceMs, nowMs: c.differenceMs });
     }
+    // Hat sich der Beleg verschoben, dessen Lage bestätigt wurde (etwa weil die Geräteuhr inzwischen genauer
+    // abgeglichen ist), gilt die Bestätigung einer alten Lage: neu prüfen, auch wenn es kein Widerspruch ist.
+    const basis = comparison.find((c) => c.enabled && c.evidenceId === decision.basisId);
+    const seenBasis = decision.seen.find((x) => x.id === decision.basisId);
+    if (
+      basis &&
+      seenBasis &&
+      !staleBecause.some((x) => x.evidenceId === basis.evidenceId) &&
+      Math.abs(seenBasis.differenceMs - basis.differenceMs) > CONFLICT_TOLERANCE_MS
+    )
+      staleBecause.push({ evidenceId: basis.evidenceId, wasMs: seenBasis.differenceMs, nowMs: basis.differenceMs });
   }
-  if (!live.length) return NO_CONFLICT;
+  if (!live.length)
+    return staleBecause.length
+      ? { state: "stale", severity: null, worstMs: staleBecause[0]!.nowMs, count: 0, staleBecause }
+      : NO_CONFLICT;
   const worst = live.reduce((w, c) => (Math.abs(c.differenceMs) > Math.abs(w.differenceMs) ? c : w));
   return {
     state: staleBecause.length ? "stale" : checked ? "decided" : "open",
@@ -627,8 +641,17 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         if (!pk) continue;
         const moment = pk.startMs + known.atMediaMs;
         const unc = combineUncertainty(anchor.uncertaintyMs, pk.uncertaintyMs);
+        const otherSrc = sourceById.get(other.sourceId);
+        if (!otherSrc) continue;
+        const clock = otherSrc.deviceId ? clocks.get(otherSrc.deviceId) : undefined;
         const po = trustedPlacement(other.sourceId);
-        if (po) {
+        // Liegt die andere Aufnahme nur über eine angesagte Uhrzeit ihres Geräts (auf die Minute genau),
+        // gilt der Anker: Er verbindet zwei Stellen auf Bruchteile einer Sekunde, die Ansage nicht.
+        const viaSpokenClock =
+          po !== undefined &&
+          clock?.basis === "spoken" &&
+          candidates.get(other.sourceId)?.find((c) => c.ev.id === po.basis.evidenceId)?.ev.clock === "device";
+        if (po && !viaSpokenClock) {
           const diff = po.startMs + other.atMediaMs - moment;
           if (
             Math.abs(diff) > combineUncertainty(unc, po.uncertaintyMs) + CONFLICT_TOLERANCE_MS &&
@@ -638,9 +661,6 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
           }
           continue;
         }
-        const otherSrc = sourceById.get(other.sourceId);
-        if (!otherSrc) continue;
-        const clock = otherSrc.deviceId ? clocks.get(otherSrc.deviceId) : undefined;
         const device = otherSrc.deviceId ? deviceById.get(otherSrc.deviceId) : undefined;
         const deviceEv = pickBest(
           candidatesFor(
@@ -650,7 +670,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             session.timeZone,
           ),
         );
-        if (clock && clock.offsetMs === null && deviceEv) {
+        if (clock && (clock.offsetMs === null || viaSpokenClock) && deviceEv) {
           // Geräteuhr zeigte im Moment des Ankers:
           const deviceShows =
             effectiveLocal(deviceEv.ev, device, session.timeZone) - deviceEv.ev.atMediaMs + other.atMediaMs;

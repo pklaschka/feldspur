@@ -130,6 +130,31 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(res.placements.get("C0012.MP4")!.status).toBe("check"); // ± 2,2 s
   });
 
+  it("Anker schlägt eine minutengenaue Ansage derselben Kamera (#117)", () => {
+    const input = testmarkt();
+    // Angesagt „zehn Uhr vierzig“ bei 0:30, auf die Minute gerundet: 20 s neben dem Klatschen.
+    input.evidence.push({
+      id: "ansage",
+      sourceId: "C0013.MP4",
+      kind: "spoken",
+      clock: "true",
+      atMediaMs: 30_000,
+      localMs: T(10, 40, 20),
+      utcMs: null,
+      uncertaintyMs: 60_000,
+      detail: "angesagt",
+      raw: "",
+      enabled: true,
+    });
+    const res = resolveTimeline(input);
+    const cam = res.deviceClocks.get("camA")!;
+    expect(cam.basis).toBe("anchor");
+    expect(cam.offsetMs).toBe(167_000);
+    expect(formatClock(res.placements.get("C0012.MP4")!.startMs)).toBe("10:16:00");
+    expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:10");
+    expect(res.anchorConflicts).toEqual([]);
+  });
+
   it("abgeschalteter Beleg zählt nicht", () => {
     const input = testmarkt();
     input.evidence.find((e) => e.sourceId === "IMG_0231.jpg")!.enabled = false;
