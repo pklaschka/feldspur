@@ -4,19 +4,19 @@
  */
 import { useEffect, useRef, useState } from "react";
 import type {
+  ExportProgress,
   ExportStatus,
   OriginalsCheck,
-  OriginalsProgress,
   SessionTranscriptPreview,
   SessionView,
 } from "../shared/api.ts";
-import { cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
+import { CHECK_STEP, cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
 import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
-import { FILE_STATE_TEXT, progressText } from "./Originals.tsx";
+import { FILE_STATE_TEXT } from "./Originals.tsx";
 import { Button, ContextMark, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -51,12 +51,15 @@ function loadOptions(): Options {
 
 /** Pfad einer Datei im Ausgabeordner, mit dem Trenner, den der Ordner schon hat (Windows oder sonst). */
 const inDir = (dir: string, name: string) => `${dir}${dir.includes("\\") ? "\\" : "/"}${name}`;
+const GB = 1024 ** 3;
+/** „12,4 von 80,0 GB geprüft“; unter einem GB in MB. */
+function checkedText(p: ExportProgress): string {
+  const big = p.total >= GB;
+  const unit = big ? GB : 1024 ** 2;
+  const n = (x: number) => (x / unit).toFixed(big ? 1 : 0).replace(".", ",");
+  return `${n(p.done)} von ${n(p.total)} ${big ? "GB" : "MB"} geprüft`;
+}
 const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
-
-/** Prüfung der Originale vor einer Ausgabe: läuft, oder hat etwas gefunden (dann entscheidet die Person). */
-type PreCheck =
-  | { phase: "running"; progress: OriginalsProgress | null }
-  | { phase: "found"; result: OriginalsCheck; video: boolean; paths: string };
 
 export function ExportStep({
   view,
@@ -119,43 +122,35 @@ export function ExportStep({
       live = false;
     };
   }, [view, sessionId, realtime]);
-  const [pre, setPre] = useState<PreCheck | null>(null);
-  useEffect(
-    () =>
-      api.onOriginalsProgress(
-        (p) => p.sessionId === sessionId && setPre((old) => (old?.phase === "running" ? { ...old, progress: p } : old)),
-      ),
-    [sessionId],
-  );
-  // Ein Ergebnis gilt nur für die Einstellung (mit/ohne Video) und die Pfade, mit denen geprüft wurde.
+  // Hat die Prüfung der Originale (erster Schritt der Ausgabe) etwas gefunden, hält die Ausgabe an. Das Ergebnis
+  // gilt nur für die Einstellung (mit/ohne Video) und die Pfade, mit denen geprüft wurde.
+  const held = busy ? null : (ex.held[sessionId] ?? null);
   const paths = view.rows.map((r) => r.originalPath).join("\n");
-  const found = pre?.phase === "found" && pre.video === video && pre.paths === paths ? pre : null;
-  const running = pre?.phase === "running" ? pre : null;
-  // Ob die Ausgabe in den Ordner der letzten gehen soll (gilt auch, wenn erst die Originale-Prüfung nachfragt).
-  const reuseDir = useRef(false);
-  const start = () => {
-    setPre(null);
-    ex.start(sessionId, { ...settings, reuseDir: reuseDir.current });
-  };
-  /** Erst die Originale prüfen (Prüfsummen schon geprüfter Dateien merkt sich die App), dann ausgeben. */
-  const run = async (reuse = false) => {
-    reuseDir.current = reuse;
-    setPre({ phase: "running", progress: null });
-    let result: OriginalsCheck;
-    try {
-      result = await api.checkOriginals(sessionId, video);
-    } catch {
-      setPre(null);
-      return start(); // Prüfen ging nicht: die Ausgabe meldet selbst, was fehlt.
+  const found = held && held.opts.video === video && held.key === paths ? held : null;
+  // Nach der Prüfung kennt die App die Prüfsummen: Zustand der Originale in der Ansicht auffrischen.
+  const checkedJob = useRef(false);
+  useEffect(() => {
+    if (busy) {
+      checkedJob.current = true;
+      return;
     }
+    if (!checkedJob.current) return;
+    checkedJob.current = false;
     void api.getSession(sessionId).then(onView, () => {});
-    if (!result.blocking.length && !result.warnings.length) return start();
-    setPre({ phase: "found", result, video, paths });
+  }, [busy, sessionId, onView]);
+  /** Ausgeben: erst Ordner wählen, dann prüft die Ausgabe als ersten Schritt die Originale (Issue #116). */
+  const run = (reuse = false) => {
+    ex.start(sessionId, { ...settings, reuseDir: reuse }, paths);
+  };
+  /** Nach der Prüfung bewusst weiter: gleiche Einstellungen, schon gewählter Ordner. */
+  const proceed = () => {
+    if (!found) return;
+    ex.start(sessionId, { ...found.opts, reuseDir: false, dir: found.parent, acceptOriginals: true }, paths);
   };
   const stale = !!result && result.differences.length > 0;
 
   const empty = !preview || preview.durationMs <= 0;
-  const pct = percent(progress);
+  const pct = percent(progress, ex.job?.video);
   const open = todos(view);
 
   return (
@@ -196,6 +191,7 @@ export function ExportStep({
                   {progress?.step === "Montagevideo" &&
                     !ex.job!.cancelling &&
                     `${remainingText(remainingMs(ex.job))} · `}
+                  {progress?.step === CHECK_STEP && !ex.job!.cancelling && `${checkedText(progress)} · `}
                   {pct} %
                 </span>
                 <Button size="sm" disabled={ex.job!.cancelling} onClick={ex.cancel} data-testid="export-cancel">
@@ -214,6 +210,9 @@ export function ExportStep({
                 <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
               </div>
               <p className="mt-2 text-[0.85rem] text-muted">
+                {progress?.step === CHECK_STEP || !progress
+                  ? "Zuerst prüft Feldspur, ob die Originale noch dieselben sind wie beim Einsammeln (schon geprüfte merkt es sich). "
+                  : ""}
                 Du kannst weiterarbeiten oder den Schritt wechseln, die Ausgabe läuft weiter. Änderungen ab jetzt kommen
                 in die nächste Ausgabe.
               </p>
@@ -229,9 +228,9 @@ export function ExportStep({
             <ExportResult
               status={result}
               fresh={!!justDone && !stale}
-              disabled={!!ex.job || !!running || !!found}
-              onRerun={() => void run(true)}
-              onRerunElsewhere={() => void run()}
+              disabled={!!ex.job || !!found}
+              onRerun={() => run(true)}
+              onRerunElsewhere={() => run()}
             />
           )}
         </Panel>
@@ -320,20 +319,16 @@ export function ExportStep({
               <PreCheckResult
                 view={view}
                 result={found.result}
+                parent={found.parent}
                 onOriginals={onOriginals}
-                onContinue={start}
-                onCancel={() => setPre(null)}
+                onContinue={proceed}
+                onCancel={() => ex.dismiss(sessionId)}
               />
             )}
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <Button variant="primary" disabled={!!ex.job || empty || !!running || !!found} onClick={() => void run()}>
-                {busy ? "Gibt aus…" : running ? "Prüft Originale…" : open.length ? "Trotzdem ausgeben…" : "Ausgeben…"}
+              <Button variant="primary" disabled={!!ex.job || empty || !!found} onClick={() => run()}>
+                {busy ? "Gibt aus…" : open.length ? "Trotzdem ausgeben…" : "Ausgeben…"}
               </Button>
-              {running && (
-                <span className="text-[0.85rem] text-muted tabular-nums" data-testid="export-precheck">
-                  {progressText(running.progress)}
-                </span>
-              )}
               {empty && <span className="text-[0.9rem] text-muted">Noch keine Quelle mit Uhrzeit.</span>}
               {elsewhere && (
                 <span className="text-[0.9rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>
@@ -498,18 +493,21 @@ function ExportResult({
 }
 
 /**
- * Was die Prüfung der Originale gefunden hat. Fehlt eine Datei, die die Ausgabe braucht, geht es nicht weiter;
+ * Was die Prüfung der Originale (erster Schritt der Ausgabe, nach der Ordnerwahl) gefunden hat. Fehlt eine Datei, die die Ausgabe braucht, geht es nicht weiter;
  * Veränderungen und fehlende, aber nicht gebrauchte Dateien lassen sich bewusst übergehen.
  */
 function PreCheckResult({
   view,
   result,
+  parent,
   onOriginals,
   onContinue,
   onCancel,
 }: {
   view: SessionView;
   result: OriginalsCheck;
+  /** Schon gewählter Ordner: „Trotzdem ausgeben“ geht ohne Nachfrage dorthin. */
+  parent: string;
   onOriginals: () => void;
   onContinue: () => void;
   onCancel: () => void;
@@ -560,7 +558,7 @@ function PreCheckResult({
           Originale suchen…
         </Button>
         {!blocked && (
-          <Button size="sm" onClick={onContinue} data-testid="export-anyway">
+          <Button size="sm" onClick={onContinue} title={`Ausgeben nach: ${parent}`} data-testid="export-anyway">
             Trotzdem ausgeben
           </Button>
         )}

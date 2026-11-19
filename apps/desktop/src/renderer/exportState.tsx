@@ -3,9 +3,18 @@
  * oder den Einsatz wechselt, findet Fortschritt und Ergebnis beim Zurückkommen wieder.
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { ExportOutcome, ExportProgress } from "../shared/api.ts";
+import {
+  EXPORT_CHECK_STEP,
+  type ExportOutcome,
+  type ExportProgress,
+  type ExportRequestOptions,
+  type OriginalsCheck,
+} from "../shared/api.ts";
 
 const api = window.feldspur;
+
+/** Erster Schritt jeder Ausgabe, nach der Ordnerwahl. */
+export const CHECK_STEP = EXPORT_CHECK_STEP;
 
 export interface ExportJob {
   sessionId: string;
@@ -15,6 +24,18 @@ export interface ExportJob {
   videoFrom: { at: number; done: number } | null;
   /** Abbrechen ist angefordert, ffmpeg wird beendet. */
   cancelling: boolean;
+}
+
+/**
+ * Ausgabe, die nach der Prüfung der Originale angehalten hat: Etwas fehlt oder ist verändert. Die Person entscheidet;
+ * „Trotzdem ausgeben“ nutzt dieselben Einstellungen und den schon gewählten Ordner.
+ */
+export interface HeldExport {
+  result: OriginalsCheck;
+  parent: string;
+  opts: ExportRequestOptions;
+  /** Was der Aufrufer zum Ergebnis merken will (der Schritt „Ausgeben“: die geprüften Pfade). */
+  key?: string;
 }
 
 /** Wie eine abgebrochene Ausgabe lief: mit Video bleiben fertige Abschnitte im Zwischenspeicher. */
@@ -28,12 +49,13 @@ interface ExportState {
   errors: Record<string, string>;
   /** Abgebrochene Ausgaben je Einsatz, bis zum nächsten Versuch. */
   cancelled: Record<string, CancelledExport>;
+  /** Nach der Prüfung angehaltene Ausgaben je Einsatz, bis zur Entscheidung oder zum nächsten Versuch. */
+  held: Record<string, HeldExport>;
   /** Laufende Ausgabe abbrechen. */
   cancel(): void;
-  start(
-    sessionId: string,
-    opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean; reuseDir?: boolean },
-  ): void;
+  start(sessionId: string, opts: ExportRequestOptions, key?: string): void;
+  /** Angehaltene Ausgabe verwerfen (Abbrechen im Hinweis). */
+  dismiss(sessionId: string): void;
 }
 
 const Ctx = createContext<ExportState | null>(null);
@@ -43,6 +65,7 @@ export function ExportProvider({ children }: { children: ReactNode }) {
   const [results, setResults] = useState<Record<string, ExportOutcome>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cancelled, setCancelled] = useState<Record<string, CancelledExport>>({});
+  const [held, setHeld] = useState<Record<string, HeldExport>>({});
   useEffect(
     () =>
       api.onExportProgress((p) =>
@@ -54,17 +77,17 @@ export function ExportProvider({ children }: { children: ReactNode }) {
       ),
     [],
   );
-  const start = (
-    sessionId: string,
-    opts: { video: boolean; resolve: boolean; mixAudio: boolean; realtime: boolean; reuseDir?: boolean },
-  ) => {
+  const start = (sessionId: string, opts: ExportRequestOptions, key?: string) => {
     if (job) return;
     setJob({ sessionId, video: opts.video, progress: null, videoFrom: null, cancelling: false });
     setErrors((x) => without(x, sessionId));
     setCancelled((x) => without(x, sessionId));
+    setHeld((x) => without(x, sessionId));
     api.exportSession(sessionId, opts).then(
       (r) => {
         if (r && "cancelled" in r) setCancelled((x) => ({ ...x, [sessionId]: { video: opts.video } }));
+        else if (r && "originals" in r)
+          setHeld((x) => ({ ...x, [sessionId]: { result: r.originals, parent: r.parent, opts, key } }));
         else if (r) setResults((x) => ({ ...x, [sessionId]: r }));
         setJob(null);
       },
@@ -80,7 +103,10 @@ export function ExportProvider({ children }: { children: ReactNode }) {
     setJob({ ...job, cancelling: true });
     void api.cancelExport(job.sessionId);
   };
-  return <Ctx.Provider value={{ job, results, errors, cancelled, cancel, start }}>{children}</Ctx.Provider>;
+  const dismiss = (sessionId: string) => setHeld((x) => without(x, sessionId));
+  return (
+    <Ctx.Provider value={{ job, results, errors, cancelled, held, cancel, start, dismiss }}>{children}</Ctx.Provider>
+  );
 }
 
 function without<T>(x: Record<string, T>, key: string): Record<string, T> {
@@ -102,16 +128,27 @@ export function useExport(): ExportState {
   return s;
 }
 
-/** Fortschritt als Prozent (0–100), grob über die Schritte gewichtet. */
-export function percent(p: ExportProgress | null): number {
+/**
+ * Fortschritt als Prozent (0–100), grob über die Schritte gewichtet. Ohne Video ist die Prüfung der Originale fast
+ * die ganze Arbeit, mit Video das Montagevideo.
+ */
+export function percent(p: ExportProgress | null, video = true): number {
   if (!p) return 0;
   const frac = p.total ? p.done / p.total : 0;
-  const steps: [string, number, number][] = [
-    ["Standbilder", 0, 5],
-    ["Montagevideo", 5, 95],
-    ["Einsatztranskript", 95, 99],
-    ["Fertig", 100, 100],
-  ];
+  const steps: [string, number, number][] = video
+    ? [
+        [CHECK_STEP, 0, 10],
+        ["Standbilder", 10, 15],
+        ["Montagevideo", 15, 95],
+        ["Einsatztranskript", 95, 99],
+        ["Fertig", 100, 100],
+      ]
+    : [
+        [CHECK_STEP, 0, 85],
+        ["Standbilder", 85, 90],
+        ["Einsatztranskript", 90, 99],
+        ["Fertig", 100, 100],
+      ];
   const s = steps.find(([name]) => name === p.step);
   return s ? Math.round(s[1] + (s[2] - s[1]) * frac) : 0;
 }

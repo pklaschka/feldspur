@@ -21,8 +21,8 @@ import {
   type OverlayHeader,
   timestamp,
 } from "@feldspur/media";
-import { IPC, type ExportRunResult, type SessionTranscriptPreview } from "../shared/api.ts";
-import { exportBlocker } from "./originals.ts";
+import { EXPORT_CHECK_STEP, IPC, type ExportRunResult, type SessionTranscriptPreview } from "../shared/api.ts";
+import { checkOriginals } from "./originals.ts";
 
 const CHUNK = 60;
 let running: string | null = null;
@@ -38,6 +38,17 @@ export function exportingSession(): string | null {
   return running;
 }
 let nextId = 1;
+
+/** Fortschritt höchstens alle 100 ms senden (die Prüfsumme meldet jedes gelesene MB), Anfang und Ende immer. */
+function throttled(send: (done: number, total: number) => void): (done: number, total: number) => void {
+  let last = 0;
+  return (done, total) => {
+    const now = Date.now();
+    if (done !== 0 && done !== total && now - last < 100) return;
+    last = now;
+    send(done, total);
+  };
+}
 const pending = new Map<number, { resolve: (b: Buffer[]) => void; reject: (e: Error) => void }>();
 
 const pendingStills = new Map<number, (b: Buffer | null) => void>();
@@ -148,16 +159,37 @@ export async function runExport(
   wc: WebContents,
   sessionId: string,
   parent: string,
-  opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean },
+  opts: {
+    video: boolean;
+    resolve?: boolean;
+    mixAudio?: boolean;
+    realtime?: boolean;
+    /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */
+    acceptOriginals?: boolean;
+  },
 ): Promise<ExportRunResult> {
   // Eine Ausgabe nach der anderen: ffmpeg und die Einblendungen brauchen die ganze Maschine.
   if (running) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
-  const blocked = exportBlocker(s, sessionId, opts.video);
-  if (blocked) throw new Error(blocked);
   running = sessionId;
   const ctrl = new AbortController();
   controller = ctrl;
   try {
+    // Erster Schritt der Ausgabe, erst nach der Ordnerwahl (Issue #116): Originale mit Prüfsumme prüfen. Das dauert
+    // bei großen Einsätzen Minuten, schon geprüfte Dateien merkt sich die App. Findet die Prüfung etwas, entscheidet
+    // die Person; der gewählte Ordner kommt mit zurück, damit „Trotzdem ausgeben“ nicht noch einmal fragt.
+    const send = throttled((done: number, total: number) =>
+      wc.send(IPC.exportProgress, { sessionId, step: EXPORT_CHECK_STEP, done, total }),
+    );
+    let check;
+    try {
+      check = await checkOriginals(s, sessionId, { video: opts.video, signal: ctrl.signal, onBytes: send });
+    } catch (e) {
+      if (ctrl.signal.aborted) return { cancelled: true };
+      throw e;
+    }
+    if (check.blocking.length || (check.warnings.length && !opts.acceptOriginals)) {
+      return { originals: check, parent };
+    }
     // Stand beim Start: Was sich während der Ausgabe ändert, kommt in die nächste (und macht diese veraltet).
     const settings = exportSettings(s, sessionId, opts);
     const fingerprint = exportFingerprint(s, sessionId, settings);

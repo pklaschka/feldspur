@@ -195,6 +195,7 @@ type ExportRequest = {
   realtime?: boolean;
   dir?: string;
   reuseDir?: boolean;
+  acceptOriginals?: boolean;
 };
 
 /**

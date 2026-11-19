@@ -21,13 +21,16 @@ beginnt dann beim bisherigen Ordner. Ist eine Datei der letzten Ausgabe noch in 
 Feldspur das gleich zu Beginn („… ist noch in einem anderen Programm geöffnet“) und nicht erst nach dem Video. Feldspur ist dabei vorsichtig: Lieber einmal zu oft „Veraltet“ als
 eine alte Ausgabe, die als aktuell gilt.
 
-Vor jeder Ausgabe prüft Feldspur die Originale mit ihrer Prüfsumme (@sec-originale). Ist alles da und unverändert,
-geht es gleich weiter. Sonst steht da, was auffällt:
+Erster Schritt jeder Ausgabe, gleich nach der Wahl des Ordners, ist die Prüfung der Originale mit ihrer Prüfsumme
+(@sec-originale). Bei großen Einsätzen dauert das einige Minuten; der Balken zeigt, wie viele Gigabyte schon geprüft
+sind, und **Abbrechen** geht auch hier. Schon geprüfte Dateien merkt sich Feldspur, bis die App beendet wird. Ist alles
+da und unverändert, geht die Ausgabe ohne Halt weiter. Sonst hält sie an, bevor etwas geschrieben ist, und es steht da,
+was auffällt:
 
 - **Fehlt** eine Datei, die die Ausgabe braucht, geht es erst nach dem Neu-Verknüpfen weiter. Gebraucht werden Fotos
   und Tagebuchseiten (für das Einsatztranskript) und, mit Montagevideo, alle Ton- und Videoaufnahmen.
 - **Verändert** ist eine Datei, wenn sie nicht mehr dieselbe ist wie beim Einsammeln. Mit **Trotzdem ausgeben**
-  geht es bewusst weiter; das Begleitprotokoll nennt weiter die Prüfsumme vom Einsammeln. Ebenso bei fehlenden
+  geht es bewusst weiter, in den schon gewählten Ordner; das Begleitprotokoll nennt weiter die Prüfsumme vom Einsammeln. Ebenso bei fehlenden
   Dateien, die diese Ausgabe nicht braucht (z. B. Ton ohne Montagevideo).
 
 ![Ausgabe mit Vorschau des Einsatztranskripts](bilder/ausgeben.png){#fig-ausgeben}
