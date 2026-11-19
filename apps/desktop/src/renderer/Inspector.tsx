@@ -196,9 +196,7 @@ function SourceDetails({
           </div>
         </div>
       )}
-      {context && (
-        <ContextPanel c={context} view={view} apply={actions.apply} onOpenDiary={actions.openDiary} />
-      )}
+      {context && <ContextPanel c={context} view={view} apply={actions.apply} onOpenDiary={actions.openDiary} />}
       {!context && row.status === "unplaced" && !row.partOf && row.kind !== "audio" && row.kind !== "video" && (
         <NotInChronology
           diary={row.kind === "diary"}

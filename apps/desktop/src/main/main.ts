@@ -904,11 +904,15 @@ function registerIpc(): void {
       return buildSessionView(s, setEntryRefs(s, entryId, refs));
     },
   );
-  undoable(IPC.createContextText, "Kontext als Text angelegt", (_e, sessionId: string, input: { title: string; text: string }) => {
-    const s = requireStore();
-    const id = createContextText(s, sessionId, input);
-    return { view: buildSessionView(s, sessionId), key: `entry:${id}` };
-  });
+  undoable(
+    IPC.createContextText,
+    "Kontext als Text angelegt",
+    (_e, sessionId: string, input: { title: string; text: string }) => {
+      const s = requireStore();
+      const id = createContextText(s, sessionId, input);
+      return { view: buildSessionView(s, sessionId), key: `entry:${id}` };
+    },
+  );
 
   undoable(IPC.setDeviceOffset, "Uhrabweichung geändert", (_e, deviceId: string, offsetMs: number | null) => {
     const s = requireStore();

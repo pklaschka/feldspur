@@ -17,7 +17,7 @@ import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
 import { FILE_STATE_TEXT, progressText } from "./Originals.tsx";
-import { Button, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
+import { Button, ContextMark, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -306,6 +306,7 @@ export function ExportStep({
                 Nach Episoden schneiden geht, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
               </p>
             )}
+            {view.context.length > 0 && <ContextCard view={view} onView={onView} />}
             {open.length > 0 && !empty && (
               <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-open">
                 <b className="block font-semibold text-warn">Noch offen</b>
@@ -345,6 +346,22 @@ export function ExportStep({
               className="max-h-[calc(100vh-16rem)] overflow-y-auto font-serif text-[0.92rem] leading-relaxed text-ink-2"
               data-testid="session-transcript-preview"
             >
+              {!!preview?.context.length && (
+                <>
+                  <li className="pb-1 font-sans font-semibold text-ink">Kontext</li>
+                  <li className="pb-1 text-[0.85rem] italic">
+                    Diese Stücke gehören nicht in die Chronologie und haben keine Zeitmarke.
+                  </li>
+                  {preview.context.map((c) => (
+                    <li key={c.key} className="border-b border-line/60 py-1 break-words" data-kind="context">
+                      <span className="font-semibold text-st-episode">{c.head}</span>
+                      <span className="text-st-clock">{c.details}</span>
+                      {c.body && <span className="block whitespace-pre-line">{c.body}</span>}
+                    </li>
+                  ))}
+                  <li className="pt-3 pb-1 font-sans font-semibold text-ink">Chronologie</li>
+                </>
+              )}
               {preview?.entries.map((e, i) => (
                 <SessionTranscriptLine key={i} entry={e} />
               ))}
@@ -572,5 +589,66 @@ function Option({
       {label}
       <span className="col-start-2 text-[0.85rem] text-muted">{hint}</span>
     </label>
+  );
+}
+
+/** Karte „Kontext (n)“: Reihenfolge vor der Chronologie, mit ↑ ↓; Kontext zählt nicht als offen. */
+function ContextCard({ view, onView }: { view: SessionView; onView: (v: SessionView) => void }) {
+  const items = view.context;
+  const untitled = items.filter((c) => !c.title).length;
+  const gone = new Set(view.rows.filter((r) => r.file === "missing" || r.file === "unreadable").map((r) => r.id));
+  const missing = items.filter((c) => c.thumb && gone.has(c.thumb.sourceId)).length;
+  const move = (key: string, to: number) => void api.moveContext(key, to).then(onView, () => {});
+  return (
+    <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-context">
+      <b className="inline-flex items-center gap-1.5 font-semibold">
+        <ContextMark decorative />
+        Kontext ({items.length})
+      </b>
+      <p className="mb-1.5 text-[0.85rem] text-muted">
+        Steht vor der ersten Zeitmarke, in dieser Reihenfolge. Kontext zählt nicht als offen.
+      </p>
+      <ol className="grid gap-0.5">
+        {items.map((c) => (
+          <li key={c.key} className="flex items-center gap-2">
+            <b className="w-5 text-right font-mono text-ink-2">{c.position}</b>
+            <span className="min-w-0 flex-1 truncate" title={c.find}>
+              {c.name}
+            </span>
+            {items.length > 1 && (
+              <span className="flex">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={c.position <= 1}
+                  aria-label={`${c.name} weiter nach vorn`}
+                  title="weiter nach vorn"
+                  onClick={() => move(c.key, c.position - 1)}
+                >
+                  ↑
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={c.position >= items.length}
+                  aria-label={`${c.name} weiter nach hinten`}
+                  title="weiter nach hinten"
+                  onClick={() => move(c.key, c.position + 1)}
+                >
+                  ↓
+                </Button>
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-1.5 text-[0.85rem] text-muted">
+        {untitled
+          ? `${untitled} ohne Titel: Im Dokument steht die Fundstelle.`
+          : missing
+            ? `✓ Alle haben einen Titel. ${missing === 1 ? "Ein Bild fehlt" : `${missing} Bilder fehlen`} (Originale).`
+            : "✓ Alle haben einen Titel. Alle Bilder sind vorhanden."}
+      </p>
+    </section>
   );
 }

@@ -1,11 +1,7 @@
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vite-plus/test";
 import { sessionTranscriptDocx } from "../src/docx.ts";
-import type {
-  SessionTranscript,
-  SessionTranscriptContext,
-  SessionTranscriptEntry,
-} from "../src/session-transcript.ts";
+import type { SessionTranscript, SessionTranscriptContext, SessionTranscriptEntry } from "../src/session-transcript.ts";
 
 /** Nur der Teil von SessionTranscript, den sessionTranscriptDocx liest. */
 function fake(entries: SessionTranscriptEntry[], context: SessionTranscriptContext[] = []): SessionTranscript {
@@ -105,7 +101,9 @@ describe("Einsatztranskript-.docx: Kontext (Issue #108)", () => {
   });
 
   it("ohne Kontext: keine Überschrift „Kontext“ oder „Chronologie“", async () => {
-    const t = text(documentXml(await sessionTranscriptDocx(fake([line]), { mediaFileName: "m.mp4", stills: new Map() })));
+    const t = text(
+      documentXml(await sessionTranscriptDocx(fake([line]), { mediaFileName: "m.mp4", stills: new Map() })),
+    );
     expect(t).not.toContain("Chronologie");
     expect(t).not.toContain("Diese Stücke");
   });

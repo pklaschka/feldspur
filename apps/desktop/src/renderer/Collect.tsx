@@ -453,8 +453,8 @@ function SourceList({
                 : r.startMs === null
                   ? "–"
                   : r.endMs !== null && r.endMs !== r.startMs
-                  ? `${hm(r.startMs)}–${hm(r.endMs)}`
-                  : lage(r.startMs, null)}
+                    ? `${hm(r.startMs)}–${hm(r.endMs)}`
+                    : lage(r.startMs, null)}
             </span>
             <Tip content={STATUS_TEXT[r.status]}>
               <span>

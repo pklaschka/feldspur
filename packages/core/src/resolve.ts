@@ -760,13 +760,14 @@ const byCode = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** Sortierschlüssel nach Fundstelle: Kurzzeichen der Seite, weiteres Bild, PDF-Seite, Lage auf der Seite. */
 function findKey(input: ResolveInput, item: { entryId?: Id; sourceId?: Id }): string {
   const byId = new Map(input.sources.map((s) => [s.id, s]));
-  if (item.sourceId) return byId.get(item.sourceId)?.label ?? LAST;
+  // Wie im Notizbuch: erst das Tagebuch nach Seite und Lage, dann Fotos und Notizen nach Kurzzeichen.
+  if (item.sourceId) return `1:${byId.get(item.sourceId)?.label ?? LAST}`;
   const e = input.diaryEntries.find((x) => x.id === item.entryId);
   const first = e?.regions[0];
   if (!first) return LAST; // Text ohne Scan: nach allem mit Fundstelle
   const src = byId.get(first.sourceId);
   const main = src?.partOf ? byId.get(src.partOf) : src;
-  return `${main?.label ?? LAST}:${src?.partOf ? src.label : ""}:${String(first.page).padStart(4, "0")}:${first.y.toFixed(4)}:${first.x.toFixed(4)}`;
+  return `0:${main?.label ?? LAST}:${src?.partOf ? src.label : ""}:${String(first.page).padStart(4, "0")}:${first.y.toFixed(4)}:${first.x.toFixed(4)}`;
 }
 
 /** Kontextstücke des Einsatzes in Ausgabereihenfolge: gewünschte Stelle, dann Fundstelle. */
@@ -780,22 +781,32 @@ export function contextItems(
   for (const s of input.sources) {
     if (s.role !== "context" || s.partOf || s.kind === "diary") continue;
     const it = { key: contextKey.source(s.id), sourceId: s.id };
-    raw.push({ ...it, notedAtMs: null, wouldStartMs: wouldStart.get(s.id) ?? null, order: s.contextOrder, find: findKey(input, it) });
+    raw.push({
+      ...it,
+      notedAtMs: null,
+      wouldStartMs: wouldStart.get(s.id) ?? null,
+      order: s.contextOrder,
+      find: findKey(input, it),
+    });
   }
   for (const e of input.diaryEntries) {
     if (e.role !== "context") continue;
     const it = { key: contextKey.entry(e.id), entryId: e.id };
-    raw.push({ ...it, notedAtMs: e.notedAtMs, wouldStartMs: e.notedAtMs, order: e.contextOrder, find: findKey(input, it) });
+    raw.push({
+      ...it,
+      notedAtMs: e.notedAtMs,
+      wouldStartMs: e.notedAtMs,
+      order: e.contextOrder,
+      find: findKey(input, it),
+    });
   }
-  raw.sort(
-    (a, b) =>
-      (a.order ?? Infinity) - (b.order ?? Infinity) || byCode(a.find, b.find) || byCode(a.key, b.key),
-  );
+  raw.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || byCode(a.find, b.find) || byCode(a.key, b.key));
   const mentions = new Map<string, { entryId: Id; notedAtMs: LocalMs }[]>();
   for (const e of input.diaryEntries) {
     const dp = diary.get(e.id);
     if (!dp) continue;
-    for (const k of new Set(e.contextRefs)) mentions.set(k, [...(mentions.get(k) ?? []), { entryId: e.id, notedAtMs: dp.notedAtMs }]);
+    for (const k of new Set(e.contextRefs))
+      mentions.set(k, [...(mentions.get(k) ?? []), { entryId: e.id, notedAtMs: dp.notedAtMs }]);
   }
   return raw.map(({ order: _o, find: _f, ...r }, i) => ({
     ...r,

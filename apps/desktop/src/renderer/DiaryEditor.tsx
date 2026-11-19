@@ -372,7 +372,9 @@ export function DiaryEditor({
                 key={e.id}
                 entry={e}
                 context={view.context}
-                onRole={(on) => void track(guard(() => api.setContext(`entry:${e.id}`, on)).then((v) => v && onView(v)))}
+                onRole={(on) =>
+                  void track(guard(() => api.setContext(`entry:${e.id}`, on)).then((v) => v && onView(v)))
+                }
                 onDetails={(d) =>
                   void track(guard(() => api.setContextDetails(`entry:${e.id}`, d)).then((v) => v && onView(v)))
                 }

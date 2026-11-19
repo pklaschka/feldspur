@@ -25,15 +25,44 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
     const handy = store.addDevice({ sessionId, label: "Handy", personId: person.id });
     const buch = store.addDevice({ sessionId, label: "Tagebuch", personId: person.id });
     const sha = (n: number) => String(n).repeat(64).slice(0, 64);
-    const add = (kind: "audio" | "photo" | "diary" | "note", deviceId: string, fileName: string, n: number, durationMs: number | null = null) =>
-      store.addSource({ sessionId, deviceId, kind, originalPath: join(dir, fileName), fileName, sizeBytes: 1, sha256: sha(n), durationMs }).id;
+    const add = (
+      kind: "audio" | "photo" | "diary" | "note",
+      deviceId: string,
+      fileName: string,
+      n: number,
+      durationMs: number | null = null,
+    ) =>
+      store.addSource({
+        sessionId,
+        deviceId,
+        kind,
+        originalPath: join(dir, fileName),
+        fileName,
+        sizeBytes: 1,
+        sha256: sha(n),
+        durationMs,
+      }).id;
     const audio = add("audio", rec.id, "ZOOM0001.m4a", 1, 30 * 60_000);
     const foto = add("photo", handy.id, "IMG_0007.jpg", 2);
     const seite = add("diary", buch.id, "Tagebuch_S03.jpg", 3);
     writeFileSync(join(dir, "zusammenfassung.txt"), "Zwischenstand\r\nerste Runde");
     const notiz = add("note", buch.id, "zusammenfassung.txt", 4);
-    store.addEvidence({ sourceId: audio, kind: "metadata", clock: "device", localMs: T(10, 15), uncertaintyMs: 1000, detail: "Metadaten" });
-    store.addEvidence({ sourceId: foto, kind: "metadata", clock: "device", localMs: T(9, 41, 12), uncertaintyMs: 1000, detail: "EXIF" });
+    store.addEvidence({
+      sourceId: audio,
+      kind: "metadata",
+      clock: "device",
+      localMs: T(10, 15),
+      uncertaintyMs: 1000,
+      detail: "Metadaten",
+    });
+    store.addEvidence({
+      sourceId: foto,
+      kind: "metadata",
+      clock: "device",
+      localMs: T(9, 41, 12),
+      uncertaintyMs: 1000,
+      detail: "EXIF",
+    });
     store.addDiaryEntry({
       sessionId,
       regions: [{ sourceId: seite, page: 0, x: 0, y: 0, w: 1, h: 0.4 }],

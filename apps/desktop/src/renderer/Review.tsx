@@ -170,15 +170,12 @@ function Timeline({
   const innerW = Math.max(width, ((t1 - t0) / MIN) * ppm);
 
   const tracks = useMemo(() => buildTracks(view.allDevices, placed), [view.allDevices, placed]);
-  const items = useMemo(
-    () => {
-      // Nur Verweise auf Stücke, die gerade Kontext sind, tragen →K (die anderen ruhen).
-      const live = new Set(view.context.map((c) => c.key));
-      const diary = view.diary.map((e) => ({ ...e, refs: e.refs.filter((k) => live.has(k)) }));
-      return buildItems(tracks, view.episodes, view.gaps, diary);
-    },
-    [tracks, view.episodes, view.gaps, view.diary, view.context],
-  );
+  const items = useMemo(() => {
+    // Nur Verweise auf Stücke, die gerade Kontext sind, tragen →K (die anderen ruhen).
+    const live = new Set(view.context.map((c) => c.key));
+    const diary = view.diary.map((e) => ({ ...e, refs: e.refs.filter((k) => live.has(k)) }));
+    return buildItems(tracks, view.episodes, view.gaps, diary);
+  }, [tracks, view.episodes, view.gaps, view.diary, view.context]);
   const transcripts = useMemo(() => groupTranscript(view.transcript), [view.transcript]);
   // Die Spuren teilen sich die freie Höhe (Kopf, Legende und „Ohne Uhrzeit“ abgezogen), statt unten Platz frei
   // zu lassen; zwischen 52 und 88 px, damit wenige Spuren nicht zu Balken aufquellen.

@@ -47,11 +47,7 @@ const hm = (ms: number) => formatClock(ms).slice(0, 5);
 const KIND_WORD: Partial<Record<SourceKind, string>> = { photo: "Foto", note: "Notiz", gps: "GPS", other: "Datei" };
 
 /** Alle Kontextstücke eines Einsatzes, aufbereitet, in Ausgabereihenfolge. */
-export function contextPieces(
-  input: ResolveInput,
-  resolved: ResolveResult,
-  persons: Map<Id, string>,
-): ContextPiece[] {
+export function contextPieces(input: ResolveInput, resolved: ResolveResult, persons: Map<Id, string>): ContextPiece[] {
   const src = new Map(input.sources.map((s) => [s.id, s]));
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const entries = new Map(input.diaryEntries.map((e) => [e.id, e]));

@@ -394,7 +394,9 @@ function Refs({
               </li>
             )}
           </ul>
-          <p className="mt-1 border-t border-line pt-1 text-[0.8rem] text-muted">Fehlt etwas? Erst als Kontext führen.</p>
+          <p className="mt-1 border-t border-line pt-1 text-[0.8rem] text-muted">
+            Fehlt etwas? Erst als Kontext führen.
+          </p>
         </div>
       )}
     </div>

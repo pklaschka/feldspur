@@ -127,7 +127,13 @@ function placeAt(s: ProjectStore, sessionId: Id, key: string | null, old: number
 }
 
 function entriesOnPage(s: ProjectStore, page: Source): DiaryEntry[] {
-  const parts = new Set([page.id, ...s.listSources(page.sessionId).filter((x) => x.partOf === page.id).map((x) => x.id)]);
+  const parts = new Set([
+    page.id,
+    ...s
+      .listSources(page.sessionId)
+      .filter((x) => x.partOf === page.id)
+      .map((x) => x.id),
+  ]);
   return s.listDiaryEntries(page.sessionId).filter((e) => e.regions.some((r) => parts.has(r.sourceId)));
 }
 

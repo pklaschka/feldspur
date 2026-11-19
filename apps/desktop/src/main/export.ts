@@ -110,6 +110,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
       head: e.head,
       body: e.body,
     })),
+    context: transcript.context.map((c) => ({ key: c.key, head: c.head, details: c.details, body: c.body })),
   };
 }
 

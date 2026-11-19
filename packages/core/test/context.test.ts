@@ -33,7 +33,9 @@ describe("Kontext: bewusst ohne Uhrzeit", () => {
     expect(res.placements.has("IMG_0231.jpg")).toBe(false);
     expect(res.context).toHaveLength(1);
     expect(res.context[0]).toMatchObject({ key: "source:IMG_0231.jpg", sourceId: "IMG_0231.jpg", position: 1 });
-    expect(clock(res.context[0]!.wouldStartMs)).toBe(clock(resolveTimeline(testmarkt()).placements.get("IMG_0231.jpg")!.startMs));
+    expect(clock(res.context[0]!.wouldStartMs)).toBe(
+      clock(resolveTimeline(testmarkt()).placements.get("IMG_0231.jpg")!.startMs),
+    );
     // Zurück: liegt genau wie vorher.
     foto.role = "timeline";
     expect(resolveTimeline(input).placements.get("IMG_0231.jpg")!.startMs).toBe(res.context[0]!.wouldStartMs);
@@ -49,7 +51,12 @@ describe("Kontext: bewusst ohne Uhrzeit", () => {
 
   it("Kontext-Foto mit widersprüchlichen Belegen meldet keinen Widerspruch", () => {
     const input = testmarkt();
-    input.evidence.push({ ...input.evidence.find((e) => e.sourceId === "IMG_0231.jpg")!, id: "x", kind: "filename", localMs: T(9, 0) });
+    input.evidence.push({
+      ...input.evidence.find((e) => e.sourceId === "IMG_0231.jpg")!,
+      id: "x",
+      kind: "filename",
+      localMs: T(9, 0),
+    });
     input.sources.find((s) => s.id === "IMG_0231.jpg")!.role = "context";
     const res = resolveTimeline(input);
     expect(res.placements.has("IMG_0231.jpg")).toBe(false);
@@ -90,7 +97,7 @@ describe("Kontext: bewusst ohne Uhrzeit", () => {
     expect(page.notes).toEqual(["1 Eintrag ohne Uhrzeit"]);
   });
 
-  it("Reihenfolge: gewünschte Stelle, dann Fundstelle; Text ohne Scan zuletzt", () => {
+  it("Reihenfolge: gewünschte Stelle, dann Tagebuch vor Fotos; Text ohne Scan zuletzt", () => {
     const input = withMap();
     const fotoA = input.sources.find((s) => s.id === "IMG_0231.jpg")!;
     const fotoB = input.sources.find((s) => s.id === "IMG_0232.jpg")!;
@@ -112,8 +119,8 @@ describe("Kontext: bewusst ohne Uhrzeit", () => {
     const res = resolveTimeline(input);
     expect(res.context.map((c) => [c.position, c.key])).toEqual([
       [1, "source:IMG_0232.jpg"],
-      [2, "source:IMG_0231.jpg"],
-      [3, "entry:karte"],
+      [2, "entry:karte"],
+      [3, "source:IMG_0231.jpg"],
       [4, "entry:text"],
     ]);
   });

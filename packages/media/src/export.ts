@@ -160,8 +160,7 @@ export function protocolCsv(
   };
   const contextOf = (s: Source): { names: string; made: string } => {
     if (s.partOf) return { names: "", made: "" };
-    const keys =
-      s.kind === "diary" ? entriesOf(s).map((e) => `entry:${e.id}`) : [`source:${s.id}`];
+    const keys = s.kind === "diary" ? entriesOf(s).map((e) => `entry:${e.id}`) : [`source:${s.id}`];
     const found = keys.flatMap((k) => (pieces.has(k) ? [pieces.get(k)!] : []));
     const made = [
       ...new Set(

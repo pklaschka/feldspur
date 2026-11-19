@@ -523,6 +523,8 @@ export interface SessionTranscriptPreview {
   /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
   entries: SessionTranscriptPreviewEntry[];
+  /** Abschnitt „Kontext“ vor der ersten Zeitmarke (Issue #108); leer = keiner. */
+  context: { key: string; head: string; details: string; body: string }[];
 }
 
 /** Einsammeln abgebrochen: Nichts wurde übernommen. */
@@ -712,7 +714,10 @@ export interface FeldspurApi {
   /** Verweise eines Tagebucheintrags auf Kontextstücke (ersetzt alle). */
   setEntryRefs(entryId: string, refs: string[]): Promise<SessionView>;
   /** Neues Kontextstück als Text ohne Scan; gibt seinen Schlüssel mit zurück. */
-  createContextText(sessionId: string, input: { title: string; text: string }): Promise<{ view: SessionView; key: string }>;
+  createContextText(
+    sessionId: string,
+    input: { title: string; text: string },
+  ): Promise<{ view: SessionView; key: string }>;
   /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
   /**
    * Automatisches Transkript (.srt, .vtt, .json, .tsv, z. B. Whisper) an eine Aufnahme hängen.
