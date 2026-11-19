@@ -4,7 +4,7 @@
  *
  * Das Video zeigt nur noch, was zum Zuordnen nötig ist: oben Uhrzeit, Einsatz und Montage-ID,
  * in der Mitte die laufenden Videos (gleichzeitige nebeneinander) mit ihrer Herkunft, unten
- * die laufenden Tonquellen. Fotos und Tagebuch stehen im Zeitgerüst, nicht im Video.
+ * die laufenden Tonquellen. Fotos und Tagebuch stehen im Einsatztranskript, nicht im Video.
  */
 export const W = 1280;
 export const H = 720;

@@ -1,10 +1,10 @@
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vite-plus/test";
-import { scaffoldDocx } from "../src/docx.ts";
-import type { Scaffold, ScaffoldEntry } from "../src/scaffold.ts";
+import { sessionTranscriptDocx } from "../src/docx.ts";
+import type { SessionTranscript, SessionTranscriptEntry } from "../src/session-transcript.ts";
 
-/** Nur der Teil von Scaffold, den scaffoldDocx liest. */
-function fake(entries: ScaffoldEntry[]): Scaffold {
+/** Nur der Teil von SessionTranscript, den sessionTranscriptDocx liest. */
+function fake(entries: SessionTranscriptEntry[]): SessionTranscript {
   return {
     header: {
       title: "Test",
@@ -18,7 +18,7 @@ function fake(entries: ScaffoldEntry[]): Scaffold {
       modeLabel: "Echtzeit",
     },
     entries,
-  } as unknown as Scaffold;
+  } as unknown as SessionTranscript;
 }
 
 /** word/document.xml aus dem ZIP lesen (Größen stehen ggf. erst im Datenbeschreiber, daher Zentralverzeichnis). */
@@ -41,9 +41,9 @@ function documentXml(buf: Buffer): string {
   throw new Error("document.xml fehlt");
 }
 
-describe("Zeitgerüst-.docx: Zeilenumbrüche", () => {
+describe("Einsatztranskript-.docx: Zeilenumbrüche", () => {
   it("setzt einen Umbruch im selben Absatz, nicht rohe Zeilenumbrüche", async () => {
-    const e: ScaffoldEntry = {
+    const e: SessionTranscriptEntry = {
       montageMs: 1000,
       kind: "diary",
       clock: "",
@@ -51,7 +51,7 @@ describe("Zeitgerüst-.docx: Zeilenumbrüche", () => {
       body: "Volltext: a\nb\r\nc",
       images: [],
     };
-    const xml = documentXml(await scaffoldDocx(fake([e]), { mediaFileName: "m.mp4", stills: new Map() }));
+    const xml = documentXml(await sessionTranscriptDocx(fake([e]), { mediaFileName: "m.mp4", stills: new Map() }));
     expect(xml).toContain("<w:br/>");
     expect(xml.match(/<w:br\/>/g)).toHaveLength(2);
     expect(xml).not.toMatch(/<w:t[^>]*>[^<]*\n/);

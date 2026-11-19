@@ -1,13 +1,19 @@
 /**
- * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Zeitgerüst (.docx), Dokumentvariablen und
+ * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Einsatztranskript (.docx), Dokumentvariablen und
  * Begleitprotokoll.
  */
 import { useEffect, useRef, useState } from "react";
-import type { ExportStatus, OriginalsCheck, OriginalsProgress, ScaffoldPreview, SessionView } from "../shared/api.ts";
+import type {
+  ExportStatus,
+  OriginalsCheck,
+  OriginalsProgress,
+  SessionTranscriptPreview,
+  SessionView,
+} from "../shared/api.ts";
 import { cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
 import { MontageView } from "./MontageView.tsx";
-import { ScaffoldLine } from "./ScaffoldLine.tsx";
+import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
 import { FILE_STATE_TEXT, progressText } from "./Originals.tsx";
@@ -20,7 +26,7 @@ const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || p;
 const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
-  [/\.docx$/, "Zeitgerüst für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
+  [/\.docx$/, "Einsatztranskript für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
   [/\.xlsx$/, "Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren)"],
   [/\.csv$/, "Begleitprotokoll: Herkunft und Zeitnachweis jeder Datei"],
   [/\.fcpxml$/, "Schnittliste für DaVinci Resolve (Datei › Importieren › Timeline)"],
@@ -63,7 +69,7 @@ export function ExportStep({
   onView: (v: SessionView) => void;
   onOriginals: () => void;
 }) {
-  const [preview, setPreview] = useState<ScaffoldPreview | null>(null);
+  const [preview, setPreview] = useState<SessionTranscriptPreview | null>(null);
   const [opts, setOpts] = useState(loadOptions);
   const set = (patch: Partial<Options>) =>
     setOpts((o) => {
@@ -157,18 +163,18 @@ export function ExportStep({
       <StepHeader
         className="max-w-[1240px]"
         title="Ausgeben"
-        summary="Ein Ordner pro Einsatz: Montagevideo, Zeitgerüst für MAXQDA und Begleitprotokoll."
+        summary="Ein Ordner pro Einsatz: Montagevideo, Einsatztranskript für MAXQDA und Begleitprotokoll."
         help={
           <>
             <p className="mb-1.5">
-              In MAXQDA das Zeitgerüst (.docx) als Transkript importieren und das Montagevideo als Mediendatei zuordnen.
-              Die Zeitmarken <code>#hh:mm:ss-z#</code> zeigen auf Stellen im Video; die echte Uhrzeit steht in jeder
-              Zeile dahinter.
+              In MAXQDA das Einsatztranskript (.docx) als Transkript importieren und das Montagevideo als Mediendatei
+              zuordnen. Die Zeitmarken <code>#hh:mm:ss-z#</code> zeigen auf Stellen im Video; die echte Uhrzeit steht in
+              jeder Zeile dahinter.
             </p>
             <p className="mb-1.5">
               Das Video zeigt nur, was zum Zuordnen nötig ist: Uhrzeit, die laufenden Videos (gleichzeitige
               nebeneinander) mit Datei und Stelle im Original, die laufenden Tonquellen und eine Montage-ID, die auch im
-              Kopf des Zeitgerüsts steht. Fotos und Tagebuch stehen im Zeitgerüst.
+              Kopf des Einsatztranskripts steht. Fotos und Tagebuch stehen im Einsatztranskript.
             </p>
             <p>
               Standard ist Echtzeit: Der ganze Einsatz läuft am Stück, Videozeit = Uhrzeit ab Beginn. Wer unter
@@ -280,7 +286,7 @@ export function ExportStep({
                 checked={video}
                 onChange={(v) => set({ video: v })}
                 label="Montagevideo mit ausgeben"
-                hint="Dauert einige Minuten. Aus: nur Zeitgerüst und Protokoll."
+                hint="Dauert einige Minuten. Aus: nur Einsatztranskript und Protokoll."
               />
               <Option
                 checked={mixAudio}
@@ -304,7 +310,7 @@ export function ExportStep({
               <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-open">
                 <b className="block font-semibold text-warn">Noch offen</b>
                 <p className="mb-1.5 text-[0.85rem]">
-                  Ausgeben geht trotzdem; was offen ist, steht dann so im Zeitgerüst, wie es gerade liegt.
+                  Ausgeben geht trotzdem; was offen ist, steht dann so im Einsatztranskript, wie es gerade liegt.
                 </p>
                 <TodoList items={open} onGo={onGo} />
               </section>
@@ -334,13 +340,13 @@ export function ExportStep({
             </div>
           </Panel>
           <Panel className="min-w-0">
-            <h3 className="mb-2 text-[1rem] font-semibold">Vorschau des Zeitgerüsts</h3>
+            <h3 className="mb-2 text-[1rem] font-semibold">Vorschau des Einsatztranskripts</h3>
             <ol
               className="max-h-[calc(100vh-16rem)] overflow-y-auto font-serif text-[0.92rem] leading-relaxed text-ink-2"
-              data-testid="scaffold-preview"
+              data-testid="session-transcript-preview"
             >
               {preview?.entries.map((e, i) => (
-                <ScaffoldLine key={i} entry={e} />
+                <SessionTranscriptLine key={i} entry={e} />
               ))}
             </ol>
           </Panel>

@@ -8,7 +8,7 @@ import { analyzeSession } from "../src/analyze.ts";
 import { exportSession } from "../src/export.ts";
 import { montagePreview } from "../src/montage-preview.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
-import { buildScaffold, entryText, timestamp } from "../src/scaffold.ts";
+import { buildSessionTranscript, entryText, timestamp } from "../src/session-transcript.ts";
 import { unzip } from "./xlsx.test.ts";
 import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay, makeSyncVideo } from "./fixtures.ts";
 
@@ -62,45 +62,45 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("ordnet Tafel, Episoden, Mitschrift und Fotos nach Uhrzeit", () => {
-    const sc = buildScaffold(store, sessionId, { mode: "episodes" });
-    expect(sc.episodes).toBe(true);
-    const lines = sc.entries.map(entryText);
+    const transcript = buildSessionTranscript(store, sessionId, { mode: "episodes" });
+    expect(transcript.episodes).toBe(true);
+    const lines = transcript.entries.map(entryText);
     // Tagebuch vor der ersten Aufnahme: eigene Tafel ganz vorne.
     expect(lines[0]).toMatch(/^#00:00:00-0# Uhrzeit .*Zwischentafel/);
     expect(lines.find((l) => l.includes("Tagebuch"))).toMatch(
       /^#00:00:00-0# Uhrzeit 10:12 \(notiert, bezieht sich auf ca\. 09:57–10:12\)/,
     );
-    const episode = sc.plan.segments.find((s) => s.kind === "episode")!;
+    const episode = transcript.plan.segments.find((s) => s.kind === "episode")!;
     expect(formatClock(episode.fromMs)).toBe("10:15:00");
-    const line = sc.entries.find((e) => e.kind === "line")!;
+    const line = transcript.entries.find((e) => e.kind === "line")!;
     expect(line.montageMs).toBe(episode.montageStartMs + 10_000);
     expect(entryText(line)).toContain("Uhrzeit 10:15:10 · B1: Wie lange schon?");
     // Foto mitten in der Episode an seiner Uhrzeit.
-    const photo = sc.entries.find((e) => e.kind === "photo")!;
+    const photo = transcript.entries.find((e) => e.kind === "photo")!;
     expect(photo.montageMs).toBe(episode.montageStartMs + 90_000);
-    expect(sc.entries.at(-1)!.montageMs).toBe(sc.plan.durationMs);
+    expect(transcript.entries.at(-1)!.montageMs).toBe(transcript.plan.durationMs);
   });
 
   it("läuft ohne Wunsch in Echtzeit und nennt keine Episoden", () => {
-    const sc = buildScaffold(store, sessionId);
-    expect(sc.plan.mode).toBe("realtime");
-    expect(sc.episodes).toBe(false);
-    expect(sc.header.modeLabel).toBe("Echtzeit");
-    const lines = sc.entries.map(entryText);
+    const transcript = buildSessionTranscript(store, sessionId);
+    expect(transcript.plan.mode).toBe("realtime");
+    expect(transcript.episodes).toBe(false);
+    expect(transcript.header.modeLabel).toBe("Echtzeit");
+    const lines = transcript.entries.map(entryText);
     expect(lines.some((l) => /Episode|Zwischentafel|Zwischenzeit/.test(l))).toBe(false);
     // Videozeit = Uhrzeit ab dem ersten Ereignis (Tagebuch 10:12, notiert).
-    const line = sc.entries.find((e) => e.kind === "line")!;
-    const first = sc.plan.segments[0]!.fromMs;
+    const line = transcript.entries.find((e) => e.kind === "line")!;
+    const first = transcript.plan.segments[0]!.fromMs;
     expect(entryText(line)).toContain("Uhrzeit 10:15:10 · B1: Wie lange schon?");
-    expect(sc.plan.toMontage(first + 60_000)).toBe(60_000);
+    expect(transcript.plan.toMontage(first + 60_000)).toBe(60_000);
     // Mit benannten Episoden bleibt die Echtzeit-Montage gleich lang, nur mit Episodenzeilen.
-    const named = buildScaffold(store, sessionId, { episodes: true });
-    expect(named.plan.durationMs).toBe(sc.plan.durationMs);
+    const named = buildSessionTranscript(store, sessionId, { episodes: true });
+    expect(named.plan.durationMs).toBe(transcript.plan.durationMs);
     expect(named.entries.some((e) => e.kind === "episode")).toBe(true);
-    expect(named.header.montageId).not.toBe(sc.header.montageId);
+    expect(named.header.montageId).not.toBe(transcript.header.montageId);
   });
 
-  it("schreibt Video, Zeitgerüst und Begleitprotokoll", { timeout: 180_000 }, async () => {
+  it("schreibt Video, Einsatztranskript und Begleitprotokoll", { timeout: 180_000 }, async () => {
     const out = join(dir, "export");
     const r = await exportSession(store, sessionId, out);
     expect(r.files).toEqual([
@@ -168,8 +168,8 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("zeigt gleichzeitige Videos nebeneinander und mischt den Ton aller Geräte", () => {
-    const sc = buildScaffold(store, sessionId);
-    const both = montagePreview(sc).pieces.find((p) => p.videos.length === 2)!;
+    const transcript = buildSessionTranscript(store, sessionId);
+    const both = montagePreview(transcript).pieces.find((p) => p.videos.length === 2)!;
     expect(both.videos.map((v) => v.label).join(" | ")).toMatch(/V-0\d .* \| V-0\d /);
     // Hauptton zuerst (Referenzgerät), danach die Kameras.
     expect(both.audios[0]!.sourceId).toBe(src("ZOOM0001.m4a").id);
@@ -177,16 +177,16 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("plant die Montage zum Ansehen in der App wie das Video", () => {
-    const sc = buildScaffold(store, sessionId);
-    const p = montagePreview(sc);
-    expect(p.durationMs).toBeCloseTo(sc.plan.durationMs, -2);
+    const transcript = buildSessionTranscript(store, sessionId);
+    const p = montagePreview(transcript);
+    expect(p.durationMs).toBeCloseTo(transcript.plan.durationMs, -2);
     let at = 0;
     for (const piece of p.pieces) {
       expect(piece.fromMs).toBeCloseTo(at, 6);
       at = piece.toMs;
     }
     const ep = p.pieces.find((x) => x.kind === "episode" && x.audios.length)!;
-    expect(sc.input.sources.some((s) => s.id === ep.audios[0]!.sourceId)).toBe(true);
+    expect(transcript.input.sources.some((s) => s.id === ep.audios[0]!.sourceId)).toBe(true);
     expect(p.header.montageId).toMatch(/^FS-[2-9A-Z]{4}-[2-9A-Z]{4}$/);
   });
 
@@ -210,7 +210,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     expect(xml).toContain('srcEnable="video"');
     expect(xml).toMatch(/<marker [^>]*value="[^"]*B1: Wie lange schon\?"/);
     expect(xml).toMatch(/<chapter-marker [^>]*Episode 1/);
-    // Keine Standbilder mehr: Fotos und Scans stehen im Zeitgerüst.
+    // Keine Standbilder mehr: Fotos und Scans stehen im Einsatztranskript.
     expect(xml).not.toMatch(/\.jpg"/);
   });
 });

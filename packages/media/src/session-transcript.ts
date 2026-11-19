@@ -1,5 +1,5 @@
 /**
- * Zeitgerüst: alles eines Einsatzes in einer Reihenfolge, mit der Stelle im Montagevideo.
+ * Einsatztranskript: alles eines Einsatzes in einer Reihenfolge, mit der Stelle im Montagevideo.
  * Daraus entstehen das .docx für MAXQDA und die Einblendungen im Video.
  */
 import { createHash } from "node:crypto";
@@ -19,7 +19,7 @@ import {
 } from "@feldspur/core";
 import { sessionEpisodes } from "./analyze.ts";
 
-export type ScaffoldKind = "card" | "episode" | "start" | "photo" | "diary" | "line" | "sync" | "end";
+export type SessionTranscriptKind = "card" | "episode" | "start" | "photo" | "diary" | "line" | "sync" | "end";
 
 /** Bildausschnitt für das Dokument: ganzes Foto oder Rahmen auf einer Scan-Seite. */
 export interface ImageRef {
@@ -27,10 +27,10 @@ export interface ImageRef {
   region?: { page: number; x: number; y: number; w: number; h: number };
 }
 
-export interface ScaffoldEntry {
+export interface SessionTranscriptEntry {
   /** Stelle im Montagevideo. */
   montageMs: number;
-  kind: ScaffoldKind;
+  kind: SessionTranscriptKind;
   /** „10:16:20“, „ca. 10:05 (notiert 10:12)“, „10:17:30–10:40:00“. */
   clock: string;
   /** Uhrzeit als Zahl (Beginn bei Spannen), für Einblendungen. */
@@ -40,7 +40,7 @@ export interface ScaffoldEntry {
   images: ImageRef[];
 }
 
-export interface ScaffoldHeader {
+export interface SessionTranscriptHeader {
   title: string;
   date: string;
   place: string;
@@ -49,7 +49,7 @@ export interface ScaffoldHeader {
   sources: string[];
   extra: Record<string, string>;
   /**
-   * Kennung, die Montagevideo und Zeitgerüst einander zuordnet. Steht im Video eingeblendet
+   * Kennung, die Montagevideo und Einsatztranskript einander zuordnet. Steht im Video eingeblendet
    * und in den Metadaten, im Dokument im Kopf. Gleicher Stand → gleiche Kennung.
    */
   montageId: string;
@@ -57,18 +57,18 @@ export interface ScaffoldHeader {
   modeLabel: string;
 }
 
-export interface Scaffold {
-  header: ScaffoldHeader;
+export interface SessionTranscript {
+  header: SessionTranscriptHeader;
   plan: MontagePlan;
   /** Episoden benannt (Zeilen „Episode n“, Zwischenzeiten)? Sonst nur Uhrzeit, Quellen und Leerlauf. */
   episodes: boolean;
-  entries: ScaffoldEntry[];
+  entries: SessionTranscriptEntry[];
   /** Grundlage für die Montage (Lagen, Quellen). */
   input: ResolveInput;
   resolved: ResolveResult;
 }
 
-const ORDER: Record<ScaffoldKind, number> = {
+const ORDER: Record<SessionTranscriptKind, number> = {
   card: 0,
   episode: 1,
   start: 2,
@@ -90,17 +90,21 @@ export function timestamp(ms: number): string {
   return `#${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}-${tenths}#`;
 }
 
-export interface ScaffoldOptions {
+export interface SessionTranscriptOptions {
   /** Alles in Echtzeit (Standard) oder Episoden mit kurzen Tafeln dazwischen. */
   mode?: MontageMode;
   /**
-   * Episoden im Zeitgerüst und Video benennen. Nur auf Wunsch; bei mode "episodes" immer.
+   * Episoden im Einsatztranskript und Video benennen. Nur auf Wunsch; bei mode "episodes" immer.
    * Ohne sie bleibt die Echtzeit-Montage gleich lang, nur ohne Episoden- und Zwischenzeit-Zeilen.
    */
   episodes?: boolean;
 }
 
-export function buildScaffold(store: ProjectStore, sessionId: Id, opts: ScaffoldOptions = {}): Scaffold {
+export function buildSessionTranscript(
+  store: ProjectStore,
+  sessionId: Id,
+  opts: SessionTranscriptOptions = {},
+): SessionTranscript {
   const input = store.loadResolveInput(sessionId);
   const res = resolveTimeline(input);
   const analyses = store.listAudioAnalyses(sessionId);
@@ -127,8 +131,9 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
   const basis = (s: Source) => res.placements.get(s.id)?.basis.detail ?? "";
   const label = (id: Id) => src.get(id)?.label ?? "?";
 
-  const entries: ScaffoldEntry[] = [];
-  const push = (e: Omit<ScaffoldEntry, "images"> & { images?: ImageRef[] }) => entries.push({ images: [], ...e });
+  const entries: SessionTranscriptEntry[] = [];
+  const push = (e: Omit<SessionTranscriptEntry, "images"> & { images?: ImageRef[] }) =>
+    entries.push({ images: [], ...e });
 
   // Tafeln und Episoden.
   for (const seg of plan.segments) {
@@ -294,8 +299,8 @@ export function buildScaffold(store: ProjectStore, sessionId: Id, opts: Scaffold
   };
 }
 
-/** Eine Zeile des Zeitgerüsts als Text (ohne Bilder), wie sie im Dokument steht. */
-export function entryText(e: ScaffoldEntry): string {
+/** Eine Zeile des Einsatztranskripts als Text (ohne Bilder), wie sie im Dokument steht. */
+export function entryText(e: SessionTranscriptEntry): string {
   const clock = e.clock ? `Uhrzeit ${e.clock} · ` : "";
   const head = e.head ? `${e.head}: ` : "";
   return `${timestamp(e.montageMs)} ${clock}${head}${e.body}`;

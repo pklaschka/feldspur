@@ -62,5 +62,5 @@ Passt die Zählung für einen Eintrag nicht, trägst du die Seite direkt am Eint
 in PDF-Scans. Klickst du in ein leeres Feld, steht schon ein Vorschlag darin: dieselbe Seite wie beim vorigen Eintrag
 oder die nächste. Enter übernimmt ihn. Ein leeres Feld gilt wieder als Zählung des Scans.
 
-Zeitgerüst, Montagevideo, Mitschrift und Suche führen jeden Eintrag an seiner **Notierzeit**. Der Bezugszeitraum steht
+Einsatztranskript, Montagevideo, Mitschrift und Suche führen jeden Eintrag an seiner **Notierzeit**. Der Bezugszeitraum steht
 als Hinweis dabei.

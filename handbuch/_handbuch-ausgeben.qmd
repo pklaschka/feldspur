@@ -25,16 +25,16 @@ Vor jeder Ausgabe prüft Feldspur die Originale mit ihrer Prüfsumme (@sec-origi
 geht es gleich weiter. Sonst steht da, was auffällt:
 
 - **Fehlt** eine Datei, die die Ausgabe braucht, geht es erst nach dem Neu-Verknüpfen weiter. Gebraucht werden Fotos
-  und Tagebuchseiten (für das Zeitgerüst) und, mit Montagevideo, alle Ton- und Videoaufnahmen.
+  und Tagebuchseiten (für das Einsatztranskript) und, mit Montagevideo, alle Ton- und Videoaufnahmen.
 - **Verändert** ist eine Datei, wenn sie nicht mehr dieselbe ist wie beim Einsammeln. Mit **Trotzdem ausgeben**
   geht es bewusst weiter; das Begleitprotokoll nennt weiter die Prüfsumme vom Einsammeln. Ebenso bei fehlenden
   Dateien, die diese Ausgabe nicht braucht (z. B. Ton ohne Montagevideo).
 
-![Ausgabe mit Vorschau des Zeitgerüsts](bilder/ausgeben.png){#fig-ausgeben}
+![Ausgabe mit Vorschau des Einsatztranskripts](bilder/ausgeben.png){#fig-ausgeben}
 
-### Zeitgerüst (.docx)
+### Einsatztranskript (.docx)
 
-Das **Zeitgerüst** ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format `#hh:mm:ss-z#`, die
+Das **Einsatztranskript** (bis Version 0.2 "Zeitgerüst") ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format `#hh:mm:ss-z#`, die
 auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. Dazu kommen Mitschrift, Fotos und
 Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdaten und die **Montage-ID**. Zeilenumbrüche in einem abgetippten Tagebuchtext bleiben
 erhalten; der Eintrag bleibt dabei ein Absatz mit einer einzigen Zeitmarke.
@@ -43,11 +43,11 @@ erhalten; der Eintrag bleibt dabei ein Absatz mit einer einzigen Zeitmarke.
 
 Das **Montagevideo** legt Bild und Ton aller Aufnahmen des Einsatzes auf die gemeinsame Zeitachse. Es zeigt die
 Uhrzeit, die gerade laufenden Videos (bis zu vier nebeneinander) mit Kurzzeichen, Datei und Stelle im Original, die
-laufenden Tonquellen und die Montage-ID. Fotos und Tagebuch stehen schon im Zeitgerüst und fehlen deshalb im Video.
+laufenden Tonquellen und die Montage-ID. Fotos und Tagebuch stehen schon im Einsatztranskript und fehlen deshalb im Video.
 
-Zeitgerüst und Montagevideo gehören zusammen: **Erst beide zusammen** geben das Material eines Einsatzes vollständig
-und zeitlich zugeordnet wieder. Das Zeitgerüst enthält, was als Text vorliegt, dazu Fotos und Tagebuchausschnitte. Das
-Montagevideo enthält Bild und Ton auch dort, wo nichts mitgeschrieben ist. Oft wird der Großteil im Zeitgerüst
+Einsatztranskript und Montagevideo gehören zusammen: **Erst beide zusammen** geben das Material eines Einsatzes vollständig
+und zeitlich zugeordnet wieder. Das Einsatztranskript enthält, was als Text vorliegt, dazu Fotos und Tagebuchausschnitte. Das
+Montagevideo enthält Bild und Ton auch dort, wo nichts mitgeschrieben ist. Oft wird der Großteil im Einsatztranskript
 codiert. Was sich sehen oder hören, aber schwer in Worte fassen lässt, codierst du direkt im Video. In der
 Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlicher Tiere.
 
@@ -75,20 +75,20 @@ Montage-ID und deine **weiteren Angaben** aus den Einsatzdaten (z. B. DOI). So k
 Datum oder Gerät filtern und vergleichen.
 
 Die ersten beiden Spalten sind Dokumentgruppe und Dokumentname. Der Dokumentname ist der Name, den MAXQDA dem
-Zeitgerüst beim Import gibt (Dateiname ohne Endung). Liegt das Dokument in MAXQDA in einer Dokumentgruppe, trag
+Einsatztranskript beim Import gibt (Dateiname ohne Endung). Liegt das Dokument in MAXQDA in einer Dokumentgruppe, trag
 deren Namen vorher in der Spalte "Dokumentgruppe" ein, sonst findet MAXQDA das Dokument nicht.
 
 ### Begleitprotokoll (.csv)
 
 Das **Begleitprotokoll** hält für jede Datei Herkunft und Zeitnachweis fest: Kurzzeichen, Originaldatei,
-Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. So bleibt nachvollziehbar, worauf jede Lage im Zeitgerüst
+Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. So bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript
 beruht, und das Material lässt sich sauber archivieren.
 
 ### In MAXQDA
 
-Lies das Zeitgerüst in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
+Lies das Einsatztranskript in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
 Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA,
-im Text des Zeitgerüsts und, wo nichts verschriftlicht ist, direkt in Abschnitten des Videos.
+im Text des Einsatztranskripts und, wo nichts verschriftlicht ist, direkt in Abschnitten des Videos.
 Ein Einsatz ergibt genau ein MAXQDA-Dokument. Die Dokumentvariablen liest du danach über **Variablen ›
 Dokumentvariablen importieren** aus der .xlsx-Datei ein; mehrere Einsätze kannst du dafür auch in einer Tabelle
 untereinander kopieren.

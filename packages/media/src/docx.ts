@@ -1,25 +1,25 @@
 /**
- * Zeitgerüst als .docx für MAXQDA. Zeitmarken im Format #hh:mm:ss-z# (im Test von Zuri erkannt),
+ * Einsatztranskript als .docx für MAXQDA. Zeitmarken im Format #hh:mm:ss-z# (im Test von Zuri erkannt),
  * jede Zeile ein eigener Absatz, Bilder direkt unter ihrer Zeile.
  */
 import { AlignmentType, Document, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from "docx";
-import { timestamp, type Scaffold, type ScaffoldEntry } from "./scaffold.ts";
+import { timestamp, type SessionTranscript, type SessionTranscriptEntry } from "./session-transcript.ts";
 import type { Still } from "./stills.ts";
 
 export interface DocxOptions {
   /** Dateiname des Montagevideos, auf das sich die Zeitmarken beziehen. */
   mediaFileName: string;
   /** Standbilder je Eintrag (gleiche Reihenfolge wie entry.images); null = nicht darstellbar. */
-  stills: Map<ScaffoldEntry, (Still | null)[]>;
+  stills: Map<SessionTranscriptEntry, (Still | null)[]>;
   /** Breite der Bilder im Dokument in px (96 dpi). */
   imageWidth?: number;
 }
 
 /**
  * Farben der Überschriften je Art des Eintrags (Hex ohne #). Die Vorschau in der App nimmt dieselben
- * Werte für das helle Design (styles.css, --sc-*), ein Test prüft, dass beide gleich bleiben.
+ * Werte für das helle Design (styles.css, --st-*), ein Test prüft, dass beide gleich bleiben.
  */
-export const SCAFFOLD_KIND_COLOR: Partial<Record<ScaffoldEntry["kind"], string>> = {
+export const SESSION_TRANSCRIPT_KIND_COLOR: Partial<Record<SessionTranscriptEntry["kind"], string>> = {
   card: "6B7A80",
   episode: "1D2B33",
   start: "2A52BE",
@@ -28,17 +28,17 @@ export const SCAFFOLD_KIND_COLOR: Partial<Record<ScaffoldEntry["kind"], string>>
   sync: "107A5F",
 };
 /** Farbe der Uhrzeit hinter der Zeitmarke und der Kopfzeilen. */
-export const SCAFFOLD_CLOCK_COLOR = "5F6B73";
+export const SESSION_TRANSCRIPT_CLOCK_COLOR = "5F6B73";
 
-function entryParagraphs(e: ScaffoldEntry, stills: (Still | null)[], width: number): Paragraph[] {
+function entryParagraphs(e: SessionTranscriptEntry, stills: (Still | null)[], width: number): Paragraph[] {
   const runs: TextRun[] = [new TextRun({ text: `${timestamp(e.montageMs)} ` })];
-  if (e.clock) runs.push(new TextRun({ text: `Uhrzeit ${e.clock} · `, color: SCAFFOLD_CLOCK_COLOR }));
+  if (e.clock) runs.push(new TextRun({ text: `Uhrzeit ${e.clock} · `, color: SESSION_TRANSCRIPT_CLOCK_COLOR }));
   if (e.head) {
     runs.push(
       new TextRun({
         text: e.kind === "line" ? `${e.head} · ` : `${e.head}: `,
         bold: e.kind !== "line",
-        color: SCAFFOLD_KIND_COLOR[e.kind],
+        color: SESSION_TRANSCRIPT_KIND_COLOR[e.kind],
       }),
     );
   }
@@ -82,8 +82,8 @@ function entryParagraphs(e: ScaffoldEntry, stills: (Still | null)[], width: numb
   return out;
 }
 
-export async function scaffoldDocx(sc: Scaffold, opts: DocxOptions): Promise<Buffer> {
-  const h = sc.header;
+export async function sessionTranscriptDocx(transcript: SessionTranscript, opts: DocxOptions): Promise<Buffer> {
+  const h = transcript.header;
   const [y, m, d] = h.date.split("-");
   const meta = [
     `Feldtag: ${d}.${m}.${y}${h.place ? `, ${h.place}` : ""}`,
@@ -108,12 +108,12 @@ export async function scaffoldDocx(sc: Scaffold, opts: DocxOptions): Promise<Buf
           ...meta.map(
             (t) =>
               new Paragraph({
-                children: [new TextRun({ text: t, color: SCAFFOLD_CLOCK_COLOR, size: 20 })],
+                children: [new TextRun({ text: t, color: SESSION_TRANSCRIPT_CLOCK_COLOR, size: 20 })],
                 alignment: AlignmentType.LEFT,
               }),
           ),
           new Paragraph({ text: "" }),
-          ...sc.entries.flatMap((e) => entryParagraphs(e, opts.stills.get(e) ?? [], width)),
+          ...transcript.entries.flatMap((e) => entryParagraphs(e, opts.stills.get(e) ?? [], width)),
         ],
       },
     ],

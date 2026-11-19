@@ -134,7 +134,7 @@ export interface Placement {
 export interface DiaryPlacement {
   entryId: Id;
   notedAtMs: LocalMs;
-  /** Beginn des Bezugszeitraums. Hier wird der Eintrag im Zeitgerüst platziert. */
+  /** Beginn des Bezugszeitraums. Hier wird der Eintrag im Einsatztranskript platziert. */
   fromMs: LocalMs;
   toMs: LocalMs;
 }

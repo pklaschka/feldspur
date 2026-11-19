@@ -3,7 +3,7 @@
  * - realtime (Standard): alles in Echtzeit vom ersten bis zum letzten Ereignis, auch Zeit ohne Aufnahme.
  * - episodes: Episoden laufen in voller Länge, jede Zwischenzeit wird zu einer kurzen Tafel.
  *   Fotos und Tagebucheinträge darin zeigen auf den Beginn der Tafel (die Bilder stehen im
- *   Zeitgerüst, nicht im Video).
+ *   Einsatztranskript, nicht im Video).
  * Überlappende Quellen verlängern nichts, alles folgt der Uhrzeit.
  */
 import type { Episode, EpisodeResult, Gap } from "./episodes.ts";

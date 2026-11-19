@@ -1,5 +1,5 @@
 /**
- * Standbilder für Zeitgerüst und Montage: Fotos verkleinert, Tagebuch-Rahmen ausgeschnitten.
+ * Standbilder für Einsatztranskript und Montage: Fotos verkleinert, Tagebuch-Rahmen ausgeschnitten.
  * Läuft über ffmpeg, die Originale bleiben unberührt.
  */
 import { execFile } from "node:child_process";
@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { Source } from "@feldspur/core";
-import type { ImageRef } from "./scaffold.ts";
+import type { ImageRef } from "./session-transcript.ts";
 import { toolPaths } from "./tools.ts";
 
 const run = promisify(execFile);

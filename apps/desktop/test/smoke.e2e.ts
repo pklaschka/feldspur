@@ -896,12 +896,15 @@ try {
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [target] })) as typeof dialog.showOpenDialog;
   }, out);
   await page.getByRole("tab", { name: /Ausgeben/ }).click();
-  const scaffold = page.getByTestId("scaffold-preview");
-  await scaffold
+  const transcript = page.getByTestId("session-transcript-preview");
+  await transcript
     .getByText(/#00:00:00-0# .*(Zwischenzeit|Episode 1)/)
     .first()
     .waitFor();
-  console.log(`Zeitgerüst: ${await scaffold.locator("li").count()} Zeilen`);
+  console.log(`Einsatztranskript: ${await transcript.locator("li").count()} Zeilen`);
+  // Hinweis vom vorigen Rückgängig nicht mit aufs Bild nehmen.
+  const toastClose = page.getByRole("button", { name: "Hinweis ausblenden" });
+  if (await toastClose.isVisible()) await toastClose.click();
   await shot("-ausgeben");
 
   // Montage in der App ansehen: springt ins erste Episodenstück und spielt ab.

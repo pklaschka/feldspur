@@ -266,7 +266,7 @@ export type TranscriptLine = z.infer<typeof TranscriptLine>;
 /**
  * Arbeitsnotiz zu einer Datei, z. B. „ab 12:30 noch abtippen, zwei Stimmen durcheinander“.
  * Mit Strecke (fromMs/toMs, Stelle in der Aufnahme) oder ohne (gilt für die ganze Datei).
- * Notizen sind Arbeitsstand, kein Forschungsmaterial: sie gehen nicht ins Zeitgerüst.
+ * Notizen sind Arbeitsstand, kein Forschungsmaterial: sie gehen nicht ins Einsatztranskript.
  */
 export const SourceNote = z.object({
   id: Id,
@@ -331,7 +331,7 @@ export type ExportSettings = z.infer<typeof ExportSettings>;
 
 /**
  * Fingerabdruck einer Ausgabe, in Teilen, damit sich sagen lässt, was sich seitdem geändert hat:
- * - content: SHA-256 über alles aus der Projektdatei, was in Zeitgerüst, Variablen, Protokoll und Video eingeht
+ * - content: SHA-256 über alles aus der Projektdatei, was in Einsatztranskript, Variablen, Protokoll und Video eingeht
  * - originals: je Quelle Größe und Änderungszeit der Originaldatei beim Ausgeben („missing“, wenn sie fehlte)
  * - version: Verfahren des Fingerabdrucks; ein anderes zählt immer als veraltet
  */
