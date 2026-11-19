@@ -184,6 +184,15 @@ describe("Kontext führen (Issue #108)", () => {
     expect(() => setContext(store, `entry:${id}`, false)).toThrow();
   });
 
+  it("Gerät nur mit Kontext braucht keinen Abgleich", () => {
+    const { session, bare } = seed();
+    const own = store.addDevice({ sessionId: session.id, label: "Fotos Lageplan" });
+    store.updateSource(bare.id, { deviceId: own.id });
+    expect(view(session.id).devices.map((d) => d.label)).toContain("Fotos Lageplan");
+    setContext(store, `source:${bare.id}`, true);
+    expect(view(session.id).devices.map((d) => d.label)).not.toContain("Fotos Lageplan");
+  });
+
   it("Summary-Zähler: Kontext zählt nicht als offen", () => {
     const { session, bare, dated } = seed();
     setContext(store, `source:${bare.id}`, true);

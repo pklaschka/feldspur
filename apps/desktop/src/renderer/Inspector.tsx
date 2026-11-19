@@ -96,7 +96,9 @@ function SourceDetails({
     [
       "Lage",
       <>
-        <span className="whitespace-nowrap">{lage(row.startMs, row.endMs)}</span>
+        <span className="whitespace-nowrap">
+          {row.status === "context" ? "bewusst ohne Uhrzeit" : lage(row.startMs, row.endMs)}
+        </span>
         {row.uncertaintyMs !== null && row.uncertaintyMs > 0 && (
           <span className="block text-[0.85rem] text-muted">± {formatDuration(row.uncertaintyMs)}</span>
         )}
@@ -293,7 +295,10 @@ function SourceDetails({
 
       <Eyebrow>Zeitbelege</Eyebrow>
       <EvidenceList row={row} actions={actions} />
-      {row.kind !== "diary" && !row.partOf && (
+      {row.status === "context" && row.evidence.length > 0 && (
+        <p className="mt-1.5 text-[0.85rem] text-muted">Die Zeitbelege ruhen, solange das Stück Kontext ist.</p>
+      )}
+      {row.kind !== "diary" && !row.partOf && row.status !== "context" && (
         <TimeForm key={manualAsk} row={row} onAdd={actions.addTime} initialOpen={manualAsk > 0} />
       )}
       {row.partOf && (

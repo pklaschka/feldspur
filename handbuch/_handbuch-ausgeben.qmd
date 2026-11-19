@@ -39,6 +39,12 @@ auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. D
 Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdaten und die **Montage-ID**. Zeilenumbrüche in einem abgetippten Tagebuchtext bleiben
 erhalten; der Eintrag bleibt dabei ein Absatz mit einer einzigen Zeitmarke.
 
+Gibt es Kontext (@sec-kontext), steht vor der ersten Zeitmarke ein Abschnitt **Kontext** mit allen Stücken ohne
+Zeitmarke, jedes als "Kontext · Titel" mit Fundstelle, Bild und Text. Die Zeitmarken beginnen danach unter
+**Chronologie**. Weil der Kontext keine Zeitmarke trägt, verknüpft MAXQDA ihn mit keiner Stelle im Video; codieren
+lässt er sich wie jeder andere Text. Das Montagevideo bleibt unverändert. In der Karte **Kontext** links legst du die
+Reihenfolge fest.
+
 ### Montagevideo (.mp4)
 
 Das **Montagevideo** legt Bild und Ton aller Aufnahmen des Einsatzes auf die gemeinsame Zeitachse. Es zeigt die
@@ -81,7 +87,8 @@ deren Namen vorher in der Spalte "Dokumentgruppe" ein, sonst findet MAXQDA das D
 ### Begleitprotokoll (.csv)
 
 Das **Begleitprotokoll** hält für jede Datei Herkunft und Zeitnachweis fest: Kurzzeichen, Originaldatei,
-Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. So bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript
+Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. Gibt es Kontext, kommen die Spalten **Rolle**, **Kontext** und
+**Kontext entstanden** dazu, in den Dokumentvariablen die Zahl der **Kontextstücke**. So bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript
 beruht, und das Material lässt sich sauber archivieren.
 
 ### In MAXQDA

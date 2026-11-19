@@ -228,7 +228,12 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
   };
   const allDevices = input.devices.map(toRow);
   // Geräte ohne eigene Uhr (nur Tagebuchscans, Notizen) brauchen keinen Abgleich.
-  const deviceRows = allDevices.filter((d) => d.kind !== "diary" && d.kind !== "note");
+  // Ebenso Geräte, deren Dateien alle Kontext sind: Kontext hat keine Uhrzeit, also nichts abzugleichen.
+  const onlyContext = (id: Id) => {
+    const own = input.sources.filter((x) => x.deviceId === id && !x.partOf);
+    return own.length > 0 && own.every((x) => x.role === "context");
+  };
+  const deviceRows = allDevices.filter((d) => d.kind !== "diary" && d.kind !== "note" && !onlyContext(d.id));
 
   // Vorschläge aus der Tonspur-Analyse.
   const proposals: ProposalRow[] = input.anchors

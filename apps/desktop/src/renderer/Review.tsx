@@ -169,7 +169,17 @@ function Timeline({
   const ppm = zoom ?? fit;
   const innerW = Math.max(width, ((t1 - t0) / MIN) * ppm);
 
-  const tracks = useMemo(() => buildTracks(view.allDevices, placed), [view.allDevices, placed]);
+  const tracks = useMemo(() => {
+    // Ein Gerät, dessen Dateien alle Kontext sind, hat auf der Zeitachse nichts zu zeigen: keine leere Spur.
+    const onlyContext = (id: string) => {
+      const own = view.rows.filter((r) => r.deviceId === id && !r.partOf);
+      return own.length > 0 && own.every((r) => r.status === "context");
+    };
+    return buildTracks(
+      view.allDevices.filter((d) => !onlyContext(d.id)),
+      placed,
+    );
+  }, [view.allDevices, view.rows, placed]);
   const items = useMemo(() => {
     // Nur Verweise auf Stücke, die gerade Kontext sind, tragen →K (die anderen ruhen).
     const live = new Set(view.context.map((c) => c.key));

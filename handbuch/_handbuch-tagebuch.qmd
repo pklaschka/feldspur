@@ -40,6 +40,43 @@ Stelle, an den Griffen änderst du die Größe. Innerhalb eines Rahmens kannst d
 mit **Alt** ändern sie die Größe, mit **Umschalt** in großen Schritten. Notierzeit und Text bleiben am Eintrag; nur die
 Nummer kann sich ändern, weil Einträge von oben nach unten gezählt werden.
 
+### Kontext: Stücke ohne Uhrzeit {#sec-kontext}
+
+Nicht alles im Notizbuch gehört an eine Stelle im Ablauf. Eine Kartenzeichnung des Marktes, eine Liste der Stände
+oder eine Zusammenfassung vom Abend gelten für den ganzen Tag. Solche Stücke führst du als **Kontext**: Sie haben
+bewusst keine Uhrzeit und stehen im Einsatztranskript vor der ersten Zeitmarke, in einem eigenen Abschnitt
+"Kontext". Danach folgt wie bisher die **Chronologie**. Kontext ist kein offener Punkt und zählt nicht als "ohne
+Uhrzeit".
+
+Auf drei Wegen wird etwas zu Kontext:
+
+- **Ganze Datei**: im Menü ⋯ einer Quelle **Als Kontext führen**, bei Tagebuchseiten **Seite als Kontext führen**.
+  Bei einer Quelle ohne Uhrzeit steht derselbe Knopf auch in der Detailleiste ("Gehört nicht in die Chronologie?").
+  Hat das Foto eine Uhrzeit, verlässt es die Zeitachse; die Uhrzeit bleibt gemerkt.
+- **Teil einer Seite**: Zieh in der Abtipp-Ansicht einen Rahmen um die Karte und stell am Eintrag **Gehört zu** auf
+  **Kontext**. Im leeren Feld "Notiert um" geht das auch mit der Taste **K**. Statt der Zeitfelder trägst du dann
+  einen **Titel** ein (etwa "Karte 2: Standplan") und, wenn du magst, wann das Stück **entstanden** ist. Der Rahmen
+  ist gestrichelt und trägt ein K.
+- **Text ohne Scan**: **+ Text** in der Kontext-Zeile über der Zeitachse legt ein Stück an, das du direkt tippst, zum
+  Beispiel eine abends getippte Zusammenfassung. Eine Notizdatei (.txt, .md) geht als ganze Datei; ihr Inhalt steht
+  dann im Dokument.
+
+Ton und Video können kein Kontext sein, weil sie ins Montagevideo gehen.
+
+![Kontext-Zeile über der Zeitachse und Kontext-Kasten in der Detailleiste](bilder/kontext.png){#fig-kontext}
+
+Die **Kontext-Zeile** über der Zeitachse zeigt alle Stücke in der Reihenfolge des Dokuments. Wähle ein Stück und
+verschieb es mit **Alt+←/→** oder mit ↑ und ↓ in der Detailleiste; **Nach Seite ordnen** stellt einmal die
+Reihenfolge des Notizbuchs her (Tagebuch nach Seite, dann Fotos). Ohne Titel steht im Dokument die Fundstelle, etwa
+"Tagebuch T-01 · S. 3". **Zurück in die Chronologie** holt ein Stück wieder auf die Zeitachse; darunter steht, wo es
+dann liegt. Jeder Schritt lässt sich rückgängig machen.
+
+Bezieht sich ein datierter Eintrag auf ein Kontextstück ("siehe Karte 2"), setzt du am Eintrag unter **Verweist
+auf** mit **+ Kontext** einen Verweis. Im Dokument steht er hinter dem Eintrag ("→ Kontext: Karte 2: Standplan"), auf
+der Zeitachse trägt der Eintrag →K, und das Kontextstück zeigt unter **Erwähnt in**, woher es erwähnt wird.
+
+![Verweis von einem datierten Eintrag auf ein Kontextstück](bilder/kontext-verweis.png){#fig-kontext-verweis}
+
 ### Blättern und Zoomen
 
 Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst;
