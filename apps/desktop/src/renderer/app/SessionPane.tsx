@@ -21,7 +21,7 @@ import { SourceActionsProvider, type SourceActions } from "../SourceMenu.tsx";
 import { Transcriber } from "../Transcriber.tsx";
 import { Sync } from "../Sync.tsx";
 import { Button, cx, ErrorBanner } from "../ui.tsx";
-import { HistoryGlyph, UndoToast, useHistory } from "./history.tsx";
+import { HistoryGlyph, UndoToast, useHistory, type HistoryState } from "./history.tsx";
 import type { Guard, Step } from "../App.tsx";
 
 const api = window.feldspur;
@@ -31,12 +31,15 @@ export function SessionPane({
   guard,
   onProject,
   onDeleted,
+  onHistory,
 }: {
   sessionId: string;
   guard: Guard;
   onProject: (p: ProjectInfo) => void;
   /** Der Einsatz wurde gelöscht; `p` ist das Projekt danach. */
   onDeleted: (p: ProjectInfo) => void;
+  /** Jeder neu gelesene Stand des Verlaufs. */
+  onHistory?: (h: HistoryState) => void;
 }) {
   const [view, setView] = useState<SessionView | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export function SessionPane({
   const [originals, setOriginals] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
   const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
-  const history = useHistory(view, sessionId, guard, setView, onProject);
+  const history = useHistory(view, sessionId, guard, setView, onProject, onHistory);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

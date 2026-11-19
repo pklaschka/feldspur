@@ -24,6 +24,15 @@ export const NOTIFY = new Set([
   "Entscheidung zurückgenommen",
 ]);
 
+/** Beschriftung des Löschschritts für einen Einsatz (wie in main.ts). */
+export const SESSION_DELETED = "Einsatz gelöscht";
+
+export interface HistoryState {
+  undo: string | null;
+  redo: string | null;
+  serial: number;
+}
+
 /** Beschriftungen tragen oft einen Zusatz („Lage bestätigt: F-003“); gemeldet wird nach dem Teil vor dem Doppelpunkt. */
 export const notifies = (label: string) => NOTIFY.has(label.split(":")[0]!);
 
@@ -50,8 +59,11 @@ export function useHistory(
   guard: Guard,
   setView: (v: SessionView) => void,
   onProject: (p: ProjectInfo) => void,
+  /** Meldet jeden neu gelesenen Stand des Verlaufs nach außen (für den Hinweis nach dem Löschen eines Einsatzes). */
+  onState?: (h: HistoryState) => void,
 ) {
-  const [state, setState] = useState({ undo: null as string | null, redo: null as string | null, serial: 0 });
+  const [state, setState] = useState<HistoryState>({ undo: null, redo: null, serial: 0 });
+  const report = useEffectEvent((h: HistoryState) => onState?.(h));
   const [toast, setToast] = useState<Toast | null>(null);
   const lastSerial = useRef<number | null>(null);
   /** Zusatz für den nächsten Hinweis (z. B. „Alle Stellen geprüft“), gesetzt vor der neuen Ansicht. */
@@ -62,6 +74,7 @@ export function useHistory(
     pendingNote.current = null;
     void api.historyState().then((h) => {
       setState(h);
+      report(h);
       const before = lastSerial.current;
       lastSerial.current = h.serial;
       if (before !== null && h.serial > before && h.undo && notifies(h.undo))
@@ -73,7 +86,11 @@ export function useHistory(
     if (!r) return;
     onProject(r.project);
     if (r.view) setView(r.view);
-    else setState(await api.historyState());
+    else {
+      const h = await api.historyState();
+      setState(h);
+      onState?.(h);
+    }
     setToast(
       r.label
         ? {
@@ -182,6 +199,52 @@ export function UndoToast({
           Zeigen
         </button>
       )}
+      <button className="cursor-pointer opacity-70 hover:opacity-100" aria-label="Hinweis ausblenden" onClick={onClose}>
+        ×
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Hinweis nach dem Löschen eines Einsatzes. Er steht wie der UndoToast acht Sekunden und verschwindet sofort, sobald
+ * der oberste Rückgängig-Schritt nicht mehr das Löschen ist: dann hat sich etwas anderes geändert, und an derselben
+ * Stelle erscheint womöglich schon der UndoToast. `topUndo` ist undefined, solange noch kein Stand bekannt ist.
+ */
+export function DeletedToast({
+  title,
+  topUndo,
+  onUndo,
+  onClose,
+}: {
+  title: string;
+  topUndo: string | null | undefined;
+  onUndo: () => void;
+  onClose: () => void;
+}) {
+  const close = useEffectEvent(onClose);
+  useEffect(() => {
+    const t = setTimeout(close, 8000);
+    return () => clearTimeout(t);
+  }, []);
+  const stale = topUndo !== undefined && topUndo !== SESSION_DELETED;
+  useEffect(() => {
+    if (stale) close();
+  }, [stale]);
+  if (stale) return null;
+  return (
+    <div
+      role="status"
+      data-testid="session-deleted"
+      className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-ink px-4 py-2 text-[0.92rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+    >
+      <span>Einsatz „{title}“ gelöscht</span>
+      <button
+        className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
+        onClick={onUndo}
+      >
+        Rückgängig
+      </button>
       <button className="cursor-pointer opacity-70 hover:opacity-100" aria-label="Hinweis ausblenden" onClick={onClose}>
         ×
       </button>
