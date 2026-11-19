@@ -330,6 +330,25 @@ describe("Entscheidungen", () => {
     expect(p.conflict.staleBecause.find((s) => s.evidenceId === "exif")).toMatchObject({ wasMs: 0 });
   });
 
+  it("Uhr um weniger als die Unsicherheit verschoben: bestätigte Lage ist trotzdem neu zu prüfen (#117)", () => {
+    // Bestätigt, als die Uhr noch als genau galt; jetzt 20 s anders abgeglichen (± 1 Min.): kein Widerspruch,
+    // aber die bestätigte Lage stimmt nicht mehr mit dem Beleg überein, auf dem sie beruhte.
+    const chk: Ev = {
+      ...checked(decision([{ id: "exif", kind: "metadata", differenceMs: 0 }])),
+      uncertaintyMs: 60_000,
+    };
+    const { p } = photo([exif, chk], {
+      offsetBasis: "manual",
+      clockOffsetMs: 20_000,
+      clockOffsetUncertaintyMs: 60_000,
+    });
+    expect(state(p)).toEqual(["stale", "check"]);
+    expect(p.conflict.staleBecause).toEqual([{ evidenceId: "exif", wasMs: 0, nowMs: -20_000 }]);
+    expect(p.notes).toContain("Entscheidung neu prüfen");
+    // Unverändert abgeglichen: bleibt entschieden.
+    expect(photo([exif, chk], known).p.conflict.state).toBe("none");
+  });
+
   it("ein passender neuer Beleg und abgeschaltete Belege ändern nichts", () => {
     const fits: Ev = { id: "ansage", kind: "spoken", localMs: T(10, 32, 7) };
     expect(state(photo([exif, name, fits, checked(decision(seenNow))], known).p)).toEqual(["decided", "ok"]);
