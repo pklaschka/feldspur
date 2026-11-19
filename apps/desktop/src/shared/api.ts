@@ -617,6 +617,8 @@ export interface FeldspurApi {
   createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
   addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
   removeDiaryRegion(entryId: string, index: number): Promise<SessionView>;
+  /** Rahmen verschieben oder in der Größe ändern (Seite und Seitenzahl bleiben). */
+  moveDiaryRegion(entryId: string, index: number, region: Region): Promise<SessionView>;
   /** Seitenzahl im Notizbuch an einem Rahmen; null = aus der Zählung des Scans. */
   setDiaryRegionPage(entryId: string, index: number, pageNo: number | null): Promise<SessionView>;
   deleteDiaryEntry(entryId: string): Promise<SessionView>;
@@ -775,6 +777,7 @@ export const IPC = {
   createDiaryEntry: "diary:create",
   addDiaryRegion: "diary:add-region",
   removeDiaryRegion: "diary:remove-region",
+  moveDiaryRegion: "diary:move-region",
   setDiaryRegionPage: "diary:region-page",
   deleteDiaryEntry: "diary:delete",
   patchDiaryEntry: "diary:patch",

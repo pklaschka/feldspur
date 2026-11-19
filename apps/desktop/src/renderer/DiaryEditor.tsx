@@ -356,6 +356,9 @@ export function DiaryEditor({
                     selected={selected}
                     onSelect={setSelected}
                     onDraw={(r) => void draw(sf, r)}
+                    onMove={(id, i, box) =>
+                      track(guard(() => api.moveDiaryRegion(id, i, box)).then((v) => v && onView(v)))
+                    }
                   />
                 );
               })}

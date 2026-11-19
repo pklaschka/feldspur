@@ -3,7 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { addRegion, createEntry, deleteEntry, patchEntry, removeRegion, setRegionPage } from "../src/main/diary.ts";
+import {
+  addRegion,
+  createEntry,
+  deleteEntry,
+  moveRegion,
+  patchEntry,
+  removeRegion,
+  setRegionPage,
+} from "../src/main/diary.ts";
 import { setPageNumbering } from "../src/main/edits.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
@@ -151,5 +159,23 @@ describe("Tagebuch abtippen", () => {
     });
     expect(createEntry(store, p3.id, { x: 0, y: 0, w: 1, h: 0.3 }).entry.mode).toBe("short");
     expect(buildSessionView(store, session.id).diary).toHaveLength(3);
+  });
+
+  it("Rahmen verschieben und in der Größe ändern, Seite und Seitenzahl bleiben", () => {
+    const { p1, p2 } = seed();
+    const e = createEntry(store, p1.id, { x: 0.1, y: 0.1, w: 0.5, h: 0.2 }).entry;
+    addRegion(store, e.id, p2.id, { x: 0, y: 0, w: 1, h: 0.5 });
+    setRegionPage(store, e.id, 1, 7);
+    moveRegion(store, e.id, 1, { x: 0.2, y: 0.3, w: 0.6, h: 0.4 });
+    const [first, second] = store.getDiaryEntry(e.id).regions;
+    expect(first).toMatchObject({ sourceId: p1.id, x: 0.1, y: 0.1, w: 0.5, h: 0.2 });
+    expect(second).toMatchObject({ sourceId: p2.id, page: 0, x: 0.2, y: 0.3, w: 0.6, h: 0.4, pageNo: 7 });
+    // Über den Rand hinaus wird begrenzt, zu klein abgelehnt, falscher Rahmen gemeldet.
+    moveRegion(store, e.id, 0, { x: 0.8, y: 0.9, w: 0.5, h: 0.5 });
+    expect(store.getDiaryEntry(e.id).regions[0]).toMatchObject({ x: 0.8, y: 0.9 });
+    expect(store.getDiaryEntry(e.id).regions[0]!.w).toBeCloseTo(0.2);
+    expect(store.getDiaryEntry(e.id).regions[0]!.h).toBeCloseTo(0.1);
+    expect(() => moveRegion(store, e.id, 0, { x: 0, y: 0, w: 0.001, h: 0.5 })).toThrow(/zu klein/);
+    expect(() => moveRegion(store, e.id, 5, { x: 0, y: 0, w: 0.5, h: 0.5 })).toThrow(/nicht gefunden/);
   });
 });

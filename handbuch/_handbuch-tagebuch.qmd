@@ -33,6 +33,13 @@ auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
 Ein Eintrag kann auf einer anderen Seite weitergehen; dann ziehst du dort einen weiteren Rahmen für denselben Eintrag.
 Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
 
+Sitzt ein Rahmen nicht ganz, korrigierst du ihn, statt einen neuen Eintrag anzulegen: Klick in den Rahmen (oder auf
+seine Nummer), dann bekommt er Griffe an Kanten und Ecken. Am Nummernschild oben links ziehst du ihn an eine andere
+Stelle, an den Griffen änderst du die Größe. Innerhalb eines Rahmens kannst du weiterhin einen neuen aufziehen, auch
+überlappend. Mit der Tastatur geht es auch: Ist der Rahmen gewählt, verschieben ihn die Pfeiltasten,
+mit **Alt** ändern sie die Größe, mit **Umschalt** in großen Schritten. Notierzeit und Text bleiben am Eintrag; nur die
+Nummer kann sich ändern, weil Einträge von oben nach unten gezählt werden.
+
 ### Blättern und Zoomen
 
 Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst;

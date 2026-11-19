@@ -273,12 +273,13 @@
         // Funktionsreihe wie auf der Tastatur: Esc ganz links, F5–F8 als Block, F9 beginnt den letzten Block.
         let tk(n, ..a) = taste(n, u: U, farbe: terrakotta, groesse: 14pt, ..a)
         let leer(n) = taste(n, u: U, aktiv: false, groesse: 11pt)
-        let spalte(t1, t2) = {
+        // `frei`: Der graue Text darf nach rechts über die Tastenbreite hinausragen, statt mitten im Satz zu brechen.
+        let spalte(t1, t2, frei: false) = {
           set par(leading: 0.4em)
           text(weight: "semibold", t1)
           if t2 != none {
             linebreak()
-            text(fill: grau, t2)
+            if frei { box(width: 3 * U, text(fill: grau, t2)) } else { text(fill: grau, t2) }
           }
         }
         grid(
@@ -287,7 +288,7 @@
           row-gutter: 1.2 * E,
           tk("Esc", symbol: "spielen"), [], leer("F5"), leer("F6"), tk("F7", symbol: "langsam"), tk("F8", symbol: "zurueck"), [], tk("F9", symbol: "vor"), leer("F10"),
           grid.cell(colspan: 4, spalte([Abspielen / Anhalten], [beim Weiterspielen 1 s zurück])),
-          spalte([Langsamer], [⇧ = schneller \ 0,5× bis 1,5×]),
+          spalte([Langsamer], [⇧ = schneller · 0,5× bis 1,5×], frei: true),
           spalte([5 s zurück], none), [],
           spalte([5 s vor], none), [],
         )
@@ -329,7 +330,7 @@
               inset: (x: 1.2 * E),
               align(horizon, text(size: 14pt, weight: "semibold", font: ("Source Sans 3",))[B1: #text(fill: grau, weight: "regular")[Ja, genau …]]),
             ),
-            [Am Zeilenanfang: \ Sprecher wechseln],
+            [Zeilenanfang: Sprecher wechseln],
             text-unten: [Einfach lostippen: landet \ in der neuen Zeile],
           ),
         )
@@ -341,12 +342,39 @@
       [Tagebuch abtippen],
       farbe: gruen-5,
       symbol: "tagebuch",
-      markiert: ("bildauf", "bildab", "+", "-", "0", "strg", "hoch", "runter", "umschalt"),
+      markiert: ("bildauf", "bildab", "+", "-", "0", "strg", "alt", "hoch", "runter", "links", "rechts", "umschalt"),
       {
         let tg(n, ..a) = taste(n, u: u, farbe: gruen-5, ..a)
         let lg(n, ..a) = taste(n, u: u, aktiv: false, ..a)
+        let halb = (u - E / 2) / 2
+        // Pfeiltasten wie auf der Tastatur (umgekehrtes T), so hoch wie eine Taste
+        let pfeile = box(grid(
+          columns: 3,
+          gutter: E / 2,
+          [], taste("↑", u: 7mm, hoehe: halb, farbe: gruen-5, mitte: true), [],
+          ..("←", "↓", "→").map(p => taste(p, u: 7mm, hoehe: halb, farbe: gruen-5, mitte: true)),
+        ))
+        // Gewählter Eintragsrahmen: Nummernschild oben links, Griffe an Ecken und Kanten
+        let rahmen = box(width: 30mm, height: u, {
+          let griff(pos) = place(pos, rect(width: 1.6mm, height: 1.6mm, fill: weiss, stroke: linie / 2 + gruen-5))
+          place(dx: 0.8mm, dy: 0.8mm, rect(
+            width: 100% - 1.6mm,
+            height: 100% - 1.6mm,
+            stroke: (thickness: linie, paint: gruen-5, dash: "dashed"),
+          ))
+          for pos in (top + center, top + right, horizon + left, horizon + right, bottom + left, bottom + center, bottom + right) {
+            griff(pos)
+          }
+          place(top + left, box(
+            fill: gruen-5,
+            radius: 0.4mm,
+            inset: (x: 1.3mm, y: 0.9mm),
+            text(size: 9pt, weight: "bold", fill: weiss)[2],
+          ))
+          place(center + horizon, dx: 2mm, text(size: 12pt, fill: grau)[14:05 #h(0.5mm) …])
+        })
         grid(
-          columns: (auto, auto, auto, 1fr),
+          columns: (auto, 1fr),
           column-gutter: 4 * E,
           kuerzel(
             grid(
@@ -358,44 +386,75 @@
             [Vorige / nächste Seite],
             text-unten: [auch beim Tippen],
           ),
-          kuerzel(
-            {
-              tg("+", symbol: "vergroessern")
-              h(E)
-              tg("−", symbol: "verkleinern")
-              h(E)
-              tg("0")
-            },
-            [Zoomen · ganze Seite],
-            text-unten: [außerhalb von Textfeldern],
-          ),
-          kuerzel(
-            {
-              tg("Strg", breite: 1.25)
-              plus
-              taste([Rad], u: u, farbe: gruen-5, symbol: "maus")
-            },
-            [Zoomen an der Maus],
-          ),
-          kuerzel(
-            {
-              box(stack(spacing: E / 2, tg("↑", hoehe: (u - E / 2) / 2, mitte: true), tg("↓", hoehe: (u - E / 2) / 2, mitte: true)))
-              h(E)
-              box(
-                height: u,
-                stroke: (thickness: linie, paint: gruen-5, dash: "dashed"),
-                radius: E,
-                inset: (x: 1.2 * E),
-                align(horizon, text(size: 12pt, weight: "semibold")[1030 #text(fill: grau, weight: "regular")[→ 10:30]]),
-              )
-            },
-            [„Notiert um“: ± 1 Minute],
-            text-unten: [mit ⇧ ± 10 Minuten],
-          ),
+          {
+            grid(
+              columns: (37mm, auto, 1fr),
+              column-gutter: 4 * E,
+              kuerzel(
+                {
+                  tg("+", symbol: "vergroessern")
+                  h(E)
+                  tg("−", symbol: "verkleinern")
+                  h(E)
+                  tg("0")
+                },
+                [Zoomen · ganze Seite],
+                text-unten: [außerhalb von Textfeldern],
+              ),
+              kuerzel(
+                {
+                  tg("Strg", breite: 1.25)
+                  plus
+                  taste([Rad], u: u, farbe: gruen-5, symbol: "maus")
+                },
+                [Zoomen an der Maus],
+              ),
+              kuerzel(
+                {
+                  box(stack(spacing: E / 2, tg("↑", hoehe: halb, mitte: true), tg("↓", hoehe: halb, mitte: true)))
+                  h(E)
+                  box(
+                    height: u,
+                    stroke: (thickness: linie, paint: gruen-5, dash: "dashed"),
+                    radius: E,
+                    inset: (x: 1.2 * E),
+                    align(horizon, text(size: 12pt, weight: "semibold")[1030 #text(fill: grau, weight: "regular")[→ 10:30]]),
+                  )
+                },
+                [„Notiert um“: ± 1 Minute],
+                text-unten: [mit ⇧ ± 10 Minuten],
+              ),
+            )
+            v(2.5 * E, weak: true)
+            // Rahmen des gewählten Eintrags nachbessern (Tastatur: Nummernschild fokussiert)
+            grid(
+              columns: (37mm, auto, 1fr),
+              column-gutter: 4 * E,
+              kuerzel(pfeile, [Rahmen verschieben], text-unten: [Nummer fokussiert]),
+              kuerzel(
+                {
+                  tg("Alt", breite: 1.25)
+                  plus
+                  pfeile
+                },
+                [Rahmengröße ändern],
+                text-unten: [beides mit ⇧: große Schritte],
+              ),
+              kuerzel(
+                {
+                  rahmen
+                  h(E)
+                  box(height: u, align(horizon, icon("maus", farbe: gruen-5, groesse: 6mm, staerke: 1.4)))
+                },
+                [Rahmen mit der Maus ziehen],
+                text-unten: [Nummer: Lage · Griffe: Größe],
+              ),
+            )
+          },
         )
       },
     )
-    v(3 * E, weak: true)
+    v(2.5 * E, weak: true)
     // ---------------------------------------------------------------- Zeitachse (nur Maus)
     block(inset: (x: 2 * E + 1mm), {
       set text(fill: grau)

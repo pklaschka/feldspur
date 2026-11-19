@@ -58,6 +58,20 @@ export function removeRegion(s: ProjectStore, entryId: Id, index: number): Id {
   return e.sessionId;
 }
 
+/**
+ * Rahmen verschieben oder in der Größe ändern. Seite, Quelle und Seitenzahl bleiben, nur die Lage auf dem Scan
+ * ändert sich; so muss für eine kleine Korrektur kein neuer Eintrag her.
+ */
+export function moveRegion(s: ProjectStore, entryId: Id, index: number, region: Region): Id {
+  const e = s.getDiaryEntry(entryId);
+  const old = e.regions[index];
+  if (!old) throw new Error("Rahmen nicht gefunden");
+  const { page: _page, ...box } = cleanRegion({ ...region, page: old.page ?? 0 });
+  if (box.w < 0.01 || box.h < 0.01) throw new Error("Der Rahmen ist zu klein");
+  s.updateDiaryEntry(entryId, { regions: e.regions.map((r, i) => (i === index ? { ...r, ...box } : r)) });
+  return e.sessionId;
+}
+
 /** Seitenzahl im Notizbuch an einem Rahmen eintragen; null = wieder aus der Zählung des Scans. */
 export function setRegionPage(s: ProjectStore, entryId: Id, index: number, pageNo: number | null): Id {
   const e = s.getDiaryEntry(entryId);
