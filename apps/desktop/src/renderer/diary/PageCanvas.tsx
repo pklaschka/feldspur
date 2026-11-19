@@ -34,8 +34,8 @@ export function Thumb({ surface }: { surface: Surface }) {
 
 /**
  * Scan (Bild oder PDF-Seite) mit Rahmen; Ziehen mit der Maus legt einen neuen Rahmen an. Die Rahmen des gewählten
- * Eintrags lassen sich verschieben (Rahmen ziehen) und an Kanten und Ecken in der Größe ändern, auch mit den
- * Pfeiltasten. Ein Klick in einen Rahmen wählt seinen Eintrag.
+ * Eintrags lassen sich verschieben (am Nummernschild oben links ziehen) und an Kanten und Ecken in der Größe ändern,
+ * auch mit den Pfeiltasten. Ein Klick in einen Rahmen wählt seinen Eintrag.
  */
 export function PageCanvas({
   surface,
@@ -133,12 +133,14 @@ export function PageCanvas({
         onPointerDown={(e) => {
           if (e.button !== 0) return;
           const t = e.target as HTMLElement;
-          if (t.closest("[data-region]")) return;
           const p = rel(e);
           const handle = t.closest<HTMLElement>("[data-edit]");
           const hit = handle && here.find((h) => h.key === handle.dataset.key);
+          if (!hit && t.closest("[data-region]")) return;
           e.currentTarget.setPointerCapture(e.pointerId);
           if (hit) {
+            // Am Nummernschild gefasst: der Eintrag ist damit auch gewählt (das Klick-Ereignis geht an die Fläche).
+            onSelect(hit.e.id);
             const orig = shown(hit.key, hit.r);
             setEdit({
               key: hit.key,
@@ -209,30 +211,25 @@ export function PageCanvas({
               key={key}
               style={pct(box)}
               data-testid="diary-region"
-              {...(active && {
-                "data-edit": "move",
-                "data-key": key,
-                tabIndex: 0,
-                role: "group",
-                "aria-label": `Rahmen ${name}`,
-                title:
-                  "Ziehen verschiebt den Rahmen, die Griffe an Kanten und Ecken ändern die Größe. Pfeiltasten: verschieben, mit Alt: Größe ändern, mit Umschalt in großen Schritten.",
-                onKeyDown: (ev: KeyboardEvent) => onRegionKey(ev, key, r),
-                onKeyUp: (ev: KeyboardEvent) => onRegionKeyUp(ev, key, e.id, i, r),
-              })}
+              {...(active && { role: "group", "aria-label": `Rahmen ${name}` })}
+              // Die Fläche selbst fängt keine Maus: Darin lassen sich weitere (überlappende) Rahmen aufziehen.
+              // Verschoben wird nur am Nummernschild oben links.
               className={cx(
-                "absolute rounded-sm border-2",
-                active
-                  ? "pointer-events-auto cursor-move border-accent bg-accent/15 outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
-                  : "pointer-events-none border-k-diary bg-k-diary/10",
+                "pointer-events-none absolute rounded-sm border-2",
+                active ? "border-accent bg-accent/15" : "border-k-diary bg-k-diary/10",
               )}
             >
               <button
                 data-region
+                data-edit="move"
+                data-key={key}
                 onClick={() => onSelect(e.id)}
+                onKeyDown={(ev) => active && onRegionKey(ev, key, r)}
+                onKeyUp={(ev) => active && onRegionKeyUp(ev, key, e.id, i, r)}
                 aria-label={`Eintrag ${e.number}`}
+                title="Am Nummernschild ziehen verschiebt den Rahmen, die Griffe an Kanten und Ecken ändern die Größe. Gewählt: Pfeiltasten verschieben, mit Alt ändern sie die Größe, mit Umschalt in großen Schritten."
                 className={cx(
-                  "pointer-events-auto absolute -top-px -left-px cursor-pointer rounded-br px-1.5 text-[0.8rem] font-semibold text-white",
+                  "pointer-events-auto absolute -top-px -left-px cursor-move rounded-br px-1.5 text-[0.8rem] font-semibold text-white",
                   active ? "bg-accent" : "bg-k-diary",
                 )}
               >
@@ -248,7 +245,7 @@ export function PageCanvas({
                     data-testid={`diary-handle-${h}`}
                     aria-hidden
                     style={handleStyle(h)}
-                    className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-accent bg-panel"
+                    className="pointer-events-auto absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-accent bg-panel"
                   />
                 ))}
             </div>
