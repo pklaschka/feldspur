@@ -1,6 +1,6 @@
 /** Ein Einsatz: Schritte, Detailleiste und alle Dialoge, die dazugehören. */
 import { Tabs } from "radix-ui";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { ProjectInfo, SessionPatch, SessionView } from "../../shared/api.ts";
 import { Collect } from "../Collect.tsx";
 import { DiaryEditor } from "../DiaryEditor.tsx";
@@ -9,7 +9,9 @@ import { percent, useExport } from "../exportState.tsx";
 import { formatDay } from "../format.ts";
 import { Inspector } from "../Inspector.tsx";
 import { OriginalsBanner, OriginalsDialog } from "../Originals.tsx";
-import { asPlaces, checkQueue, type Todo } from "../inspector/status.ts";
+import { isMac } from "../keys.ts";
+import { asPlaces, checkQueue, firstOpen, placesAfter, type Todo } from "../inspector/status.ts";
+import { rowStart } from "../review/tracks.ts";
 import { Review } from "../Review.tsx";
 import { PlaybackProvider } from "../playback.tsx";
 import { Preview } from "../Preview.tsx";
@@ -23,8 +25,6 @@ import { HistoryGlyph, UndoToast, useHistory } from "./history.tsx";
 import type { Guard, Step } from "../App.tsx";
 
 const api = window.feldspur;
-
-export const isMac = navigator.platform.toLowerCase().includes("mac");
 
 export function SessionPane({
   sessionId,
@@ -48,6 +48,8 @@ export function SessionPane({
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
   const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
   const history = useHistory(view, sessionId, guard, setView, onProject);
+  /** „Lage passt“ läuft: weitere Bestätigungen (zweites Strg+Enter, Doppelklick) bis zur Antwort verwerfen. */
+  const confirming = useRef(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -143,6 +145,26 @@ export function SessionPane({
       const r = view.rows.find((x) => x.id === t.sourceId);
       if (t.step === "review" && r?.startMs != null) setReveal((old) => ({ fromMs: r.startMs!, n: (old?.n ?? 0) + 1 }));
     }
+  };
+  /**
+   * „Lage passt“. In Durchsehen geht es danach zur nächsten zu prüfenden Stelle (vorab bestimmt, damit die
+   * Reihenfolge der Prüfliste gilt); ist keine mehr übrig, bleibt die Auswahl und der Hinweis sagt es.
+   */
+  const confirm = (id: string, startMs: number) => {
+    if (confirming.current) return;
+    confirming.current = true;
+    const order = step === "review" ? placesAfter(checkQueue(view.rows), view.conflictGroups, id) : null;
+    void guard(() => api.confirmPlacement(id, startMs)).then((v) => {
+      confirming.current = false;
+      if (!v) return;
+      const queue = checkQueue(v.rows);
+      if (order && !queue.length) history.note("Alle Stellen geprüft");
+      setView(v);
+      const next = order && firstOpen(order, queue, v.conflictGroups);
+      if (!next) return;
+      setSelected(next.id);
+      setReveal((old) => ({ fromMs: rowStart(next), n: (old?.n ?? 0) + 1 }));
+    });
   };
   const tabContent = "flex-1 overflow-auto px-6 pt-5 pb-8 data-[state=inactive]:hidden";
 
@@ -284,6 +306,8 @@ export function SessionPane({
             <Tabs.Content value="review" className={tabContent} forceMount>
               <Review
                 view={view}
+                active={step === "review"}
+                onConfirm={(r) => confirm(r.id, r.startMs!)}
                 selected={selected}
                 onSelect={setSelected}
                 onNext={() => setStep("export")}
@@ -321,7 +345,7 @@ export function SessionPane({
               if (v) setView(v);
               return !!v;
             },
-            confirm: (id, startMs) => update(guard(() => api.confirmPlacement(id, startMs))),
+            confirm,
             decide: (input) => update(guard(() => api.decidePlacement(input))),
             decideMany: (sourceIds, kind, reason) => update(guard(() => api.decideMany({ sourceIds, kind, reason }))),
             setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),

@@ -719,10 +719,22 @@ try {
     const checkPanel = page.getByTestId("check-panel");
     await checkPanel.waitFor();
     await shot("-pruefen");
+    const label = await page.getByTestId("inspector-head").locator("b.font-mono").innerText();
+    const toast = page.getByTestId("undo-toast");
+    // „Lage passt“ geht in Durchsehen gleich zur nächsten Stelle weiter (oder meldet, dass alles geprüft ist).
     await checkPanel.getByRole("button", { name: /Lage passt/ }).click();
-    await page.getByTestId("inspector").getByText("Von Hand geprüft: Die Lage passt.").waitFor();
-    await page.getByTestId("inspector").getByRole("button", { name: "Zurücknehmen" }).click();
+    await toast.getByText(`Lage bestätigt: ${label}`).waitFor();
+    await toast.getByRole("button", { name: "Rückgängig" }).click();
+    await toast.getByText(`Rückgängig gemacht: Lage bestätigt: ${label}`).waitFor();
+    // Tastenkürzel: Umschalt+N zurück zur eben geprüften Stelle, Strg+Enter bestätigt sie.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press("Shift+N");
+    await page.getByTestId("inspector-head").getByText(label, { exact: true }).waitFor();
     await checkPanel.waitFor();
+    await page.keyboard.press("Control+Enter");
+    await toast.getByText(`Lage bestätigt: ${label}`).waitFor();
+    await toast.getByRole("button", { name: "Rückgängig" }).click();
+    await toast.getByText(`Rückgängig gemacht: Lage bestätigt: ${label}`).waitFor();
   } else {
     console.log("Prüfen: keine unsicheren Lagen");
   }

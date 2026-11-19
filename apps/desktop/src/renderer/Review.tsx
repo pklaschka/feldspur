@@ -31,13 +31,16 @@ import { HoverCard, Legend, Tray, ZoomGlyph } from "./review/parts.tsx";
 import { useEnvelopes } from "./review/envelopes.ts";
 import { CheckList } from "./review/CheckList.tsx";
 import { ConflictMark, startText } from "./inspector/ConflictPanel.tsx";
-import { asPlaces, checkQueue } from "./inspector/status.ts";
+import { asPlaces, canConfirm, checkQueue, stepPlace } from "./inspector/status.ts";
+import { DIALOG, isMac, reviewKey } from "./keys.ts";
 import { signed } from "../shared/conflict-text.ts";
 
 const LABEL_W = 180;
 
 export function Review({
   view,
+  active,
+  onConfirm,
   selected,
   onSelect,
   onNext,
@@ -46,6 +49,10 @@ export function Review({
   reveal,
 }: {
   view: SessionView;
+  /** Durchsehen ist der aktive Schritt (es bleibt auch sonst geladen): nur dann gelten die Tastenkürzel. */
+  active: boolean;
+  /** „Lage passt“ für die gewählte Quelle (Strg/⌘+Enter). */
+  onConfirm: (row: SourceRow) => void;
   selected: string | null;
   onSelect: (id: string) => void;
   onNext: () => void;
@@ -74,6 +81,8 @@ export function Review({
   return (
     <Timeline
       view={view}
+      active={active}
+      onConfirm={onConfirm}
       placed={placed}
       unplaced={unplaced}
       selected={selected}
@@ -88,6 +97,8 @@ export function Review({
 
 function Timeline({
   view,
+  active,
+  onConfirm,
   placed,
   unplaced,
   selected,
@@ -98,6 +109,8 @@ function Timeline({
   reveal,
 }: {
   view: SessionView;
+  active: boolean;
+  onConfirm: (row: SourceRow) => void;
   placed: SourceRow[];
   unplaced: SourceRow[];
   selected: string | null;
@@ -410,13 +423,36 @@ function Timeline({
     const px = xOf(scale, rowStart(r));
     if (px < 0 || px > width) centerOn(rowStart(r));
   };
-  const nextCheck = () => {
-    if (!toCheck.length) return;
-    const i = toCheck.findIndex((r) => r.id === selected);
-    const next = toCheck[(i + 1) % toCheck.length]!;
+  // Eine Gruppe (ganze Kamera mit demselben Widerspruch) ist eine Stelle, wie in der Zählung auf dem Knopf.
+  const stepCheck = (dir: 1 | -1) => {
+    const next = stepPlace(toCheck, view.conflictGroups, selected, dir);
+    if (!next) return;
     onSelect(next.id);
     show(next);
   };
+  const nextCheck = () => stepCheck(1);
+  // Tastenkürzel: N / Umschalt+N durch die Stellen, Strg/⌘+Enter „Lage passt“ für die gewählte Quelle.
+  const onKey = useEffectEvent((e: KeyboardEvent) => {
+    const target = e.target instanceof Element ? e.target : null;
+    const key = reviewKey(e, target, !!document.querySelector(DIALOG));
+    if (!key) return;
+    if (key === "confirm") {
+      const row = placed.find((r) => r.id === selected);
+      if (!row || !canConfirm(row)) return;
+      e.preventDefault();
+      onConfirm(row);
+      return;
+    }
+    if (!toCheck.length) return;
+    e.preventDefault();
+    stepCheck(key === "next" ? 1 : -1);
+  });
+  useEffect(() => {
+    if (!active) return;
+    const on = (e: KeyboardEvent) => onKey(e);
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [active]);
   const selectFromList = (id: string) => {
     onSelect(id);
     const r = placed.find((x) => x.id === id);
@@ -458,7 +494,8 @@ function Timeline({
             size="sm"
             className="rounded-full bg-warn-soft text-warn hover:brightness-95"
             onClick={nextCheck}
-            title="Springt zur nächsten Quelle mit unsicherer Lage. Rechts lässt sie sich als geprüft markieren."
+            title="Springt zur nächsten Stelle mit unsicherer Lage (N, zurück: Umschalt+N). Rechts lässt sie sich als geprüft markieren."
+            aria-keyshortcuts="N Shift+N"
             data-testid="next-check"
           >
             {asPlaces(toCheck, view.conflictGroups).length} zu prüfen · Nächste →
@@ -639,7 +676,8 @@ function Timeline({
         </Legend>
         <span className="ml-auto">
           Klick in Audio/Video spult dorthin · Episodengrenzen lassen sich ziehen · Mausrad zoomt an der Maus · Umschalt
-          + Mausrad oder Mausrad gedrückt ziehen verschiebt
+          + Mausrad oder Mausrad gedrückt ziehen verschiebt · N / Umschalt+N: nächste / vorige zu prüfende Stelle ·{" "}
+          {isMac ? "⌘+Enter" : "Strg+Enter"}: Lage passt
         </span>
       </div>
       <CheckList view={view} selected={selected} onSelect={selectFromList} onNext={nextCheck} />

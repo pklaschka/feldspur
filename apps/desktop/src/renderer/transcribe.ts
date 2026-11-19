@@ -1,4 +1,5 @@
 /** Reine Hilfen fürs Mitschreiben (ohne React), damit sie sich testen lassen. */
+import { EDITABLE, POPUP, PRESSABLE, type KeyLike, type TargetLike } from "./keys.ts";
 
 /** Ausschnitt der mitlaufenden Waveform: die Wiedergabestelle steht bei einem Viertel. */
 export function waveWindow(posMs: number, spanMs: number, durationMs: number | null): { fromMs: number; toMs: number } {
@@ -46,26 +47,6 @@ export type TranscriberKey =
   | "type"
   | null;
 
-/** Was beim Mitschreiben aus einem Tastendruck folgt; nur die Felder, die dafür zählen. */
-export interface KeyLike {
-  key: string;
-  shiftKey: boolean;
-  ctrlKey: boolean;
-  metaKey: boolean;
-  altKey: boolean;
-  isComposing: boolean;
-  defaultPrevented: boolean;
-}
-
-interface TargetLike {
-  closest(selector: string): unknown;
-}
-
-const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
-const PRESSABLE =
-  "button, a[href], summary, [role='button'], [role='radio'], [role='switch'], [role='checkbox'], [role='tab']";
-/** Aufgeklappte Auswahl oder Menü: dort gelten deren eigene Tasten (Esc schließt sie). */
-const POPUP = "[role='listbox'], [role='menu']";
 /** Ein weiterer Dialog über dem Mitschreiben (z. B. eine Rückfrage). */
 const OTHER_DIALOG = "[role='dialog']:not([data-testid='transcriber']), [role='alertdialog']";
 
