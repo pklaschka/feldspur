@@ -1,0 +1,17 @@
+...@feldspur
+direction: right
+
+vor: Außerhalb von Feldspur {
+  class: gruppe
+  scan: Tagebuchscans {class: [tagebuch; stapel]; width: 295}
+  htr: Handschrifterkennung {class: sonstiges; width: 390}
+  xml: PAGE XML oder ALTO {class: sonstiges; width: 363}
+}
+
+feldspur: Feldspur {class: werkzeug}
+vorschlag: Rahmenvorschläge {class: [tagebuch; hervorgehoben]; width: 336}
+docx: Einträge im Einsatztranskript {class: ergebnis}
+
+vor -> feldspur
+feldspur -> vorschlag: Uhrzeit und Text erkannt
+vorschlag -> docx: du bestätigst

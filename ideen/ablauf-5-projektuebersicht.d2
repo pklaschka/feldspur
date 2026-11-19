@@ -1,0 +1,28 @@
+...@feldspur
+direction: right
+
+tage: Einsätze eines Projekts {
+  class: gruppe
+  t1: Feldtag 1 {class: tagebuch; width: 241}
+  t2: Feldtag 2 {class: tagebuch; width: 241}
+  t3: Feldtag 3 {class: tagebuch; width: 241}
+  t4: Feldtag 4 {class: tagebuch; width: 241}
+}
+
+feldspur: Feldspur {class: werkzeug}
+
+sicht: Projektübersicht {
+  class: gruppe
+  kal: Feldkalender {class: [ergebnis; hervorgehoben]}
+  zahl: Kennzahlen zum Material {class: ergebnis}
+  suche: Suche über alle Tage {class: ergebnis}
+  stand: Arbeitsstand je Tag {class: ergebnis}
+}
+
+alle: Alle Tage ausgeben {class: ziel}
+bericht: Materialübersicht für den Methodenteil {class: ziel}
+
+tage -> feldspur
+feldspur -> sicht
+sicht -> alle
+sicht -> bericht

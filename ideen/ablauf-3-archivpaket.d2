@@ -1,0 +1,26 @@
+...@feldspur
+direction: right
+
+einsatz: Einsatz in Feldspur {
+  class: gruppe
+  orig: Originale {class: [video; stapel]; width: 241}
+  ausgabe: Ausgaben {class: [tagebuch; stapel]; width: 228}
+  proto: Begleitprotokoll {class: sonstiges; width: 336}
+}
+
+feldspur: Feldspur {class: werkzeug}
+
+paket: Archivpaket {
+  class: gruppe
+  daten: Daten mit Prüfsummen {class: ergebnis}
+  meta: Metadaten (RO-Crate, DataCite) {class: [ergebnis; hervorgehoben]}
+  lies: LIESMICH und Zitierhinweis {class: ergebnis}
+}
+
+repo: Zenodo, Uni-Repositorium, Qualiservice {class: ziel}
+schrank: Eigenes Archiv {class: ziel}
+
+einsatz -> feldspur
+feldspur -> paket
+paket -> repo: hochladen
+paket -> schrank: aufbewahren

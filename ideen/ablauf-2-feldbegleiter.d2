@@ -1,0 +1,20 @@
+...@feldspur
+direction: right
+
+feld: Im Feld {
+  class: gruppe
+  tafel: Uhrentafel {class: [notiz; hervorgehoben]; width: 255}
+  kamera: Kameras filmen sie {class: [video; stapel]; width: 363}
+  marker: Marker tippen {class: notiz; width: 295}
+}
+
+feldspur: Feldspur {class: werkzeug}
+
+beleg: Zeitbeleg »Uhrentafel« {class: ergebnis}
+zeile: Marker auf der Zeitachse {class: ergebnis}
+abgleich: Uhren abgeglichen {class: ziel}
+
+feld -> feldspur
+feldspur -> beleg
+feldspur -> zeile
+beleg -> abgleich: du bestätigst

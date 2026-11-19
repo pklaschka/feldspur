@@ -1,0 +1,24 @@
+...@feldspur
+direction: right
+
+orte: Ortsangaben {
+  class: gruppe
+  gpx: GPX-Track {class: gps; width: 241}
+  foto: Foto-Koordinaten {class: [foto; stapel]; width: 336}
+  hand: Von Hand gesetzt {class: notiz; width: 336}
+}
+
+feldspur: Feldspur {class: werkzeug}
+
+spur: Ortsspur auf der Zeitachse {class: [gps; hervorgehoben]; width: 471}
+karte: Karte in Durchsehen {class: ergebnis}
+docx: Ortszeilen im Einsatztranskript {class: ergebnis}
+viewer: Karte im Viewer {class: ergebnis}
+beleg: GPS-Uhr als Zeitbeleg {class: ziel}
+
+orte -> feldspur
+feldspur -> spur
+spur -> karte
+spur -> docx
+spur -> viewer
+orte.gpx -> beleg: Satellitenzeit {class: vermutet}

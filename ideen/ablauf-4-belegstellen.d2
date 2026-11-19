@@ -1,0 +1,24 @@
+...@feldspur
+direction: right
+
+stelle: Stelle auf der Zeitachse markieren {class: video; width: 579}
+feldspur: Feldspur {class: werkzeug}
+beleg: Belegstelle B-03 {class: [notiz; hervorgehoben]; width: 336}
+
+aus: Ausgabe je Belegstelle {
+  class: gruppe
+  clip: Ausschnitt .mp4 {class: ergebnis}
+  bild: Standbild oder Bildfolge {class: ergebnis}
+  zitat: Quellenangabe mit Prüfsumme {class: ergebnis}
+}
+
+docx: Bildfolge im Einsatztranskript {class: ergebnis}
+vortrag: Vortrag, Aufsatz, Abschlussarbeit {class: ziel}
+maxqda: Codieren in MAXQDA {class: ziel}
+
+stelle -> feldspur
+feldspur -> beleg
+beleg -> aus
+beleg -> docx
+aus -> vortrag
+docx -> maxqda
