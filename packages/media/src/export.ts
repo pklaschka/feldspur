@@ -14,7 +14,7 @@ import { buildScaffold, type ImageRef, type Scaffold, type ScaffoldEntry } from 
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 import { excelCsv } from "./csv.ts";
 import { xlsx, type Cell } from "./xlsx.ts";
-import { ensureWritable, friendlyWriteError } from "./write-check.ts";
+import { ensureWritable, ExportPrecheckError, friendlyWriteError, friendlyWriteErrorIn } from "./write-check.ts";
 
 export interface ExportOptions {
   /** Ohne Video geht es schnell; nützlich zum Prüfen des Gerüsts. */
@@ -190,19 +190,23 @@ export async function exportSession(
   const sc = buildScaffold(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
   if (sc.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
   const base = baseName(sc);
-  await mkdir(outDir, { recursive: true });
-  // Gesperrte oder schreibgeschützte Dateien (z. B. noch in Word offen) sofort melden, nicht erst nach dem Video.
-  await ensureWritable(
-    [
-      ...(opts.video !== false ? [`${base}.mp4`] : []),
-      ...(opts.resolve ? [`${base}_Resolve.fcpxml`] : []),
-      `${base}.docx`,
-      `${base}_Variablen.xlsx`,
-      `${base}_Begleitprotokoll.csv`,
-    ].map((name) => outPath(outDir, name)),
-  ).catch((e: unknown) => {
-    throw friendlyWriteError(e, outDir);
-  });
+  try {
+    await mkdir(outDir, { recursive: true });
+    // Gesperrte oder schreibgeschützte Dateien (z. B. noch in Word offen) sofort melden, nicht erst nach dem Video.
+    await ensureWritable(
+      [
+        ...(opts.video !== false ? [`${base}.mp4`] : []),
+        ...(opts.resolve ? [`${base}_Resolve.fcpxml`] : []),
+        `${base}.docx`,
+        `${base}_Variablen.xlsx`,
+        `${base}_Begleitprotokoll.csv`,
+      ].map((name) => outPath(outDir, name)),
+    );
+  } catch (e) {
+    // Noch nichts geschrieben: eigene Klasse, damit die App den Stand einer früheren Ausgabe behält.
+    const friendly = friendlyWriteError(e, outDir);
+    throw new ExportPrecheckError(friendly instanceof Error ? friendly.message : String(friendly), { cause: e });
+  }
   const work = await mkdtemp(join(tmpdir(), "feldspur-export-"));
   try {
     const sources = new Map(sc.input.sources.map((s) => [s.id, s]));
@@ -258,7 +262,7 @@ export async function exportSession(
     opts.onProgress?.("Fertig", 1, 1);
     return { dir: outDir, files, durationMs: sc.plan.durationMs };
   } catch (e) {
-    throw friendlyWriteError(e, outDir);
+    throw friendlyWriteErrorIn(e, outDir);
   } finally {
     // Nach einem Abbruch hält ffmpeg unter Windows Dateien im Arbeitsordner noch kurz offen (EBUSY). Mehrmals
     // versuchen; scheitert das Aufräumen trotzdem, bleibt der Ordner im Temp-Verzeichnis, statt den eigentlichen
