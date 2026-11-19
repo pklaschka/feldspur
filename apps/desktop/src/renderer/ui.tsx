@@ -4,10 +4,12 @@ import {
   createContext,
   Fragment,
   use,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ButtonHTMLAttributes,
   type ReactNode,
@@ -211,9 +213,15 @@ type ErrorState = {
   dismiss: () => void;
   /** Offene Dialoge mit eigener Fehlerzeile, der oberste zuletzt. */
   layers: string[];
-  setLayers: (fn: (l: string[]) => string[]) => void;
+  /** Meldet eine Dialog-Ebene an; gibt die Abmeldung zurück. */
+  addLayer: (id: string) => () => void;
 };
-const ErrorContext = createContext<ErrorState>({ message: null, dismiss: () => {}, layers: [], setLayers: () => {} });
+const ErrorContext = createContext<ErrorState>({
+  message: null,
+  dismiss: () => {},
+  layers: [],
+  addLayer: () => () => {},
+});
 
 /** Stellt die letzte Fehlermeldung (aus `guard`) für alle `ErrorBanner` darunter bereit. */
 export function ErrorProvider({
@@ -226,7 +234,20 @@ export function ErrorProvider({
   children: ReactNode;
 }) {
   const [layers, setLayers] = useState<string[]>([]);
-  const value = useMemo(() => ({ message, dismiss: onDismiss, layers, setLayers }), [message, onDismiss, layers]);
+  const dismissRef = useRef(onDismiss);
+  useLayoutEffect(() => {
+    dismissRef.current = onDismiss;
+  }, [onDismiss]);
+  const addLayer = useCallback((id: string) => {
+    // Ein älterer Fehler gehört zur Seite oder zum Dialog darunter, nicht in den frisch geöffneten Dialog.
+    dismissRef.current();
+    setLayers((l) => [...l, id]);
+    return () => setLayers((l) => l.filter((x) => x !== id));
+  }, []);
+  const value = useMemo(
+    () => ({ message, dismiss: onDismiss, layers, addLayer }),
+    [message, onDismiss, layers, addLayer],
+  );
   return <ErrorContext value={value}>{children}</ErrorContext>;
 }
 
@@ -248,13 +269,9 @@ export function ErrorBanner({
   /** Weitere Knöpfe unter der Meldung. */
   children?: ReactNode;
 }) {
-  const { message, dismiss, layers, setLayers } = use(ErrorContext);
+  const { message, dismiss, layers, addLayer } = use(ErrorContext);
   const id = useId();
-  useLayoutEffect(() => {
-    if (!dialog) return;
-    setLayers((l) => [...l, id]);
-    return () => setLayers((l) => l.filter((x) => x !== id));
-  }, [dialog, id, setLayers]);
+  useLayoutEffect(() => (dialog ? addLayer(id) : undefined), [dialog, id, addLayer]);
   const visible = dialog ? layers.at(-1) === id : layers.length === 0;
   if (!message || !visible) return null;
   return (
