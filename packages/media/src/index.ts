@@ -24,3 +24,4 @@ export * from "./integrity.ts";
 export * from "./export-state.ts";
 export * from "./note-text.ts";
 export * from "./context.ts";
+export { sessionTranscriptHtml, viewerData, VIEWER_CSP } from "./viewer/html.ts";

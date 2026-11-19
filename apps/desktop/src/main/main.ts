@@ -194,6 +194,7 @@ type ExportRequest = {
   mixAudio?: boolean;
   realtime?: boolean;
   deviceTracks?: boolean;
+  viewer?: boolean;
   dir?: string;
   reuseDir?: boolean;
   acceptOriginals?: boolean;

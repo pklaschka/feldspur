@@ -39,6 +39,10 @@ export interface SessionTranscriptEntry {
   head: string;
   body: string;
   images: ImageRef[];
+  /** Mitschrift: Sprecher*in, steht auch vorn im body („B1: …“). Für den Viewer, der sie hervorhebt. */
+  speaker?: string;
+  /** Tagebuch: Schlüssel der Kontextstücke, auf die der Eintrag verweist (stehen auch am Ende von body). */
+  contextRefs?: string[];
 }
 
 export interface SessionTranscriptHeader {
@@ -259,10 +263,8 @@ export function buildSessionTranscript(
     const text = e.mode === "full" ? e.fullText : e.mode === "short" ? e.shortText : "";
     const modeLabel = e.mode === "full" ? "Volltext" : e.mode === "short" ? "Kurzform" : "nur Scan";
     // Verweise auf Kontextstücke im selben Absatz, damit keine zweite Zeitmarke nötig wird. Ruhende fehlen.
-    const refs = [...new Set(e.contextRefs)].flatMap((k) => {
-      const p = pieceByKey.get(k);
-      return p ? [p.name] : [];
-    });
+    const refKeys = [...new Set(e.contextRefs)].filter((k) => pieceByKey.has(k));
+    const refs = refKeys.map((k) => pieceByKey.get(k)!.name);
     const refText = refs.length ? ` → Kontext: ${refs.join("; ")}` : "";
     push({
       montageMs: at,
@@ -272,6 +274,7 @@ export function buildSessionTranscript(
       head: `Tagebuch ${first && e.regions[0] ? diaryPageLabel(first, e.regions[0]) : (page?.label ?? "?")}${page && who(page) ? ` (${who(page)})` : ""}`,
       body: (text ? `${modeLabel}: ${text}` : modeLabel) + refText,
       images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),
+      ...(refKeys.length ? { contextRefs: refKeys } : {}),
     });
   }
 
@@ -308,6 +311,7 @@ export function buildSessionTranscript(
       clock: formatClock(t),
       head: transcribed.size > 1 ? label(l.sourceId) : "",
       body: `${speaker}${l.text}`,
+      ...(l.speaker ? { speaker: l.speaker } : {}),
     });
   }
 

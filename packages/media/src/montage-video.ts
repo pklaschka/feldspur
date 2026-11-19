@@ -373,11 +373,17 @@ async function pool<T>(
   if (err) throw err.reason;
 }
 
+/** Was im fertigen Video steckt, soweit andere Ausgaben es brauchen (der Viewer). */
+export interface MontageResult {
+  /** Tonspuren in ihrer Reihenfolge; Spur 1 ist die Mischung, danach je Gerät eine. */
+  audioTracks: { title: string; deviceId?: Id }[];
+}
+
 export async function renderMontage(
   transcript: SessionTranscript,
   outFile: string,
   opts: MontageVideoOptions,
-): Promise<void> {
+): Promise<MontageResult> {
   const { signal } = opts;
   signal?.throwIfAborted();
   const dir = join(opts.workDir, "montage");
@@ -689,6 +695,12 @@ export async function renderMontage(
   });
   // Zwischenspeicher aufräumen: nur behalten, was diese Ausgabe gebraucht hat.
   for (const f of await readdir(cacheDir)) if (!used.has(f)) await rm(join(cacheDir, f), { force: true });
+  return {
+    audioTracks: [
+      { title: tracks[0]!.title },
+      ...audio.perDevice.map((d) => ({ title: d.track.title, deviceId: d.track.deviceId })),
+    ],
+  };
 }
 
 async function exists(path: string): Promise<boolean> {
