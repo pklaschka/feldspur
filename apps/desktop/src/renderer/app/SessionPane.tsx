@@ -268,6 +268,7 @@ export function SessionPane({
                 onOpenDiary={setDiaryPage}
                 onTranscribe={setTranscribeId}
                 onNext={() => setStep("sync")}
+                onSetDate={(date) => saveDetails({ date })}
               />
             </Tabs.Content>
             <Tabs.Content value="sync" className={tabContent}>

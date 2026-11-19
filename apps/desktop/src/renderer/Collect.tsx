@@ -1,7 +1,7 @@
 import { useEffect, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { bytes, hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
+import { bytes, dominantDay, formatDate, hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
 import { remainingText } from "./exportState.tsx";
 import {
   cancelImport,
@@ -30,6 +30,7 @@ export function Collect({
   onNext,
   onOpenDiary,
   onTranscribe,
+  onSetDate,
 }: {
   view: SessionView;
   guard: Guard;
@@ -40,6 +41,8 @@ export function Collect({
   onNext: () => void;
   onOpenDiary: (pageId: string) => void;
   onTranscribe: (sourceId: string) => void;
+  /** Einsatzdatum ändern (rückgängig machbar); true, wenn es geklappt hat. */
+  onSetDate: (date: string) => Promise<boolean>;
 }) {
   const [hover, setHover] = useState(false);
   const sessionId = view.session.id;
@@ -59,6 +62,7 @@ export function Collect({
   };
   const empty = view.rows.length === 0;
   const unassigned = view.rows.filter((r) => !r.deviceId);
+  const dayHint = dominantDay(view.rows);
 
   return (
     <div
@@ -158,6 +162,14 @@ export function Collect({
           )}
         </div>
       )}
+      {!job && dayHint && (
+        <DayHint
+          key={`${view.session.date}/${dayHint.day}/${dayHint.days}`}
+          sessionDate={view.session.date}
+          hint={dayHint}
+          onSetDate={onSetDate}
+        />
+      )}
       {!empty && (
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -194,6 +206,50 @@ export function Collect({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Hinweis, wenn die Dateien nach ihren Metadaten nicht zum Einsatzdatum passen (die Ausgabe heißt nach dem Datum,
+ * und von Hand eingetragene Uhrzeiten gelten an diesem Tag), und sanft, wenn sie von mehreren Tagen stammen.
+ */
+function DayHint({
+  sessionDate,
+  hint,
+  onSetDate,
+}: {
+  sessionDate: string;
+  hint: { day: string; count: number; days: number };
+  onSetDate: (date: string) => Promise<boolean>;
+}) {
+  const [hidden, setHidden] = useState(false);
+  const differs = hint.day !== sessionDate;
+  if (hidden || (!differs && hint.days < 2)) return null;
+  return (
+    <div
+      className="my-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg bg-sunken px-3 py-2 text-[0.9rem]"
+      role="status"
+      data-testid="day-hint"
+    >
+      <span>
+        {differs && (
+          <>
+            Die meisten Dateien stammen vom {formatDate(hint.day)}, der Einsatz steht auf {formatDate(sessionDate)}.
+          </>
+        )}
+        {hint.days > 1 &&
+          ` Die Dateien stammen von ${hint.days} Tagen. Ein Einsatz ist für einen Feldtag gedacht; lege für weitere Tage eigene Einsätze an.`}
+      </span>
+      {differs && (
+        <Button variant="link" onClick={() => void onSetDate(hint.day)}>
+          Datum auf {formatDate(hint.day)} setzen
+        </Button>
+      )}
+      <span className="flex-1" />
+      <Button variant="link" className="text-[0.85rem] text-muted" onClick={() => setHidden(true)}>
+        Ausblenden
+      </Button>
     </div>
   );
 }
