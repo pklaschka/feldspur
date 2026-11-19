@@ -399,6 +399,13 @@ export interface ExportOutcome {
   durationMs: number;
 }
 
+/** Ausgabe abgebrochen: Sie gilt nicht als ausgegeben, fertige Videoabschnitte bleiben im Zwischenspeicher. */
+export interface ExportCancelled {
+  cancelled: true;
+}
+
+export type ExportRunResult = ExportOutcome | ExportCancelled;
+
 export interface ExportRequestOptions {
   video: boolean;
   resolve: boolean;
@@ -638,12 +645,15 @@ export interface FeldspurApi {
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
    * Montagevideo, Zeitgerüst und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
-   * Ordner; darin entsteht ein Unterordner je Einsatz. null = abgebrochen.
+   * Ordner; darin entsteht ein Unterordner je Einsatz. null = kein Ordner gewählt; { cancelled } = mit
+   * cancelExport abgebrochen.
    */
   exportSession(
     sessionId: string,
     opts: { video: boolean; resolve?: boolean; mixAudio?: boolean; realtime?: boolean; dir?: string },
-  ): Promise<ExportOutcome | null>;
+  ): Promise<ExportRunResult | null>;
+  /** Laufende Ausgabe abbrechen; ffmpeg wird beendet, die Ausgabe gilt nicht als fertig. */
+  cancelExport(sessionId: string): Promise<void>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
   /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */
   onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
@@ -763,6 +773,7 @@ export const IPC = {
   exportStatus: "export:status",
   montagePreview: "export:montage",
   exportSession: "export:run",
+  cancelExport: "export:cancel",
   exportProgress: "export:progress",
   overlayRequest: "overlay:request",
   overlayReply: "overlay:reply",

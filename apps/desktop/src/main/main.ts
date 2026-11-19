@@ -62,7 +62,15 @@ import {
   setPageNumbering,
   toggleEvidence,
 } from "./edits.ts";
-import { exportRunning, exportStatus, montagePlan, previewExport, registerOverlayBridge, runExport } from "./export.ts";
+import {
+  cancelExport,
+  exportRunning,
+  exportStatus,
+  montagePlan,
+  previewExport,
+  registerOverlayBridge,
+  runExport,
+} from "./export.ts";
 import { fileResponse } from "./media-response.ts";
 import { updateSessionDetails } from "./session.ts";
 import { linkFollowUps, mergeDevices, moveSource, removeSource, setFollows, setPartOf } from "./sources.ts";
@@ -534,6 +542,7 @@ function registerIpc(): void {
     }
     return runExport(s, e.sender, sessionId, parent, opts);
   });
+  ipcMain.handle(IPC.cancelExport, (_e, sessionId: string) => cancelExport(sessionId));
   ipcMain.handle(IPC.checkOriginals, (e, sessionId: string, video: boolean) =>
     checkOriginals(requireStore(), sessionId, {
       video,

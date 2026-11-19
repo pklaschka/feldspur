@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
@@ -58,7 +58,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
   afterAll(() => {
     store?.close();
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it("ordnet Tafel, Episoden, Mitschrift und Fotos nach Uhrzeit", () => {
@@ -138,6 +138,33 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const csv = readFileSync(join(out, r.files[3]!), "utf8");
     expect(csv.split("\r\n")[0]).toContain("Kurzzeichen;Art;Datei");
     expect(csv).toContain("ZOOM0001.m4a");
+  });
+
+  it("bricht mit vorab abgebrochenem Signal ab, ohne etwas zu schreiben", async () => {
+    const out = join(dir, "abgebrochen");
+    await expect(exportSession(store, sessionId, out, { signal: AbortSignal.abort() })).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    expect(existsSync(out)).toBe(false);
+  });
+
+  it("beendet ffmpeg beim Abbrechen und behält fertige Abschnitte", { timeout: 180_000 }, async () => {
+    const out = join(dir, "mittendrin");
+    const cacheDir = join(dir, "zwischenspeicher");
+    const ctrl = new AbortController();
+    const chunk = /^[0-9a-f]{40}\.mp4$/;
+    const run = exportSession(store, sessionId, out, {
+      cacheDir,
+      signal: ctrl.signal,
+      // Abbrechen, sobald der erste Abschnitt fertig im Zwischenspeicher liegt (die anderen rechnen dann noch).
+      onProgress: (step) => {
+        if (step === "Montagevideo" && existsSync(cacheDir) && readdirSync(cacheDir).some((f) => chunk.test(f)))
+          ctrl.abort();
+      },
+    });
+    await expect(run).rejects.toMatchObject({ name: "AbortError" });
+    expect(readdirSync(out)).toEqual([]);
+    expect(readdirSync(cacheDir).filter((f) => chunk.test(f)).length).toBeGreaterThan(0);
   });
 
   it("zeigt gleichzeitige Videos nebeneinander und mischt den Ton aller Geräte", () => {

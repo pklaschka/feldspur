@@ -175,13 +175,14 @@ export async function measureSource(store: ProjectStore, sourceId: Id): Promise<
 export async function sessionLevels(
   store: ProjectStore,
   sessionId: Id,
-  opts: { measureMissing?: boolean; onProgress?: (done: number, total: number) => void } = {},
+  opts: { measureMissing?: boolean; onProgress?: (done: number, total: number) => void; signal?: AbortSignal } = {},
 ): Promise<Map<Id, AudioLevel | null>> {
   const sources = store.listSources(sessionId).filter((s) => s.kind === "audio" || s.kind === "video");
   const measured = speechLevels(store, sessionId);
   if (opts.measureMissing) {
     const missing = sources.filter((s) => s.levelMode === "auto" && !measured.has(s.id));
     for (const [i, s] of missing.entries()) {
+      opts.signal?.throwIfAborted();
       opts.onProgress?.(i, missing.length);
       // Nicht lesbare Dateien bleiben unverändert; das Montagevideo scheitert daran nicht.
       measured.set(s.id, await measureSource(store, s.id).catch(() => null));

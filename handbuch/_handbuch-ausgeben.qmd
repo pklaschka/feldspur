@@ -58,6 +58,11 @@ Optionen:
 
 Mit **Montage ansehen** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
+Ein Montagevideo in Echtzeit rechnet bei einem langen Feldtag eine Weile. Hast du dich bei den Optionen vertan, hältst
+du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gilt dann nicht als fertig, auch eine
+frühere Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben im Zwischenspeicher, der nächste Versuch
+geht deshalb schneller.
+
 ### Dokumentvariablen (.xlsx)
 
 Die Datei `…_Variablen.xlsx` enthält die Angaben zum Einsatz als **Dokumentvariablen** für MAXQDA: Einsatz, Datum,

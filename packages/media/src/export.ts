@@ -36,6 +36,11 @@ export interface ExportOptions {
    * die Oberfläche sie mit pdf.js; ohne diese Hilfe fehlen solche Ausschnitte.
    */
   renderImage?: (src: Source, ref: ImageRef) => Promise<Buffer | null>;
+  /**
+   * Abbrechen: exportSession wirft dann einen AbortError (laufende ffmpeg-Prozesse werden beendet).
+   * Fertige Videoabschnitte bleiben im cacheDir; im Ausgabeordner können einzelne Dateien fehlen.
+   */
+  signal?: AbortSignal;
 }
 
 export interface ExportResult {
@@ -179,6 +184,8 @@ export async function exportSession(
   outDir: string,
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
+  const { signal } = opts;
+  signal?.throwIfAborted();
   const sc = buildScaffold(store, sessionId, { mode: opts.mode, episodes: opts.episodes });
   if (sc.plan.durationMs <= 0) throw new Error("Nichts zu exportieren: keine Quelle hat eine Uhrzeit");
   const base = baseName(sc);
@@ -190,6 +197,7 @@ export async function exportSession(
     const stills = new Map<ScaffoldEntry, (Still | null)[]>();
     let n = 0;
     for (const [i, e] of withImages.entries()) {
+      signal?.throwIfAborted();
       opts.onProgress?.("Standbilder", i, withImages.length);
       const list: (Still | null)[] = [];
       for (const ref of e.images) {
@@ -203,6 +211,7 @@ export async function exportSession(
     const media = `${base}.mp4`;
     const levels = await sessionLevels(store, sessionId, {
       measureMissing: opts.video !== false,
+      signal,
       onProgress: (done, total) => opts.onProgress?.("Lautstärke messen", done, total),
     });
     if (opts.video !== false) {
@@ -212,6 +221,7 @@ export async function exportSession(
         cacheDir: opts.cacheDir,
         audioMix: opts.audioMix,
         levels,
+        signal,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
       });
       files.push(media);
@@ -223,6 +233,7 @@ export async function exportSession(
       files.push(`${base}_Resolve.fcpxml`);
     }
 
+    signal?.throwIfAborted();
     opts.onProgress?.("Zeitgerüst", 0, 1);
     const docx = await scaffoldDocx(sc, { mediaFileName: media, stills });
     await writeFile(outPath(outDir, `${base}.docx`), docx);
@@ -234,6 +245,9 @@ export async function exportSession(
     opts.onProgress?.("Fertig", 1, 1);
     return { dir: outDir, files, durationMs: sc.plan.durationMs };
   } finally {
-    await rm(work, { recursive: true, force: true });
+    // Nach einem Abbruch hält ffmpeg unter Windows Dateien im Arbeitsordner noch kurz offen (EBUSY). Mehrmals
+    // versuchen; scheitert das Aufräumen trotzdem, bleibt der Ordner im Temp-Verzeichnis, statt den eigentlichen
+    // Fehler oder Abbruch zu verdecken.
+    await rm(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {});
   }
 }
