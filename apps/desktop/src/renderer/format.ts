@@ -1,6 +1,7 @@
 import type { SourceKind } from "@feldspur/core/model";
 import type { SourceRow } from "../shared/api.ts";
 import { formatClock, formatDuration } from "@feldspur/core/time";
+import { digitsDurationMs } from "../shared/duration-digits.ts";
 
 export const KIND_LABEL: Record<SourceKind, string> = {
   video: "Video",
@@ -31,7 +32,8 @@ const UNIT_MS: [RegExp, number][] = [
 
 /**
  * Uhrabweichung als Text → ms. null bei leerer/ungültiger Eingabe. Versteht
- * "−2:47", "+0:04", "± 0:00", "-167" (Sekunden), "+2:00:00", "+1 Tag 2:00:00", "−3 Tage", "+2 h 5 min".
+ * "−2:47", "+0:04", "± 0:00", "-247" (= −2:47), "-45" (Sekunden), "+2:00:00", "+1 Tag 2:00:00", "−3 Tage",
+ * "+2 h 5 min".
  */
 export function parseOffset(text: string): number | null {
   let t = text.trim().replace(/[−–]/g, "-").replace(",", ".").toLowerCase();
@@ -42,6 +44,9 @@ export function parseOffset(text: string): number | null {
     sign = t[0] === "-" ? -1 : 1;
     t = t.slice(1).trim();
   }
+  // Nur Ziffern: von rechts Sekunden, Minuten, Stunden („247“ = 2:47).
+  const digits = digitsDurationMs(t);
+  if (digits !== undefined) return digits === null ? null : sign * digits;
   let ms = 0;
   // Am Ende darf eine Uhrzeit-Angabe stehen: h:mm:ss, m:ss oder Sekunden.
   const clock = /(?:^|\s)(?:(\d+):)?(?:(\d+):)?(\d+(?:\.\d+)?)$/.exec(t);
@@ -158,12 +163,18 @@ export function splitSpeaker(input: string): { speaker: string | null; text: str
   return m ? { speaker: m[1]!, text: m[2]! } : { speaker: null, text: input };
 }
 
+/** Mit Sekunden („hh:mm:ss“) oder ohne („hh:mm“). */
+export interface ClockOpts {
+  seconds?: boolean;
+}
+
 /**
- * Maske für Uhrzeiten „hh:mm“ beim Tippen: nur Ziffern, der Doppelpunkt kommt von selbst. Eine erste Ziffer über 2
- * ist die Stunde („9“ → „09“), ebenso eine einzelne Ziffer vor einem getippten Doppelpunkt („9:“ → „09:“).
+ * Maske für Uhrzeiten „hh:mm“ (oder „hh:mm:ss“) beim Tippen: nur Ziffern, der Doppelpunkt kommt von selbst. Eine
+ * erste Ziffer über 2 ist die Stunde („9“ → „09“), ebenso eine einzelne Ziffer vor einem getippten Doppelpunkt
+ * („9:“ → „09:“).
  */
-export function maskClock(input: string, caret = input.length): string {
-  return maskClockAt(input, caret).value;
+export function maskClock(input: string, caret = input.length, opts: ClockOpts = {}): string {
+  return maskClockAt(input, caret, opts).value;
 }
 
 const SEP = /[:.,h ]/;
@@ -173,11 +184,15 @@ const SEP = /[:.,h ]/;
  * Marke bleibt an ihrer Stelle. „15:00“, die 5 gelöscht, ergibt „1:00“ (nicht „10:0“); tippt man dann 6, steht
  * „16:00“ da. Eine Ziffer in einem vollen Teil überschreibt die folgende.
  */
-export function maskClockAt(input: string, caret = input.length): { value: string; caret: number } {
+export function maskClockAt(
+  input: string,
+  caret = input.length,
+  opts: ClockOpts = {},
+): { value: string; caret: number } {
+  const parts = opts.seconds ? 3 : 2;
   const atEnd = caret >= input.length;
-  const sep = input.search(SEP);
-  if (sep >= 0 && !atEnd) {
-    // Korrektur mitten im Feld: Stunden und Minuten getrennt behandeln.
+  if (SEP.test(input) && !atEnd) {
+    // Korrektur mitten im Feld: jeden Teil (Stunden, Minuten, Sekunden) für sich behandeln.
     const fit = (part: string, from: number) => {
       let digits = "";
       let mark = -1;
@@ -190,15 +205,27 @@ export function maskClockAt(input: string, caret = input.length): { value: strin
       if (digits.length > 2)
         digits =
           mark >= 0 && mark < digits.length ? digits.slice(0, mark) + digits.slice(mark + 1) : digits.slice(0, 2);
-      return { digits: digits.slice(0, 2), mark };
+      return { digits: digits.slice(0, 2), mark, from, to: from + part.length };
     };
-    const h = fit(input.slice(0, sep), 0);
-    const m = fit(input.slice(sep + 1), sep + 1);
-    const value = `${h.digits}:${m.digits}`;
-    const at =
-      h.mark >= 0 && caret <= sep
-        ? Math.min(h.mark, h.digits.length)
-        : h.digits.length + 1 + Math.max(0, Math.min(m.mark, m.digits.length));
+    const pieces: { text: string; from: number }[] = [];
+    let from = 0;
+    for (let i = 0; i <= input.length; i++) {
+      if (i < input.length && !SEP.test(input[i]!)) continue;
+      // Mehr Trenner als Teile: der Rest gehört zum letzten Teil.
+      if (pieces.length === parts - 1 && i < input.length) continue;
+      pieces.push({ text: input.slice(from, i), from });
+      from = i + 1;
+    }
+    const fitted = pieces.map((p) => fit(p.text, p.from));
+    const value = fitted.map((f) => f.digits).join(":");
+    let at = 0;
+    for (const [k, f] of fitted.entries()) {
+      if (caret <= f.to || k === fitted.length - 1) {
+        at += Math.max(0, Math.min(f.mark, f.digits.length));
+        break;
+      }
+      at += f.digits.length + 1;
+    }
     return { value, caret: at };
   }
   let digits = input.replace(/\D/g, "");
@@ -208,36 +235,44 @@ export function maskClockAt(input: string, caret = input.length): { value: strin
     digits = `0${digits}`;
     pad = 1;
   }
-  digits = digits.slice(0, 4);
-  let value: string;
-  if (digits.length < 2) value = digits;
-  // Ein getippter Trenner nach der Stunde bleibt stehen, damit man „10:“ sieht, bevor die Minuten kommen.
-  else if (digits.length === 2) value = SEP.test(input.at(-1) ?? "") ? `${digits}:` : digits;
-  else value = `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  digits = digits.slice(0, 2 * parts);
+  let value = (digits.match(/\d{1,2}/g) ?? []).join(":");
+  // Ein getippter Trenner nach einem vollen Teil bleibt stehen, damit man „10:“ sieht, bevor die Minuten kommen.
+  if (digits.length > 0 && digits.length % 2 === 0 && digits.length < 2 * parts && SEP.test(input.at(-1) ?? ""))
+    value += ":";
   const d = Math.min(before + pad, digits.length);
-  const at = atEnd ? value.length : d > 2 ? d + 1 : d;
+  const at = atEnd ? value.length : d > 0 ? d + Math.floor((d - 1) / 2) : 0;
   return { value, caret: at };
 }
 
+/** Länge einer vollständig getippten Uhrzeit: „hh:mm“ oder „hh:mm:ss“. */
+export const clockLength = (opts: ClockOpts = {}) => (opts.seconds ? 8 : 5);
+
 /**
- * Fertige Eingabe „hh:mm“ prüfen und ergänzen: „10“ → „10:00“, „930“ → „09:30“, „10:5“ → „10:05“.
+ * Fertige Eingabe „hh:mm“ prüfen und ergänzen: „10“ → „10:00“, „930“ → „09:30“, „10:5“ → „10:05“. Mit Sekunden
+ * zusätzlich „103045“ → „10:30:45“; ohne getippte Sekunden bleibt es bei „hh:mm“.
  * Leer bleibt leer; ungültige Zeiten (25:00, 10:75) ergeben null.
  */
-export function normalizeClock(input: string): string | null {
+export function normalizeClock(input: string, opts: ClockOpts = {}): string | null {
   const t = input.trim();
   if (!t) return "";
-  const m = /^(\d{1,2})(?:[:.,h ](\d{1,2})?)?$/.exec(t) ?? /^(\d{1,2})(\d{2})$/.exec(t.replace(/\D/g, ""));
+  const m =
+    /^(\d{1,2})(?:[:.,h ](\d{1,2})?(?:[:.,h ](\d{1,2})?)?)?$/.exec(t) ??
+    /^(\d{1,2})(\d{2})(\d{2})?$/.exec(t.replace(/\D/g, ""));
   if (!m) return null;
   const h = Number(m[1]);
   const min = Number(m[2] ?? 0);
-  if (h > 23 || min > 59) return null;
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+  const sec = m[3] === undefined ? null : Number(m[3]);
+  if (h > 23 || min > 59 || (sec !== null && sec > 59)) return null;
+  if (sec !== null && !opts.seconds) return null;
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(h)}:${two(min)}${sec === null ? "" : `:${two(sec)}`}`;
 }
 
-/** Uhrzeit „hh:mm“ um Minuten verschieben, über Mitternacht hinweg. */
-export function stepClock(value: string, minutes: number): string {
-  const n = normalizeClock(value);
+/** Uhrzeit „hh:mm“ (oder „hh:mm:ss“) um Minuten verschieben, über Mitternacht hinweg; Sekunden bleiben. */
+export function stepClock(value: string, minutes: number, opts: ClockOpts = {}): string {
+  const n = normalizeClock(value, opts);
   if (!n) return value;
-  const total = (((Number(n.slice(0, 2)) * 60 + Number(n.slice(3)) + minutes) % 1440) + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  const total = (((Number(n.slice(0, 2)) * 60 + Number(n.slice(3, 5)) + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}${n.slice(5)}`;
 }

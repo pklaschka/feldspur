@@ -1,3 +1,4 @@
+import { digitsDurationMs, digitsDurationText } from "../src/shared/duration-digits.ts";
 import { describe, expect, it } from "vite-plus/test";
 import {
   bytes,
@@ -28,7 +29,10 @@ describe("Uhrabweichung eingeben", () => {
   it("Minuten und Sekunden wie bisher", () => {
     expect(parseOffset("−2:47")).toBe(-167_000);
     expect(parseOffset("+0:04")).toBe(4_000);
-    expect(parseOffset("-167")).toBe(-167_000);
+    expect(parseOffset("-247")).toBe(-167_000);
+    expect(parseOffset("+4")).toBe(4_000);
+    expect(parseOffset("+10247")).toBe(3_767_000);
+    expect(parseOffset("-167")).toBeNull(); // 67 Sekunden gibt es nicht
     expect(parseOffset("1,5")).toBe(1_500);
   });
 
@@ -96,6 +100,28 @@ describe("Uhrzeit als Maskenfeld", () => {
     expect(normalizeClock("25:00")).toBeNull();
     expect(normalizeClock("10:75")).toBeNull();
     expect(normalizeClock("ab")).toBeNull();
+  });
+
+  it("mit Sekunden: hh:mm:ss ohne Doppelpunkte", () => {
+    const sec = { seconds: true };
+    expect(maskClock("103045", undefined, sec)).toBe("10:30:45");
+    expect(maskClock("10304", undefined, sec)).toBe("10:30:4");
+    expect(maskClock("1030", undefined, sec)).toBe("10:30");
+    expect(maskClock("1030:", undefined, sec)).toBe("10:30:");
+    expect(maskClock("93045", undefined, sec)).toBe("09:30:45");
+    expect(maskClock("10:30:455", undefined, sec)).toBe("10:30:45");
+    // Ohne Sekunden bleibt es bei hh:mm.
+    expect(maskClock("103045")).toBe("10:30");
+    // Korrektur in den Sekunden: „10:30:45“, die 4 überschreiben.
+    expect(maskClockAt("10:30:745", 7, sec)).toEqual({ value: "10:30:75", caret: 7 });
+    expect(maskClockAt("10:30:45", 1, sec)).toEqual({ value: "10:30:45", caret: 1 });
+    expect(maskClockAt("10304", 5, sec)).toEqual({ value: "10:30:4", caret: 7 });
+    expect(normalizeClock("103045", sec)).toBe("10:30:45");
+    expect(normalizeClock("10:30:5", sec)).toBe("10:30:05");
+    expect(normalizeClock("1030", sec)).toBe("10:30");
+    expect(normalizeClock("10:30:75", sec)).toBeNull();
+    expect(normalizeClock("10:30:45")).toBeNull();
+    expect(stepClock("10:59:30", 1, sec)).toBe("11:00:30");
   });
 
   it("Pfeiltasten verschieben um Minuten", () => {
@@ -171,5 +197,21 @@ describe("Einsatzdatum und Dateien", () => {
     // Lokal kurz nach Mitternacht: UTC wäre je nach Zeitzone noch der Vortag.
     expect(localDate(new Date(2026, 10, 18, 0, 30))).toBe("2026-11-18");
     expect(localDate(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
+  });
+});
+
+describe("Dauern ohne Doppelpunkt", () => {
+  it("füllen von rechts", () => {
+    expect(digitsDurationMs("45")).toBe(45_000);
+    expect(digitsDurationMs("320")).toBe(200_000);
+    expect(digitsDurationMs("7500")).toBe(4_500_000);
+    expect(digitsDurationMs("10320")).toBe(3_800_000);
+    expect(digitsDurationMs("390")).toBeNull();
+    expect(digitsDurationMs("3:20")).toBeUndefined();
+    expect(digitsDurationText("320")).toBe("3:20");
+    expect(digitsDurationText("0320")).toBe("3:20");
+    expect(digitsDurationText("10320")).toBe("1:03:20");
+    expect(digitsDurationText("45")).toBe("45");
+    expect(digitsDurationText("390")).toBe("390");
   });
 });
