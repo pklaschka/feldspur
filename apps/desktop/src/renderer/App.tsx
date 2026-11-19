@@ -30,6 +30,8 @@ export function App() {
   const [backups, setBackups] = useState(false);
   // Dateien neben „Einsammeln“ abgelegt: Hinweis statt Stille.
   const strayDrop = useStrayDrop();
+  /** Zuletzt gelöschter Einsatz: Hinweis mit „Rückgängig“, auch wenn danach kein Einsatz mehr offen ist. */
+  const [deleted, setDeleted] = useState<{ id: string; title: string } | null>(null);
 
   // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
   const hasProject = useEffectEvent(() => !!project);
@@ -84,6 +86,7 @@ export function App() {
 
   const adopt = (p: ProjectInfo | null | undefined) => {
     if (!p) return;
+    setDeleted(null);
     setProject(p);
     setSessionId(lastSession(p));
   };
@@ -92,6 +95,21 @@ export function App() {
     if (!p) return;
     setProject(p);
     setSessionId(p.sessions.find((s) => !project?.sessions.some((o) => o.id === s.id))?.id ?? lastSession(p));
+  };
+  const undoDelete = async () => {
+    const gone = deleted;
+    setDeleted(null);
+    const r = await guard(async () => {
+      // Nur den Löschschritt zurücknehmen, nie etwas, das inzwischen dazugekommen ist.
+      if ((await api.historyState()).undo !== "Einsatz gelöscht")
+        throw new Error(
+          "Seit dem Löschen wurde etwas anderes geändert. Rückgängig geht Schritt für Schritt mit Strg+Z (Mac: ⌘Z).",
+        );
+      return api.undo(sessionId);
+    });
+    if (!r) return;
+    setProject(r.project);
+    if (gone && r.project.sessions.some((s) => s.id === gone.id)) setSessionId(gone.id);
   };
   // Den zuletzt gewählten Einsatz je Projekt merken, damit man beim nächsten Öffnen dort weitermacht.
   useEffect(() => {
@@ -202,6 +220,12 @@ export function App() {
                   // Rückgängig kann den offenen Einsatz entfernen (Anlegen rückgängig): dann einen anderen zeigen.
                   if (!p.sessions.some((x) => x.id === sessionId)) setSessionId(p.sessions[0]?.id ?? null);
                 }}
+                onDeleted={(p) => {
+                  const title = project.sessions.find((x) => x.id === sessionId)?.title ?? "";
+                  setDeleted({ id: sessionId, title });
+                  setProject(p);
+                  setSessionId(p.sessions[0]?.id ?? null);
+                }}
               />
             ) : (
               <main className="col-span-2 p-8">
@@ -219,6 +243,28 @@ export function App() {
                   onAction={() => document.getElementById(HERO_TITLE_ID)?.focus()}
                 />
               </main>
+            )}
+            {deleted && !project.sessions.some((s) => s.id === deleted.id) && (
+              <div
+                role="status"
+                data-testid="session-deleted"
+                className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-ink px-4 py-2 text-[0.92rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
+              >
+                <span>Einsatz „{deleted.title}“ gelöscht</span>
+                <button
+                  className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
+                  onClick={() => void undoDelete()}
+                >
+                  Rückgängig
+                </button>
+                <button
+                  className="cursor-pointer opacity-70 hover:opacity-100"
+                  aria-label="Hinweis ausblenden"
+                  onClick={() => setDeleted(null)}
+                >
+                  ×
+                </button>
+              </div>
             )}
           </div>
         </TooltipProvider>

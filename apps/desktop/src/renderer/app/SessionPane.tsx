@@ -32,12 +32,15 @@ export function SessionPane({
   guard,
   strayDrop,
   onProject,
+  onDeleted,
 }: {
   sessionId: string;
   guard: Guard;
   /** Zähler aus `useStrayDrop`: Dateien wurden neben „Einsammeln“ gezogen. */
   strayDrop: number;
   onProject: (p: ProjectInfo) => void;
+  /** Der Einsatz wurde gelöscht; `p` ist das Projekt danach. */
+  onDeleted: (p: ProjectInfo) => void;
 }) {
   const [view, setView] = useState<SessionView | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -97,6 +100,7 @@ export function SessionPane({
     onProject(res.project);
     return true;
   };
+  const deleteSession = () => void guard(() => api.deleteSession(sessionId)).then((p) => p && onDeleted(p));
   const unsynced = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
   const hasRef = view.devices.some((d) => d.isReference);
   const unplaced = view.rows.filter((r) => r.status === "unplaced").length;
@@ -401,7 +405,13 @@ export function SessionPane({
           onReveal={(r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 }))}
         />
         <OriginalsDialog view={view} open={originals} onOpenChange={setOriginals} onView={setView} guard={guard} />
-        <SessionDetails view={view} open={editing} onOpenChange={setEditing} onSave={saveDetails} />
+        <SessionDetails
+          view={view}
+          open={editing}
+          onOpenChange={setEditing}
+          onSave={saveDetails}
+          onDelete={deleteSession}
+        />
         <UndoToast
           view={view}
           toast={history.toast}

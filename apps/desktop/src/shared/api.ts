@@ -563,6 +563,8 @@ export interface FeldspurApi {
   /** Zeitzone der Geräteuhr (IANA); null = wie der Einsatz. */
   setDeviceTimeZone(deviceId: string, timeZone: string | null): Promise<SessionView>;
   updateSession(sessionId: string, patch: SessionPatch): Promise<{ view: SessionView; project: ProjectInfo }>;
+  /** Einsatz samt Quellen, Belegen, Tagebuch und Mitschrift aus dem Projekt nehmen (Originaldateien bleiben). */
+  deleteSession(sessionId: string): Promise<ProjectInfo>;
   /** Quelle aus dem Projekt nehmen (Originaldatei bleibt). */
   removeSource(sourceId: string): Promise<SessionView>;
   /** Quelle in ein anderes Gerät verschieben; { newLabel } legt ein neues Gerät an. */
@@ -737,6 +739,7 @@ export const IPC = {
   setDeviceTimeZone: "device:set-timezone",
   renameDevice: "device:rename",
   updateSession: "session:update",
+  deleteSession: "session:delete",
   removeSource: "source:remove",
   moveSource: "source:move",
   mergeDevices: "device:merge",

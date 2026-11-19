@@ -29,6 +29,12 @@ die meisten nach ihren Metadaten oder Dateinamen von einem anderen Tag, steht ü
 Knopf **Datum auf … setzen**. Das lässt sich rückgängig machen; von Hand eingetragene Uhrzeiten wandern mit. Liegen die
 Dateien auf mehreren Tagen, weist Feldspur sanft darauf hin, dass ein Einsatz ein Feldtag ist.
 
+Einen Testeinsatz oder einen doppelt angelegten Feldtag löschst du unter **Einsatzdaten bearbeiten** mit **Einsatz
+löschen…**. Nach einer Nachfrage verschwinden der Einsatz und alles, was in Feldspur dazu entstanden ist: Quellen,
+Zeitbelege, Anker, Tagebucheinträge, Mitschrift und Notizen. Originaldateien und frühere Ausgaben bleiben erhalten.
+Der Hinweis danach bietet **Rückgängig** an; das holt den Einsatz vollständig zurück. Solange für den Einsatz
+eingesammelt, analysiert oder ausgegeben wird, lässt er sich nicht löschen.
+
 ::: {.callout-tip}
 ### Deine Originale bleiben, wo sie sind
 Feldspur kopiert und verändert keine Originaldateien. Die Projektdatei merkt sich nur, wo sie liegen, und hält ihre
