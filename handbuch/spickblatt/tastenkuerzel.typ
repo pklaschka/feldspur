@@ -8,7 +8,7 @@
 //
 // Die Kürzel stammen aus dem Code (apps/desktop/src/renderer: transcribe.ts, Transcriber.tsx, transcriber/Line.tsx,
 // app/history.tsx, app/SessionPane.tsx, App.tsx, DiaryEditor.tsx, diary/EntryCard.tsx, MontageView.tsx,
-// FineAlign.tsx, SearchDialog.tsx, Notes.tsx, Review.tsx). Ändert sich dort etwas, hier nachziehen.
+// FineAlign.tsx, SearchDialog.tsx, Notes.tsx, Review.tsx, keys.ts). Ändert sich dort etwas, hier nachziehen.
 //
 // Bauen: läuft mit `quarto render handbuch` (post-render spickblatt.ts) und landet als
 // Feldspur-Tastenkuerzel.pdf neben dem Handbuch. Von Hand:
@@ -35,7 +35,7 @@
 #let sans = ("Source Sans 3", "DejaVu Sans")
 
 #set document(title: "Feldspur – Tastenkürzel", author: "Zuri Nimca Klaschka")
-#set page(paper: "a4", flipped: true, margin: (x: 4 * E + 2mm, y: 4 * E), fill: weiss)
+#set page(paper: "a4", flipped: true, margin: (x: 4 * E + 2mm, top: 4 * E, bottom: 3 * E), fill: weiss)
 #set text(font: sans, size: 9pt, fill: tinte, lang: "de", number-type: "lining")
 #set par(leading: 0.45em, spacing: 0.6em)
 
@@ -405,6 +405,17 @@
       h(2 * E)
       [*Mausrad* zoomt an der Maus #h(1.5mm)·#h(1.5mm) *⇧ + Mausrad* verschiebt die Achse #h(1.5mm)·#h(1.5mm)
         *Rad gedrückt ziehen* verschiebt auch]
+    })
+    v(1.5 * E, weak: true)
+    // ---------------------------------------------------------------- Durchsehen (drei Kürzel)
+    block(inset: (x: 2 * E + 1mm), {
+      set text(fill: grau)
+      icon("suchen", farbe: umbra, groesse: 5mm, staerke: 1.4)
+      h(1.2 * E)
+      text(size: 11pt, weight: "bold", style: "italic", fill: umbra)[Durchsehen]
+      h(2 * E)
+      [*N* nächste Stelle #h(1.5mm)·#h(1.5mm) *⇧ + N* vorige Stelle #h(1.5mm)·#h(1.5mm)
+        *Strg + Enter* Lage passt, weiter]
     })
   },
   // ---------------------------------------------------------------- rechts
