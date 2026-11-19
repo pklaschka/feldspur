@@ -223,7 +223,8 @@ function DeleteConfirm({
             {sources === 0
               ? "Der Einsatz hat keine Quellen."
               : `${sources === 1 ? "Die eine Quelle" : `Alle ${sources} Quellen`} mit Zeitbelegen, Ankern, Tagebucheinträgen, Mitschrift und Notizen ${sources === 1 ? "wird" : "werden"} aus dem Projekt genommen.`}{" "}
-            Originaldateien und frühere Ausgaben bleiben erhalten. Rückgängig machen lässt es sich auch danach noch.
+            Originaldateien und frühere Ausgaben bleiben erhalten. Rückgängig machen lässt es sich danach, solange das
+            Projekt offen ist und du nichts Neues einsammelst oder analysierst.
           </AlertDialog.Description>
           <div className="mt-4 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>

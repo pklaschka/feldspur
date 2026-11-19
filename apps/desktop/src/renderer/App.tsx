@@ -12,6 +12,7 @@ import { Button, cx, ErrorBanner, ErrorProvider, Panel, TooltipProvider } from "
 import { HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
 import { SessionPane } from "./app/SessionPane.tsx";
 import { StrayDropHint, useStrayDrop } from "./app/strayDrop.tsx";
+import { DeletedToast, SESSION_DELETED } from "./app/history.tsx";
 
 const api = window.feldspur;
 
@@ -32,6 +33,8 @@ export function App() {
   const strayDrop = useStrayDrop();
   /** Zuletzt gelöschter Einsatz: Hinweis mit „Rückgängig“, auch wenn danach kein Einsatz mehr offen ist. */
   const [deleted, setDeleted] = useState<{ id: string; title: string } | null>(null);
+  /** Oberster Rückgängig-Schritt, wie ihn der offene Einsatz zuletzt gelesen hat (undefined: noch keiner). */
+  const [topUndo, setTopUndo] = useState<string | null | undefined>(undefined);
 
   // Strg/⌘+O: Projektmenü mit den zuletzt geöffneten (auf dem Startbildschirm: Öffnen-Dialog).
   const hasProject = useEffectEvent(() => !!project);
@@ -101,7 +104,12 @@ export function App() {
     setDeleted(null);
     const r = await guard(async () => {
       // Nur den Löschschritt zurücknehmen, nie etwas, das inzwischen dazugekommen ist.
-      if ((await api.historyState()).undo !== "Einsatz gelöscht")
+      const { undo } = await api.historyState();
+      if (undo === null)
+        throw new Error(
+          "Das Löschen lässt sich nicht mehr rückgängig machen: Der Verlauf ist leer (nach dem Schließen des Projekts, nach Einsammeln oder Tonspur-Analyse). Einen früheren Stand findest du unter Sicherungen im Projektmenü.",
+        );
+      if (undo !== SESSION_DELETED)
         throw new Error(
           "Seit dem Löschen wurde etwas anderes geändert. Rückgängig geht Schritt für Schritt mit Strg+Z (Mac: ⌘Z).",
         );
@@ -220,8 +228,10 @@ export function App() {
                   // Rückgängig kann den offenen Einsatz entfernen (Anlegen rückgängig): dann einen anderen zeigen.
                   if (!p.sessions.some((x) => x.id === sessionId)) setSessionId(p.sessions[0]?.id ?? null);
                 }}
+                onHistory={(h) => setTopUndo(h.undo)}
                 onDeleted={(p) => {
                   const title = project.sessions.find((x) => x.id === sessionId)?.title ?? "";
+                  setTopUndo(undefined);
                   setDeleted({ id: sessionId, title });
                   setProject(p);
                   setSessionId(p.sessions[0]?.id ?? null);
@@ -245,26 +255,13 @@ export function App() {
               </main>
             )}
             {deleted && !project.sessions.some((s) => s.id === deleted.id) && (
-              <div
-                role="status"
-                data-testid="session-deleted"
-                className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-ink px-4 py-2 text-[0.92rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
-              >
-                <span>Einsatz „{deleted.title}“ gelöscht</span>
-                <button
-                  className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
-                  onClick={() => void undoDelete()}
-                >
-                  Rückgängig
-                </button>
-                <button
-                  className="cursor-pointer opacity-70 hover:opacity-100"
-                  aria-label="Hinweis ausblenden"
-                  onClick={() => setDeleted(null)}
-                >
-                  ×
-                </button>
-              </div>
+              <DeletedToast
+                key={deleted.id}
+                title={deleted.title}
+                topUndo={topUndo}
+                onUndo={() => void undoDelete()}
+                onClose={() => setDeleted(null)}
+              />
             )}
           </div>
         </TooltipProvider>

@@ -12,6 +12,7 @@ import {
   type ExportStatus,
   entryText,
   exportSession,
+  ExportPrecheckError,
   type ImageRef,
   montagePreview,
   type MontagePreview,
@@ -161,7 +162,7 @@ export async function runExport(
     const fingerprint = exportFingerprint(s, sessionId, settings);
     const dir = join(parent, baseName(buildScaffold(s, sessionId, modeOf(s, sessionId, opts.realtime))));
     // Schlägt die Ausgabe in denselben Ordner fehl oder wird abgebrochen, liegen dort womöglich halbe Dateien:
-    // dann gilt der alte Stand nicht.
+    // dann gilt der alte Stand nicht. Scheitert schon die Vorabprüfung, ist noch nichts geschrieben: Stand behalten.
     const r = await exportSession(s, sessionId, dir, {
       signal: ctrl.signal,
       video: opts.video,
@@ -173,7 +174,8 @@ export async function runExport(
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
     }).catch((e: unknown) => {
-      if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);
+      if (!(e instanceof ExportPrecheckError) && s.getExportRecord(sessionId)?.dir === dir)
+        s.deleteExportRecord(sessionId);
       if (ctrl.signal.aborted) return null;
       throw e;
     });

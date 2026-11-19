@@ -1,6 +1,6 @@
 /** Ein Einsatz: Schritte, Detailleiste und alle Dialoge, die dazugehören. */
 import { Tabs } from "radix-ui";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { ProjectInfo, SessionPatch, SessionView } from "../../shared/api.ts";
 import { Collect } from "../Collect.tsx";
 import { DiaryEditor } from "../DiaryEditor.tsx";
@@ -21,8 +21,9 @@ import { SourceActionsProvider, type SourceActions } from "../SourceMenu.tsx";
 import { Transcriber } from "../Transcriber.tsx";
 import { Sync } from "../Sync.tsx";
 import { Button, cx, ErrorBanner } from "../ui.tsx";
-import { HistoryGlyph, UndoToast, useHistory } from "./history.tsx";
+
 import { StrayDropHint } from "./strayDrop.tsx";
+import { HistoryGlyph, UndoToast, useHistory, type HistoryState } from "./history.tsx";
 import type { Guard, Step } from "../App.tsx";
 
 const api = window.feldspur;
@@ -33,6 +34,7 @@ export function SessionPane({
   strayDrop,
   onProject,
   onDeleted,
+  onHistory,
 }: {
   sessionId: string;
   guard: Guard;
@@ -41,6 +43,8 @@ export function SessionPane({
   onProject: (p: ProjectInfo) => void;
   /** Der Einsatz wurde gelöscht; `p` ist das Projekt danach. */
   onDeleted: (p: ProjectInfo) => void;
+  /** Jeder neu gelesene Stand des Verlaufs. */
+  onHistory?: (h: HistoryState) => void;
 }) {
   const [view, setView] = useState<SessionView | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -54,7 +58,9 @@ export function SessionPane({
   const [originals, setOriginals] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
   const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
-  const history = useHistory(view, sessionId, guard, setView, onProject);
+  const history = useHistory(view, sessionId, guard, setView, onProject, onHistory);
+  /** „Lage passt“ läuft: weitere Bestätigungen (zweites Strg+Enter, Doppelklick) bis zur Antwort verwerfen. */
+  const confirming = useRef(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -158,8 +164,11 @@ export function SessionPane({
    * Reihenfolge der Prüfliste gilt); ist keine mehr übrig, bleibt die Auswahl und der Hinweis sagt es.
    */
   const confirm = (id: string, startMs: number) => {
+    if (confirming.current) return;
+    confirming.current = true;
     const order = step === "review" ? placesAfter(checkQueue(view.rows), view.conflictGroups, id) : null;
     void guard(() => api.confirmPlacement(id, startMs)).then((v) => {
+      confirming.current = false;
       if (!v) return;
       const queue = checkQueue(v.rows);
       if (order && !queue.length) history.note("Alle Stellen geprüft");

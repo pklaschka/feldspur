@@ -32,8 +32,10 @@ Dateien auf mehreren Tagen, weist Feldspur sanft darauf hin, dass ein Einsatz ei
 Einen Testeinsatz oder einen doppelt angelegten Feldtag löschst du unter **Einsatzdaten bearbeiten** mit **Einsatz
 löschen…**. Nach einer Nachfrage verschwinden der Einsatz und alles, was in Feldspur dazu entstanden ist: Quellen,
 Zeitbelege, Anker, Tagebucheinträge, Mitschrift und Notizen. Originaldateien und frühere Ausgaben bleiben erhalten.
-Der Hinweis danach bietet **Rückgängig** an; das holt den Einsatz vollständig zurück. Solange für den Einsatz
-eingesammelt, analysiert oder ausgegeben wird, lässt er sich nicht löschen.
+Der Hinweis danach bietet **Rückgängig** an; das holt den Einsatz vollständig zurück, solange das Projekt offen ist und
+du seitdem nichts eingesammelt oder analysiert hast. Danach ist der Verlauf leer, und nur eine Sicherung bringt den
+Einsatz zurück (@sec-sicherungen). Solange für den Einsatz eingesammelt, analysiert oder ausgegeben wird, lässt er sich
+nicht löschen.
 
 ::: {.callout-tip}
 ### Deine Originale bleiben, wo sie sind

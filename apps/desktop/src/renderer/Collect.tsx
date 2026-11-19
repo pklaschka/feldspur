@@ -239,7 +239,8 @@ function DayHint({
             Die meisten Dateien stammen vom {formatDate(hint.day)}, der Einsatz steht auf {formatDate(sessionDate)}.
           </>
         )}
-        {hint.days > 1 && ` Dateien von ${hint.days} Tagen, ein Einsatz ist ein Tag.`}
+        {hint.days > 1 &&
+          ` Die Dateien stammen von ${hint.days} Tagen. Ein Einsatz ist für einen Feldtag gedacht; lege für weitere Tage eigene Einsätze an.`}
       </span>
       {differs && (
         <Button variant="link" onClick={() => void onSetDate(hint.day)}>
