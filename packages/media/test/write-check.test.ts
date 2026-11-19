@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vite-plus/test";
-import { ensureWritable, friendlyWriteError, writeErrorText } from "../src/write-check.ts";
+import { ensureWritable, friendlyWriteError, friendlyWriteErrorIn, writeErrorText } from "../src/write-check.ts";
 
 const errno = (code: string, path?: string) =>
   Object.assign(new Error(`${code}: irgendwas, open '${path}'`), { code, path });
@@ -25,6 +25,24 @@ describe("writeErrorText", () => {
     expect(friendlyWriteError(other)).toBe(other);
     expect(friendlyWriteError(errno("EBUSY", "/x/a.docx"))).toMatchObject({
       message: expect.stringContaining("„a.docx“"),
+    });
+  });
+});
+
+describe("friendlyWriteErrorIn", () => {
+  it("übersetzt nur Fehler im Ausgabeordner", () => {
+    expect(friendlyWriteErrorIn(errno("EBUSY", "/ziel/Tag/a.docx"), "/ziel/Tag")).toMatchObject({
+      message: expect.stringContaining("„a.docx“"),
+    });
+    const elsewhere = errno("EBUSY", "/tmp/feldspur-export-1/still-1.jpg");
+    expect(friendlyWriteErrorIn(elsewhere, "/ziel/Tag")).toBe(elsewhere);
+    const sibling = errno("EACCES", "/ziel/Tag2/a.docx");
+    expect(friendlyWriteErrorIn(sibling, "/ziel/Tag")).toBe(sibling);
+    expect(friendlyWriteErrorIn(errno("EACCES"), "/ziel/Tag")).toMatchObject({
+      message: "Keine Schreibrechte im Ordner „/ziel/Tag“.",
+    });
+    expect(friendlyWriteErrorIn(errno("ENOSPC", "/tmp/x.mp4"), "/ziel/Tag")).toMatchObject({
+      message: "Der Datenträger ist voll.",
     });
   });
 });

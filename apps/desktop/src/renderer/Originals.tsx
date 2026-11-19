@@ -7,7 +7,7 @@ import { Dialog } from "radix-ui";
 import { useEffect, useState } from "react";
 import type { OriginalsProgress, OriginalsSearch, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
-import { Button, CloseButton, cx, Glyph } from "./ui.tsx";
+import { Button, CloseButton, cx, ErrorBanner, Glyph } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -173,6 +173,7 @@ export function OriginalsDialog({
             die Prüfsumme (SHA-256) zu der beim Einsammeln passt; ein gleicher Dateiname genügt nicht. Jede
             Neuverknüpfung steht im Änderungsprotokoll.
           </Dialog.Description>
+          <ErrorBanner dialog className="mb-3" />
 
           <p className="mb-2 font-serif text-[1.05rem]" data-testid="originals-summary">
             {summary ??
