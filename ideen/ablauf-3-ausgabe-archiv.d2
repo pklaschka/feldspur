@@ -1,0 +1,21 @@
+...@feldspur
+direction: right
+
+einsatz: Einsatz in Feldspur {class: tagebuch; width: 360}
+feldspur: Feldspur {class: werkzeug}
+
+ordner: Ein Ausgabeordner {
+  class: gruppe
+  bisher: Einsatztranskript, Montagevideo, Viewer {class: ergebnis}
+  meta: Metadaten und LIESMICH {class: [ergebnis; hervorgehoben]}
+  proto: Änderungsprotokoll, Prüfsummenliste {class: ergebnis}
+  orig: Originale (auf Wunsch) {class: ergebnis}
+}
+
+maxqda: Codieren in MAXQDA {class: ziel}
+archiv: Archiv oder Repositorium {class: ziel}
+
+einsatz -> feldspur
+feldspur -> ordner
+ordner -> maxqda
+ordner -> archiv

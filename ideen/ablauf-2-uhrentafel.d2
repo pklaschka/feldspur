@@ -1,0 +1,17 @@
+...@feldspur
+direction: right
+
+feld: Im Feld {
+  class: gruppe
+  tafel: Uhrentafel auf dem Handy {class: [notiz; hervorgehoben]; width: 420}
+  kamera: Kameras filmen das Bild {class: [video; stapel]; width: 400}
+  rekorder: Rekorder hören die Tonfolge {class: [audio; stapel]; width: 460}
+}
+
+feldspur: Feldspur {class: werkzeug}
+beleg: Zeitbeleg »Uhrentafel« {class: ergebnis}
+abgleich: Uhren abgeglichen {class: ziel}
+
+feld -> feldspur: Aufnahmen
+feldspur -> beleg: erkennt Bild und Ton
+beleg -> abgleich: du bestätigst
