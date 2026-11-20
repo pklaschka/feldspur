@@ -1,5 +1,5 @@
 /**
- * Ein Weg, ffmpeg und ffprobe zu starten (ADR-001, Issue #134). Alle Kindprozesse in Feldspur
+ * Ein Weg, ffmpeg und ffprobe zu starten (Issue #134). Alle Kindprozesse in Feldspur
  * laufen hierüber, damit Abbruch, Zeitlimit und Fehlertext überall gleich funktionieren:
  *
  * - Abbrechen beendet den Prozess. Das Promise wird erst abgelehnt, wenn der Prozess wirklich
