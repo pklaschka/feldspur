@@ -9,6 +9,8 @@ const api = window.feldspur;
 /** Schritte, nach denen ein Hinweis mit „Rückgängig“ erscheint: sie ersetzen die frühere Nachfrage. */
 export const NOTIFY = new Set([
   "Quelle entfernt",
+  "Zeitbelege neu gelesen",
+  "Bestätigungen entfernt",
   "Anker entfernt",
   "Anker gesetzt",
   "Anker geändert",
@@ -43,6 +45,8 @@ export interface Toast {
   /** Was der Knopf im Hinweis tut: false = rückgängig, true = wiederholen. */
   redo: boolean;
   n: number;
+  /** Nur zur Information, es gibt nichts rückgängig zu machen (kein Knopf). */
+  info?: boolean;
 }
 
 /** Textfeld mit eigenem Rückgängig (Strg+Z bleibt dort beim Feld). */
@@ -141,6 +145,8 @@ export function useHistory(
     note: (text: string) => {
       pendingNote.current = text;
     },
+    /** Hinweis ohne Rückgängig, wenn ein Schritt nichts geändert hat. */
+    info: (text: string) => setToast({ text, redo: false, n: Date.now(), info: true }),
   };
 }
 
@@ -173,14 +179,16 @@ export function UndoToast({
       className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-ink px-4 py-2 text-[0.92rem] text-panel shadow-lg dark:border dark:border-line-2 dark:bg-panel-2 dark:text-ink"
     >
       <span>{toast.text}</span>
-      <button
-        className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
-        onClick={() => {
-          onAction(toast.redo);
-        }}
-      >
-        {toast.redo ? "Wiederholen" : "Rückgängig"}
-      </button>
+      {!toast.info && (
+        <button
+          className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"
+          onClick={() => {
+            onAction(toast.redo);
+          }}
+        >
+          {toast.redo ? "Wiederholen" : "Rückgängig"}
+        </button>
+      )}
       {toast.target && (
         <button
           className="cursor-pointer font-semibold text-accent-soft underline-offset-2 hover:underline dark:text-accent"

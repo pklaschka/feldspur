@@ -190,6 +190,11 @@ export function deviceGuess(
   return { key: `family:${family.toLowerCase()}`, label: prefix ? `${base} ${prefix}` : base };
 }
 
+/** Zeitbelege einer Datei aus Metadaten, EXIF und Dateinamen (vor dem Abgleich über alle Clips eines Geräts). */
+function timeEvidenceOf(fileName: string, probe: MediaProbe | null, exif: ImageExif | null): EvidenceDraft[] {
+  return [...(probe ? evidenceFromMediaTags(probe) : []), ...evidenceFromExif(exif), ...evidenceFromFilename(fileName)];
+}
+
 export async function inspectFile(
   path: string,
   opts: { signal?: AbortSignal; onBytes?: (bytes: number) => void } = {},
@@ -215,12 +220,7 @@ export async function inspectFile(
     kind = classify(fileName, { hasCameraExif: !!(exif?.model || exif?.dateTimeOriginal) });
   }
 
-  const evidence: EvidenceDraft[] = [];
-  if (evidenceAppliesTo(kind)) {
-    if (probe) evidence.push(...evidenceFromMediaTags(probe));
-    evidence.push(...evidenceFromExif(exif));
-    evidence.push(...evidenceFromFilename(fileName));
-  }
+  const evidence = evidenceAppliesTo(kind) ? timeEvidenceOf(fileName, probe, exif) : [];
   if (evidenceAppliesTo(kind) && evidence.length === 0) warnings.push("Keine Zeitangabe gefunden");
 
   const device = deviceGuess(fileName, kind, exif, probe);
@@ -412,5 +412,86 @@ export function applyImport(
         : d;
     });
     return result;
+  });
+}
+
+/** Neu gelesene Metadaten einer schon eingesammelten Quelle. */
+export interface RereadSource {
+  source: Source;
+  metadata: Record<string, unknown>;
+  evidence: EvidenceDraft[];
+}
+
+/**
+ * Metadaten und Zeitbelege einer Quelle erneut aus der Originaldatei lesen, ohne Prüfsumme. Für Projekte, die mit
+ * einer älteren Fassung eingesammelt wurden (neue Zeitquellen wie Kamera-Timecode).
+ */
+export async function rereadSource(source: Source, opts: { signal?: AbortSignal } = {}): Promise<RereadSource> {
+  let probe: MediaProbe | null = null;
+  let exif: ImageExif | null = null;
+  if (source.kind === "video" || source.kind === "audio") probe = await probeMedia(source.originalPath, opts);
+  else if (source.kind === "photo" || source.kind === "diary") exif = await readImageExif(source.originalPath);
+  const metadata: Record<string, unknown> = { ...source.metadata };
+  if (probe) metadata.media = probe;
+  if (exif) metadata.exif = exif;
+  const evidence = evidenceAppliesTo(source.kind) ? timeEvidenceOf(source.fileName, probe, exif) : [];
+  return { source, metadata, evidence };
+}
+
+const READ_KINDS = new Set(["metadata", "filename"]);
+const evidenceKey = (e: EvidenceDraft) =>
+  [e.kind, e.clock, e.atMediaMs, e.localMs, e.utcMs ?? "", e.uncertaintyMs, e.detail, e.raw].join("|");
+
+/**
+ * Neu gelesene Zeitbelege übernehmen: je Gerät gemeinsam nachschärfen (wie beim Einsammeln), dann nur gelesene
+ * Belege (Metadaten, Dateiname) ersetzen. Unveränderte Belege behalten ihre Kennung und ob sie eingeschaltet sind;
+ * Anker, Ansagen, Handeingaben und Entscheidungen bleiben unberührt. Die Geräteeinstellungen (UTC, Zeitzone) auch.
+ * Gibt zurück, bei wie vielen Quellen sich etwas geändert hat.
+ */
+export function applyReread(store: ProjectStore, sessionId: Id, read: RereadSource[]): number {
+  const plan = rereadPlan(store, sessionId, read);
+  return store.transaction(() => {
+    for (const p of plan) {
+      for (const e of p.gone) store.deleteEvidence(e.id);
+      for (const e of p.added) store.addEvidence({ ...e, sourceId: p.source.id });
+      if (p.metadataChanged) store.updateSource(p.source.id, { metadata: p.metadata });
+    }
+    return plan.filter((p) => p.gone.length || p.added.length).length;
+  });
+}
+
+/** Ändert neues Lesen etwas (an Belegen oder Metadaten)? */
+export function rereadChanges(store: ProjectStore, sessionId: Id, read: RereadSource[]): boolean {
+  return rereadPlan(store, sessionId, read).some((p) => p.gone.length || p.added.length || p.metadataChanged);
+}
+
+function rereadPlan(store: ProjectStore, sessionId: Id, read: RereadSource[]) {
+  const asCandidates = read.map((r): ImportCandidate => ({
+    path: r.source.originalPath,
+    fileName: r.source.fileName,
+    sizeBytes: r.source.sizeBytes,
+    sha256: r.source.sha256,
+    kind: r.source.kind,
+    durationMs: r.source.durationMs,
+    metadata: r.metadata,
+    deviceKey: r.source.deviceId ?? r.source.id,
+    deviceLabel: "",
+    evidence: r.evidence,
+    warnings: [],
+  }));
+  const refined = refineClipTimes(asCandidates);
+  const all = store.listEvidence(sessionId);
+  return read.map((r, i) => {
+    const fresh = refined[i]!.evidence;
+    const old = all.filter((e) => e.sourceId === r.source.id && READ_KINDS.has(e.kind));
+    const freshKeys = new Set(fresh.map(evidenceKey));
+    const oldKeys = new Set(old.map(evidenceKey));
+    return {
+      source: r.source,
+      metadata: r.metadata,
+      gone: old.filter((e) => !freshKeys.has(evidenceKey(e))),
+      added: fresh.filter((e) => !oldKeys.has(evidenceKey(e))),
+      metadataChanged: JSON.stringify(r.metadata) !== JSON.stringify(r.source.metadata),
+    };
   });
 }

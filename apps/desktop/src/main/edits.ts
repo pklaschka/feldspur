@@ -109,6 +109,22 @@ export function addTimeEvidence(s: ProjectStore, input: TimeInput): Id {
   return session.id;
 }
 
+/** Bestätigungen aller Quellen eines Geräts entfernen; die Lagen folgen dann wieder den Belegen. Gibt den Einsatz zurück. */
+export function clearDeviceChecks(s: ProjectStore, deviceId: Id): Id {
+  const device = s.getDevice(deviceId);
+  const own = new Set(
+    s
+      .listSources(device.sessionId)
+      .filter((x) => x.deviceId === deviceId)
+      .map((x) => x.id),
+  );
+  s.transaction(() => {
+    for (const e of s.listEvidence(device.sessionId))
+      if (e.kind === "checked" && own.has(e.sourceId)) s.deleteEvidence(e.id);
+  });
+  return device.sessionId;
+}
+
 function dropChecks(s: ProjectStore, sessionId: Id, sourceId: Id): void {
   for (const e of s.listEvidence(sessionId))
     if (e.sourceId === sourceId && e.kind === "checked") s.deleteEvidence(e.id);

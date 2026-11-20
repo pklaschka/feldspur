@@ -92,6 +92,13 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
   Einträgen, nicht nach der Aufnahmezeit des Fotos (@sec-tagebuch). Eine Seite mit Einträgen lässt sich erst wieder
   als Foto behandeln, wenn die Einträge gelöscht sind.
 - **Zeitzone der Geräteuhr**, falls ein Gerät auf eine andere Zeitzone gestellt war als der Einsatz.
+- **Zeitbelege neu lesen** (Menü am Gerät) liest Metadaten, Dateinamen und Kamera-Timecode aller Quellen des Geräts
+  noch einmal aus den Originaldateien, etwa wenn eine neuere Feldspur-Fassung mehr Zeitquellen kennt
+  (@sec-zeitquellen). Anker, angesagte Uhrzeiten, Handeingaben und deine Entscheidungen bleiben, ebenso die
+  Einstellungen des Geräts. Rückgängig machen geht wie immer mit Strg/⌘+Z.
+- **Bestätigungen entfernen** nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen an den Quellen
+  des Geräts auf einmal zurück. Eine Bestätigung hält eine Lage fest; ohne sie folgen die Quellen wieder dem
+  genauesten Zeitbeleg, zum Beispiel einem neu gelesenen Timecode.
 - **Entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
 
 Wenn alles eingesammelt ist, geht es mit **Weiter** zum Abgleichen.

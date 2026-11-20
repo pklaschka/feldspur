@@ -13,7 +13,7 @@ import {
   timecodeOffset,
 } from "../src/clip-times.ts";
 import { evidenceFromFilename, evidenceFromMediaTags } from "../src/evidence.ts";
-import { applyImport, scanPaths, stampsLookLocal, type ImportCandidate } from "../src/import.ts";
+import { applyImport, applyReread, scanPaths, stampsLookLocal, type ImportCandidate } from "../src/import.ts";
 import type { MediaProbe } from "../src/probe.ts";
 import { ff, hasFfmpeg } from "./fixtures.ts";
 
@@ -223,6 +223,63 @@ describe("Zeitzone der Kamera", () => {
     const r = resolveTimeline(store.loadResolveInput(session.id));
     // Beide liegen bei 10:18:27, wie die Kameras es anzeigten.
     for (const s of res.sources) expect(formatLocal(r.placements.get(s.id)!.startMs)).toBe("2026-09-14T10:18:27");
+    store.close();
+  });
+});
+
+describe("Zeitbelege neu lesen", () => {
+  it("ergänzt Timecode-Belege, lässt Handeingaben und unveränderte Belege in Ruhe", () => {
+    const tcProbe = (created: string, tc: string) =>
+      probe(1_000, { creation_time: created, timecode: tc }, { frameRate: { num: 50, den: 1 } });
+    const fresh = [
+      cand("P001C001.MOV", tcProbe("2026-09-14T09:18:27.000000Z", "10:34:39:28"), "cam"),
+      cand("P001C002.MOV", tcProbe("2026-09-14T09:25:03.000000Z", "10:41:16:03"), "cam"),
+    ];
+    // Stand einer älteren Fassung: nur creation_time, keine Bildrate in den Metadaten.
+    const old = fresh.map((c) => ({
+      ...c,
+      metadata: { media: { ...(c.metadata.media as MediaProbe), frameRate: undefined } },
+    }));
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "UTC" });
+    const res = applyImport(
+      store,
+      session.id,
+      old.map((c) => ({ ...c, metadata: JSON.parse(JSON.stringify(c.metadata)) })),
+    );
+    const [a] = res.sources;
+    const before = store.listEvidence(session.id);
+    expect(before.some((e) => e.detail.startsWith("Kamera-Timecode"))).toBe(false);
+    const keep = before.find((e) => e.sourceId === a!.id)!;
+    store.setEvidenceEnabled(keep.id, false);
+    const manual = store.addEvidence({
+      sourceId: a!.id,
+      kind: "manual",
+      clock: "true",
+      atMediaMs: 0,
+      localMs: localMs(2026, 9, 14, 9, 18, 30),
+      uncertaintyMs: 1000,
+      detail: "Von Hand",
+    });
+    const changed = applyReread(
+      store,
+      session.id,
+      res.sources.map((s, i) => ({ source: s, metadata: fresh[i]!.metadata, evidence: fresh[i]!.evidence })),
+    );
+    expect(changed).toBe(2);
+    const after = store.listEvidence(session.id);
+    expect(after.filter((e) => e.detail.startsWith("Kamera-Timecode"))).toHaveLength(2);
+    expect(after.find((e) => e.id === manual.id)).toBeDefined();
+    // Unveränderter Beleg: gleiche Kennung, bleibt ausgeschaltet.
+    expect(after.find((e) => e.id === keep.id)?.enabled).toBe(false);
+    expect((store.getSource(a!.id).metadata.media as MediaProbe).frameRate).toEqual({ num: 50, den: 1 });
+    // Zweites Mal: nichts mehr zu tun.
+    const again = res.sources.map((s, i) => ({
+      source: store.getSource(s.id),
+      metadata: fresh[i]!.metadata,
+      evidence: fresh[i]!.evidence,
+    }));
+    expect(applyReread(store, session.id, again)).toBe(0);
     store.close();
   });
 });
