@@ -20,6 +20,8 @@
   --accent: #a4441f;
   --accent-ink: #fffaf2;
   --accent-soft: #f3e1d3;
+  /* Laufende Zeile beim Mitschreiben: Sand aus der Feldspur-Palette, dazu ein Terrakotta-Streifen (5,9:1 zum Grund). */
+  --current-line: #e8d6b8;
   --rail: #3a281d;
   --rail-ink: #f5ecdf;
   --rail-muted: #c9b7a2;
@@ -60,6 +62,7 @@
     --accent: #e48f63;
     --accent-ink: #26140a;
     --accent-soft: #452b1d;
+    --current-line: #553624;
     --rail: #110e0b;
     --rail-ink: #efe6da;
     --rail-muted: #a59683;
@@ -100,6 +103,7 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-current-line: var(--current-line);
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);

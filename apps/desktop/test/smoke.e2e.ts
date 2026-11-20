@@ -676,6 +676,21 @@ try {
   const firstPart = await tr.getByTestId("line").nth(1).getByLabel("Text der Zeile").inputValue();
   if (firstPart !== "Zwölf Jahre,") throw new Error(`Erster Teil nach dem Teilen: ${firstPart}`);
   console.log(`Geteilt: ${(await tr.getByTestId("line").nth(2).innerText()).replace(/\s+/g, " ")}`);
+  // Die laufende Zeile ist markiert (Fläche + Streifen), hell und dunkel.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.mouse.click(sb.x + sb.width * atFrac(63_500), sb.y + sb.height / 2);
+  await tr.locator('[data-testid="line"][aria-current="true"]').waitFor();
+  if ((await tr.locator('[aria-current="true"]').count()) !== 1) throw new Error("Nicht genau eine laufende Zeile");
+  if (process.env.FELDSPUR_SCREENSHOT) {
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.waitForTimeout(150);
+      await tr.getByTestId("lines").screenshot({
+        path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, `-laufende-zeile-${scheme}.png`),
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+  }
   // Notiz mit Strecke: noch abzutippender Abschnitt.
   const notes = tr.getByTestId("notes");
   await notes.getByRole("button", { name: "Beginn hier" }).click();
