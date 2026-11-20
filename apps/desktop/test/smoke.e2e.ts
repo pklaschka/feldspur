@@ -676,6 +676,24 @@ try {
   const firstPart = await tr.getByTestId("line").nth(1).getByLabel("Text der Zeile").inputValue();
   if (firstPart !== "Zwölf Jahre,") throw new Error(`Erster Teil nach dem Teilen: ${firstPart}`);
   console.log(`Geteilt: ${(await tr.getByTestId("line").nth(2).innerText()).replace(/\s+/g, " ")}`);
+  // Markierter Text in der laufenden Zeile bleibt sichtbar (#147), hell und dunkel.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.mouse.click(sb.x + sb.width * atFrac(63_500), sb.y + sb.height / 2);
+  await page.waitForTimeout(300);
+  if (process.env.FELDSPUR_SCREENSHOT) {
+    const marked = tr.getByTestId("line").nth(2).getByLabel("Text der Zeile");
+    await marked.focus();
+    await marked.evaluate((el: HTMLTextAreaElement) => el.setSelectionRange(5, 17));
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.waitForTimeout(150);
+      await tr.getByTestId("lines").screenshot({
+        path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, `-markierung-${scheme}.png`),
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await marked.blur();
+  }
   // Notiz mit Strecke: noch abzutippender Abschnitt.
   const notes = tr.getByTestId("notes");
   await notes.getByRole("button", { name: "Beginn hier" }).click();

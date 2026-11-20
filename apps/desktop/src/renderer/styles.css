@@ -154,8 +154,10 @@
     text-wrap: pretty;
   }
   /* Was der Browser sonst selbst zeichnet, trägt auch die Farben der App. */
+  /* Markierter Text in vollem Terrakotta: accent-soft war zugleich die Fläche der laufenden Mitschreib-Zeile,
+     ausgewählter Text war dort unsichtbar (#147). Kontrast zum Grund ≥ 4,8:1, Schrift darauf ≥ 5,9:1. */
   ::selection {
-    @apply bg-accent-soft;
+    @apply bg-accent text-accent-ink;
   }
   html {
     scrollbar-color: var(--line-2) transparent;
