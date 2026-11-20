@@ -11,11 +11,14 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { hasFfmpeg, makeSyncVideo } from "../../../packages/media/test/fixtures.ts";
 import { EXPORT_CHECK_STEP, IPC, type ExportProgress } from "../src/shared/api.ts";
 import { fakeWebContents } from "./fake-webcontents.ts";
+import { fakePowerSaveBlocker } from "./power-blocker.ts";
 
 const userData = mkdtempSync(join(tmpdir(), "feldspur-userdata-"));
+const power = vi.hoisted(() => ({ blocker: null as unknown as ReturnType<typeof fakePowerSaveBlocker> }));
 vi.mock("electron", () => ({
   app: { getPath: () => userData },
   ipcMain: { on: () => {}, handle: () => {} },
+  powerSaveBlocker: (power.blocker = fakePowerSaveBlocker()),
 }));
 const { cancelExport, exportRunning, exportStatus, runExport } = await import("../src/main/export.ts");
 

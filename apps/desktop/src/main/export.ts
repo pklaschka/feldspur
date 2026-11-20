@@ -2,7 +2,7 @@
  * Ausgeben aus der App: Ordner wählen, Export anstoßen, Einblendungen von der Oberfläche zeichnen lassen.
  */
 import { join } from "node:path";
-import { app, ipcMain, type WebContents } from "electron";
+import { app, ipcMain, powerSaveBlocker, type WebContents } from "electron";
 import type { ExportSettings, ProjectStore } from "@feldspur/core";
 import {
   baseName,
@@ -205,6 +205,21 @@ export function exportStatus(
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
 }
 
+/**
+ * Während der Ausgabe wach bleiben (Issue #142): Der Rechner geht nicht in den Ruhezustand, der Bildschirm darf
+ * aber aus. Die Oberfläche zeichnet die Einblendungen und wird sonst gedrosselt, wenn ihr Fenster verdeckt ist oder
+ * der Bildschirm aus ist; auch das wird für die Dauer der Ausgabe abgeschaltet. Gibt das Aufräumen zurück.
+ */
+function keepAwake(wc: WebContents): () => void {
+  const blocker = powerSaveBlocker.start("prevent-app-suspension");
+  const throttled = wc.isDestroyed() ? null : wc.getBackgroundThrottling();
+  if (throttled) wc.setBackgroundThrottling(false);
+  return () => {
+    if (powerSaveBlocker.isStarted(blocker)) powerSaveBlocker.stop(blocker);
+    if (throttled && !wc.isDestroyed()) wc.setBackgroundThrottling(true);
+  };
+}
+
 /** Laufende Ausgabe dieses Einsatzes abbrechen (sonst nichts). */
 export function cancelExport(sessionId: string): void {
   if (running === sessionId) controller?.abort();
@@ -231,6 +246,7 @@ export async function runExport(
   running = sessionId;
   const ctrl = new AbortController();
   controller = ctrl;
+  const sleepAgain = keepAwake(wc);
   try {
     // Erster Schritt der Ausgabe, erst nach der Ordnerwahl (Issue #116): Originale mit Prüfsumme prüfen. Das dauert
     // bei großen Einsätzen Minuten, schon geprüfte Dateien merkt sich die App. Findet die Prüfung etwas, entscheidet
@@ -285,6 +301,7 @@ export async function runExport(
     });
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
   } finally {
+    sleepAgain();
     running = null;
     controller = null;
   }
