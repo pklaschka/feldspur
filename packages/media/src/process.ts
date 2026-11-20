@@ -53,6 +53,8 @@ export const STALL_MS = 120_000;
 const STDERR_KEEP = 4000;
 /** So lange darf ein Prozess nach dem Beenden-Signal brauchen, bevor er hart beendet wird. */
 const KILL_GRACE_MS = 5000;
+/** So lange nach dem Prozessende auf das Schließen von stdout/stderr warten, wenn wir ihn selbst beendet haben. */
+const PIPE_GRACE_MS = 1000;
 
 /** Startet ffmpeg/ffprobe und liefert stdout als Text, sobald der Prozess erfolgreich endet. */
 export function runTool(tool: Tool, args: readonly string[], opts: RunToolOptions = {}): Promise<string> {
@@ -61,7 +63,7 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
   const maxStdout = opts.maxStdoutBytes ?? 16 * 1024 * 1024;
 
   return new Promise((resolve, reject) => {
-    const child = spawn(toolPaths()[tool], args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(toolPaths()[tool], args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     const out: Buffer[] = [];
     let outBytes = 0;
     let err = "";
@@ -74,6 +76,14 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
     const stop = (reason: unknown) => {
       if (stopReason !== null || child.exitCode !== null) return;
       stopReason = reason;
+      // Unter Windows mit allen Unterprozessen beenden: Ein Starter (etwa Chocolateys ffmpeg.exe) ließe sonst das
+      // eigentliche ffmpeg weiterlaufen.
+      if (process.platform === "win32" && child.pid !== undefined) {
+        spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }).on(
+          "error",
+          () => {},
+        );
+      }
       child.kill("SIGTERM");
       hardKill = setTimeout(() => child.kill("SIGKILL"), KILL_GRACE_MS);
     };
@@ -136,6 +146,15 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
           reject(new ToolError(`${tool} lässt sich nicht starten: ${e.message}`, tool, null, err, { cause: e })),
         );
       }
+    });
+    child.on("exit", () => {
+      // Selbst beendet: Hält noch ein Enkelprozess die Ausgabe offen (unter Windows etwa ein Starter-Programm, das
+      // das eigentliche ffmpeg aufruft), käme close nie. Dann die Leitungen nach kurzer Frist selbst schließen.
+      if (stopReason === null) return;
+      setTimeout(() => {
+        child.stdout.destroy();
+        child.stderr.destroy();
+      }, PIPE_GRACE_MS).unref();
     });
     child.on("close", (code) => {
       finish(() => {
