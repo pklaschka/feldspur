@@ -17,20 +17,16 @@
  * MAXQDA und jeder Player. Auf Wunsch folgt je Gerät eine eigene Spur, so lang wie das Video und stumm, wo
  * das Gerät nicht läuft (Issue #122). Schnittprogramme, VLC und der Viewer können sie einzeln abspielen.
  */
-import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { basename, join } from "node:path";
-import { promisify } from "node:util";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
 import type { SessionTranscript } from "./session-transcript.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
 import { probeMedia } from "./probe.ts";
-import { toolPaths } from "./tools.ts";
-
-const run = promisify(execFile);
+import { PROBE_TIMEOUT_MS, runTool, STALL_MS } from "./process.ts";
 
 const FRAME_MS = 1000 / FPS;
 const RATE = 48_000;
@@ -95,20 +91,13 @@ export interface Piece {
 }
 
 /** ffmpeg mit Fortschritt: meldet die schon geschriebene Ausgabezeit in ms. */
-function ffProgress(args: string[], onTimeMs: (ms: number) => void, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Mit signal beendet Node den ffmpeg-Prozess beim Abbrechen und meldet einen AbortError.
-    const child = spawn(
-      toolPaths().ffmpeg,
-      ["-hide_banner", "-loglevel", "error", "-nostats", "-progress", "pipe:1", "-y", ...args],
-      { stdio: ["ignore", "pipe", "pipe"], signal },
-    );
-    let err = "";
-    let buf = "";
-    child.stderr.on("data", (d: Buffer) => {
-      err = (err + d.toString()).slice(-4000);
-    });
-    child.stdout.on("data", (d: Buffer) => {
+async function ffProgress(args: string[], onTimeMs: (ms: number) => void, signal?: AbortSignal): Promise<void> {
+  let buf = "";
+  await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostats", "-progress", "pipe:1", "-y", ...args], {
+    signal,
+    // ffmpeg meldet Fortschritt etwa jede halbe Sekunde; bleibt er aus, hängt der Prozess.
+    idleTimeoutMs: STALL_MS,
+    onStdout: (d) => {
       buf += d.toString();
       const lines = buf.split("\n");
       buf = lines.pop() ?? "";
@@ -116,24 +105,19 @@ function ffProgress(args: string[], onTimeMs: (ms: number) => void, signal?: Abo
         const m = /^out_time_us=(\d+)/.exec(l);
         if (m) onTimeMs(Number(m[1]) / 1000);
       }
-    });
-    child.on("error", reject);
-    child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg: ${err.trim() || code}`))));
+    },
   });
 }
 
 async function ff(args: string[], signal?: AbortSignal): Promise<void> {
-  await run(toolPaths().ffmpeg, ["-hide_banner", "-loglevel", "error", "-y", ...args], {
-    maxBuffer: 16 * 1024 * 1024,
-    signal,
-  });
+  await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { signal });
 }
 
 let encoderCache: string[] | null = null;
 /** H.264, wenn möglich: libx264 (Entwicklung), VideoToolbox (macOS), Media Foundation (Windows), OpenH264; sonst MPEG-4. */
 export async function videoEncoder(): Promise<string[]> {
   if (encoderCache) return encoderCache;
-  const { stdout } = await run(toolPaths().ffmpeg, ["-hide_banner", "-encoders"], { maxBuffer: 8 * 1024 * 1024 });
+  const stdout = await runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS });
   const has = (n: string) => new RegExp(`^\\s*V\\S*\\s+${n}\\s`, "m").test(stdout);
   encoderCache = has("libx264")
     ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]

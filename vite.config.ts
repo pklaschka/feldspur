@@ -13,6 +13,24 @@ export default defineConfig({
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
     },
+    overrides: [
+      {
+        // Kindprozesse nur über runTool (packages/media/src/process.ts): einheitlicher Abbruch, Zeitlimit, Fehlertext.
+        files: ["packages/*/src/**", "apps/*/src/**"],
+        rules: {
+          "no-restricted-imports": [
+            "error",
+            {
+              paths: [
+                { name: "node:child_process", message: "ffmpeg/ffprobe über runTool aus process.ts starten." },
+                { name: "child_process", message: "ffmpeg/ffprobe über runTool aus process.ts starten." },
+              ],
+            },
+          ],
+        },
+      },
+      { files: ["packages/media/src/process.ts"], rules: { "no-restricted-imports": "off" } },
+    ],
   },
   test: {
     include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],

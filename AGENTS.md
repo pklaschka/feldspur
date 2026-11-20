@@ -37,6 +37,9 @@ release. Add a tool name to select part of the graph. For example, run
 - Migrationen in `packages/core/src/db/migrations.ts` nur anhängen, nie ändern.
 - IPC-Aufrufe, die Daten ändern, mit `undoable(…, "Beschriftung", …)` anmelden (Rückgängig, `packages/core/src/db/history.ts`).
   Schreibt etwas außerhalb davon in die Projektdatei, leert das den Verlauf.
+- ffmpeg/ffprobe nur über `runTool` (`packages/media/src/process.ts`) starten und das `signal` immer durchreichen; eine
+  Lint-Regel sperrt `node:child_process` in `src`. Kein Effect, keine eigenen Promise-Hüllen um Prozesse
+  (`docs/adr/001-effect.md`).
 - Keine echten Forschungsdaten in Tests oder Fixtures.
 - Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
 - Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
