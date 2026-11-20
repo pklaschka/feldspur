@@ -1,13 +1,9 @@
 /**
  * Metadaten aus Audio/Video lesen (ffprobe) und aus Bildern (EXIF).
  */
-import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { promisify } from "node:util";
 import exifr from "exifr";
-import { toolPaths } from "./tools.ts";
-
-const run = promisify(execFile);
+import { PROBE_TIMEOUT_MS, runTool } from "./process.ts";
 
 export interface MediaProbe {
   durationMs: number | null;
@@ -26,10 +22,13 @@ interface FfprobeJson {
 }
 
 export async function probeMedia(path: string, opts: { signal?: AbortSignal } = {}): Promise<MediaProbe> {
-  const { stdout } = await run(
-    toolPaths().ffprobe,
+  const stdout = await runTool(
+    "ffprobe",
     ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", path],
-    { maxBuffer: 16 << 20, signal: opts.signal },
+    {
+      signal: opts.signal,
+      timeoutMs: PROBE_TIMEOUT_MS,
+    },
   );
   const j = JSON.parse(stdout) as FfprobeJson;
   const tags: Record<string, string> = {};

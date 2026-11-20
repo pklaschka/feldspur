@@ -2,15 +2,11 @@
  * Standbilder für Einsatztranskript und Montage: Fotos verkleinert, Tagebuch-Rahmen ausgeschnitten.
  * Läuft über ffmpeg, die Originale bleiben unberührt.
  */
-import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import type { Source } from "@feldspur/core";
 import type { ImageRef } from "./session-transcript.ts";
-import { toolPaths } from "./tools.ts";
-
-const run = promisify(execFile);
+import { runTool, STILL_TIMEOUT_MS } from "./process.ts";
 
 export interface Still {
   data: Buffer;
@@ -61,21 +57,25 @@ export async function renderStill(
   // Nie vergrößern; gerade Maße für spätere Videonutzung.
   filters.push(`scale='min(${maxW},iw)':-2`);
   const out = join(outDir, `${opts.name}.jpg`);
-  await run(toolPaths().ffmpeg, [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-i",
-    src.originalPath,
-    "-vf",
-    filters.join(","),
-    "-frames:v",
-    "1",
-    "-q:v",
-    "3",
-    out,
-  ]);
+  await runTool(
+    "ffmpeg",
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-i",
+      src.originalPath,
+      "-vf",
+      filters.join(","),
+      "-frames:v",
+      "1",
+      "-q:v",
+      "3",
+      out,
+    ],
+    { timeoutMs: STILL_TIMEOUT_MS },
+  );
   const data = await readFile(out);
   const size = jpegSize(data);
   if (!size) throw new Error(`Standbild ohne lesbare Größe: ${src.fileName}`);
