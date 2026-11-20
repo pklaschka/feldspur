@@ -83,6 +83,10 @@ du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gi
 frühere Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben im Zwischenspeicher, der nächste Versuch
 geht deshalb schneller.
 
+Solange die Ausgabe läuft, geht der Rechner nicht in den Ruhezustand. Der Bildschirm darf sich ausschalten, und du
+kannst das Fenster verdecken oder in den Hintergrund legen; die Ausgabe läuft weiter. Am Laptop lohnt trotzdem das
+Netzteil. Klappst du einen Mac zu, schläft er je nach Einstellung trotzdem ein; dann den Deckel offen lassen.
+
 ### Viewer (.html) {#sec-viewer}
 
 Der **Viewer** ist eine einzelne HTML-Datei, die neben dem Montagevideo liegt. Du öffnest sie per Doppelklick in
