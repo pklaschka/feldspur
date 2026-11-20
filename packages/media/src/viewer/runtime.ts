@@ -588,9 +588,10 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   function seek(t: number, follow?: boolean) {
     S.t = clamp(t);
     if (!S.missing && vid.readyState > 0) vid.currentTime = S.t;
-    if (follow) setFollow(true, true);
     keepInView();
+    // Erst die aktuelle Zeile bestimmen, dann mitlaufen: sonst scrollt der Text zur vorigen Zeile.
     update();
+    if (follow) setFollow(true, true);
   }
   function update() {
     $("now-clock").textContent = clock(S.t);
@@ -631,11 +632,25 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     // Nur schieben, wenn die Zeile den ruhigen Bereich verlässt: so steht der Text die meiste Zeit still.
     if (!always && top > Math.max(h * 0.12, 70) && top + li.offsetHeight < h * 0.7) return;
     S.progUntil = performance.now() + 900;
+    scrollTarget = li;
     sc.scrollTo({
       top: Math.max(0, sc.scrollTop + top - Math.max(h * 0.28, 76)),
       behavior: reduce.matches ? "auto" : "smooth",
     });
   }
+  // Zeilen außerhalb des Bildes haben nur eine geschätzte Höhe (content-visibility, Bilder laden spät). Steht die
+  // Zeile nach dem Scrollen nicht, wo sie hin sollte, einmal ohne Animation nachrücken.
+  let scrollTarget: HTMLElement | null = null;
+  sc.addEventListener("scrollend", () => {
+    const li = scrollTarget;
+    scrollTarget = null;
+    if (!li || !S.follow || S.cur < 0 || entries[S.cur]!.li !== li) return;
+    const top = rel(li);
+    const want = Math.max(sc.clientHeight * 0.28, 76);
+    if (Math.abs(top - want) < 24) return;
+    S.progUntil = performance.now() + 300;
+    sc.scrollTo({ top: Math.max(0, sc.scrollTop + top - want), behavior: "auto" });
+  });
   function setFollow(on: boolean, quiet?: boolean) {
     S.follow = on;
     $("sheet").dataset.folgt = String(on);
@@ -662,7 +677,9 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     userAt = performance.now();
     S.progUntil = 0;
   };
-  for (const n of ["wheel", "touchstart", "touchmove", "pointerdown"]) sc.addEventListener(n, user, { passive: true });
+  for (const n of ["wheel", "touchstart", "touchmove"]) sc.addEventListener(n, user, { passive: true });
+  // Rollbalken: der Klick trifft den Scrollbereich selbst. Ein Klick auf eine Zeile ist kein Scrollen.
+  sc.addEventListener("pointerdown", (ev) => ev.target === sc && user(), { passive: true });
   sc.addEventListener("keydown", (ev) => {
     if (["PageUp", "PageDown", "Home", "End"].includes(ev.key)) user();
   });
