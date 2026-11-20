@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import type { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { WebContents } from "electron";
 import { ProjectStore } from "@feldspur/core";
 import { applyImport, scanPaths } from "@feldspur/media";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { hasFfmpeg, makeSyncVideo } from "../../../packages/media/test/fixtures.ts";
+import { fakeWebContents } from "./fake-webcontents.ts";
 import { IPC, type ExportProgress } from "../src/shared/api.ts";
 
 const userData = mkdtempSync(join(tmpdir(), "feldspur-userdata-"));
@@ -38,17 +39,15 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
   it("meldet den Abbruch statt eines Fehlers und vergisst die alte Ausgabe im selben Ordner", async () => {
     const out = join(dir, "ausgabe");
     // Zuerst eine fertige Ausgabe ohne Video: Sie steht danach als letzter Stand in der Projektdatei.
-    const quiet = { send: () => {} } as unknown as WebContents;
+    const quiet = fakeWebContents();
     const first = await runExport(store, quiet, sessionId, out, { video: false });
     expect("cancelled" in first).toBe(false);
     expect(store.getExportRecord(sessionId)).not.toBeNull();
 
     // Dann mit Video in denselben Ordner, abgebrochen, sobald das Video beginnt.
-    const wc = {
-      send: (channel: string, p: ExportProgress) => {
-        if (channel === IPC.exportProgress && p.step === "Montagevideo") cancelExport(sessionId);
-      },
-    } as unknown as WebContents;
+    const wc = fakeWebContents((channel: string, p: ExportProgress) => {
+      if (channel === IPC.exportProgress && p.step === "Montagevideo") cancelExport(sessionId);
+    });
     const r = await runExport(store, wc, sessionId, out, { video: true });
     expect(r).toEqual({ cancelled: true });
     // Dort liegen womöglich halbe Dateien: Der alte Stand gilt nicht mehr, ein Video gibt es nicht.
@@ -57,9 +56,23 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
     expect(exportRunning()).toBe(false);
   });
 
+  it("hängt nicht, wenn die Oberfläche während der Einblendungen neu lädt (Issue #137)", async () => {
+    const out = join(dir, "neu-geladen");
+    // Die Oberfläche bekommt die Anfrage nach Einblendungen, antwortet nie und lädt stattdessen neu.
+    const wc = fakeWebContents((channel: string) => {
+      if (channel === IPC.overlayRequest)
+        queueMicrotask(() => (wc as unknown as EventEmitter).emit("did-start-loading"));
+    });
+    await expect(runExport(store, wc, sessionId, out, { video: true })).rejects.toThrow(/neu geladen oder beendet/);
+    expect(exportRunning()).toBe(false);
+    // Und die nächste Ausgabe ist wieder möglich.
+    const again = await runExport(store, fakeWebContents(), sessionId, out, { video: false });
+    expect("dir" in again).toBe(true);
+  });
+
   it("behält den Stand der alten Ausgabe, wenn schon die Vorabprüfung scheitert", async () => {
     const out = join(dir, "vorab");
-    const quiet = { send: () => {} } as unknown as WebContents;
+    const quiet = fakeWebContents();
     await runExport(store, quiet, sessionId, out, { video: false });
     const record = store.getExportRecord(sessionId);
     expect(record).not.toBeNull();

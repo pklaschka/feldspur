@@ -4,6 +4,7 @@ import {
   bytes,
   dbText,
   dominantDay,
+  errorText,
   formatDate,
   localDate,
   maskClock,
@@ -213,5 +214,17 @@ describe("Dauern ohne Doppelpunkt", () => {
     expect(digitsDurationText("10320")).toBe("1:03:20");
     expect(digitsDurationText("45")).toBe("45");
     expect(digitsDurationText("390")).toBe("390");
+  });
+});
+
+describe("Fehlermeldungen aus dem Hauptprozess", () => {
+  it("zeigt nur die Meldung, auch bei eigenen Fehlerklassen", () => {
+    const remote = (m: string) => new Error(`Error invoking remote method 'export:run': ${m}`);
+    expect(errorText(remote("Error: Es läuft schon eine Ausgabe."))).toBe("Es läuft schon eine Ausgabe.");
+    expect(errorText(remote("ToolError: ffmpeg (1): kaputt.mp4: Invalid data"))).toBe(
+      "ffmpeg (1): kaputt.mp4: Invalid data",
+    );
+    expect(errorText(new Error("Direkt"))).toBe("Direkt");
+    expect(errorText("Text")).toBe("Text");
   });
 });

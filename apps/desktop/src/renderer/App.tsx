@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import type { ProjectInfo } from "../shared/api.ts";
 import { ExportProvider } from "./exportState.tsx";
-import { formatDay } from "./format.ts";
+import { errorText, formatDay } from "./format.ts";
 import { renderOverlays } from "./overlay.ts";
 import { Backups } from "./Backups.tsx";
 import { ChangeLog } from "./ChangeLog.tsx";
@@ -59,7 +59,7 @@ export function App() {
       setError(null);
       return await fn();
     } catch (e) {
-      setError((e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+      setError(errorText(e));
       return undefined;
     }
   }, []);
