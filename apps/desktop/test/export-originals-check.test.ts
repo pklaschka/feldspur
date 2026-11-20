@@ -5,12 +5,12 @@
 import { existsSync, mkdirSync, mkdtempSync, openSync, renameSync, rmSync, writeSync, closeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { WebContents } from "electron";
 import { ProjectStore } from "@feldspur/core";
 import { applyImport, scanPaths } from "@feldspur/media";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { hasFfmpeg, makeSyncVideo } from "../../../packages/media/test/fixtures.ts";
 import { EXPORT_CHECK_STEP, IPC, type ExportProgress } from "../src/shared/api.ts";
+import { fakeWebContents } from "./fake-webcontents.ts";
 
 const userData = mkdtempSync(join(tmpdir(), "feldspur-userdata-"));
 vi.mock("electron", () => ({
@@ -43,9 +43,7 @@ describe.skipIf(!hasFfmpeg())("Ausgabe: Originale prüfen als erster Schritt", (
 
   const recorder = () => {
     const steps: ExportProgress[] = [];
-    const wc = {
-      send: (channel: string, p: ExportProgress) => channel === IPC.exportProgress && steps.push(p),
-    } as unknown as WebContents;
+    const wc = fakeWebContents((channel: string, p: ExportProgress) => channel === IPC.exportProgress && steps.push(p));
     return { steps, wc };
   };
 
@@ -100,11 +98,9 @@ describe.skipIf(!hasFfmpeg())("Ausgabe: Originale prüfen als erster Schritt", (
     const fd = openSync(video, "r+");
     writeSync(fd, Buffer.from("feldspur"), 0, 8, 2000);
     closeSync(fd);
-    const wc = {
-      send: (channel: string, p: ExportProgress) => {
-        if (channel === IPC.exportProgress && p.step === EXPORT_CHECK_STEP) cancelExport(sessionId);
-      },
-    } as unknown as WebContents;
+    const wc = fakeWebContents((channel: string, p: ExportProgress) => {
+      if (channel === IPC.exportProgress && p.step === EXPORT_CHECK_STEP) cancelExport(sessionId);
+    });
     const r = await runExport(store, wc, sessionId, join(dir, "abbruch"), { video: false });
     expect(r).toEqual({ cancelled: true });
     expect(existsSync(join(dir, "abbruch"))).toBe(false);

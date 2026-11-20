@@ -10,6 +10,7 @@ import {
   type ExportRequestOptions,
   type OriginalsCheck,
 } from "../shared/api.ts";
+import { errorText } from "./format.ts";
 
 const api = window.feldspur;
 
@@ -92,7 +93,7 @@ export function ExportProvider({ children }: { children: ReactNode }) {
         setJob(null);
       },
       (e: unknown) => {
-        const msg = (e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
+        const msg = errorText(e);
         setErrors((x) => ({ ...x, [sessionId]: msg }));
         setJob(null);
       },
