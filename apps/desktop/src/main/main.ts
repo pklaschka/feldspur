@@ -109,8 +109,8 @@ import { AUTO_BACKUP_CHECK_MS, AutoBackup } from "./backup.ts";
 let store: ProjectStore | null = null;
 /** Laufendes Einsammeln je Einsatz, zum Abbrechen. */
 const importing = new Map<string, AbortController>();
-/** Einsätze, deren Tonspuren gerade analysiert werden. */
-const analyzing = new Set<string>();
+/** Einsätze, deren Tonspuren gerade analysiert werden, zum Abbrechen. */
+const analyzing = new Map<string, AbortController>();
 /** Schon vollständig gelesene Dateien: Ein zweiter Versuch nach einem Abbruch muss sie nicht erneut lesen. */
 const scanCache = new ScanCache();
 let win: BrowserWindow | null = null;
@@ -154,6 +154,8 @@ function bindingOpts(): { nativeBinding?: string } {
 /** Projekt schließen; vorher Änderungen seit der letzten automatischen Sicherung sichern. */
 function closeStore(): void {
   if (!store) return;
+  // Eine laufende Analyse schreibt in dieses Projekt; sie endet mit dem Projekt.
+  for (const ctrl of analyzing.values()) ctrl.abort();
   autoBackup.detach();
   store.close();
   store = null;
@@ -668,15 +670,29 @@ function registerIpc(): void {
     return buildSessionView(s, setDiaryNote(s, sourceId, clock));
   });
 
+  ipcMain.handle(IPC.cancelAnalyze, (_e, sessionId: string) => {
+    analyzing.get(sessionId)?.abort();
+  });
   ipcMain.handle(IPC.analyze, async (e, sessionId: string) => {
     const s = requireStore();
-    analyzing.add(sessionId);
+    if (analyzing.has(sessionId)) throw new Error("Die Tonspuren dieses Einsatzes werden schon analysiert.");
+    const ctrl = new AbortController();
+    analyzing.set(sessionId, ctrl);
     let r;
     try {
       r = await analyzeSession(s, sessionId, {
+        signal: ctrl.signal,
         skip: unreachableForAnalysis(s, sessionId),
-        onProgress: (done, total, fileName) => e.sender.send(IPC.progress, { done, total, fileName }),
+        onProgress: (done, total, fileName) => {
+          if (!e.sender.isDestroyed()) e.sender.send(IPC.progress, { done, total, fileName });
+        },
       });
+    } catch (err) {
+      if (!ctrl.signal.aborted) throw err;
+      if (store !== s)
+        throw new Error("Das Projekt wurde während der Analyse gewechselt. Die Analyse wurde abgebrochen.");
+      // Abgebrochen: Schon analysierte Tonspuren bleiben gespeichert und werden beim nächsten Mal übersprungen.
+      return { view: buildSessionView(s, sessionId), analyzed: 0, failed: [], cancelled: true };
     } finally {
       analyzing.delete(sessionId);
     }

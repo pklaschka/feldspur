@@ -394,9 +394,13 @@ export async function renderMontage(
     if (src.kind === "audio") return Promise.resolve(true);
     let got = soundCache.get(src.originalPath);
     if (!got) {
-      got = probeMedia(src.originalPath).then(
+      got = probeMedia(src.originalPath, { signal }).then(
         (pr) => pr.hasAudio,
-        () => false,
+        (e: unknown) => {
+          // Nicht lesbar: ohne Ton weiter. Abgebrochen: nicht als „ohne Ton“ merken, sondern abbrechen.
+          if (signal?.aborted) throw e;
+          return false;
+        },
       );
       soundCache.set(src.originalPath, got);
     }

@@ -222,7 +222,7 @@ async function stillOf(
   name: string,
   opts: ExportOptions,
 ): Promise<Still | null> {
-  if (canRenderStill(src)) return renderStill(src, ref, work, { name });
+  if (canRenderStill(src)) return renderStill(src, ref, work, { name, signal: opts.signal });
   if (!opts.renderImage) return null;
   const data = await opts.renderImage(src, ref).catch(() => null);
   const size = data && jpegSize(data);
