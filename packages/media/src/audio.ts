@@ -7,9 +7,8 @@
  * und in die Projektdatei. FFmpeg dekodiert gestreamt, die Rohdaten werden nie
  * vollständig geladen.
  */
-import { spawn } from "node:child_process";
 import { COMPRESSOR, dbToGain, effectiveGainDb, levelActive, LIMIT_DB, type Source } from "@feldspur/core";
-import { toolPaths } from "./tools.ts";
+import { runTool, STALL_MS } from "./process.ts";
 
 /** Werte pro Sekunde in der Hüllkurve. */
 export const ENVELOPE_RATE = 100;
@@ -25,56 +24,52 @@ export interface Envelope {
 }
 
 /** Hüllkurve einer Audio- oder Videodatei berechnen (erste Tonspur, auf Mono gemischt). */
-export function computeEnvelope(path: string, opts: { signal?: AbortSignal } = {}): Promise<Envelope> {
-  return new Promise((resolve, reject) => {
-    const ff = spawn(
-      toolPaths().ffmpeg,
-      [
-        "-v",
-        "error",
-        "-nostdin",
-        "-i",
-        path,
-        "-map",
-        "0:a:0",
-        "-vn",
-        "-ac",
-        "1",
-        "-ar",
-        String(DECODE_RATE),
-        "-f",
-        "f32le",
-        "-",
-      ],
-      { stdio: ["ignore", "pipe", "pipe"], ...(opts.signal ? { signal: opts.signal } : {}) },
-    );
-    const out: number[] = [];
-    let carry: Buffer = Buffer.alloc(0);
-    let sumSq = 0;
-    let n = 0;
-    let err = "";
-    ff.stdout.on("data", (chunk: Buffer) => {
-      const buf: Buffer = carry.length ? Buffer.concat([carry, chunk]) : chunk;
-      const whole = buf.length - (buf.length % 4);
-      for (let i = 0; i < whole; i += 4) {
-        const v = buf.readFloatLE(i);
-        sumSq += v * v;
-        if (++n === SAMPLES_PER_FRAME) {
-          out.push(toDb(Math.sqrt(sumSq / n)));
-          sumSq = 0;
-          n = 0;
+export async function computeEnvelope(path: string, opts: { signal?: AbortSignal } = {}): Promise<Envelope> {
+  const out: number[] = [];
+  let carry: Buffer = Buffer.alloc(0);
+  let sumSq = 0;
+  let n = 0;
+  await runTool(
+    "ffmpeg",
+    [
+      "-v",
+      "error",
+      "-nostdin",
+      "-i",
+      path,
+      "-map",
+      "0:a:0",
+      "-vn",
+      "-ac",
+      "1",
+      "-ar",
+      String(DECODE_RATE),
+      "-f",
+      "f32le",
+      "-",
+    ],
+    {
+      signal: opts.signal,
+      // Dekodiert laufend; steht die Ausgabe so lange, hängt ffmpeg (etwa an einem schlafenden Netzlaufwerk).
+      idleTimeoutMs: STALL_MS,
+      onStdout: (chunk) => {
+        const buf: Buffer = carry.length ? Buffer.concat([carry, chunk]) : chunk;
+        const whole = buf.length - (buf.length % 4);
+        for (let i = 0; i < whole; i += 4) {
+          const v = buf.readFloatLE(i);
+          sumSq += v * v;
+          if (++n === SAMPLES_PER_FRAME) {
+            out.push(toDb(Math.sqrt(sumSq / n)));
+            sumSq = 0;
+            n = 0;
+          }
         }
-      }
-      carry = buf.subarray(whole);
-    });
-    ff.stderr.on("data", (d: Buffer) => (err += d.toString()));
-    ff.on("error", reject);
-    ff.on("close", (code) => {
-      if (code !== 0) return reject(new Error(`ffmpeg (${code}): ${err.trim().split("\n")[0] ?? ""}`));
-      if (n > 0) out.push(toDb(Math.sqrt(sumSq / n)));
-      resolve({ rate: ENVELOPE_RATE, db: Float32Array.from(out) });
-    });
-  });
+        carry = buf.subarray(whole);
+      },
+    },
+  );
+  if (n > 0) out.push(toDb(Math.sqrt(sumSq / n)));
+  return { rate: ENVELOPE_RATE, db: Float32Array.from(out) };
 }
 
 function toDb(rms: number): number {
