@@ -63,7 +63,10 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
   const maxStdout = opts.maxStdoutBytes ?? 16 * 1024 * 1024;
 
   return new Promise((resolve, reject) => {
-    const child = spawn(toolPaths()[tool], args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    // stdin wie bei execFile als Leitung, gleich geschlossen: ffmpeg liest dort Tastenbefehle und sieht so sofort das Ende.
+    const child = spawn(toolPaths()[tool], args, { stdio: ["pipe", "pipe", "pipe"] });
+    child.stdin.on("error", () => {});
+    child.stdin.end();
     const out: Buffer[] = [];
     let outBytes = 0;
     let err = "";
