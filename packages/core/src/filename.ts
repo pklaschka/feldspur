@@ -15,17 +15,40 @@ export interface FilenameTime {
   /** Welcher Teil des Namens getroffen wurde. */
   matched: string;
   pattern: string;
+  /** Der Name trägt UTC statt Ortszeit (Google Pixel). `localMs` ist dann die UTC-Wanduhrzeit wie geschrieben. */
+  utc?: boolean;
 }
 
-type Groups = { Y: string; M: string; D: string; h: string; m: string; s?: string | undefined };
+type Groups = {
+  Y: string;
+  M: string;
+  D: string;
+  h: string;
+  m: string;
+  s?: string | undefined;
+  ms?: string | undefined;
+};
 
 interface BuiltinPattern {
   name: string;
   re: RegExp;
+  utc?: boolean;
 }
+
+/**
+ * Ein Dateiname mit Millisekunden bezeichnet den Moment, in dem die App die Aufnahme angelegt hat. Bis das erste Bild
+ * oder der erste Ton wirklich aufgezeichnet ist, vergeht etwas Zeit; deshalb nicht auf die Millisekunde genau.
+ */
+const MS_NAME_UNCERTAINTY = 250;
 
 // Reihenfolge = Priorität. Alle verlangen Datum und mindestens Stunde+Minute.
 const BUILTIN: BuiltinPattern[] = [
+  // Google Pixel: PXL_20260907_151441849.mp4 (auch .MP.jpg, .NIGHT.jpg, …). Uhrzeit in UTC, mit Millisekunden.
+  {
+    name: "PXL_YYYYMMDD_hhmmssSSS (UTC)",
+    re: /(?<![A-Za-z0-9])PXL_(?<Y>20\d{2})(?<M>\d{2})(?<D>\d{2})_(?<h>\d{2})(?<m>\d{2})(?<s>\d{2})(?<ms>\d{3})(?!\d)/,
+    utc: true,
+  },
   // IMG_20260914_104050, VID_20260914_103200, REC_20260914_1032, PXL_20260914_103215123
   {
     name: "YYYYMMDD_hhmm[ss]",
@@ -43,14 +66,23 @@ const BUILTIN: BuiltinPattern[] = [
   },
 ];
 
-function toResult(g: Groups, matched: string, pattern: string): FilenameTime | null {
+function toResult(g: Groups, matched: string, pattern: string, utc = false): FilenameTime | null {
   const [Y, M, D, h, m] = [g.Y, g.M, g.D, g.h, g.m].map(Number) as [number, number, number, number, number];
   const s = g.s === undefined ? undefined : Number(g.s);
   if (!isValidLocal(Y, M, D, h, m, s ?? 0)) return null;
   if (s === undefined) {
     return { localMs: localMs(Y, M, D, h, m, 30), uncertaintyMs: 30_000, matched, pattern };
   }
-  return { localMs: localMs(Y, M, D, h, m, s, 500), uncertaintyMs: 500, matched, pattern };
+  const extra = utc ? { utc } : {};
+  if (g.ms !== undefined)
+    return {
+      localMs: localMs(Y, M, D, h, m, s, Number(g.ms)),
+      uncertaintyMs: MS_NAME_UNCERTAINTY,
+      matched,
+      pattern,
+      ...extra,
+    };
+  return { localMs: localMs(Y, M, D, h, m, s, 500), uncertaintyMs: 500, matched, pattern, ...extra };
 }
 
 const TOKEN: Record<string, string> = {
@@ -93,7 +125,7 @@ export function timeFromFilename(fileName: string, customPattern?: string | null
   for (const p of candidates) {
     const m = p.re.exec(base);
     if (m?.groups) {
-      const r = toResult(m.groups as unknown as Groups, m[0], p.name);
+      const r = toResult(m.groups as unknown as Groups, m[0], p.name, p.utc);
       if (r) return r;
     }
   }

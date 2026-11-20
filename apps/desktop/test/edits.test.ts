@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   addManualAnchor,
   addTimeEvidence,
+  clearDeviceChecks,
   confirmAnchors,
   confirmPlacement,
   decideMany,
@@ -94,6 +95,16 @@ function seed() {
 const row = (sessionId: string, id: string) => buildSessionView(store, sessionId).rows.find((r) => r.id === id)!;
 
 describe("Lage prüfen", () => {
+  it("Bestätigungen eines Geräts gesammelt entfernen", () => {
+    const { session, cam, video } = seed();
+    confirmPlacement(store, video.id, row(session.id, video.id).startMs!);
+    const device = () => buildSessionView(store, session.id).allDevices.find((d) => d.id === cam.id)!;
+    expect(device().checkedCount).toBe(1);
+    expect(clearDeviceChecks(store, cam.id)).toBe(session.id);
+    expect(device().checkedCount).toBe(0);
+    expect(row(session.id, video.id).status).toBe("check");
+  });
+
   it("unsichere Lage bestätigen, zurücknehmen und durch Handeingabe ersetzen", () => {
     const { session, video } = seed();
     const before = row(session.id, video.id);

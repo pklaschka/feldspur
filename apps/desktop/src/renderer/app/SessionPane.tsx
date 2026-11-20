@@ -94,6 +94,17 @@ export function SessionPane({
     mergeDevices: (from, into) => update(guard(() => api.mergeDevices(from, into))),
     setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),
     setDeviceTimeZone: (id, tz) => update(guard(() => api.setDeviceTimeZone(id, tz))),
+    rereadDevice: (id) =>
+      void guard(() => api.rereadDevice(id)).then((r) => {
+        if (!r) return;
+        const missing = r.missing.length ? `nicht gefunden: ${r.missing.join(", ")}` : "";
+        if (r.changed) {
+          const n = r.changed === 1 ? "1 Quelle geändert" : `${r.changed} Quellen geändert`;
+          history.note(missing ? `${n}, ${missing}` : n);
+        } else history.info(`Zeitbelege neu gelesen: nichts geändert${missing ? `, ${missing}` : ""}.`);
+        setView(r.view);
+      }),
+    clearDeviceChecks: (id) => update(guard(() => api.clearDeviceChecks(id))),
     setPartOf: (id, mainId) => update(guard(() => api.setPartOf(id, mainId))),
     setSourceKind: (id, kind) => update(guard(() => api.setSourceKind(id, kind))),
     setFollows: (id, prevId) => update(guard(() => api.setFollows(id, prevId))),

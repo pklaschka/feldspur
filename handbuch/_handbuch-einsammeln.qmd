@@ -7,11 +7,44 @@ jede Datei
 - die **Länge** bei Audio und Video,
 - eine **Prüfsumme** (SHA-256), mit der sich später belegen lässt, dass das Original unverändert ist,
 - alle **Zeitbelege**, die es findet: Aufnahmezeit aus den Metadaten (z. B. EXIF bei Fotos, `creation_time` bei
-  Videos, BWF bei Rekorder-WAVs) und Uhrzeiten im Dateinamen.
+  Videos, BWF bei Rekorder-WAVs) und Uhrzeiten im Dateinamen (@sec-zeitquellen).
 
 Begleitdateien, die Kameras neben die Aufnahmen legen, überspringt Feldspur. Dateien, die schon im Einsatz sind,
 werden nicht doppelt übernommen. Landen Dateien anderswo im Fenster, übernimmt Feldspur nichts und bietet an,
 **Einsammeln** zu öffnen.
+
+### Woher die Uhrzeiten kommen {#sec-zeitquellen}
+
+| Quelle | Was Feldspur liest | Genauigkeit |
+|---|---|---|
+| Fotos | EXIF-Aufnahmezeit, mit Sekundenbruchteilen, falls vorhanden | Sekunde, mit Bruchteilen ± 0,05 s |
+| iPhone-Videos | Apple-Aufnahmedatum mit Zeitzone | Sekunde |
+| Profikameras mit Aufnahme-XML (z. B. Panasonic HC-X1500) | Aufnahmebeginn aus dem XML, mit Zeitzone der Kamera | Sekunde |
+| Kameras mit frei laufendem Timecode | Timecode, abgeglichen mit der Kamerauhr über alle Clips | Bruchteile einer Sekunde |
+| andere Videos und Audio | `creation_time`, BWF-Felder von Rekordern | Sekunde |
+| Dateinamen | z. B. `IMG_20260914_104050`, `2026-09-14 10.32.15`; Pixel-Namen wie `PXL_20260914_103215123` mit Millisekunden | Sekunde, Pixel ± 0,25 s |
+
+**Beginn oder Ende?** MP4-Dateien sagen nicht, ob `creation_time` den Aufnahmebeginn meint oder den Moment, in dem die
+Datei gespeichert wurde. Viele Android-Handys, etwa Google Pixel, schreiben das **Ende**. Feldspur erkennt das beim
+Einsammeln an allen Videos eines Geräts gemeinsam: Ergibt Uhrzeit im Dateinamen plus Länge ungefähr `creation_time`,
+oder würden sich die Clips eines Geräts sonst überlappen (was physisch nicht geht), gilt der Stempel als Ende. In der
+Detailleiste steht dann **Metadaten (Aufnahmeende …)**.
+
+**UTC im Dateinamen:** Pixel-Handys benennen Dateien nach der Uhrzeit in UTC, nicht nach der Ortszeit. Feldspur rechnet
+sie wie als UTC markierte Metadaten in die Zeitzone des Einsatzes um.
+
+**Kamera-Timecode:** Viele Videokameras schreiben einen bildgenauen Timecode, ihre Uhr aber nur auf die Sekunde. Läuft
+der Timecode frei mit (in der Kamera meist „Free Run“), ist sein Abstand zur Kamerauhr in allen Clips gleich. Feldspur
+schätzt diesen Abstand aus allen Clips, die du zusammen einsammelst, und ordnet jeden Clip damit auf Bruchteile einer
+Sekunde genau ein; untereinander liegen die Clips dann bildgenau. Das klappt ab zwei Clips desselben Geräts. Wurde der
+Timecode zwischendurch neu gesetzt, wertet Feldspur die Abschnitte davor und danach getrennt aus. Läuft er nur während
+der Aufnahme („Rec Run“), passen die Clips nicht zusammen, und Feldspur nimmt wie bisher die Kamerauhr. Drop-Frame-Timecode (29,97 mit `;`) wertet Feldspur nicht aus.
+
+**Zeitzone der Kamera:** Das Aufnahme-XML nennt die Zeitzone, auf die die Kamera eingestellt war, und Feldspur zeigt sie
+im Zeitbeleg an (z. B. „Zeitzone der Kamera +01:00“). Passt sie nicht zur Zeitzone des Einsatzes (etwa +01:00 im
+Sommer in Deutschland), ist meist nur die Zone falsch eingestellt und die Uhr trotzdem nach der Ortszeit gestellt.
+Feldspur nimmt dann die Uhrzeit, wie die Kamera sie anzeigte, und stellt das Gerät im Gerätemenü unter **Zeitstempel in
+UTC** auf **Sind schon Ortszeit, so lesen**. Stimmte die Zone doch, stell dort auf **Sind UTC, in Ortszeit umrechnen**.
 
 ### Große Ordner
 
@@ -59,6 +92,13 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
   Einträgen, nicht nach der Aufnahmezeit des Fotos (@sec-tagebuch). Eine Seite mit Einträgen lässt sich erst wieder
   als Foto behandeln, wenn die Einträge gelöscht sind.
 - **Zeitzone der Geräteuhr**, falls ein Gerät auf eine andere Zeitzone gestellt war als der Einsatz.
+- **Zeitbelege neu lesen** (Menü am Gerät) liest Metadaten, Dateinamen und Kamera-Timecode aller Quellen des Geräts
+  noch einmal aus den Originaldateien, etwa wenn eine neuere Feldspur-Fassung mehr Zeitquellen kennt
+  (@sec-zeitquellen). Anker, angesagte Uhrzeiten, Handeingaben und deine Entscheidungen bleiben, ebenso die
+  Einstellungen des Geräts. Rückgängig machen geht wie immer mit Strg/⌘+Z.
+- **Bestätigungen entfernen** nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen an den Quellen
+  des Geräts auf einmal zurück. Eine Bestätigung hält eine Lage fest; ohne sie folgen die Quellen wieder dem
+  genauesten Zeitbeleg, zum Beispiel einem neu gelesenen Timecode.
 - **Entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
 
 Wenn alles eingesammelt ist, geht es mit **Weiter** zum Abgleichen.

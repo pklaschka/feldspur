@@ -14,6 +14,10 @@ export interface SourceActions {
   mergeDevices(fromId: string, intoId: string): void;
   setDeviceUtc(deviceId: string, utc: boolean): void;
   setDeviceTimeZone(deviceId: string, timeZone: string | null): void;
+  /** Zeitbelege des Geräts erneut aus den Originalen lesen. */
+  rereadDevice(deviceId: string): void;
+  /** Alle Bestätigungen („geprüft“) an den Quellen des Geräts entfernen. */
+  clearDeviceChecks(deviceId: string): void;
   setPartOf(sourceId: string, mainId: string | null): void;
   /** Bild als Tagebuchseite oder als Foto behandeln. */
   setSourceKind(sourceId: string, kind: "diary" | "photo"): void;
@@ -239,6 +243,7 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
   const sessionZone = view.session.timeZone;
   const noClock = device.kind === "diary" || device.kind === "note";
   if (!others.length && !device.hasUtcStamps && noClock) return null;
+  const checks = device.checkedCount;
   return (
     <>
       <DropdownMenu.Root>
@@ -296,11 +301,24 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
                 </DropdownMenu.RadioGroup>
               </>
             )}
+            {!noClock && (
+              <>
+                <DropdownMenu.Separator className={sep} />
+                <DropdownMenu.Item className={item} onSelect={() => a.rereadDevice(device.id)}>
+                  Zeitbelege neu lesen
+                </DropdownMenu.Item>
+                {checks > 0 && (
+                  <DropdownMenu.Item className={item} onSelect={() => a.clearDeviceChecks(device.id)}>
+                    {checks === 1 ? "Bestätigung entfernen (1 Quelle)" : `Bestätigungen entfernen (${checks} Quellen)`}
+                  </DropdownMenu.Item>
+                )}
+              </>
+            )}
             {device.hasUtcStamps && (
               <>
                 <DropdownMenu.Separator className={sep} />
                 <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.8rem] text-muted">
-                  Zeitstempel mit „Z“ (UTC) in den Metadaten
+                  Zeitstempel in UTC (Metadaten, Dateiname)
                 </DropdownMenu.Label>
                 <DropdownMenu.RadioGroup
                   value={device.timestampsAreUtc ? "utc" : "local"}

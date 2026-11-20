@@ -222,6 +222,9 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
       offsetBasis: c?.basis ?? "unknown",
       sourceCount: kinds.length,
       hasUtcStamps: input.evidence.some((e) => e.utcMs !== null && own.has(e.sourceId)),
+      checkedCount: new Set(
+        input.evidence.filter((e) => e.kind === "checked" && own.has(e.sourceId)).map((e) => e.sourceId),
+      ).size,
       timestampsAreUtc: d.timestampsAreUtc,
       timeZone: d.timeZone,
     };

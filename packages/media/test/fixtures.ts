@@ -16,7 +16,7 @@ export function hasFfmpeg(): boolean {
   }
 }
 
-const ff = (...args: string[]) => execFileSync("ffmpeg", ["-v", "error", "-y", ...args]);
+export const ff = (...args: string[]) => execFileSync("ffmpeg", ["-v", "error", "-y", ...args]);
 
 export function makeVideo(path: string, opts: { seconds: number; creationTime?: string }) {
   ff(

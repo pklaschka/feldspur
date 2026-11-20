@@ -15,6 +15,10 @@ import {
 import {
   analyzeSession,
   applyImport,
+  applyReread,
+  rereadChanges,
+  rereadSource,
+  type RereadSource,
   measureSource,
   refineAlignment,
   parseTranscript,
@@ -61,6 +65,7 @@ import { addRegion, createEntry, deleteEntry, moveRegion, patchEntry, removeRegi
 import {
   addManualAnchor,
   addTimeEvidence,
+  clearDeviceChecks,
   confirmAnchors,
   confirmPlacement,
   decideMany,
@@ -641,6 +646,40 @@ function registerIpc(): void {
     return buildSessionView(s, d.sessionId);
   });
 
+  ipcMain.handle(IPC.rereadDevice, async (_e, deviceId: string) => {
+    const s = requireStore();
+    const device = s.getDevice(deviceId);
+    const sources = s.listSources(device.sessionId).filter((x) => x.deviceId === deviceId);
+    const read: RereadSource[] = [];
+    const missing: string[] = [];
+    // Erst alles lesen (dauert), dann in einem Schritt übernehmen: der lässt sich rückgängig machen.
+    for (const src of sources) {
+      if (!existsSync(src.originalPath)) {
+        missing.push(src.label);
+        continue;
+      }
+      try {
+        read.push(await rereadSource(src));
+      } catch {
+        missing.push(src.label);
+      }
+    }
+    const store = requireStore();
+    if (store !== s) throw new Error("Das Projekt wurde inzwischen gewechselt");
+    // Erst prüfen, ob sich etwas ändert: ein leerer Schritt im Verlauf hilft niemandem.
+    const changed = rereadChanges(s, device.sessionId, read)
+      ? s.history.record(`Zeitbelege neu gelesen: ${device.label}`, () => applyReread(s, device.sessionId, read))
+      : 0;
+    return { view: buildSessionView(s, device.sessionId), changed, missing };
+  });
+  undoable(
+    IPC.clearDeviceChecks,
+    (s, deviceId: string) => `Bestätigungen entfernt: ${s.getDevice(deviceId).label}`,
+    (_e, deviceId: string) => {
+      const s = requireStore();
+      return buildSessionView(s, clearDeviceChecks(s, deviceId));
+    },
+  );
   undoable(IPC.setDeviceTimeZone, "Zeitzone geändert", (_e, deviceId: string, timeZone: string | null) => {
     const s = requireStore();
     const zone = timeZone?.trim() || null;

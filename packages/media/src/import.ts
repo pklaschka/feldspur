@@ -14,6 +14,7 @@ import {
   evidenceFromMediaTags,
   type EvidenceDraft,
 } from "./evidence.ts";
+import { refineClipTimes } from "./clip-times.ts";
 import { sha256File } from "./hash.ts";
 import { probeMedia, readImageExif, type ImageExif, type MediaProbe } from "./probe.ts";
 
@@ -189,6 +190,11 @@ export function deviceGuess(
   return { key: `family:${family.toLowerCase()}`, label: prefix ? `${base} ${prefix}` : base };
 }
 
+/** Zeitbelege einer Datei aus Metadaten, EXIF und Dateinamen (vor dem Abgleich über alle Clips eines Geräts). */
+function timeEvidenceOf(fileName: string, probe: MediaProbe | null, exif: ImageExif | null): EvidenceDraft[] {
+  return [...(probe ? evidenceFromMediaTags(probe) : []), ...evidenceFromExif(exif), ...evidenceFromFilename(fileName)];
+}
+
 export async function inspectFile(
   path: string,
   opts: { signal?: AbortSignal; onBytes?: (bytes: number) => void } = {},
@@ -214,12 +220,7 @@ export async function inspectFile(
     kind = classify(fileName, { hasCameraExif: !!(exif?.model || exif?.dateTimeOriginal) });
   }
 
-  const evidence: EvidenceDraft[] = [];
-  if (evidenceAppliesTo(kind)) {
-    if (probe) evidence.push(...evidenceFromMediaTags(probe));
-    evidence.push(...evidenceFromExif(exif));
-    evidence.push(...evidenceFromFilename(fileName));
-  }
+  const evidence = evidenceAppliesTo(kind) ? timeEvidenceOf(fileName, probe, exif) : [];
   if (evidenceAppliesTo(kind) && evidence.length === 0) warnings.push("Keine Zeitangabe gefunden");
 
   const device = deviceGuess(fileName, kind, exif, probe);
@@ -319,17 +320,37 @@ export function stampsLookLocal(candidates: ImportCandidate[], timeZone: string)
   let utc = 0;
   for (const c of candidates) {
     const named = c.evidence.find((e) => e.kind === "filename");
-    if (!named) continue;
+    // Ein Name in UTC (Pixel) taugt nicht als Ortszeit-Vergleich.
+    if (!named || (named.utcMs !== null && named.utcMs !== undefined)) continue;
     for (const e of c.evidence) {
       if (e.kind !== "metadata" || e.utcMs === null || e.utcMs === undefined) continue;
-      const asWritten = Math.abs(e.localMs - named.localMs);
-      const converted = Math.abs(utcToLocal(e.utcMs, timeZone) - named.localMs);
+      // Verglichen wird der Beginn: ein Stempel am Aufnahmeende (siehe clip-times.ts) um die Länge zurückgerechnet.
+      const atMs = e.atMediaMs ?? 0;
+      const asWritten = Math.abs(e.localMs - atMs - named.localMs);
+      const converted = Math.abs(utcToLocal(e.utcMs, timeZone) - atMs - named.localMs);
       if (Math.abs(asWritten - converted) < NEAR) continue; // Zeitzone UTC oder kein Unterschied
       if (asWritten <= NEAR && asWritten < converted) local++;
       else if (converted <= NEAR) utc++;
     }
   }
   return local > utc;
+}
+
+/**
+ * Nennt das Aufnahme-XML einer Kamera eine andere Zeitzone als die des Einsatzes (etwa +01:00 im Sommer in
+ * Deutschland), ist meist nur die Zone falsch eingestellt, die Uhr aber nach der Ortszeit gestellt. Dann gilt die
+ * Uhrzeit wie geschrieben; die Zone steht im Zeitbeleg, und im Gerätemenü lässt sich auf UTC umstellen.
+ */
+export function cameraZoneDiffers(candidates: ImportCandidate[], timeZone: string): boolean {
+  return candidates.some((c) =>
+    c.evidence.some(
+      (e) =>
+        e.kind === "metadata" &&
+        e.detail.includes("Kamera-XML") &&
+        e.utcMs != null &&
+        e.localMs - e.utcMs !== utcToLocal(e.utcMs, timeZone) - e.utcMs,
+    ),
+  );
 }
 
 /** Importplan in den Einsatz übernehmen: Geräte zuordnen oder anlegen, Quellen und Belege speichern. */
@@ -344,7 +365,8 @@ export function applyImport(
     const result: ApplyImportResult = { sources: [], devicesCreated: [], duplicates: [] };
     const seen = new Map<string, Source>();
     // Chronologisch nach bestem Beleg, damit die Kurzzeichen der Reihenfolge im Feld folgen.
-    const ordered = candidates.toSorted(
+    // Zeitbelege je Gerät nachschärfen (Aufnahmeende statt -beginn, Kamera-Timecode), dann chronologisch.
+    const ordered = refineClipTimes(candidates).toSorted(
       (a, b) =>
         (a.evidence[0]?.localMs ?? Infinity) - (b.evidence[0]?.localMs ?? Infinity) ||
         a.fileName.localeCompare(b.fileName),
@@ -385,8 +407,91 @@ export function applyImport(
     const tz = store.getSession(sessionId).timeZone;
     result.devicesCreated = result.devicesCreated.map((d) => {
       const own = ordered.filter((c) => c.deviceKey === d.matchKey);
-      return stampsLookLocal(own, tz) ? store.updateDevice(d.id, { timestampsAreUtc: false }) : d;
+      return stampsLookLocal(own, tz) || cameraZoneDiffers(own, tz)
+        ? store.updateDevice(d.id, { timestampsAreUtc: false })
+        : d;
     });
     return result;
+  });
+}
+
+/** Neu gelesene Metadaten einer schon eingesammelten Quelle. */
+export interface RereadSource {
+  source: Source;
+  metadata: Record<string, unknown>;
+  evidence: EvidenceDraft[];
+}
+
+/**
+ * Metadaten und Zeitbelege einer Quelle erneut aus der Originaldatei lesen, ohne Prüfsumme. Für Projekte, die mit
+ * einer älteren Fassung eingesammelt wurden (neue Zeitquellen wie Kamera-Timecode).
+ */
+export async function rereadSource(source: Source, opts: { signal?: AbortSignal } = {}): Promise<RereadSource> {
+  let probe: MediaProbe | null = null;
+  let exif: ImageExif | null = null;
+  if (source.kind === "video" || source.kind === "audio") probe = await probeMedia(source.originalPath, opts);
+  else if (source.kind === "photo" || source.kind === "diary") exif = await readImageExif(source.originalPath);
+  const metadata: Record<string, unknown> = { ...source.metadata };
+  if (probe) metadata.media = probe;
+  if (exif) metadata.exif = exif;
+  const evidence = evidenceAppliesTo(source.kind) ? timeEvidenceOf(source.fileName, probe, exif) : [];
+  return { source, metadata, evidence };
+}
+
+const READ_KINDS = new Set(["metadata", "filename"]);
+const evidenceKey = (e: EvidenceDraft) =>
+  [e.kind, e.clock, e.atMediaMs, e.localMs, e.utcMs ?? "", e.uncertaintyMs, e.detail, e.raw].join("|");
+
+/**
+ * Neu gelesene Zeitbelege übernehmen: je Gerät gemeinsam nachschärfen (wie beim Einsammeln), dann nur gelesene
+ * Belege (Metadaten, Dateiname) ersetzen. Unveränderte Belege behalten ihre Kennung und ob sie eingeschaltet sind;
+ * Anker, Ansagen, Handeingaben und Entscheidungen bleiben unberührt. Die Geräteeinstellungen (UTC, Zeitzone) auch.
+ * Gibt zurück, bei wie vielen Quellen sich etwas geändert hat.
+ */
+export function applyReread(store: ProjectStore, sessionId: Id, read: RereadSource[]): number {
+  const plan = rereadPlan(store, sessionId, read);
+  return store.transaction(() => {
+    for (const p of plan) {
+      for (const e of p.gone) store.deleteEvidence(e.id);
+      for (const e of p.added) store.addEvidence({ ...e, sourceId: p.source.id });
+      if (p.metadataChanged) store.updateSource(p.source.id, { metadata: p.metadata });
+    }
+    return plan.filter((p) => p.gone.length || p.added.length).length;
+  });
+}
+
+/** Ändert neues Lesen etwas (an Belegen oder Metadaten)? */
+export function rereadChanges(store: ProjectStore, sessionId: Id, read: RereadSource[]): boolean {
+  return rereadPlan(store, sessionId, read).some((p) => p.gone.length || p.added.length || p.metadataChanged);
+}
+
+function rereadPlan(store: ProjectStore, sessionId: Id, read: RereadSource[]) {
+  const asCandidates = read.map((r): ImportCandidate => ({
+    path: r.source.originalPath,
+    fileName: r.source.fileName,
+    sizeBytes: r.source.sizeBytes,
+    sha256: r.source.sha256,
+    kind: r.source.kind,
+    durationMs: r.source.durationMs,
+    metadata: r.metadata,
+    deviceKey: r.source.deviceId ?? r.source.id,
+    deviceLabel: "",
+    evidence: r.evidence,
+    warnings: [],
+  }));
+  const refined = refineClipTimes(asCandidates);
+  const all = store.listEvidence(sessionId);
+  return read.map((r, i) => {
+    const fresh = refined[i]!.evidence;
+    const old = all.filter((e) => e.sourceId === r.source.id && READ_KINDS.has(e.kind));
+    const freshKeys = new Set(fresh.map(evidenceKey));
+    const oldKeys = new Set(old.map(evidenceKey));
+    return {
+      source: r.source,
+      metadata: r.metadata,
+      gone: old.filter((e) => !freshKeys.has(evidenceKey(e))),
+      added: fresh.filter((e) => !oldKeys.has(evidenceKey(e))),
+      metadataChanged: JSON.stringify(r.metadata) !== JSON.stringify(r.source.metadata),
+    };
   });
 }

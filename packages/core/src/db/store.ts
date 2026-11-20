@@ -361,6 +361,7 @@ export class ProjectStore {
         | "role"
         | "contextOrder"
         | "contextMade"
+        | "metadata"
       >
     >,
   ): Source {

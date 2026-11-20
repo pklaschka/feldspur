@@ -401,6 +401,8 @@ export interface DeviceRow {
   sourceCount: number;
   /** Trägt eine Datei des Geräts einen als UTC markierten Zeitstempel? Dann gibt es die Einstellung. */
   hasUtcStamps: boolean;
+  /** Wie viele Quellen des Geräts eine Bestätigung („geprüft“) tragen. */
+  checkedCount: number;
   /** Als UTC markierte Zeitstempel umrechnen (true) oder als Ortszeit lesen (false). */
   timestampsAreUtc: boolean;
   /** Zeitzone, auf die die Geräteuhr gestellt ist; null = wie der Einsatz. */
@@ -662,6 +664,14 @@ export interface FeldspurApi {
   setDeviceUtc(deviceId: string, utc: boolean): Promise<SessionView>;
   /** Zeitzone der Geräteuhr (IANA); null = wie der Einsatz. */
   setDeviceTimeZone(deviceId: string, timeZone: string | null): Promise<SessionView>;
+  /**
+   * Zeitbelege aller Quellen des Geräts erneut aus den Originaldateien lesen (Metadaten, Dateiname, Kamera-Timecode).
+   * Anker, Handeingaben und Entscheidungen bleiben. `changed` = Quellen mit geänderten Belegen, `missing` = Kurzzeichen
+   * der Quellen, deren Original nicht zu finden war.
+   */
+  rereadDevice(deviceId: string): Promise<{ view: SessionView; changed: number; missing: string[] }>;
+  /** Alle Bestätigungen („geprüft“, auch Entscheidungen bei Widersprüchen) an den Quellen des Geräts entfernen. */
+  clearDeviceChecks(deviceId: string): Promise<SessionView>;
   updateSession(sessionId: string, patch: SessionPatch): Promise<{ view: SessionView; project: ProjectInfo }>;
   /** Einsatz samt Quellen, Belegen, Tagebuch und Mitschrift aus dem Projekt nehmen (Originaldateien bleiben). */
   deleteSession(sessionId: string): Promise<ProjectInfo>;
@@ -860,6 +870,8 @@ export const IPC = {
   setReference: "device:set-reference",
   setDeviceUtc: "device:set-utc",
   setDeviceTimeZone: "device:set-timezone",
+  rereadDevice: "device:reread",
+  clearDeviceChecks: "device:clear-checks",
   renameDevice: "device:rename",
   updateSession: "session:update",
   deleteSession: "session:delete",
