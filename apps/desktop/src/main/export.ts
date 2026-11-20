@@ -49,43 +49,81 @@ function throttled(send: (done: number, total: number) => void): (done: number, 
     send(done, total);
   };
 }
-const pending = new Map<number, { resolve: (b: Buffer[]) => void; reject: (e: Error) => void }>();
+/**
+ * Anfragen an die Oberfläche (Einblendungen, Standbilder), die noch auf Antwort warten. Jede endet spätestens
+ * mit Abbruch, Zeitlimit oder wenn die Oberfläche neu lädt oder abstürzt (Issue #137); sonst hinge die Ausgabe
+ * und sperrte jede weitere bis zum Neustart.
+ */
+const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
+/** So lange darf die Oberfläche für ein Häppchen Einblendungen oder ein Standbild brauchen. */
+export const BRIDGE_TIMEOUT_MS = 120_000;
+const RENDERER_EVENTS = ["render-process-gone", "did-start-loading", "destroyed"] as const;
 
-const pendingStills = new Map<number, (b: Buffer | null) => void>();
+function askRenderer<T>(wc: WebContents, signal: AbortSignal, what: string, send: (id: number) => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    if (wc.isDestroyed()) return reject(rendererGone());
+    const id = nextId++;
+    const cleanup = () => {
+      pending.delete(id);
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      for (const ev of RENDERER_EVENTS) wc.off(ev as "destroyed", onGone);
+    };
+    const fail = (e: unknown) => {
+      cleanup();
+      reject(e);
+    };
+    const onAbort = () => fail(signal.reason);
+    const onGone = () => fail(rendererGone());
+    const timer = setTimeout(
+      () =>
+        fail(
+          new Error(`Die Oberfläche hat ${what} nicht innerhalb von ${BRIDGE_TIMEOUT_MS / 60_000} Minuten geliefert.`),
+        ),
+      BRIDGE_TIMEOUT_MS,
+    );
+    pending.set(id, {
+      resolve: (v) => {
+        cleanup();
+        resolve(v as T);
+      },
+      reject: fail,
+    });
+    signal.addEventListener("abort", onAbort, { once: true });
+    for (const ev of RENDERER_EVENTS) wc.on(ev as "destroyed", onGone);
+    send(id);
+  });
+}
+
+function rendererGone(): Error {
+  return new Error("Die Oberfläche wurde während der Ausgabe neu geladen oder beendet. Bitte erneut ausgeben.");
+}
 
 /** Lässt die Oberfläche einen Bildausschnitt als JPEG zeichnen (PDF-Seiten kann ffmpeg nicht lesen). */
-function stillVia(wc: WebContents) {
+function stillVia(wc: WebContents, signal: AbortSignal) {
   return (src: { id: string; fileName: string }, ref: ImageRef) =>
-    new Promise<Buffer | null>((resolve) => {
-      const id = nextId++;
-      pendingStills.set(id, resolve);
-      wc.send(IPC.stillRequest, id, ref, /\.pdf$/i.test(src.fileName));
-    });
+    askRenderer<Buffer | null>(wc, signal, "ein Standbild", (id) =>
+      wc.send(IPC.stillRequest, id, ref, /\.pdf$/i.test(src.fileName)),
+    );
 }
 
 export function registerOverlayBridge(): void {
   ipcMain.on(IPC.stillReply, (_e, id: number, jpeg: Uint8Array | null) => {
-    const done = pendingStills.get(id);
-    pendingStills.delete(id);
-    done?.(jpeg ? Buffer.from(jpeg) : null);
+    pending.get(id)?.resolve(jpeg ? Buffer.from(jpeg) : null);
   });
   ipcMain.on(IPC.overlayReply, (_e, id: number, pngs: Uint8Array[], err: string | null) => {
     const p = pending.get(id);
     if (!p) return;
-    pending.delete(id);
     if (err) p.reject(new Error(`Einblendungen: ${err}`));
     else p.resolve(pngs.map((b) => Buffer.from(b)));
   });
 }
 
 /** Lässt die Oberfläche die Einblendungen zeichnen, in Häppchen, damit die IPC-Nachrichten klein bleiben. */
-function overlayVia(wc: WebContents): OverlayRenderer {
+function overlayVia(wc: WebContents, signal: AbortSignal): OverlayRenderer {
   const ask = (tl: OverlayHeader, frames: OverlayFrame[]) =>
-    new Promise<Buffer[]>((resolve, reject) => {
-      const id = nextId++;
-      pending.set(id, { resolve, reject });
-      wc.send(IPC.overlayRequest, id, tl, frames);
-    });
+    askRenderer<Buffer[]>(wc, signal, "die Einblendungen", (id) => wc.send(IPC.overlayRequest, id, tl, frames));
   return async (tl, frames) => {
     const out: Buffer[] = [];
     for (let i = 0; i < frames.length; i += CHUNK) out.push(...(await ask(tl, frames.slice(i, i + CHUNK))));
@@ -220,8 +258,8 @@ export async function runExport(
       signal: ctrl.signal,
       video: opts.video,
       resolve: opts.resolve,
-      overlay: overlayVia(wc),
-      renderImage: stillVia(wc),
+      overlay: overlayVia(wc, ctrl.signal),
+      renderImage: stillVia(wc, ctrl.signal),
       audioMix: opts.mixAudio === false ? "main" : "all",
       deviceTracks: opts.deviceTracks !== false,
       viewer: opts.viewer !== false,

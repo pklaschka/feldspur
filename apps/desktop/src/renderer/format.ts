@@ -276,3 +276,12 @@ export function stepClock(value: string, minutes: number, opts: ClockOpts = {}):
   const total = (((Number(n.slice(0, 2)) * 60 + Number(n.slice(3, 5)) + minutes) % 1440) + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}${n.slice(5)}`;
 }
+
+/**
+ * Fehlermeldung für die Oberfläche. Electron stellt Fehlern aus dem Hauptprozess „Error invoking remote method
+ * '…': Error: “ voran (bei eigenen Klassen deren Namen, etwa „ToolError: “); die Person sieht nur die Meldung.
+ */
+export function errorText(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  return msg.replace(/^Error invoking remote method '[^']+': /, "").replace(/^[A-Za-z]*Error: /, "");
+}
