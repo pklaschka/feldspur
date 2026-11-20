@@ -80,14 +80,17 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
       if (stopReason !== null || child.exitCode !== null) return;
       stopReason = reason;
       // Unter Windows mit allen Unterprozessen beenden: Ein Starter (etwa Chocolateys ffmpeg.exe) ließe sonst das
-      // eigentliche ffmpeg weiterlaufen.
+      // eigentliche ffmpeg weiterlaufen. Nicht zugleich child.kill: Wäre der Starter schon weg, fände taskkill
+      // seine Unterprozesse nicht mehr.
       if (process.platform === "win32" && child.pid !== undefined) {
-        spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }).on(
-          "error",
-          () => {},
-        );
+        spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true })
+          .on("error", () => child.kill())
+          .on("exit", (code) => {
+            if (code !== 0) child.kill();
+          });
+      } else {
+        child.kill("SIGTERM");
       }
-      child.kill("SIGTERM");
       hardKill = setTimeout(() => child.kill("SIGKILL"), KILL_GRACE_MS);
     };
     const onAbort = () => stop(abortReason(signal!));
