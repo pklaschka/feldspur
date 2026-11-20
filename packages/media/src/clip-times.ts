@@ -125,28 +125,66 @@ function timedClip(c: ImportCandidate, index: number): TimedClip | null {
 }
 
 /**
- * Abstand Kamerauhr − Timecode aus mehreren Clips. Die Uhr schneidet vermutlich auf ganze Sekunden ab: Jeder Clip
- * sagt dann „Abstand liegt in [r, r + 1 s)“. Die Schnittmenge aller Clips wird mit jedem Clip enger. Passen die Clips
- * nicht zusammen (Timecode läuft nur während der Aufnahme oder wurde neu gesetzt), gibt es kein Ergebnis.
+ * So weit dürfen die Abstände Uhr − Timecode zweier Clips auseinanderliegen, damit sie als ein frei laufender Timecode
+ * gelten: 1 s durch das Abschneiden der Uhr auf ganze Sekunden, dazu etwas Spiel, weil die Kamera ihre Uhr nicht
+ * genau im selben Moment wie das erste Bild abliest (gemessen an einer Panasonic HC-X1500: gut 1,1 s).
  */
-export function timecodeOffset(
-  clips: { clockMs: number; tcMs: number; frameMs: number }[],
-): { offsetMs: number; uncertaintyMs: number } | null {
-  if (clips.length < 2) return null;
+const TC_SPREAD_MS = 1_500;
+
+/** Abstand Uhr − Timecode, um Mitternacht des Timecodes herum auf den ersten Clip bezogen. */
+function residuals(clips: { clockMs: number; tcMs: number }[]): number[] {
+  if (!clips.length) return [];
   const first = clips[0]!.clockMs - clips[0]!.tcMs;
-  // Timecode springt um Mitternacht auf 00:00:00:00 zurück.
-  const rs = clips.map((c) => {
+  return clips.map((c) => {
     let r = c.clockMs - c.tcMs;
     while (r - first > DAY / 2) r -= DAY;
     while (first - r > DAY / 2) r += DAY;
     return r;
   });
+}
+
+/**
+ * Abstand Kamerauhr − Timecode aus mehreren Clips. Die Uhr schneidet vermutlich auf ganze Sekunden ab: Jeder Clip
+ * sagt dann „Abstand liegt in [r, r + 1 s)“. Die Schnittmenge aller Clips wird mit jedem Clip enger. Streuen die
+ * Clips etwas mehr, gilt die Mitte, mit der Überschreitung als Unsicherheit. Passen sie gar nicht zusammen (Timecode
+ * läuft nur während der Aufnahme oder wurde neu gesetzt), gibt es kein Ergebnis.
+ */
+export function timecodeOffset(
+  clips: { clockMs: number; tcMs: number; frameMs: number }[],
+): { offsetMs: number; uncertaintyMs: number } | null {
+  if (clips.length < 2) return null;
+  const rs = residuals(clips);
   const frameMs = Math.max(...clips.map((c) => c.frameMs));
-  let lo = Math.max(...rs);
-  let hi = Math.min(...rs) + 1000;
-  if (hi < lo - 2 * frameMs) return null;
-  if (hi < lo) [lo, hi] = [(lo + hi) / 2, (lo + hi) / 2];
-  return { offsetMs: (lo + hi) / 2, uncertaintyMs: Math.max(Math.round((hi - lo) / 2), Math.round(frameMs / 2)) };
+  const lo = Math.max(...rs);
+  const hi = Math.min(...rs) + 1000;
+  if (lo - hi > TC_SPREAD_MS - 1000) return null;
+  const half = Math.round(Math.abs(hi - lo) / 2);
+  return {
+    offsetMs: (lo + hi) / 2,
+    // Schnittmenge: halbe Breite. Überschritten: die Streuung über das Abschneiden hinaus.
+    uncertaintyMs: Math.max(hi >= lo ? half : 2 * half, Math.round(frameMs / 2)),
+  };
+}
+
+/**
+ * Clips in Gruppen mit gleichem Abstand Uhr − Timecode teilen: Wurde der Timecode zwischendurch neu gesetzt, bildet
+ * jeder Abschnitt eine eigene Gruppe. Einzelne Clips ohne Partner bleiben übrig. Gibt Positionen in `clips` zurück.
+ */
+export function timecodeGroups(clips: { clockMs: number; tcMs: number }[]): number[][] {
+  const rs = residuals(clips);
+  let left = rs.map((r, i) => ({ r, i })).toSorted((a, b) => a.r - b.r);
+  const groups: number[][] = [];
+  for (;;) {
+    let best: typeof left = [];
+    for (let a = 0, b = 0; a < left.length; a++) {
+      while (b < left.length && left[b]!.r - left[a]!.r <= TC_SPREAD_MS) b++;
+      if (b - a > best.length) best = left.slice(a, b);
+    }
+    if (best.length < 2) return groups;
+    groups.push(best.map((x) => x.i).toSorted((x, y) => x - y));
+    const taken = new Set(best);
+    left = left.filter((x) => !taken.has(x));
+  }
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -160,24 +198,28 @@ const formatOffset = (ms: number) => {
 
 /** Belege aus dem Kamera-Timecode für alle Clips eines Geräts, deren Timecode frei mitläuft. */
 function timecodeEvidence(cands: ImportCandidate[]): Map<number, EvidenceDraft> {
-  const clips = cands.flatMap((c, i) => timedClip(c, i) ?? []);
-  const off = timecodeOffset(clips.map((c) => ({ clockMs: c.base.localMs, tcMs: c.tcMs, frameMs: c.frameMs })));
+  const all = cands.flatMap((c, i) => timedClip(c, i) ?? []);
+  const timed = all.map((c) => ({ clockMs: c.base.localMs, tcMs: c.tcMs, frameMs: c.frameMs }));
   const out = new Map<number, EvidenceDraft>();
-  if (!off) return out;
-  for (const c of clips) {
-    const localMs = Math.round(c.tcMs + off.offsetMs);
-    out.set(c.index, {
-      kind: "metadata",
-      clock: "device",
-      atMediaMs: 0,
-      localMs,
-      utcMs: c.base.utcMs != null ? localMs + (c.base.utcMs - c.base.localMs) : null,
-      uncertaintyMs: off.uncertaintyMs,
-      detail: `Kamera-Timecode ${c.tc} (bildgenau; Abstand zur Kamerauhr aus ${clips.length} Clips)`,
-      raw: `timecode=${c.tc} fps=${c.fps} uhr−timecode=${formatOffset(off.offsetMs)}`,
-    });
+  for (const group of timecodeGroups(timed)) {
+    const off = timecodeOffset(group.map((g) => timed[g]!));
+    if (off) for (const g of group) out.set(all[g]!.index, timecodeDraft(all[g]!, off, group.length));
   }
   return out;
+}
+
+function timecodeDraft(c: TimedClip, off: { offsetMs: number; uncertaintyMs: number }, n: number): EvidenceDraft {
+  const localMs = Math.round(c.tcMs + off.offsetMs);
+  return {
+    kind: "metadata",
+    clock: "device",
+    atMediaMs: 0,
+    localMs,
+    utcMs: c.base.utcMs != null ? localMs + (c.base.utcMs - c.base.localMs) : null,
+    uncertaintyMs: off.uncertaintyMs,
+    detail: `Kamera-Timecode ${c.tc} (bildgenau; Abstand zur Kamerauhr aus ${n} Clips)`,
+    raw: `timecode=${c.tc} fps=${c.fps} uhr−timecode=${formatOffset(off.offsetMs)}`,
+  };
 }
 
 /**

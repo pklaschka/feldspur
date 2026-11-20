@@ -36,9 +36,9 @@ sie wie als UTC markierte Metadaten in die Zeitzone des Einsatzes um.
 **Kamera-Timecode:** Viele Videokameras schreiben einen bildgenauen Timecode, ihre Uhr aber nur auf die Sekunde. Läuft
 der Timecode frei mit (in der Kamera meist „Free Run“), ist sein Abstand zur Kamerauhr in allen Clips gleich. Feldspur
 schätzt diesen Abstand aus allen Clips, die du zusammen einsammelst, und ordnet jeden Clip damit auf Bruchteile einer
-Sekunde genau ein; untereinander liegen die Clips dann bildgenau. Das klappt ab zwei Clips desselben Geräts. Läuft der
-Timecode nur während der Aufnahme („Rec Run“) oder wurde er zwischendurch neu gesetzt, passen die Clips nicht zusammen,
-und Feldspur nimmt wie bisher die Kamerauhr. Drop-Frame-Timecode (29,97 mit `;`) wertet Feldspur nicht aus.
+Sekunde genau ein; untereinander liegen die Clips dann bildgenau. Das klappt ab zwei Clips desselben Geräts. Wurde der
+Timecode zwischendurch neu gesetzt, wertet Feldspur die Abschnitte davor und danach getrennt aus. Läuft er nur während
+der Aufnahme („Rec Run“), passen die Clips nicht zusammen, und Feldspur nimmt wie bisher die Kamerauhr. Drop-Frame-Timecode (29,97 mit `;`) wertet Feldspur nicht aus.
 
 **Zeitzone der Kamera:** Das Aufnahme-XML nennt die Zeitzone, auf die die Kamera eingestellt war, und Feldspur zeigt sie
 im Zeitbeleg an (z. B. „Zeitzone der Kamera +01:00“). Passt sie nicht zur Zeitzone des Einsatzes (etwa +01:00 im

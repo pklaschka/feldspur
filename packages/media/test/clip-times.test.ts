@@ -10,6 +10,7 @@ import {
   END_STAMP_UNCERTAINTY_MS,
   refineClipTimes,
   timecodeFrames,
+  timecodeGroups,
   timecodeOffset,
 } from "../src/clip-times.ts";
 import { evidenceFromFilename, evidenceFromMediaTags } from "../src/evidence.ts";
@@ -145,6 +146,37 @@ describe("Kamera-Timecode", () => {
     const off = timecodeOffset([clip(38_079_160), clip(38_200_540), clip(38_350_900), clip(39_000_020)])!;
     expect(Math.abs(off.offsetMs - true_)).toBeLessThanOrEqual(off.uncertaintyMs);
     expect(off.uncertaintyMs).toBeLessThan(250);
+  });
+
+  it("verträgt Uhren, die etwas mehr als eine Sekunde streuen, und einen neu gesetzten Timecode", () => {
+    // Erfundene Werte nach dem Muster einer echten Kamera: Abstand ≈ −1:16:12, Streuung gut 1,1 s.
+    const at = (tc: string, clock: string) => {
+      const [h, m, s, f] = tc.split(":").map(Number) as [number, number, number, number];
+      const [H, M, S] = clock.split(":").map(Number) as [number, number, number];
+      return { tcMs: ((h * 60 + m) * 60 + s) * 1000 + f * 20, clockMs: ((H * 60 + M) * 60 + S) * 1000, frameMs: 20 };
+    };
+    const day = [
+      at("10:34:39:08", "09:18:27"),
+      at("10:36:05:28", "09:19:53"),
+      at("10:38:37:46", "09:22:26"),
+      at("12:41:48:04", "11:25:36"),
+      at("12:44:10:38", "11:27:58"),
+      at("12:48:55:40", "11:32:43"),
+      at("13:57:13:02", "12:41:00"),
+      // Danach neu gesetzt: eigener Abschnitt.
+      at("00:00:10:00", "13:00:00"),
+      at("00:05:10:10", "13:05:00"),
+      // Einzelner Ausreißer ohne Partner.
+      at("05:00:00:00", "14:00:00"),
+    ];
+    const groups = timecodeGroups(day);
+    expect(groups).toEqual([
+      [0, 1, 2, 3, 4, 5, 6],
+      [7, 8],
+    ]);
+    const off = timecodeOffset(groups[0]!.map((i) => day[i]!))!;
+    expect(off.uncertaintyMs).toBeLessThanOrEqual(150);
+    expect(Math.abs(off.offsetMs - -4_572_000)).toBeLessThan(200);
   });
 
   it("verwirft Timecode, der nur während der Aufnahme läuft", () => {
