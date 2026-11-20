@@ -4,6 +4,66 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.3.0-rc.1 – 2026-11-20 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at a9dce054f2f223e42a43e94555e62e5e4ad5bc5d -->
+
+### Neu
+
+- Hinweis, wenn das Einsatzdatum nicht zu den Dateien passt ([#84](https://github.com/pklaschka/feldspur/pull/84), @pklaschka)
+- Laufende Ausgabe abbrechen ([#88](https://github.com/pklaschka/feldspur/pull/88), @pklaschka)
+- Fotos lassen sich als Tagebuchseite behandeln (und zurück) ([#98](https://github.com/pklaschka/feldspur/pull/98), @pklaschka)
+- Einsätze lassen sich löschen ([#100](https://github.com/pklaschka/feldspur/pull/100), @pklaschka)
+- Kontext: Karten, Listen und Zusammenfassungen ohne Uhrzeit stehen vor der Chronologie ([#115](https://github.com/pklaschka/feldspur/pull/115), @pklaschka)
+- Montagevideo: zusätzlich eine Tonspur je Gerät ([#126](https://github.com/pklaschka/feldspur/pull/126), @pklaschka)
+- Viewer: Einsatztranskript synchron zum Montagevideo im Browser ([#127](https://github.com/pklaschka/feldspur/pull/127), @pklaschka)
+
+### Verbessert
+
+- Suche zeigt, wenn es mehr Treffer gibt, und liest den gewählten Treffer vor ([#85](https://github.com/pklaschka/feldspur/pull/85), @pklaschka)
+- Erneut ausgeben merkt sich den Ordner und meldet gesperrte Dateien verständlich ([#89](https://github.com/pklaschka/feldspur/pull/89), @pklaschka)
+- Tagebuch: Neuer Eintrag übernimmt die Form des vorigen ([#94](https://github.com/pklaschka/feldspur/pull/94), @pklaschka)
+- Durchsehen: Nach „Lage passt“ geht es gleich zur nächsten Stelle, mit Tastenkürzeln ([#95](https://github.com/pklaschka/feldspur/pull/95), @pklaschka)
+- Neues Projekt: ersten Einsatz direkt auf der Startfläche anlegen ([#97](https://github.com/pklaschka/feldspur/pull/97), @pklaschka)
+- Hinweis, wenn Dateien neben „Einsammeln“ abgelegt werden ([#101](https://github.com/pklaschka/feldspur/pull/101), @pklaschka)
+- Tagebucheinträge nachträglich verschieben und in der Größe ändern ([#106](https://github.com/pklaschka/feldspur/pull/106), @pklaschka)
+- Alle Uhrzeit- und Stellenfelder ohne Doppelpunkt tippen ([#107](https://github.com/pklaschka/feldspur/pull/107), @pklaschka)
+- Das Zeitgerüst heißt jetzt Einsatztranskript ([#112](https://github.com/pklaschka/feldspur/pull/112), @pklaschka)
+- Tonspur-Analyse lässt sich abbrechen; Abbrechen wirkt auch bei Lautstärkemessung und Standbildern ([#139](https://github.com/pklaschka/feldspur/pull/139), @pklaschka)
+
+### Behoben
+
+- Transkript-Import lässt sich rückgängig machen und meldet ausgelassene Zeilen ([#83](https://github.com/pklaschka/feldspur/pull/83), @pklaschka)
+- Fehlermeldungen erscheinen auch in geöffneten Dialogen ([#86](https://github.com/pklaschka/feldspur/pull/86), @pklaschka)
+- Ungültige Uhrzeiten abweisen und Statuspunkte für Screenreader beschriften ([#87](https://github.com/pklaschka/feldspur/pull/87), @pklaschka)
+- Mitschreiben: Weitertippen und angefangene Zeilen gehen nicht mehr verloren ([#90](https://github.com/pklaschka/feldspur/pull/90), @pklaschka)
+- „Alle eindeutigen übernehmen“ klappt ohne Fehlermeldung und lässt sich in einem Schritt rückgängig machen ([#91](https://github.com/pklaschka/feldspur/pull/91), @pklaschka)
+- Tippfehler bei der Uhrabweichung löscht den Abgleich nicht mehr ([#92](https://github.com/pklaschka/feldspur/pull/92), @pklaschka)
+- Tagebuch: Getippter Text bleibt beim Blättern und Schließen erhalten ([#93](https://github.com/pklaschka/feldspur/pull/93), @pklaschka)
+- Zeilenumbrüche im Tagebuch-Volltext bleiben im Zeitgerüst erhalten ([#96](https://github.com/pklaschka/feldspur/pull/96), @pklaschka)
+- Ausgabe unter macOS: Montagevideo scheitert nicht mehr an fehlendem PNG-Decoder ([#114](https://github.com/pklaschka/feldspur/pull/114), @pklaschka)
+- Montagevideo synchron: Feinabgleich schlägt angesagte Uhrzeit ([#120](https://github.com/pklaschka/feldspur/pull/120), @pklaschka)
+- Ausgabe: Prüfsummen erst nach der Ordnerwahl prüfen ([#119](https://github.com/pklaschka/feldspur/pull/119), @pklaschka)
+- Montagevideo: Bei einem Fehler wird sofort abgebrochen statt weitergerechnet ([#140](https://github.com/pklaschka/feldspur/pull/140), @pklaschka)
+- Ausgabe hängt nicht mehr, wenn die Oberfläche währenddessen neu lädt ([#141](https://github.com/pklaschka/feldspur/pull/141), @pklaschka)
+- Während der Ausgabe geht der Rechner nicht mehr in den Ruhezustand ([#143](https://github.com/pklaschka/feldspur/pull/143), @pklaschka)
+- Video-Zeiten genauer: Android-Videos überlappen nicht mehr, Kamera-Timecode, Zeitbelege neu lesen ([#146](https://github.com/pklaschka/feldspur/pull/146), @pklaschka)
+- Markierter Text bleibt sichtbar, auch in der laufenden Mitschreib-Zeile ([#148](https://github.com/pklaschka/feldspur/pull/148), @pklaschka)
+
+### Dokumentation
+
+- Tastenkürzel-Spickblatt zum Ausdrucken ([#82](https://github.com/pklaschka/feldspur/pull/82), @pklaschka)
+- Tastenkürzel-Spickblatt um die Kürzel in „Durchsehen“ ergänzt ([#99](https://github.com/pklaschka/feldspur/pull/99), @pklaschka)
+- Lieferling als empfohlenen Installationsweg nennen ([#111](https://github.com/pklaschka/feldspur/pull/111), @pklaschka)
+
+### Hinter den Kulissen
+
+- Release-Workflow: Hotfix-Branches, Changelog 0.2.1 ([#124](https://github.com/pklaschka/feldspur/pull/124), @pklaschka)
+- CI: Actions auf Node-24-Versionen heben ([#125](https://github.com/pklaschka/feldspur/pull/125), @pklaschka)
+- Ein gemeinsamer Weg für ffmpeg und ffprobe (Zeitlimits, einheitliche Fehlermeldungen) ([#138](https://github.com/pklaschka/feldspur/pull/138), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.2.1...v0.3.0-rc.1
+
 ## 0.2.1 – 2026-11-19
 
 Hotfix auf Grundlage von 0.2.0. Die Neuerungen, die seitdem in `main` liegen, kommen mit 0.3.0.
