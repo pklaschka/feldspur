@@ -34,6 +34,8 @@ export interface AnalyzeOptions extends IdleOptions {
   onProgress?: (done: number, total: number, fileName: string) => void;
   /** Quellen, die nicht gelesen werden können (z. B. Originaldatei fehlt), mit Grund: erscheinen unter failed. */
   skip?: Map<Id, string>;
+  /** Abbrechen: analyzeSession wirft einen AbortError; schon analysierte Quellen bleiben gespeichert. */
+  signal?: AbortSignal;
 }
 
 export interface AnalyzeResult {
@@ -54,6 +56,7 @@ export async function analyzeSession(
   let analyzed = 0;
 
   for (const [i, s] of sources.entries()) {
+    opts.signal?.throwIfAborted();
     opts.onProgress?.(i, sources.length, s.fileName);
     const cached = existing.get(s.id);
     if (cached && cached.version === ANALYSIS_VERSION) {
@@ -68,7 +71,7 @@ export async function analyzeSession(
       continue;
     }
     try {
-      const env = await computeEnvelope(s.originalPath);
+      const env = await computeEnvelope(s.originalPath, { signal: opts.signal });
       const idle = detectIdle(env, opts);
       store.saveAudioAnalysis({
         sourceId: s.id,
@@ -84,9 +87,11 @@ export async function analyzeSession(
       envelopes.set(s.id, env);
       analyzed++;
     } catch (e) {
+      if (opts.signal?.aborted) throw e;
       failed.push({ sourceId: s.id, fileName: s.fileName, message: (e as Error).message });
     }
   }
+  opts.signal?.throwIfAborted();
   opts.onProgress?.(sources.length, sources.length, "");
 
   const input = store.loadResolveInput(sessionId);
@@ -148,9 +153,13 @@ export function speechLevels(
 }
 
 /** Nur den Pegel einer Quelle messen (ohne Anker-Vorschläge), etwa vor dem Ausgeben. */
-export async function measureSource(store: ProjectStore, sourceId: Id): Promise<number | null> {
+export async function measureSource(
+  store: ProjectStore,
+  sourceId: Id,
+  opts: { signal?: AbortSignal } = {},
+): Promise<number | null> {
   const s = store.getSource(sourceId);
-  const env = await computeEnvelope(s.originalPath);
+  const env = await computeEnvelope(s.originalPath, opts);
   const idle = detectIdle(env);
   const level = speechLevelDb(env.db);
   store.saveAudioAnalysis({
@@ -184,8 +193,12 @@ export async function sessionLevels(
     for (const [i, s] of missing.entries()) {
       opts.signal?.throwIfAborted();
       opts.onProgress?.(i, missing.length);
-      // Nicht lesbare Dateien bleiben unverändert; das Montagevideo scheitert daran nicht.
-      measured.set(s.id, await measureSource(store, s.id).catch(() => null));
+      // Nicht lesbare Dateien bleiben unverändert; das Montagevideo scheitert daran nicht. Ein Abbruch schon.
+      const level = await measureSource(store, s.id, { signal: opts.signal }).catch((e: unknown) => {
+        if (opts.signal?.aborted) throw e;
+        return null;
+      });
+      measured.set(s.id, level);
     }
     if (missing.length) opts.onProgress?.(missing.length, missing.length);
   }

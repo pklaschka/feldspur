@@ -44,7 +44,7 @@ export async function renderStill(
   src: Source,
   ref: ImageRef,
   outDir: string,
-  opts: { maxWidth?: number; name: string },
+  opts: { maxWidth?: number; name: string; signal?: AbortSignal },
 ): Promise<Still | null> {
   if (!canRenderStill(src)) return null;
   const maxW = opts.maxWidth ?? 1000;
@@ -74,7 +74,7 @@ export async function renderStill(
       "3",
       out,
     ],
-    { timeoutMs: STILL_TIMEOUT_MS },
+    { signal: opts.signal, timeoutMs: STILL_TIMEOUT_MS },
   );
   const data = await readFile(out);
   const size = jpegSize(data);

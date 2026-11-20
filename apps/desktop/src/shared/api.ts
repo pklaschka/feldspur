@@ -680,8 +680,10 @@ export interface FeldspurApi {
   setDeviceOffset(deviceId: string, offsetMs: number | null): Promise<SessionView>;
   /** Randnotiz einer Tagebuchseite setzen ("10:12"); leer = entfernen. Erzeugt einen Eintrag über die ganze Seite. */
   setDiaryNote(sourceId: string, clock: string): Promise<SessionView>;
-  /** Tonspuren analysieren (Hüllkurve, Leerlauf) und Anker vorschlagen. */
-  analyze(sessionId: string): Promise<{ view: SessionView; analyzed: number; failed: string[] }>;
+  /** Tonspuren analysieren (Hüllkurve, Leerlauf) und Anker vorschlagen. `cancelled`: abgebrochen, ohne Vorschläge. */
+  analyze(sessionId: string): Promise<{ view: SessionView; analyzed: number; failed: string[]; cancelled?: boolean }>;
+  /** Laufende Tonspur-Analyse abbrechen; schon analysierte Tonspuren bleiben gespeichert. */
+  cancelAnalyze(sessionId: string): Promise<void>;
   confirmAnchor(anchorId: string): Promise<SessionView>;
   /** Mehrere Vorschläge in einem Schritt übernehmen, je Gerät den sichersten; gelöschte werden übersprungen. */
   confirmAnchors(sessionId: string, anchorIds: string[]): Promise<SessionView>;
@@ -878,6 +880,7 @@ export const IPC = {
   setDeviceOffset: "device:set-offset",
   setDiaryNote: "diary:set-note",
   analyze: "audio:analyze",
+  cancelAnalyze: "audio:analyze-cancel",
   confirmAnchor: "anchor:confirm",
   confirmAnchors: "anchor:confirm-many",
   rejectAnchor: "anchor:reject",

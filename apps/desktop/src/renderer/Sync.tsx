@@ -68,6 +68,9 @@ export function Sync({
   const [progress, setProgress] = useState<string | null>(null);
   /** Ergebnis der letzten Tonspur-Analyse; was davon noch offen ist, steht in `view`. */
   const [analysis, setAnalysis] = useState<{ analyzed: number; failed: number } | null>(null);
+  /** Abbrechen wurde gedrückt; bis die Analyse steht, bleibt der Knopf gesperrt. */
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   /** Sammelübernahme läuft. */
   const [accepting, setAccepting] = useState(false);
   const [fine, setFine] = useState<FineAlignStart | null>(null);
@@ -81,15 +84,26 @@ export function Sync({
 
   const run = async () => {
     setProgress("Starte…");
+    setCancelled(false);
     const off = api.onProgress((p) =>
       setProgress(p.fileName ? `${p.done + 1} / ${p.total} · ${p.fileName}` : "Suche Übereinstimmungen…"),
     );
     const r = await guard(() => api.analyze(view.session.id));
     off();
     setProgress(null);
+    setCancelling(false);
     if (!r) return;
     onView(r.view);
+    if (r.cancelled) {
+      setAnalysis(null);
+      setCancelled(true);
+      return;
+    }
     setAnalysis({ analyzed: r.analyzed, failed: r.failed.length });
+  };
+  const cancel = () => {
+    setCancelling(true);
+    void api.cancelAnalyze(view.session.id);
   };
 
   const sure = view.proposals.filter(isSure);
@@ -153,7 +167,21 @@ export function Sync({
       </StepHeader>
       <div className="grid max-w-[1500px] gap-4">
         <Panel>
-          {progress && <Notice>{progress}</Notice>}
+          {progress && (
+            <Notice>
+              <span className="flex flex-wrap items-center gap-3">
+                {progress}
+                <Button size="sm" disabled={cancelling} onClick={cancel} data-testid="analyze-cancel">
+                  {cancelling ? "Wird abgebrochen…" : "Abbrechen"}
+                </Button>
+              </span>
+            </Notice>
+          )}
+          {cancelled && !progress && (
+            <Notice>
+              Abgebrochen. Schon analysierte Tonspuren bleiben gespeichert und werden beim nächsten Mal übersprungen.
+            </Notice>
+          )}
           {notice && !progress && !done && sure.length < 2 && <Notice>{notice}</Notice>}
           {done && (
             <p
