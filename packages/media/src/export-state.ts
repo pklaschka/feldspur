@@ -95,6 +95,7 @@ const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
   resolve: ["mit Schnittliste für Resolve", "ohne Schnittliste für Resolve"],
   mixAudio: ["Ton aller Geräte gemischt", "nur Ton der Hauptquelle"],
   deviceTracks: ["mit einer Tonspur je Gerät", "ohne Tonspuren je Gerät"],
+  viewer: ["mit Viewer", "ohne Viewer"],
   realtime: ["in Echtzeit", "nach Episoden geschnitten"],
 };
 

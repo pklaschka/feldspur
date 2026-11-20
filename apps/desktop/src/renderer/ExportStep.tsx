@@ -26,6 +26,7 @@ const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || p;
 const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
+  [/\.html$/, "Viewer: Einsatztranskript synchron zum Video, im Browser öffnen"],
   [/\.docx$/, "Einsatztranskript für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
   [/\.xlsx$/, "Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren)"],
   [/\.csv$/, "Begleitprotokoll: Herkunft und Zeitnachweis jeder Datei"],
@@ -38,9 +39,17 @@ interface Options {
   resolve: boolean;
   mixAudio: boolean;
   deviceTracks: boolean;
+  viewer: boolean;
   byEpisodes: boolean;
 }
-const DEFAULTS: Options = { video: true, resolve: false, mixAudio: true, deviceTracks: true, byEpisodes: false };
+const DEFAULTS: Options = {
+  video: true,
+  resolve: false,
+  mixAudio: true,
+  deviceTracks: true,
+  viewer: true,
+  byEpisodes: false,
+};
 const KEY = "feldspur.export-options";
 function loadOptions(): Options {
   try {
@@ -85,7 +94,7 @@ export function ExportStep({
       }
       return next;
     });
-  const { video, resolve, mixAudio, deviceTracks, byEpisodes } = opts;
+  const { video, resolve, mixAudio, deviceTracks, viewer, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
   const realtime = !(withEpisodes && byEpisodes);
@@ -97,20 +106,20 @@ export function ExportStep({
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
   const cancelled = busy ? null : (ex.cancelled[sessionId] ?? null);
-  const settings = { video, resolve, mixAudio, deviceTracks, realtime };
+  const settings = { video, resolve, mixAudio, deviceTracks, viewer, realtime };
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const [status, setStatus] = useState<ExportStatus | null>(null);
   useEffect(() => {
     if (busy) return;
     let live = true;
-    void api.exportStatus(sessionId, { video, resolve, mixAudio, deviceTracks, realtime }).then(
+    void api.exportStatus(sessionId, { video, resolve, mixAudio, deviceTracks, viewer, realtime }).then(
       (st) => live && setStatus(st),
       () => live && setStatus(null),
     );
     return () => {
       live = false;
     };
-  }, [view, sessionId, video, resolve, mixAudio, deviceTracks, realtime, busy, justDone]);
+  }, [view, sessionId, video, resolve, mixAudio, deviceTracks, viewer, realtime, busy, justDone]);
   const result = busy || status?.record.sessionId !== sessionId ? null : status;
 
   useEffect(() => {
@@ -299,6 +308,12 @@ export function ExportStep({
                 onChange={(v) => set({ deviceTracks: v })}
                 label="Zusätzlich eine Tonspur je Gerät"
                 hint="Die Mischung bleibt Spur 1. VLC und Schnittprogramme spielen die Geräte auch einzeln."
+              />
+              <Option
+                checked={viewer}
+                onChange={(v) => set({ viewer: v })}
+                label="Viewer zum Ansehen im Browser (.html)"
+                hint="Eine Datei neben dem Video: Einsatztranskript läuft mit, Klick auf eine Zeile springt. Mit Bildern, darum größer."
               />
               <Option
                 checked={resolve}

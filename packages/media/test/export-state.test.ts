@@ -7,7 +7,14 @@ import { compareExport, exportFingerprint, FINGERPRINT_VERSION, settingsDifferen
 import { applyImport, scanPaths } from "../src/import.ts";
 import { hasFfmpeg, makePhoto } from "./fixtures.ts";
 
-const SETTINGS: ExportSettings = { video: true, resolve: false, mixAudio: true, realtime: true, deviceTracks: true };
+const SETTINGS: ExportSettings = {
+  video: true,
+  resolve: false,
+  mixAudio: true,
+  realtime: true,
+  deviceTracks: true,
+  viewer: true,
+};
 
 describe("Einstellungen im Vergleich", () => {
   it("nennt nur, was sich unterscheidet", () => {

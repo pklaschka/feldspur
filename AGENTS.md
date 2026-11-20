@@ -53,5 +53,10 @@ release. Add a tool name to select part of the graph. For example, run
   `skills-lock.json`, für Claude Code verlinkt in `.claude/skills/`). Aktualisieren: `npx -y skills update modern-web-guidance`.
 - Altlasten suchen: `DISABLE_TELEMETRY=1 npx -y modern-web-guidance@latest legacy-scan apps --json` (ebenso für
   `packages`). Ohne `DISABLE_TELEMETRY=1` schickt das Werkzeug anonyme Nutzungsdaten an Google.
+- **Ausnahme Viewer** (`packages/media/src/viewer/`, Issue #122): Die HTML-Datei neben dem Montagevideo öffnen
+  Forschende in irgendeinem Browser. Dort nur, was alle heutigen Browser können (Chrome, Edge, Firefox, Safari);
+  Dateizugriff und WebCodecs vorher prüfen und ohne sie bei der Mischung bleiben. Das Skript (`runtime.ts`,
+  `mp4-audio.ts`) wird per `Function#toString` eingebettet: keine Importe zur Laufzeit, keine Bezüge außerhalb der
+  Funktion, nichts nachladen, nichts speichern außer der Freigabe in IndexedDB.
 - Farben nicht auf `light-dark()` umstellen: die Canvas-Zeichnungen lesen die Farbvariablen per `getComputedStyle`
   und bekämen dann den unaufgelösten Ausdruck statt einer Farbe.

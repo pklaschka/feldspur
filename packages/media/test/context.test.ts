@@ -7,7 +7,14 @@ import { documentVariables, protocolCsv } from "../src/export.ts";
 import { exportFingerprint } from "../src/export-state.ts";
 import { buildSessionTranscript, entryText } from "../src/session-transcript.ts";
 
-const SETTINGS: ExportSettings = { video: false, resolve: false, mixAudio: true, realtime: true, deviceTracks: false };
+const SETTINGS: ExportSettings = {
+  video: false,
+  resolve: false,
+  mixAudio: true,
+  realtime: true,
+  deviceTracks: false,
+  viewer: false,
+};
 const T = (h: number, m: number, s = 0) => Date.UTC(2026, 8, 14, h, m, s);
 
 describe("Kontext im Einsatztranskript (Issue #108)", () => {

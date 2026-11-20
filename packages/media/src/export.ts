@@ -6,10 +6,10 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
 import { levelText, sessionLevels } from "./analyze.ts";
-import type { AudioLevel } from "./audio.ts";
+import { unpackEnvelope, type AudioLevel } from "./audio.ts";
 import { sessionTranscriptDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
-import { planPieces, renderMontage, type OverlayRenderer } from "./montage-video.ts";
+import { planPieces, renderMontage, type MontageResult, type OverlayRenderer } from "./montage-video.ts";
 import {
   buildSessionTranscript,
   type ImageRef,
@@ -19,6 +19,7 @@ import {
 } from "./session-transcript.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 import { excelCsv } from "./csv.ts";
+import { sessionTranscriptHtml } from "./viewer/html.ts";
 import { xlsx, type Cell } from "./xlsx.ts";
 import { ensureWritable, ExportPrecheckError, friendlyWriteError, friendlyWriteErrorIn } from "./write-check.ts";
 
@@ -40,6 +41,8 @@ export interface ExportOptions {
   audioMix?: "all" | "main";
   /** Nach der Mischung je Gerät eine eigene Tonspur ins Montagevideo (ab zwei Geräten mit Ton). */
   deviceTracks?: boolean;
+  /** Viewer (.html) neben dem Montagevideo: Einsatztranskript synchron zum Video im Browser (nur mit Video). */
+  viewer?: boolean;
   /**
    * Bilder, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG liefern. In der App zeichnet
    * die Oberfläche sie mit pdf.js; ohne diese Hilfe fehlen solche Ausschnitte.
@@ -256,6 +259,7 @@ export async function exportSession(
     await ensureWritable(
       [
         ...(opts.video !== false ? [`${base}.mp4`] : []),
+        ...(opts.video !== false && opts.viewer ? [`${base}.html`] : []),
         ...(opts.resolve ? [`${base}_Resolve.fcpxml`] : []),
         `${base}.docx`,
         `${base}_Variablen.xlsx`,
@@ -301,8 +305,9 @@ export async function exportSession(
       signal,
       onProgress: (done, total) => opts.onProgress?.("Lautstärke messen", done, total),
     });
+    let montage: MontageResult | null = null;
     if (opts.video !== false) {
-      await renderMontage(transcript, outPath(outDir, media), {
+      montage = await renderMontage(transcript, outPath(outDir, media), {
         workDir: work,
         overlay: opts.overlay,
         cacheDir: opts.cacheDir,
@@ -326,6 +331,21 @@ export async function exportSession(
     const docx = await sessionTranscriptDocx(transcript, { mediaFileName: media, stills, contextStills });
     await writeFile(outPath(outDir, `${base}.docx`), docx);
     files.push(`${base}.docx`);
+    if (montage && opts.viewer) {
+      opts.onProgress?.("Viewer", 0, 1);
+      const html = sessionTranscriptHtml(transcript, {
+        mediaFileName: media,
+        stills,
+        contextStills,
+        audioTracks: montage.audioTracks,
+        // Wellenform der Gerätespuren aus der Tonspur-Analyse; ohne Analyse bleibt die Aufnahme ein glatter Balken.
+        envelopes: new Map(
+          store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, unpackEnvelope(a.envelope, a.envelopeRate)]),
+        ),
+      });
+      await writeFile(outPath(outDir, `${base}.html`), html, "utf8");
+      files.push(`${base}.html`);
+    }
     await writeFile(
       outPath(outDir, `${base}_Variablen.xlsx`),
       xlsx(documentVariables(transcript, base), "Dokumentvariablen"),

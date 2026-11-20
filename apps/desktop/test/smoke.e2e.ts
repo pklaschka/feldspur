@@ -6,7 +6,7 @@
  *   FELDSPUR_SCREENSHOT=bild.png …                 speichert ein Bildschirmfoto
  *   FELDSPUR_E2E_APP=release/…/feldspur vpx test/smoke.e2e.ts   prüft das fertige Paket
  */
-import { cpSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
@@ -1020,11 +1020,45 @@ try {
   if (
     !files.some((f) => f.includes(".mp4")) ||
     !files.some((f) => f.includes(".docx")) ||
-    !files.some((f) => f.includes(".fcpxml"))
+    !files.some((f) => f.includes(".fcpxml")) ||
+    !files.some((f) => f.includes(".html"))
   )
     throw new Error("Ausgabe unvollständig");
   await shot("-ausgegeben");
   if (process.env.FELDSPUR_EXPORT_KEEP) cpSync(out, process.env.FELDSPUR_EXPORT_KEEP, { recursive: true });
+
+  // Viewer (Issue #122): im Chromium von Electron öffnen. Eine Zeile anklicken springt im Video dorthin.
+  const viewerFile = readdirSync(out, { recursive: true }).find((f) => String(f).endsWith(".html"));
+  const [viewer] = await Promise.all([
+    app.waitForEvent("window"),
+    app.evaluate(
+      ({ BrowserWindow }, path) => {
+        void new BrowserWindow({ width: 1440, height: 900 }).loadFile(path);
+      },
+      join(out, String(viewerFile)),
+    ),
+  ]);
+  const viewerErrors: string[] = [];
+  viewer.on("pageerror", (e) => viewerErrors.push(e.message));
+  await viewer.setViewportSize({ width: 1440, height: 900 });
+  await viewer.waitForFunction(
+    () => ((document.getElementById("vid") as HTMLVideoElement | null)?.readyState ?? 0) > 0,
+  );
+  const lines = viewer.locator("li.ln.k-line");
+  if ((await lines.count()) < 1) throw new Error("Viewer ohne Mitschrift");
+  await lines.nth(1).click();
+  await viewer.waitForFunction(() => {
+    const cur = document.querySelector<HTMLElement>("li.ln[aria-current]");
+    const v = document.getElementById("vid") as HTMLVideoElement;
+    return !!cur && Math.abs(v.currentTime - Number(cur.dataset.m) / 1000) < 0.5;
+  });
+  if (await viewer.locator("#ton-btn").isHidden()) throw new Error("Viewer: Knopf für die Tonspuren fehlt");
+  if (viewerErrors.length) throw new Error(`Viewer: ${viewerErrors.join("; ")}`);
+  if (process.env.FELDSPUR_SCREENSHOT) {
+    await viewer.waitForTimeout(500);
+    await viewer.screenshot({ path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, "-viewer.png") });
+  }
+  await viewer.close();
 
   await page.getByRole("tab", { name: /Durchsehen/ }).click();
   if (process.env.FELDSPUR_SCREENSHOT) {

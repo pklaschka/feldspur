@@ -73,6 +73,8 @@ Optionen:
   wenn eine Stimme im Rekorder untergeht und das Handy näher dran war. Bei nur einem Gerät mit Ton entfällt die Extraspur.
 - **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
   willst.
+- **Viewer zum Ansehen im Browser** (Standard, nur mit Montagevideo): Neben dem Video entsteht eine HTML-Datei, in
+  der du Video und Einsatztranskript zusammen im Browser ansiehst (@sec-viewer).
 
 Mit **Montage ansehen** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
@@ -80,6 +82,53 @@ Ein Montagevideo in Echtzeit rechnet bei einem langen Feldtag eine Weile. Hast d
 du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gilt dann nicht als fertig, auch eine
 frühere Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben im Zwischenspeicher, der nächste Versuch
 geht deshalb schneller.
+
+### Viewer (.html) {#sec-viewer}
+
+Der **Viewer** ist eine einzelne HTML-Datei, die neben dem Montagevideo liegt. Du öffnest sie per Doppelklick in
+Chrome, Edge, Firefox oder Safari; MAXQDA oder Feldspur braucht dafür niemand. Willst du einen Einsatz weitergeben,
+etwa an die Betreuung oder an eine Interpretationsgruppe, kopierst du den ganzen Ordner.
+
+![Viewer im Browser: links Video und Zeitleiste, rechts das Einsatztranskript](bilder/viewer.png){#fig-viewer}
+
+Links stehen das Video, die Steuerleiste und die Zeitleiste, rechts das Einsatztranskript mit Mitschrift, Fotos und
+Tagebuch. Die Zeile, die gerade läuft, ist getönt, ihre Uhrzeit steht in Terrakotta.
+
+- Ein **Klick** auf eine Zeile springt im Video an diese Stelle. Markierst du Text, etwa zum Kopieren, springt das
+  Video nicht.
+- Mit dem Schalter **Text läuft mit** (Taste **T**) folgt der Text dem Video. Scrollst du selbst, hält er an;
+  **Zur aktuellen Stelle** bringt dich zurück.
+- Die **Zeitleiste** zeigt Episoden, Zwischenzeiten, Fotos, Tagebuch und je Gerät eine Spur. Das **Mausrad** über der
+  Zeitleiste zoomt, ohne Strg oder ⌘, ebenso die Knöpfe und Tasten **+** und **−**. Mit **Umschalt** und Mausrad
+  oder durch Ziehen an der Uhrzeitleiste verschiebst du den Ausschnitt. **Alles** zeigt wieder den ganzen Einsatz.
+  Beim Abspielen bleibt die Fahne, also der Zeitzeiger, im Ausschnitt.
+- Dazu kommen die **Suche** und das Fenster **Kontext** (@sec-kontext). Unter **Ansicht** blendest du Zeilenarten
+  ein oder aus, änderst die Schriftgröße, wählst hell oder dunkel und legst fest, ob am Rand Uhrzeit, Videozeit oder
+  `#Marke#` steht.
+- **Stelle kopieren** legt Einsatz, Uhrzeit, Zeitmarke und Montage-ID in die Zwischenablage.
+- Ins **Vollbild** kommst du mit dem Knopf rechts in der Steuerleiste, mit der Taste **F** oder per Doppelklick ins
+  Video; **Esc** beendet es. Alle Tasten zeigt das Tastatur-Zeichen oben rechts oder die Taste **?**.
+
+Findet der Viewer das Video nicht, weil es fehlt oder anders heißt, steht dort ein Hinweis mit dem Knopf
+**Videodatei wählen…**. Das Einsatztranskript bleibt auch ohne Video lesbar.
+
+Zu hören ist zunächst die Mischung. Hat das Video eine Tonspur je Gerät (siehe die Optionen oben), kannst du auch
+einzelne Geräte hören. Der Knopf **Erweiterte Tonspurkontrolle** öffnet dafür einen kurzen Assistenten. Was du dort
+tun musst, hängt vom Browser ab:
+
+- Safari spielt die Tonspuren selbst und braucht keine Freigabe.
+- Chrome, Edge und Firefox spielen von sich aus nur die erste Tonspur. Für die anderen musst du dem Browser die
+  Videodatei einmal freigeben: Zieh sie in den Assistenten oder wähle **Video freigeben…**. Chrome und Edge merken
+  sich die Freigabe und fragen beim nächsten Öffnen nur kurz nach (**Erneut freigeben**). In Firefox wählst du das
+  Video jedes Mal neu.
+
+Danach hat jede Gerätespur die Knöpfe **S** (nur diese Spur hören) und **M** (stumm). Mit den Tasten **1** bis **9**
+hörst du nur ein Gerät, mit **0** oder **Alle hören** wieder die Mischung. Bei einem anderen Tempo als 1× ist immer
+die Mischung zu hören.
+
+Der Viewer lädt nichts aus dem Netz und schickt nichts weg. Schriften, Bilder und Programm stecken in der Datei;
+gespeichert wird nur die Freigabe des Videos im Browser. Weil die Bilder eingebettet sind, wächst die Datei mit jedem
+Foto und jeder Tagebuchseite um grob 150 KB.
 
 ### Dokumentvariablen (.xlsx)
 
