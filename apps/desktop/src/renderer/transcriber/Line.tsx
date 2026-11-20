@@ -8,11 +8,11 @@ import { Button, CloseButton, cx } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import { isEnter } from "../keys.js";
 
-export function At({ ms, startMs, current = false }: { ms: number; startMs: number | null; current?: boolean }) {
+export function At({ ms, startMs }: { ms: number; startMs: number | null }) {
   return (
     <>
       {positionText(ms)}
-      {startMs !== null && <span className={current ? "text-ink-2" : "text-muted"}> · {clock(startMs + ms)}</span>}
+      {startMs !== null && <span className="text-muted"> · {clock(startMs + ms)}</span>}
     </>
   );
 }
@@ -43,22 +43,17 @@ export const Line = memo(function Line({
     <li
       className={cx(
         "group flex items-start gap-3 rounded-md px-2 py-0.5 [contain-intrinsic-size:auto_2rem] [content-visibility:auto]",
-        // Fläche allein hebt sich kaum ab (1,4:1); der Streifen links trägt den Kontrast (WCAG 1.4.11, ≥ 3:1).
-        current ? "bg-current-line shadow-[inset_3px_0_0_var(--accent)]" : "hover:bg-panel-2",
+        current ? "bg-accent-soft" : "hover:bg-panel-2",
       )}
-      aria-current={current || undefined}
       data-testid="line"
       data-line={line.id}
     >
       <button
-        className={cx(
-          "w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent",
-          current && "font-semibold",
-        )}
+        className="w-36 flex-none cursor-pointer pt-1 text-left font-mono text-[0.85rem] hover:text-accent"
         onClick={() => actions.seek(line.atMs)}
         title="Hierhin springen"
       >
-        <At ms={line.atMs} startMs={startMs} current={current} />
+        <At ms={line.atMs} startMs={startMs} />
       </button>
       <input
         className="w-14 flex-none border-transparent bg-transparent font-mono font-medium hover:border-line focus:border-line-2"
