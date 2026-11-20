@@ -300,7 +300,7 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
               <>
                 <DropdownMenu.Separator className={sep} />
                 <DropdownMenu.Label className="px-2.5 pt-1 pb-0.5 text-[0.8rem] text-muted">
-                  Zeitstempel mit „Z“ (UTC) in den Metadaten
+                  Zeitstempel in UTC (Metadaten, Dateiname)
                 </DropdownMenu.Label>
                 <DropdownMenu.RadioGroup
                   value={device.timestampsAreUtc ? "utc" : "local"}

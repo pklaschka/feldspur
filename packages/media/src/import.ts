@@ -14,6 +14,7 @@ import {
   evidenceFromMediaTags,
   type EvidenceDraft,
 } from "./evidence.ts";
+import { refineClipTimes } from "./clip-times.ts";
 import { sha256File } from "./hash.ts";
 import { probeMedia, readImageExif, type ImageExif, type MediaProbe } from "./probe.ts";
 
@@ -319,17 +320,37 @@ export function stampsLookLocal(candidates: ImportCandidate[], timeZone: string)
   let utc = 0;
   for (const c of candidates) {
     const named = c.evidence.find((e) => e.kind === "filename");
-    if (!named) continue;
+    // Ein Name in UTC (Pixel) taugt nicht als Ortszeit-Vergleich.
+    if (!named || (named.utcMs !== null && named.utcMs !== undefined)) continue;
     for (const e of c.evidence) {
       if (e.kind !== "metadata" || e.utcMs === null || e.utcMs === undefined) continue;
-      const asWritten = Math.abs(e.localMs - named.localMs);
-      const converted = Math.abs(utcToLocal(e.utcMs, timeZone) - named.localMs);
+      // Verglichen wird der Beginn: ein Stempel am Aufnahmeende (siehe clip-times.ts) um die Länge zurückgerechnet.
+      const atMs = e.atMediaMs ?? 0;
+      const asWritten = Math.abs(e.localMs - atMs - named.localMs);
+      const converted = Math.abs(utcToLocal(e.utcMs, timeZone) - atMs - named.localMs);
       if (Math.abs(asWritten - converted) < NEAR) continue; // Zeitzone UTC oder kein Unterschied
       if (asWritten <= NEAR && asWritten < converted) local++;
       else if (converted <= NEAR) utc++;
     }
   }
   return local > utc;
+}
+
+/**
+ * Nennt das Aufnahme-XML einer Kamera eine andere Zeitzone als die des Einsatzes (etwa +01:00 im Sommer in
+ * Deutschland), ist meist nur die Zone falsch eingestellt, die Uhr aber nach der Ortszeit gestellt. Dann gilt die
+ * Uhrzeit wie geschrieben; die Zone steht im Zeitbeleg, und im Gerätemenü lässt sich auf UTC umstellen.
+ */
+export function cameraZoneDiffers(candidates: ImportCandidate[], timeZone: string): boolean {
+  return candidates.some((c) =>
+    c.evidence.some(
+      (e) =>
+        e.kind === "metadata" &&
+        e.detail.includes("Kamera-XML") &&
+        e.utcMs != null &&
+        e.localMs - e.utcMs !== utcToLocal(e.utcMs, timeZone) - e.utcMs,
+    ),
+  );
 }
 
 /** Importplan in den Einsatz übernehmen: Geräte zuordnen oder anlegen, Quellen und Belege speichern. */
@@ -344,7 +365,8 @@ export function applyImport(
     const result: ApplyImportResult = { sources: [], devicesCreated: [], duplicates: [] };
     const seen = new Map<string, Source>();
     // Chronologisch nach bestem Beleg, damit die Kurzzeichen der Reihenfolge im Feld folgen.
-    const ordered = candidates.toSorted(
+    // Zeitbelege je Gerät nachschärfen (Aufnahmeende statt -beginn, Kamera-Timecode), dann chronologisch.
+    const ordered = refineClipTimes(candidates).toSorted(
       (a, b) =>
         (a.evidence[0]?.localMs ?? Infinity) - (b.evidence[0]?.localMs ?? Infinity) ||
         a.fileName.localeCompare(b.fileName),
@@ -385,7 +407,9 @@ export function applyImport(
     const tz = store.getSession(sessionId).timeZone;
     result.devicesCreated = result.devicesCreated.map((d) => {
       const own = ordered.filter((c) => c.deviceKey === d.matchKey);
-      return stampsLookLocal(own, tz) ? store.updateDevice(d.id, { timestampsAreUtc: false }) : d;
+      return stampsLookLocal(own, tz) || cameraZoneDiffers(own, tz)
+        ? store.updateDevice(d.id, { timestampsAreUtc: false })
+        : d;
     });
     return result;
   });

@@ -11,13 +11,21 @@ describe("Uhrzeit aus Dateinamen", () => {
   it.each([
     ["IMG_20260914_104050.jpg", "2026-09-14T10:40:50.500", 500],
     ["VID_20260914_103200.mp4", "2026-09-14T10:32:00.500", 500],
-    ["PXL_20260914_103215123.mp4", "2026-09-14T10:32:15.500", 500],
+    ["PXL_20260914_103215123.mp4", "2026-09-14T10:32:15.123", 250],
+    ["PXL_20260914_103215123.MP.jpg", "2026-09-14T10:32:15.123", 250],
     ["2026-09-14 10.32.15.jpg", "2026-09-14T10:32:15.500", 500],
     ["signal-2026-09-14-103215.m4a", "2026-09-14T10:32:15.500", 500],
     ["Screenshot 2026-09-14 at 10.32.15.png", "2026-09-14T10:32:15.500", 500],
     ["DJI_20260914103215_0001.MP4", "2026-09-14T10:32:15.500", 500],
   ])("%s", (name, time, unc) => {
     expect(at(name)).toEqual({ time, unc });
+  });
+
+  it("Pixel-Namen tragen UTC, andere Ortszeit", () => {
+    expect(timeFromFilename("PXL_20260907_151441849.mp4")?.utc).toBe(true);
+    expect(timeFromFilename("IMG_20260914_104050.jpg")?.utc).toBeUndefined();
+    // Ein anderes Präfix mit derselben Ziffernfolge ist kein Pixel-Name.
+    expect(timeFromFilename("XPXL_20260914_103215123.mp4")?.utc).toBeUndefined();
   });
 
   it("nur Minute: Mitte der Minute mit ± 30 s", () => {

@@ -14,11 +14,27 @@ export interface MediaProbe {
   formatName: string;
   width?: number;
   height?: number;
+  /** Bildrate des Videos als Bruch (50/1, 30000/1001), um einen Timecode in Zeit umzurechnen. */
+  frameRate?: { num: number; den: number };
 }
 
 interface FfprobeJson {
   format?: { duration?: string; format_name?: string; tags?: Record<string, string> };
-  streams?: { codec_type?: string; width?: number; height?: number; tags?: Record<string, string> }[];
+  streams?: {
+    codec_type?: string;
+    width?: number;
+    height?: number;
+    r_frame_rate?: string;
+    tags?: Record<string, string>;
+  }[];
+}
+
+/** "30000/1001" → { num, den }; "0/0" und Unsinn → undefined. */
+export function parseFrameRate(text: string | undefined): { num: number; den: number } | undefined {
+  const m = /^(\d+)\/(\d+)$/.exec(text ?? "");
+  if (!m) return undefined;
+  const [num, den] = [Number(m[1]), Number(m[2])];
+  return num > 0 && den > 0 && num / den <= 1000 ? { num, den } : undefined;
 }
 
 export async function probeMedia(path: string, opts: { signal?: AbortSignal } = {}): Promise<MediaProbe> {
@@ -37,6 +53,7 @@ export async function probeMedia(path: string, opts: { signal?: AbortSignal } = 
   for (const [k, v] of Object.entries(j.format?.tags ?? {})) tags[k.toLowerCase()] = v;
   const video = j.streams?.find((s) => s.codec_type === "video");
   const dur = Number(j.format?.duration);
+  const frameRate = parseFrameRate(video?.r_frame_rate);
   return {
     durationMs: Number.isFinite(dur) ? Math.round(dur * 1000) : null,
     hasVideo: !!video,
@@ -45,6 +62,7 @@ export async function probeMedia(path: string, opts: { signal?: AbortSignal } = 
     formatName: j.format?.format_name ?? "",
     ...(video?.width ? { width: video.width } : {}),
     ...(video?.height ? { height: video.height } : {}),
+    ...(frameRate ? { frameRate } : {}),
   };
 }
 

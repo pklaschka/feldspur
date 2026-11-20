@@ -8,7 +8,7 @@ export type EvidenceDraft = Omit<TimeEvidence, "id" | "sourceId" | "enabled">;
 
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*(Z|[+-]\d{2}:?\d{2})?$/;
 
-interface ParsedStamp {
+export interface ParsedStamp {
   /** Wanduhrzeit wie geschrieben. */
   local: number;
   /** UTC, falls eine Zone angegeben war. */
@@ -41,10 +41,11 @@ export function parseStamp(text: string): ParsedStamp | null {
 /**
  * Zeitbelege aus Audio/Video-Metadaten.
  *
- * Reihenfolge der Felder: Apple-Aufnahmedatum (mit echter Ortszeit-Zone),
+ * Reihenfolge der Felder: Apple-Aufnahmedatum (mit echter Ortszeit-Zone), Kamera-XML (Panasonic u. a.),
  * BWF-Felder von Rekordern, dann das allgemeine creation_time.
- * Annahme: Die Angabe bezeichnet den Aufnahmebeginn. Geräte, die das Ende
- * schreiben, müssen später per Geräteeinstellung korrigiert werden.
+ * Annahme: Die Angabe bezeichnet den Aufnahmebeginn. Ob ein Gerät in creation_time stattdessen das Ende schreibt
+ * (viele Android-Handys), lässt sich erst im Vergleich mit Dateiname und Länge oder den anderen Clips des Geräts
+ * erkennen: siehe clip-times.ts.
  */
 export function evidenceFromMediaTags(probe: MediaProbe): EvidenceDraft[] {
   const t = probe.tags;
@@ -61,6 +62,21 @@ export function evidenceFromMediaTags(probe: MediaProbe): EvidenceDraft[] {
       uncertaintyMs: 1000,
       detail: "Metadaten (Aufnahmebeginn, Apple)",
       raw: `com.apple.quicktime.creationdate=${apple}`,
+    });
+  }
+  const xml = cameraXmlStart(t);
+  if (xml && out.length === 0) {
+    const zoneText = xml.stamp.zone && xml.stamp.zone !== "Z" ? `, Zeitzone der Kamera ${xml.stamp.zone}` : "";
+    out.push({
+      kind: "metadata",
+      clock: "device",
+      atMediaMs: 0,
+      localMs: xml.stamp.local,
+      // Wie bei creation_time: die Geräteeinstellung „Zeitstempel sind UTC“ entscheidet, welche Lesart gilt.
+      utcMs: xml.stamp.utc,
+      uncertaintyMs: 1000,
+      detail: `Metadaten (Aufnahmebeginn, Kamera-XML${zoneText})`,
+      raw: `${xml.key}: ${xml.field}=${xml.text}`,
     });
   }
   // BWF (WAV von Rekordern): ffprobe zeigt origination_date/-time als "date" und
@@ -104,6 +120,28 @@ export function evidenceFromMediaTags(probe: MediaProbe): EvidenceDraft[] {
   return out;
 }
 
+/**
+ * Profikameras (Panasonic „Semi-Pro“/P2, ähnlich Sony und Canon) legen ein XML mit Aufnahmedaten in die Datei. Darin
+ * steht der Aufnahmebeginn ausdrücklich als Beginn und mit der Zeitzone der Kamera (`<Shoot><StartDate>`).
+ */
+export function cameraXmlStart(
+  tags: Record<string, string>,
+): { key: string; field: string; text: string; stamp: ParsedStamp } | null {
+  for (const [key, value] of Object.entries(tags)) {
+    if (!value.includes("<") || !/StartDate|CreationDate/.test(value)) continue;
+    const shoot = /<Shoot>[\s\S]*?<StartDate>([^<]+)<\/StartDate>/.exec(value);
+    const access = /<CreationDate>([^<]+)<\/CreationDate>/.exec(value);
+    for (const [field, m] of [
+      ["StartDate", shoot],
+      ["CreationDate", access],
+    ] as const) {
+      const stamp = m ? parseStamp(m[1]!) : null;
+      if (m && stamp) return { key, field, text: m[1]!.trim(), stamp };
+    }
+  }
+  return null;
+}
+
 export function evidenceFromExif(exif: ImageExif | null): EvidenceDraft[] {
   if (!exif?.dateTimeOriginal) return [];
   const s = parseStamp(exif.dateTimeOriginal);
@@ -132,9 +170,10 @@ export function evidenceFromFilename(fileName: string, customPattern?: string | 
       clock: "device",
       atMediaMs: 0,
       localMs: f.localMs,
-      utcMs: null,
+      // Pixel-Namen tragen UTC: umgerechnet wie als UTC markierte Metadaten.
+      utcMs: f.utc ? f.localMs : null,
       uncertaintyMs: f.uncertaintyMs,
-      detail: `Dateiname „${f.matched}“`,
+      detail: f.utc ? `Dateiname „${f.matched}“ (UTC)` : `Dateiname „${f.matched}“`,
       raw: fileName,
     },
   ];
