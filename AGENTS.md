@@ -38,8 +38,8 @@ release. Add a tool name to select part of the graph. For example, run
 - IPC-Aufrufe, die Daten ändern, mit `undoable(…, "Beschriftung", …)` anmelden (Rückgängig, `packages/core/src/db/history.ts`).
   Schreibt etwas außerhalb davon in die Projektdatei, leert das den Verlauf.
 - ffmpeg/ffprobe nur über `runTool` (`packages/media/src/process.ts`) starten und das `signal` immer durchreichen; eine
-  Lint-Regel sperrt `node:child_process` in `src`. Kein Effect, keine eigenen Promise-Hüllen um Prozesse
-  (`docs/adr/001-effect.md`).
+  Lint-Regel sperrt `node:child_process` in `src`. Keine eigenen Promise-Hüllen um Prozesse und kein Effect
+  (bewusst entschieden am 20.11.2026, Issue #134).
 - Keine echten Forschungsdaten in Tests oder Fixtures.
 - Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
 - Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
