@@ -21,8 +21,11 @@ export const FORMAT_LABEL: Record<CitationFormat, string> = { apa: "APA", bibtex
 
 export const doiUrl = (doi: string) => `https://doi.org/${doi}`;
 
-/** Versionsliste aller Feldspur-Versionen in der öffentlichen Zenodo-API (ohne Token). */
-export const ZENODO_VERSIONS_URL = `https://zenodo.org/api/records?q=conceptrecid:${ZENODO_CONCEPT_ID}&all_versions=true&size=100&sort=mostrecent`;
+/**
+ * Versionsliste aller Feldspur-Versionen in der öffentlichen Zenodo-API (ohne Token). Ohne Anmeldung erlaubt Zenodo
+ * höchstens 25 Einträge je Seite (größere Seiten lehnt es mit 400 ab); neueste zuerst, die laufende Version steht also vorn.
+ */
+export const ZENODO_VERSIONS_URL = `https://zenodo.org/api/records?q=conceptrecid:${ZENODO_CONCEPT_ID}&all_versions=true&size=25&sort=newest`;
 
 /** Ein Stück Zitattext; `italic` für den Titel (APA), `doi` für die farbig hervorgehobene DOI. */
 export interface CitationPart {

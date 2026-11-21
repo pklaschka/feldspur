@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { ALL_VERSIONS_DOI, citationText, isCitationLink, pickVersionDoi } from "../src/shared/citation.ts";
+import {
+  ALL_VERSIONS_DOI,
+  ZENODO_VERSIONS_URL,
+  citationText,
+  isCitationLink,
+  pickVersionDoi,
+} from "../src/shared/citation.ts";
 
 const v050 = { version: "0.5.0", released: "2026-12-03", doi: ALL_VERSIONS_DOI };
 
@@ -40,6 +46,12 @@ describe("Zitat für Feldspur", () => {
 });
 
 describe("DOI der Version bei Zenodo", () => {
+  it("fragt ohne Anmeldung höchstens 25 Einträge ab, neueste zuerst (sonst lehnt Zenodo mit 400 ab)", () => {
+    const url = new URL(ZENODO_VERSIONS_URL);
+    expect(Number(url.searchParams.get("size"))).toBeLessThanOrEqual(25);
+    expect(url.searchParams.get("sort")).toBe("newest");
+    expect(url.searchParams.get("all_versions")).toBe("true");
+  });
   it.each`
     version    | doi                          | seite
     ${"0.5.0"} | ${"10.5281/zenodo.24310418"} | ${"https://zenodo.org/records/24310418"}
