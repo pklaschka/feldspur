@@ -54,10 +54,16 @@ export interface SessionTranscriptHeader {
   sources: string[];
   extra: Record<string, string>;
   /**
-   * Kennung, die Montagevideo und Einsatztranskript einander zuordnet. Steht im Video eingeblendet
-   * und in den Metadaten, im Dokument im Kopf. Gleicher Stand → gleiche Kennung.
+   * Kennung der Ausgabe in drei Blöcken, z. B. „FS-7KQ2-M9XD-3F8A“. Die ersten beiden Blöcke beschreiben die
+   * Montage (Einsatz, Art, Lage der Quellen), der dritte den Textstand des Einsatztranskripts. Steht im Kopf
+   * des Dokuments, im Viewer und in den Dokumentvariablen. Gleicher Stand → gleiche Kennung.
    */
   montageId: string;
+  /**
+   * Die ersten beiden Blöcke von `montageId`, z. B. „FS-7KQ2-M9XD“. So steht die Kennung im Video eingeblendet:
+   * Das Video enthält keinen Text und muss nicht neu gerechnet werden, wenn sich nur der Text ändert.
+   */
+  montageVideoId: string;
   /** „Episoden“ oder „Echtzeit“. */
   modeLabel: string;
   /** Anzahl der Kontextstücke; fehlt, wenn es keine gibt (dann bleibt alles wie vor Issue #108). */
@@ -359,18 +365,30 @@ export function buildSessionTranscript(
     ...new Set(input.devices.flatMap((d) => (d.personId && persons.get(d.personId) ? [persons.get(d.personId)!] : []))),
   ];
   const ref = input.devices.find((d) => d.isReference);
+  const stated = {
+    title: input.session.title,
+    date: input.session.date,
+    place: input.session.place,
+    researchers,
+    reference: ref ? ref.label : null,
+    sources: input.sources
+      .filter((s) => !s.partOf && (res.placements.has(s.id) || isContextSource(s.id)))
+      .map((s) => s.label),
+    extra: input.session.extra,
+  };
+  const montageVideoId = montageId(sessionId, plan, named, input.sources, res);
+  // Bilder über die Prüfsumme der Datei, nicht über die interne Kennung der Quelle.
+  const image = (i: ImageRef) => [src.get(i.sourceId)?.sha256 ?? i.sourceId, i.region ?? null];
+  const text = textBlock({
+    ...stated,
+    entries: entries.map((e) => [e.montageMs, e.kind, entryText(e), e.images.map(image)]),
+    context: context.map((c) => [c.head, c.details, c.body, c.images.map(image)]),
+  });
   return {
     header: {
-      title: input.session.title,
-      date: input.session.date,
-      place: input.session.place,
-      researchers,
-      reference: ref ? ref.label : null,
-      sources: input.sources
-        .filter((s) => !s.partOf && (res.placements.has(s.id) || isContextSource(s.id)))
-        .map((s) => s.label),
-      extra: input.session.extra,
-      montageId: montageId(sessionId, plan, named, input.sources, res),
+      ...stated,
+      montageId: `${montageVideoId}-${text}`,
+      montageVideoId,
       modeLabel: plan.mode === "realtime" ? "Echtzeit" : "Episoden",
       ...(context.length ? { contextCount: context.length } : {}),
     },
@@ -390,10 +408,29 @@ export function entryText(e: SessionTranscriptEntry): string {
   return `${timestamp(e.montageMs)} ${clock}${head}${e.body}`;
 }
 
-/** Kurze, gut lesbare Kennung aus Einsatz, Art der Montage und Lage der Quellen. */
+// Ohne leicht verwechselbare Zeichen (0/O, 1/I).
+const ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+/** Die ersten `length` Bytes eines SHA-1 als Zeichen aus `ID_ALPHABET`. */
+function idChars(json: unknown, length: number): string {
+  const bytes = createHash("sha1").update(JSON.stringify(json)).digest();
+  let id = "";
+  for (let i = 0; i < length; i++) id += ID_ALPHABET[bytes[i]! % ID_ALPHABET.length];
+  return id;
+}
+
+/**
+ * Dritter Block der Montage-ID: alles, was im Einsatztranskript steht (Kopf, Zeilen mit Zeitmarke, Bilder, Kontext).
+ * Ändert sich mit jedem Wort, aber auch, wenn Zeilen an einer anderen Stelle im Video stehen.
+ */
+function textBlock(content: unknown): string {
+  return idChars(content, 4);
+}
+
+/** Die ersten beiden Blöcke der Montage-ID: Einsatz, Art der Montage und Lage der Quellen. */
 function montageId(sessionId: Id, plan: MontagePlan, named: boolean, sources: Source[], res: ResolveResult): string {
-  const h = createHash("sha1").update(
-    JSON.stringify({
+  const id = idChars(
+    {
       sessionId,
       mode: plan.mode,
       // Echtzeit mit benannten Episoden wie bisher; ohne Episoden ist es eine andere Montage.
@@ -403,12 +440,8 @@ function montageId(sessionId: Id, plan: MontagePlan, named: boolean, sources: So
         .filter((s) => res.placements.has(s.id))
         .map((s) => [s.sha256, Math.round(res.placements.get(s.id)!.startMs)])
         .sort(),
-    }),
+    },
+    8,
   );
-  // Ohne leicht verwechselbare Zeichen (0/O, 1/I).
-  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const bytes = h.digest();
-  let id = "";
-  for (let i = 0; i < 8; i++) id += alphabet[bytes[i]! % alphabet.length];
   return `FS-${id.slice(0, 4)}-${id.slice(4)}`;
 }

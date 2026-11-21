@@ -22,6 +22,9 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   };
   const p2 = (n: number) => String(n).padStart(2, "0");
   const D = JSON.parse($("feldspur-daten").textContent || "{}") as ViewerData;
+  // Freigabe des Videos merken unter den ersten beiden Blöcken der Montage-ID: Die stehen für das Video,
+  // der dritte Block nur für den Textstand.
+  const videoKey = D.montageId.split("-").slice(0, 3).join("-");
   const DUR = Math.max(0.001, D.durationMs / 1000);
   const clamp = (t: number) => Math.min(DUR, Math.max(0, t));
   /** Uhrzeit (ms) an einer Stelle des Videos (s); in einer Tafel steht sie still. */
@@ -1141,7 +1144,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
       void engine.ctx.close().catch(() => {});
     }
     engine = makeEngine(file, info);
-    if (handle) await idb("readwrite", (s) => s.put(handle, D.montageId));
+    if (handle) await idb("readwrite", (s) => s.put(handle, videoKey));
     setTon("frei");
     return true;
   }
@@ -1385,7 +1388,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   });
   // Schon einmal freigegeben? Dann nur kurz nachfragen (Chrome, Edge).
   if (controllable.length >= 2 && "showOpenFilePicker" in window && canEngine())
-    void idb<FileSystemFileHandle>("readonly", (s) => s.get(D.montageId)).then(async (h) => {
+    void idb<FileSystemFileHandle>("readonly", (s) => s.get(videoKey)).then(async (h) => {
       if (!h) return;
       S.knownHandle = h;
       const q = (h as unknown as { queryPermission?: (o: unknown) => Promise<string> }).queryPermission;

@@ -55,7 +55,7 @@ Reihenfolge fest.
 
 Das **Montagevideo** legt Bild und Ton aller Aufnahmen des Einsatzes auf die gemeinsame Zeitachse. Es zeigt die
 Uhrzeit, die gerade laufenden Videos (bis zu vier nebeneinander) mit Kurzzeichen, Datei und Stelle im Original, die
-laufenden Tonquellen und die Montage-ID. Fotos und Tagebuch stehen schon im Einsatztranskript und fehlen deshalb im Video.
+laufenden Tonquellen und die Montage-ID (@sec-montage-id). Fotos und Tagebuch stehen schon im Einsatztranskript und fehlen deshalb im Video.
 
 Einsatztranskript und Montagevideo gehören zusammen: **Erst beide zusammen** geben das Material eines Einsatzes vollständig
 und zeitlich zugeordnet wieder. Das Einsatztranskript enthält, was als Text vorliegt, dazu Fotos und Tagebuchausschnitte. Das
@@ -96,13 +96,22 @@ Netzteil. Klappst du einen Mac zu, schläft er je nach Einstellung trotzdem ein;
 
 ### Montage-ID {#sec-montage-id}
 
-Die **Montage-ID** ist eine Kennung wie `FS-7KQ2-M9XD`. Sie steht oben rechts im Montagevideo, im Kopf des
-Einsatztranskripts, im Viewer und in den Dokumentvariablen. An ihr erkennst du, welches Video zu welchem
-Einsatztranskript gehört.
+Die **Montage-ID** ist eine Kennung wie `FS-7KQ2-M9XD-3F8A`. Sie steht im Kopf des Einsatztranskripts, im Viewer und
+in den Dokumentvariablen. An ihr erkennst du, welches Video zu welchem Einsatztranskript gehört und welche Fassung
+du vor dir hast.
 
-Feldspur vergibt sie nicht fortlaufend und nicht bei jeder Ausgabe neu, sondern **errechnet** sie aus dem Zeitgefüge
-der Montage. Derselbe Stand ergibt deshalb immer dieselbe ID, auch nach einem Neustart, auf einem anderen Rechner
-oder in einer späteren Ausgabe. In die Rechnung gehen ein:
+Feldspur vergibt sie nicht fortlaufend und nicht bei jeder Ausgabe neu, sondern **errechnet** sie aus dem Stand
+des Einsatzes. Derselbe Stand ergibt deshalb immer dieselbe ID, auch nach einem Neustart, auf einem anderen Rechner
+oder in einer späteren Ausgabe. Sie besteht aus zwei Teilen, die du einzeln lesen kannst:
+
+| Teil | im Beispiel | beschreibt |
+|:---|:---|:---|
+| **Montage** | `FS-7KQ2-M9XD` (die ersten beiden Blöcke) | welche Aufnahmen wann laufen |
+| **Text** | `3F8A` (der dritte Block) | was im Einsatztranskript steht |
+
+: Die Teile der Montage-ID {#tbl-montage-id-teile}
+
+In die **Montage** gehen ein:
 
 - der **Einsatz** (seine interne Kennung in der Projektdatei, nicht Titel oder Datum),
 - die **Art der Montage**: in Echtzeit, in Echtzeit mit benannten Episoden oder nach Episoden geschnitten,
@@ -111,29 +120,44 @@ oder in einer späteren Ausgabe. In die Rechnung gehen ein:
   Zeitachse, ebenfalls auf die Millisekunde. Das sind Videos und Tonaufnahmen, aber auch Fotos und Tagebuchseiten
   mit Uhrzeit.
 
-Daraus bildet Feldspur einen Fingerabdruck (SHA-1) und kürzt ihn auf acht Zeichen, ohne die leicht verwechselbaren
-0, O, 1 und I.
+In den **Text** geht ein, was im Einsatztranskript steht: der Kopf mit den Einsatzdaten und weiteren
+Angaben, jede Zeile mit ihrer Zeitmarke (Mitschrift, Tagebuch, Fotos), die Bildausschnitte und der Kontext.
 
-| Die ID ändert sich, wenn … | Die ID bleibt gleich, wenn … |
+Im **Montagevideo** stehen oben rechts nur die ersten beiden Blöcke, also `FS-7KQ2-M9XD`. Das Video enthält keinen
+Text. Es bleibt deshalb gültig, wenn du nur weiterschreibst, und muss dafür nicht neu gerechnet werden.
+
+Beide Teile sind Fingerabdrücke (SHA-1), gekürzt auf acht bzw. vier Zeichen, ohne die leicht verwechselbaren 0, O, 1
+und I. Aus den Zeichen selbst lässt sich nichts zurückrechnen. Lesen lässt sich die ID im **Vergleich** zweier
+Ausgaben:
+
+| Vergleich zweier IDs | Was das heißt |
 |:---|:---|
-| eine Quelle dazukommt, wegfällt oder Kontext wird | du mitschreibst oder eine Mitschrift korrigierst |
-| eine Quelle auf der Zeitachse anders liegt (neuer Abgleich, andere Uhrkorrektur, Uhrzeit von Hand) | du Tagebuchtext abtippst oder änderst |
-| eine Tagebuchseite ihre erste oder eine frühere Randnotiz bekommt | du Einsatzdaten, weitere Angaben, Geräte, Personen oder Kurzzeichen änderst |
-| du Episoden ein- oder ausschaltest oder anders ausgibst (in Echtzeit, nach Episoden) | du Kontext umsortierst oder Lautstärken änderst |
-| sich die Länge der Montage ändert | du mit anderen Optionen für Ton, Viewer oder Schnittliste ausgibst |
-| dieselben Dateien in einem neuen Einsatz oder Projekt liegen | du ohne Änderung noch einmal ausgibst |
+| alle drei Blöcke gleich | Derselbe Stand. Zeitmarken und Wortlaut stimmen überein. |
+| Montage gleich, Text anders | Gleiches Video, gleiche Zeitmarken. Geändert hat sich nur etwas im Einsatztranskript: Mitschrift, Tagebuchtext, Kontext oder Angaben im Kopf. |
+| Montage anders | Auf der Zeitachse hat sich etwas geändert (oder es ist ein anderer Einsatz). Zeitmarken können auf andere Stellen zeigen, und das Video gehört nicht mehr dazu. Der Textblock ändert sich dabei in aller Regel mit, weil die Zeilen an anderen Stellen stehen. |
+
+: Zwei Montage-IDs vergleichen {#tbl-montage-id-lesen}
+
+| Die Montage ändert sich, wenn … | Nur der Text ändert sich, wenn … | Nichts ändert sich, wenn … |
+|:---|:---|:---|
+| eine Quelle dazukommt, wegfällt oder Kontext wird | du mitschreibst oder eine Mitschrift korrigierst | du ohne Änderung noch einmal ausgibst |
+| eine Quelle auf der Zeitachse anders liegt (neuer Abgleich, andere Uhrkorrektur, Uhrzeit von Hand) | du Tagebuchtext abtippst oder änderst | du mit anderen Optionen für Ton, Viewer oder Schnittliste ausgibst |
+| eine Tagebuchseite ihre erste oder eine frühere Randnotiz bekommt | du Einsatzdaten, weitere Angaben, Personen oder Kurzzeichen änderst | du Lautstärken änderst |
+| du Episoden ein- oder ausschaltest oder anders ausgibst (in Echtzeit, nach Episoden) | du Kontext ergänzt, änderst oder umsortierst | du das Projekt verschiebst, sicherst oder wiederherstellst |
+| sich die Länge der Montage ändert | | |
+| dieselben Dateien in einem neuen Einsatz oder Projekt liegen | | |
 
 : Wovon die Montage-ID abhängt {#tbl-montage-id}
 
-Die Montage-ID beschreibt also, **welche Aufnahmen wann laufen**. Gleiche ID heißt: Eine Zeitmarke zeigt auf
-dieselbe Stelle in denselben Aufnahmen, und jede Uhrzeit liegt an derselben Stelle im Video. Sie beschreibt *nicht*,
-was im Einsatztranskript steht. Zwei Ausgaben mit derselben Montage-ID können sich im Text unterscheiden, etwa weil
-du dazwischen weiter mitgeschrieben hast. Das ist Absicht: Ein Montagevideo, das du schon in MAXQDA codiert hast,
-passt so auch zum nächsten Stand des Einsatztranskripts. Welcher Textstand vorliegt, sagt die ID aber eben nicht
-(@sec-stelle-zitieren).
+Die ID ist an beiden Stellen bewusst streng. Schon ein einzelnes zusätzliches Foto oder eine um eine Millisekunde
+verschobene Aufnahme ergibt eine neue Montage, auch wenn sich das Video dadurch kaum ändert. Und schon ein
+korrigierter Tippfehler ergibt einen neuen Textblock.
 
-Umgekehrt reicht schon ein einzelnes zusätzliches Foto oder eine um eine Millisekunde verschobene Aufnahme für eine
-neue ID, auch wenn sich das Video dadurch kaum oder gar nicht ändert. Die ID ist an der Stelle bewusst streng.
+::: {.callout-note}
+Bis Version 0.2 bestand die Montage-ID nur aus den ersten beiden Blöcken (`FS-7KQ2-M9XD`). Die sind geblieben, wie
+sie waren: Ein älteres Montagevideo passt weiter zu einer neuen Ausgabe desselben Stands. Eine ältere Ausgabe zeigt
+Feldspur nach dem Update einmal als **Veraltet** an, weil dem Einsatztranskript der dritte Block fehlt.
+:::
 
 ### Viewer (.html) {#sec-viewer}
 
@@ -227,19 +251,20 @@ was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings e
    Adresse vergibt, etwa eine DOI.
 3. Zitiere aus genau dieser Fassung. Im Viewer legt **Stelle kopieren** die Angabe in die Zwischenablage:
    Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID.
-4. Ergänze, **welche Fassung** du meinst: das Datum der Ausgabe oder die Adresse im Archiv. Die Montage-ID allein
-   reicht dafür nicht, weil sie den Textstand nicht kennt (@sec-montage-id).
+4. Nenne die **ganze Montage-ID** mit allen drei Blöcken. Sie legt fest, welche Fassung du meinst, samt Wortlaut
+   (@sec-montage-id). Die Adresse im Archiv sagt dazu, wo diese Fassung liegt.
 
 Eine Angabe kann dann so aussehen (die Werte sind erfunden):
 
-> Testperson A (2026): Feldtag Testmarkt, 14.09.2026. Einsatztranskript und Montagevideo FS-7KQ2-M9XD, Ausgabe vom
-> 21.11.2026, #00:05:02-0# (10:07:02 Uhr).
+> Testperson A (2026): Feldtag Testmarkt, 14.09.2026. Einsatztranskript und Montagevideo FS-7KQ2-M9XD-3F8A,
+> #00:05:02-0# (10:07:02 Uhr).
 
 Im Methodenteil erklärst du einmal, was ein Montagevideo und ein Einsatztranskript sind und womit sie entstanden sind
 (Feldspur mit Version, @sec-zitieren). Nachvollziehbar bleibt der Weg zurück zum Original trotzdem: Das
 Begleitprotokoll nennt für jede Datei Herkunft, Prüfsumme und den Zeitbeleg, auf dem ihre Lage beruht.
 
-Änderst du nach dem Zitieren noch etwas und gibst erneut aus, dann sichere die neue Ausgabe als eigene Fassung. Hat
-sie dieselbe Montage-ID, gelten deine Zeitmarken weiter, und nur der Text kann anders lauten. Hat sie eine neue
-Montage-ID, können sich die Stellen verschoben haben. Dann prüfst du die zitierten Zeitmarken anhand der Uhrzeit
-nach.
+Änderst du nach dem Zitieren noch etwas und gibst erneut aus, dann sichere die neue Ausgabe als eigene Fassung und
+vergleiche die Montage-IDs (@tbl-montage-id-lesen). Ist nur der dritte Block anders, gelten deine Zeitmarken
+weiter, und du prüfst höchstens den Wortlaut der zitierten Stellen. Sind die ersten beiden Blöcke anders, können
+sich die Stellen verschoben haben. Dann prüfst du die zitierten Zeitmarken anhand der Uhrzeit nach. Wer deine Arbeit
+liest, erkennt an der ID ebenso, ob die vorliegende Fassung die zitierte ist.

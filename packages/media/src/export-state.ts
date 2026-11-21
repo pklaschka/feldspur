@@ -16,7 +16,7 @@ import { baseName, documentVariables, protocolCsv } from "./export.ts";
 import { buildSessionTranscript, entryText, type SessionTranscript } from "./session-transcript.ts";
 
 /** Verfahren des Fingerabdrucks. Erhöhen, wenn sich ändert, was in eine Ausgabe eingeht. */
-export const FINGERPRINT_VERSION = 1;
+export const FINGERPRINT_VERSION = 2;
 
 /** JSON mit Maps als sortierte Einträge und ohne Funktionen, damit gleicher Stand gleichen Text ergibt. */
 function stable(value: unknown): string {
