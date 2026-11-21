@@ -52,4 +52,5 @@ jobs:
           name: handbuch
           path: dist/handbuch/*.pdf
           if-no-files-found: error
-          retention-days: 7
+          # In einer Release nur bis zum Anhängen im selben Lauf nötig, von Hand gebaut eine Woche.
+          retention-days: ${{ inputs.version != '' && 1 || 7 }}

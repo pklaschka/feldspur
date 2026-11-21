@@ -1,20 +1,45 @@
 name: CI
 
+# Sparsam mit Runnern: Pull Requests und main prüft nur Linux. Windows und macOS kommen dazu
+#   - mit dem Label „alle-plattformen“ am Pull Request,
+#   - von Hand (Actions → CI → Run workflow),
+#   - als Pflichtprüfung in jeder Release (release.yml), bevor Commit und Tag gepusht werden.
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      alle_plattformen:
+        description: "Auch unter Windows und macOS prüfen"
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      alle_plattformen:
+        type: boolean
+        default: true
 
 # Nur lesen; Artefakte gehen über upload-artifact, nicht über das Repository.
 permissions:
   contents: read
 
+# Ein neuer Push bricht den alten Lauf desselben Pull Requests ab. Andere Labels als „alle-plattformen“ bekommen
+# eine eigene Gruppe, damit z. B. das Changelog-Label keinen laufenden Lauf abbricht (der Lauf wird dann übersprungen).
+concurrency:
+  group: >-
+    ${{ github.event_name == 'pull_request' && format('ci-pr-{0}-{1}', github.event.pull_request.number, github.event.action == 'labeled' && github.event.label.name != 'alle-plattformen' && github.event.label.name || 'lauf') || format('ci-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
+    if: github.event.action != 'labeled' || github.event.label.name == 'alle-plattformen'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2022, macos-latest]
+        os: >-
+          ${{ fromJSON((inputs.alle_plattformen || contains(github.event.pull_request.labels.*.name, 'alle-plattformen')) && '["ubuntu-latest", "windows-2022", "macos-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
