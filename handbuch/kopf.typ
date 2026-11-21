@@ -52,8 +52,8 @@
 // dürfen über den Seitenrand umbrechen; der Kopf wiederholt sich.
 #show figure.where(kind: "quarto-float-tbl"): it => block(width: 100%, breakable: true, {
   set align(left)
-  it.caption
-  v(0.4em)
+  // Beschriftung nie allein unten auf der Seite: Sie rückt mit der Tabelle auf die nächste.
+  block(sticky: true, below: 0.4em, it.caption)
   it.body
 })
 // Tastenkürzel als Tastenkappen (tasten.lua): `tasten("Strg", "+", "O")`, „+“ und „/“ stehen zwischen den Tasten.
