@@ -51,12 +51,14 @@ describe("Dateinamen und Ordner", () => {
   it("vergibt in derselben Sekunde einen freien Namen und listet die neueste zuerst", () => {
     const s = seeded();
     const at = new Date(2026, 10, 18, 16, 47, 5);
+    // Wenn: zwei Sicherungen in derselben Sekunde angelegt werden, dann bekommt die zweite einen anderen Namen
     const a = nextBackupPath(project, "manuell", at);
     s.backupTo(a);
     const b = nextBackupPath(project, "manuell", at);
     expect(b).not.toBe(a);
     s.backupTo(b);
     s.close();
+    // Dann: die Liste nennt die neueste zuerst, mit Anlass und Ortszeit
     const list = listBackups(project);
     expect(list.map((x) => x.path)).toEqual([b, a]);
     expect(list[0]!.kind).toBe("manuell");
@@ -64,11 +66,13 @@ describe("Dateinamen und Ordner", () => {
   });
 
   it("übergeht fremde Dateien und Sicherungen anderer Projekte im Ordner", () => {
+    // Angenommen: im Sicherungsordner liegen eine Sicherung, eine Notiz und eine Sicherung eines anderen Projekts
     const s = seeded();
     s.backupTo(join(backupDir(project), backupFileName(project, "automatisch")));
     s.close();
     writeFileSync(join(backupDir(project), "notiz.txt"), "x");
     writeFileSync(join(backupDir(project), "Feldforschung_alt_2026-01-01_10-00-00_automatisch.feldspur"), "x");
+    // Dann: zählt nur die eigene Sicherung
     expect(listBackups(project)).toHaveLength(1);
   });
 });
@@ -76,10 +80,12 @@ describe("Dateinamen und Ordner", () => {
 describe("Sicherung anlegen", () => {
   it("schreibt eine vollständige, eigenständige Kopie, auch mit ungesicherten WAL-Inhalten", () => {
     const s = seeded();
+    // Wenn: gesichert und danach noch ein Einsatz angelegt wird
     const dest = nextBackupPath(project, "manuell");
     s.backupTo(dest);
     s.addSession({ title: "Nach der Sicherung", date: "2026-09-15", place: "", extra: {} });
     s.close();
+    // Dann: enthält die Sicherung den Stand von vorher, eigenständig lesbar
     const copy = ProjectStore.open(dest);
     expect(copy.listSessions().map((x) => x.title)).toEqual(["Testmarkt"]);
     expect(copy.getMeta("name")).toBe("Feldforschung");
@@ -93,11 +99,14 @@ describe("Sicherung anlegen", () => {
   });
 
   it("dünnt automatische Sicherungen aus, von Hand angelegte nie", () => {
+    // Angenommen: vier automatische Sicherungen und eine von Hand
     const s = seeded();
     for (let i = 0; i < 4; i++) s.backupTo(nextBackupPath(project, "automatisch", new Date(2026, 10, 18, 10, i)));
     s.backupTo(nextBackupPath(project, "manuell", new Date(2026, 10, 17)));
     s.close();
+    // Wenn: auf zwei automatische ausgedünnt wird
     const removed = rotateBackups(project, "automatisch", 2);
+    // Dann: bleiben die zwei neuesten automatischen und die von Hand; von Hand wird nie ausgedünnt
     expect(removed).toHaveLength(2);
     const left = listBackups(project);
     expect(left.filter((b) => b.kind === "automatisch").map((b) => new Date(b.createdAt).getMinutes())).toEqual([3, 2]);
@@ -121,9 +130,12 @@ describe("Sicherung vor dem Aktualisieren", () => {
   }
 
   it("sichert eine ältere Projektdatei, bevor sie migriert wird", () => {
+    // Angenommen: eine Projektdatei, der die letzte Migration fehlt
     oldProject(SCHEMA_VERSION - 1);
+    // Wenn: Feldspur sie öffnet
     const s = ProjectStore.open(project, { backupBeforeMigration: true });
     s.close();
+    // Dann: liegt eine Sicherung „vor-Aktualisierung“ im alten Stand daneben
     const list = listBackups(project);
     expect(list).toHaveLength(1);
     expect(list[0]!.kind).toBe("vor-Aktualisierung");
@@ -133,15 +145,19 @@ describe("Sicherung vor dem Aktualisieren", () => {
   });
 
   it("sichert nicht, wenn nichts zu migrieren ist", () => {
+    // Angenommen: ein aktuelles Projekt
     seeded().close();
     ProjectStore.open(project, { backupBeforeMigration: true }).close();
+    // Dann: entsteht beim Öffnen keine Sicherung
     expect(listBackups(project)).toEqual([]);
   });
 
   it("migriert nicht, wenn die Sicherung scheitert", () => {
+    // Angenommen: eine ältere Projektdatei
     oldProject(SCHEMA_VERSION - 1);
     // Wo der Sicherungsordner hin soll, liegt eine Datei: Anlegen schlägt fehl.
     writeFileSync(backupDir(project), "kein Ordner");
+    // Dann: lässt sich das Projekt nicht öffnen, und die Datei bleibt im alten Stand
     expect(() => ProjectStore.open(project, { backupBeforeMigration: true })).toThrow(/bleibt deshalb unverändert/);
     const db = new Database(project, { readonly: true });
     expect(db.pragma("user_version", { simple: true })).toBe(SCHEMA_VERSION - 1);
@@ -156,11 +172,15 @@ describe("Projektdatei prüfen", () => {
   });
 
   it("meldet fehlende, leere und fremde Dateien verständlich", () => {
+    // Wenn: die Datei fehlt
     expect(checkProjectFile(project)).toMatchObject({ ok: false, problem: expect.stringMatching(/nicht gefunden/) });
+    // Wenn: die Datei leer ist
     writeFileSync(project, "");
     expect(checkProjectFile(project)).toMatchObject({ ok: false, problem: expect.stringMatching(/leer/) });
+    // Wenn: die Datei Text enthält
     writeFileSync(project, "Das ist ein Text, kein Projekt. ".repeat(10));
     expect(checkProjectFile(project)).toMatchObject({ ok: false, problem: expect.stringMatching(/kein SQLite/) });
+    // Wenn: die Datei eine fremde SQLite-Datenbank ist
     rmSync(project);
     const other = new Database(project);
     other.exec("CREATE TABLE t (x)");
@@ -172,15 +192,18 @@ describe("Projektdatei prüfen", () => {
   });
 
   it("erkennt eine abgeschnittene Datei", () => {
+    // Angenommen: eine Sicherung, auf die halbe Länge gekürzt
     const s = seeded();
     const dest = nextBackupPathFor("automatisch");
     s.backupTo(dest);
     s.close();
     truncateSync(dest, Math.floor(statSync(dest).size / 2));
+    // Dann: gilt sie als unvollständig
     expect(checkProjectFile(dest)).toMatchObject({ ok: false, problem: expect.stringMatching(/unvollständig/) });
   });
 
   it("erkennt beschädigte Seiten", () => {
+    // Angenommen: eine Sicherung
     const s = seeded();
     const dest = nextBackupPathFor("automatisch");
     s.backupTo(dest);
@@ -192,26 +215,33 @@ describe("Projektdatei prüfen", () => {
     const fd = openSync(dest, "r+");
     writeSync(fd, Buffer.alloc(pageSize, 0xab), 0, pageSize, pageSize * 2);
     closeSync(fd);
+    // Dann: gilt sie als beschädigt
     expect(checkProjectFile(dest)).toMatchObject({ ok: false, problem: expect.stringMatching(/beschädigt/) });
   });
 
   it("verändert die geprüfte Datei nicht", () => {
+    // Angenommen: ein Projekt mit Änderungszeit 1.1.2026
     seeded().close();
     const past = new Date(2026, 0, 1);
     utimesSync(project, past, past);
+    // Wenn: es geprüft wird
     checkProjectFile(project);
+    // Dann: bleibt die Änderungszeit
     expect(statSync(project).mtime.getTime()).toBe(past.getTime());
   });
 });
 
 describe("Als Kopie öffnen", () => {
   it("kopiert eine Sicherung in eine neue Datei, das Original bleibt", () => {
+    // Angenommen: eine automatische Sicherung
     const s = seeded();
     const backup = nextBackupPathFor("automatisch");
     s.backupTo(backup);
     s.close();
+    // Wenn: sie als Kopie geöffnet wird
     const copy = join(dir, "Wiederhergestellt.feldspur");
     copyProjectFile(backup, copy);
+    // Dann: ist die Kopie ein gesundes Projekt, nicht auf sich selbst kopierbar, und die Sicherung bleibt liegen
     expect(checkProjectFile(copy).ok).toBe(true);
     expect(() => copyProjectFile(copy, copy)).toThrow(/dieselbe Datei/);
     expect(readdirSync(dir).sort()).toEqual([

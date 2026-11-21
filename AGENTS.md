@@ -42,6 +42,31 @@ release. Add a tool name to select part of the graph. For example, run
   (bewusst entschieden am 20.11.2026, Issue #134).
 - Keine echten Forschungsdaten in Tests oder Fixtures.
 - Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
+
+## Tests lesbar schreiben
+
+Tests werden im Review gelesen wie das Handbuch. Kein Gherkin, kein Cucumber und keine weitere Testbibliothek
+(entschieden am 21.11.2026): dieselbe Lesbarkeit entsteht in einer Datei mit Vitest und Playwright.
+
+- **Testname = Satz über das Verhalten**, auf Deutsch, aus Sicht der App oder der Forschenden: „Namen ohne Uhrzeit
+  liefern nichts“, nicht „timeFromFilename null“.
+- **Mehrere Fälle derselben Prüfung = Tabelle mit Spaltennamen** (`it.each` mit Tagged Template), der Testname
+  setzt die Spalten ein:
+  ```ts
+  it.each`
+    datei                        | uhrzeit
+    ${"IMG_20260914_104050.jpg"} | ${"2026-09-14T10:40:50.500"}
+  `("$datei ergibt $uhrzeit", ({ datei, uhrzeit }) => { … });
+  ```
+- **Gliederung mit Kommentaren**, sobald ein Test mehr als eine Handlung hat: `// Angenommen:` (Ausgangslage),
+  `// Wenn:` (Handlung), `// Dann:` (Erwartung), jeweils mit einem kurzen Satz. Mehrere Runden im selben Test
+  dürfen sich wiederholen (`// Wenn: … // Dann: … // Wenn: …`). Ein Test aus einer einzigen Prüfung braucht
+  keine Kommentare.
+- **Oberflächentests** (`apps/desktop/test/*.e2e.ts`): in kleine Abläufe mit Namen teilen,
+  `await ablauf("Einen Einsatz anlegen", async () => { … })` aus `test/ablauf.ts`, darin dieselben Kommentare.
+  `ablauf` druckt den Namen und nennt ihn im Fehler.
+- Kommentare beschreiben, was passiert, nicht wie der Code es macht. Ändert sich der Test, ändern sich die
+  Kommentare mit.
 - Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
   setzen: `neu`, `verbessert`, `behoben`, `doku`, `intern` oder `kein-changelog` (siehe `.github/release.yml`).
 - Versionen nie von Hand ändern: das macht der Release-Workflow (`.github/workflows/release.yml`, `scripts/release.ts`).

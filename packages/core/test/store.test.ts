@@ -87,12 +87,15 @@ function seed(store: ProjectStore) {
 
 describe("Projektdatei", () => {
   it("speichert alles und liest es nach dem Wiederöffnen gleich zurück", () => {
+    // Angenommen: ein Projekt mit Einsatz, Geräten, Quellen, Belegen, Anker und Tagebuch
     const file = join(dir, "test.feldspur");
     const store = ProjectStore.create(file, { name: "Markt" });
     const { session, audio, video, page } = seed(store);
+    // Wenn: es geschlossen und wieder geöffnet wird
     store.close();
 
     const again = ProjectStore.open(file);
+    // Dann: sind Angaben und Quellen gleich, und die Zeitachse ergibt dieselben Lagen
     expect(again.getMeta("name")).toBe("Markt");
     expect(again.getMeta("format")).toBe("feldspur-project");
     const input = again.loadResolveInput(session.id);
@@ -110,7 +113,9 @@ describe("Projektdatei", () => {
     const file = join(dir, "episoden.feldspur");
     const store = ProjectStore.create(file, { name: "x" });
     const s = store.addSession({ title: "Markt", date: "2026-09-14" });
+    // Dann: ein neuer Einsatz bildet keine Episoden
     expect(s.episodes).toBe(false);
+    // Wenn: Episoden eingeschaltet und das Projekt neu geöffnet wird, dann bleiben sie an
     store.updateSession(s.id, { episodes: true });
     store.close();
     const again = ProjectStore.open(file);
@@ -121,12 +126,14 @@ describe("Projektdatei", () => {
   it("entfernt eine Quelle samt Belegen, Ankern, Rahmen und leerem Gerät", () => {
     const store = ProjectStore.create(join(dir, "del.feldspur"), { name: "x" });
     const { session, cam, video, page, audio } = seed(store);
+    // Wenn: das einzige Video der Kamera entfernt wird, dann verschwinden Belege, Anker und die leere Kamera
     store.deleteSource(video.id);
     const input = store.loadResolveInput(session.id);
     expect(input.sources.map((s) => s.label)).toEqual(["A-01", "T-01"]);
     expect(input.evidence.every((e) => e.sourceId !== video.id)).toBe(true);
     expect(input.anchors).toEqual([]);
     expect(store.listDevices(session.id).some((d) => d.id === cam.id)).toBe(false);
+    // Wenn: die Tagebuchseite entfernt wird, dann auch ihr Eintrag
     store.deleteSource(page.id);
     expect(store.listDiaryEntries(session.id)).toEqual([]);
     // Das Referenzgerät mit seiner verbliebenen Quelle bleibt.
@@ -138,19 +145,24 @@ describe("Projektdatei", () => {
   it("speichert Mitschrift-Zeilen je Quelle und entfernt sie mit der Quelle", () => {
     const store = ProjectStore.open(":memory:");
     const { session, video, audio } = seed(store);
+    // Angenommen: zwei Zeilen zum Rekorder (in falscher Reihenfolge angelegt) und eine zum Video
     const b = store.addTranscriptLine({ sourceId: audio.id, atMs: 70_000, speaker: "H", text: "Zwölf Jahre" });
     store.addTranscriptLine({ sourceId: audio.id, atMs: 66_000, speaker: "B1", text: "Wie lange schon?" });
     store.addTranscriptLine({ sourceId: video.id, atMs: 1_000, text: "Ruf im Hintergrund" });
+    // Dann: kommen sie nach Zeit sortiert zurück
     expect(
       store
         .listTranscript(session.id)
         .filter((l) => l.sourceId === audio.id)
         .map((l) => l.speaker),
     ).toEqual(["B1", "H"]);
+    // Wenn: eine Zeile geändert wird, dann ist der neue Text gespeichert
     store.updateTranscriptLine(b.id, { text: "Zwölf Jahre, seit mein Vater…" });
     expect(store.getTranscriptLine(b.id).text).toBe("Zwölf Jahre, seit mein Vater…");
+    // Wenn: das Video entfernt wird, dann auch seine Zeile
     store.deleteSource(video.id);
     expect(store.listTranscript(session.id)).toHaveLength(2);
+    // Wenn: eine Zeile gelöscht wird, dann bleibt nur die andere
     store.deleteTranscriptLine(b.id);
     expect(store.listTranscript(session.id).map((l) => l.text)).toEqual(["Wie lange schon?"]);
     store.close();
@@ -185,14 +197,16 @@ describe("Projektdatei", () => {
   it("es gibt höchstens eine Referenzuhr pro Einsatz", () => {
     const store = ProjectStore.open(":memory:");
     const { session, zoom, cam } = seed(store);
+    // Wenn: die Kamera Referenz wird
     store.setReferenceDevice(cam.id);
+    // Dann: ist der Rekorder es nicht mehr
     const devs = store.listDevices(session.id);
     expect(devs.find((d) => d.id === cam.id)!.isReference).toBe(true);
     expect(devs.find((d) => d.id === zoom.id)!.isReference).toBe(false);
     store.close();
   });
 
-  it("prüft Eingaben mit dem Schema", () => {
+  it("lehnt einen Einsatz ohne Titel oder mit deutschem Datum ab", () => {
     const store = ProjectStore.open(":memory:");
     expect(() => store.addSession({ title: "", date: "2026-09-14" })).toThrow();
     expect(() => store.addSession({ title: "x", date: "14.09.2026" })).toThrow();
@@ -200,14 +214,16 @@ describe("Projektdatei", () => {
   });
 
   it("öffnet keine Datei aus einer neueren Version", () => {
+    // Angenommen: eine Datei, deren Schema eine Version neuer ist
     const file = join(dir, "neu.feldspur");
     const db = new Database(file);
     db.pragma(`user_version = ${SCHEMA_VERSION + 1}`);
     db.close();
+    // Dann: lehnt Feldspur sie mit Hinweis ab
     expect(() => ProjectStore.open(file)).toThrow(/neueren Feldspur-Version/);
   });
 
-  it("create überschreibt kein bestehendes Projekt", () => {
+  it("ein neues Projekt überschreibt kein bestehendes", () => {
     const file = join(dir, "a.feldspur");
     ProjectStore.create(file, { name: "A" }).close();
     expect(() => ProjectStore.create(file, { name: "B" })).toThrow(/schon ein Feldspur-Projekt/);
