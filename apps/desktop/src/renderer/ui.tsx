@@ -2,6 +2,7 @@
 import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
 import {
   createContext,
+  type Ref,
   Fragment,
   use,
   useCallback,
@@ -36,7 +37,11 @@ export function Button({
   size = "md",
   className,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  size?: "sm" | "md";
+  ref?: Ref<HTMLButtonElement>;
+}) {
   const pad = variant === "link" ? "" : size === "sm" ? "px-2.5 py-0.5 text-[0.86rem]" : "px-3.5 py-1.5";
   return (
     <button

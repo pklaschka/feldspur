@@ -28,10 +28,17 @@ samt PDF übernehmen können.
 Die vollständigen Angaben zum Programm stehen in
 [`CITATION.cff`](https://github.com/pklaschka/feldspur/blob/main/CITATION.cff); GitHub bietet daraus "Cite this
 repository" (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Für das
-Programm ist sie die beste Angabe: die DOI der verwendeten Version (sie steht auf deren Zenodo-Seite), die
-übergreifende DOI [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (alle Versionen, führt immer
-zur neuesten) nur, wenn es um Feldspur im Allgemeinen geht. Zenodo archiviert dabei den Quellcode, nicht das PDF
-dieses Texts. Den Text deshalb mit den Adressen oben und dem Stand zitieren.
+Programm ist sie die beste Angabe: die **DOI von Version** x (sie steht auf deren Zenodo-Seite), die **DOI für alle
+Versionen** [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (führt immer zur neuesten) nur, wenn
+es um Feldspur im Allgemeinen geht. Vorabversionen (etwa 0.3.0-rc.1) werden nicht archiviert und haben keine eigene
+DOI. Zenodo archiviert dabei den Quellcode, nicht das PDF dieses Texts. Den Text deshalb mit den Adressen oben und dem
+Stand zitieren.
+
+In der App steht die laufende Version unten in der Einsatzliste. **Zitieren…** daneben öffnet den Dialog **Feldspur
+zitieren** mit einer fertigen Quellenangabe für genau diese Version, als APA, BibTeX oder nur DOI, und **Zitat
+kopieren**. Zunächst steht darin die DOI für alle Versionen. **DOI bei Zenodo nachschlagen** setzt die DOI von
+dieser Version ein; erst dann ruft Feldspur die Versionsliste von zenodo.org ab, aus dem Projekt wird nichts
+übertragen. Die gefundene DOI merkt sich Feldspur und fragt danach nicht noch einmal.
 
 Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/). Dieser Text steht unter
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de).
