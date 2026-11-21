@@ -89,6 +89,9 @@ $endif$
 $if(beschnitt)$
   beschnitt: $beschnitt$,
 $endif$
+$if(link-fussnoten)$
+  link-fussnoten: true,
+$endif$
   cols: $if(columns)$$columns$$else$1$endif$,
   doc,
 )

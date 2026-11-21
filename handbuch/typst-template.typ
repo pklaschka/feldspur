@@ -122,6 +122,7 @@
   toc_depth: none,
   toc_indent: 1.5em,
   beschnitt: 0mm,
+  link-fussnoten: false,
   doc,
 ) = {
   set par(justify: true)
@@ -134,6 +135,17 @@
   let body-start = state("fs-body-start", none)
   // Ab hier nur noch Leerseiten und Rückumschlag: wieder ohne Kopf- und Fußzeile.
   let body-end = state("fs-body-end", none)
+
+  // Druckfassung: Auf Papier kann man nicht klicken. Jeder Link ins Netz bekommt seine Adresse als Fußnote, außer
+  // die Adresse steht schon als Linktext da (etwa im Literaturverzeichnis, auf der Rückseite, bei ORCID und DOI).
+  show link: it => {
+    if not link-fussnoten or type(it.dest) != str or not it.dest.starts-with(regex("https?://")) { return it }
+    let ohne(s) = s.replace(regex("^(https?://)?(www\.)?"), "").trim("/", at: end)
+    let linktext = if it.body.has("text") { it.body.text } else { "" }
+    // Auch wenn der Linktext der Schluss der Adresse ist, etwa die ORCID oder die DOI.
+    if linktext != "" and ohne(it.dest).ends-with(ohne(linktext)) { return it }
+    it + footnote(link(it.dest, it.dest.replace(regex("^https?://"), "")))
+  }
 
   let b = beschnitt
   // Endformat A4; mit Beschnitt entsprechend größer (bei 3 mm: 216 × 303 mm).
