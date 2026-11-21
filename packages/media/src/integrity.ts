@@ -12,6 +12,7 @@ import { statSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Id, Source } from "@feldspur/core";
 import { sha256File, type HashOptions } from "./hash.ts";
+import { log } from "./log.ts";
 
 /**
  * Zustand einer Originaldatei:
@@ -154,12 +155,19 @@ export async function checkSources(
         });
       } catch (e) {
         if (opts.signal?.aborted) throw e;
-        out.push({ sourceId: src.id, ...(fromError(e) as { state: "unreadable"; detail: string }) });
+        const bad = fromError(e) as { state: "unreadable"; detail: string };
+        log("prüfen", `${src.label} ${src.originalPath}: nicht lesbar (${bad.detail})`);
+        out.push({ sourceId: src.id, ...bad });
         before += src.sizeBytes;
         continue;
       }
     }
-    out.push(judge(src, st, hash));
+    const verdict = judge(src, st, hash);
+    log(
+      "prüfen",
+      `${src.label} ${src.originalPath}: ${verdict.state}${"detail" in verdict && verdict.detail ? ` (${verdict.detail})` : ""}`,
+    );
+    out.push(verdict);
     before += src.sizeBytes;
   }
   opts.onProgress?.(sources.length, sources.length, "");
@@ -283,6 +291,7 @@ export async function findOriginals(sources: Source[], dir: string, opts: FindOp
     }
     if (hit) {
       taken.add(hit);
+      log("originale", `${src.label} gefunden: ${hit}`);
       found.push({ sourceId: src.id, path: hit });
       continue;
     }
@@ -290,6 +299,7 @@ export async function findOriginals(sources: Source[], dir: string, opts: FindOp
     for (const c of sameName.filter((x) => basename(x.path).toLowerCase() === lower)) {
       let reason = `Größe passt nicht (${size(c.size)} statt ${size(src.sizeBytes)})`;
       if (c.size === src.sizeBytes) reason = "Prüfsumme passt nicht";
+      log("originale", `${src.label} nicht übernommen: ${c.path} (${reason})`);
       rejected.push({ sourceId: src.id, path: c.path, reason });
     }
   }

@@ -41,6 +41,10 @@ release. Add a tool name to select part of the graph. For example, run
   Lint-Regel sperrt `node:child_process` in `src`. Keine eigenen Promise-Hüllen um Prozesse und kein Effect
   (bewusst entschieden am 20.11.2026, Issue #134).
 - Keine echten Forschungsdaten in Tests oder Fixtures.
+- Arbeitsprotokoll (Issue #168): Schritte mit Dateien (Einsammeln, Prüfen, Originale suchen, Ausgeben, Montage,
+  Sicherungen, jeder ffmpeg/ffprobe-Aufruf mit Befehlszeile) mit `log(bereich, text)` aus `packages/media/src/log.ts`
+  vermerken. Erscheint auf stderr, in der nicht gepackten App von selbst; `FELDSPUR_LOG=1` schaltet es überall ein
+  (auch in Tests und in der installierten App, aus dem Terminal gestartet), `FELDSPUR_LOG=0` ab.
 - Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
 
 ## Tests lesbar schreiben

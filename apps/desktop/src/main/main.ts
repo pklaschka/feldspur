@@ -25,6 +25,7 @@ import {
   readPeaks,
   ScanCache,
   scanPaths,
+  setLogEnabled,
   setToolPaths,
   TRANSCRIPT_EXTENSIONS,
   type ScanProgress,
@@ -1106,6 +1107,10 @@ function showOpenError(detail: string): void {
   const opts = { type: "error" as const, message: "Projekt lässt sich nicht öffnen", detail };
   void (win ? dialog.showMessageBox(win, opts) : dialog.showMessageBox(opts));
 }
+
+// Arbeitsprotokoll auf der Konsole (Issue #168): beim Entwickeln (nicht gepackt) an. Oberflächentests mit eigenem
+// Benutzerordner bleiben leise; FELDSPUR_LOG=1 schaltet es überall ein (auch in der installierten App), =0 ab.
+setLogEnabled(!app.isPackaged && !process.env.FELDSPUR_USER_DATA);
 
 void app.whenReady().then(() => {
   if (!primaryInstance) return;

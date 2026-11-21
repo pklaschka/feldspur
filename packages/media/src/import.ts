@@ -16,6 +16,7 @@ import {
 } from "./evidence.ts";
 import { refineClipTimes } from "./clip-times.ts";
 import { sha256File } from "./hash.ts";
+import { log, logSince, logSize } from "./log.ts";
 import { probeMedia, readImageExif, type ImageExif, type MediaProbe } from "./probe.ts";
 
 export interface ImportCandidate {
@@ -104,6 +105,7 @@ async function walk(path: string, out: Listed[], opts: ScanOptions, found: () =>
     st = await stat(path);
   } catch (e) {
     if (!opts.onSkipped) throw e;
+    log("einsammeln", `übersprungen ${path}: ${errText(e)}`);
     opts.onSkipped(path, `übersprungen: ${errText(e)}`);
     return;
   }
@@ -113,10 +115,15 @@ async function walk(path: string, out: Listed[], opts: ScanOptions, found: () =>
       entries = (await readdir(path)).sort((a, b) => a.localeCompare(b));
     } catch (e) {
       if (!opts.onSkipped) throw e;
+      log("einsammeln", `Ordner übersprungen ${path}: ${errText(e)}`);
       opts.onSkipped(path, `Ordner übersprungen: ${errText(e)}`);
       return;
     }
-    for (const e of entries) if (!isIgnored(e)) await walk(join(path, e), out, opts, found);
+    log("einsammeln", `durchsucht Ordner ${path} (${entries.length} Einträge)`);
+    for (const e of entries) {
+      if (isIgnored(e)) log("einsammeln", `ignoriert ${join(path, e)} (System- oder Begleitdatei)`);
+      else await walk(join(path, e), out, opts, found);
+    }
   } else if (st.isFile() && !isIgnored(basename(path))) {
     out.push({ path: resolve(path), size: st.size, mtimeMs: st.mtimeMs });
     found();
@@ -243,13 +250,22 @@ export async function inspectFile(
   };
 }
 
+/** Eine Zeile fürs Protokoll: was beim Lesen einer Datei herauskam. */
+function describeCandidate(c: ImportCandidate): string {
+  const times = c.evidence.map((e) => `${e.kind} ${e.detail}`.trim()).join("; ") || "keine Zeitangabe";
+  const warn = c.warnings.length ? `, Hinweise: ${c.warnings.join("; ")}` : "";
+  return `${c.kind}, Gerät „${c.deviceLabel}“, SHA-256 ${c.sha256.slice(0, 12)}…, Zeit: ${times}${warn}`;
+}
+
 /**
  * Dateien und Ordner einsammeln. Liest nur, verändert nichts: Ein Abbruch (signal) hinterlässt nichts, und erst
  * applyImport schreibt ins Projekt, in einem Rutsch.
  */
 export async function scanPaths(paths: string[], opts: ScanOptions = {}): Promise<ImportCandidate[]> {
+  const started = performance.now();
   const files = await listWithStats(paths, opts);
   const bytesTotal = files.reduce((n, f) => n + f.size, 0);
+  log("einsammeln", `${files.length} Dateien gefunden (${logSize(bytesTotal)}) in ${paths.join(", ")}`);
   const out: ImportCandidate[] = [];
   let bytesDone = 0;
   let reused = 0;
@@ -274,6 +290,7 @@ export async function scanPaths(paths: string[], opts: ScanOptions = {}): Promis
     opts.signal?.throwIfAborted();
     const known = opts.cache?.get(f);
     if (known) {
+      log("einsammeln", `unverändert seit dem letzten Lesen, übernommen: ${f.path}`);
       out.push(known);
       reused++;
       bytesReused += f.size;
@@ -282,18 +299,23 @@ export async function scanPaths(paths: string[], opts: ScanOptions = {}): Promis
       continue;
     }
     report(i, f.path, 0, true);
+    const fileStarted = performance.now();
+    log("einsammeln", `liest ${f.path} (${logSize(f.size)})`);
     try {
       const c = await inspectFile(f.path, { signal: opts.signal, onBytes: (b) => report(i, f.path, b) });
       opts.cache?.set(f, c);
       out.push(c);
+      log("einsammeln", `  ${describeCandidate(c)}, ${logSince(fileStarted)}`);
     } catch (e) {
       opts.signal?.throwIfAborted();
       if (!opts.onSkipped) throw e;
+      log("einsammeln", `übersprungen ${f.path}: ${errText(e)}`);
       opts.onSkipped(f.path, `übersprungen: ${errText(e)}`);
     }
     bytesDone += f.size;
   }
   report(files.length, "", 0, true);
+  log("einsammeln", `${out.length} Dateien gelesen (${reused} unverändert übernommen) in ${logSince(started)}`);
   return out;
 }
 
@@ -384,6 +406,12 @@ export function applyImport(
       for (const e of p.added) store.addEvidence({ ...e, sourceId: p.source.id });
     }
     result.refreshed = refreshPlan.filter((p) => p.gone.length || p.added.length).length;
+    for (const p of refreshPlan)
+      if (p.gone.length || p.added.length)
+        log(
+          "einsammeln",
+          `schärft Zeitbelege von ${p.source.label} nach (${p.gone.length} ersetzt, ${p.added.length} neu)`,
+        );
     // Chronologisch nach bestem Beleg, damit die Kurzzeichen der Reihenfolge im Feld folgen.
     const ordered = refinedAll
       .slice(0, candidates.length)
@@ -395,6 +423,7 @@ export function applyImport(
     for (const c of ordered) {
       const existing = store.findSourceBySha(sessionId, c.sha256) ?? seen.get(c.sha256);
       if (existing) {
+        log("einsammeln", `schon im Einsatz (gleiche Prüfsumme wie ${existing.fileName}): ${c.path}`);
         result.duplicates.push({ candidate: c, existing });
         continue;
       }
@@ -408,6 +437,7 @@ export function applyImport(
         });
         devices.set(c.deviceKey, device);
         result.devicesCreated.push(device);
+        log("einsammeln", `legt Gerät „${device.label}“ an`);
       }
       const src = store.addSource({
         sessionId,
@@ -422,6 +452,10 @@ export function applyImport(
         metadata: c.metadata,
       });
       for (const e of c.evidence) store.addEvidence({ ...e, sourceId: src.id });
+      log(
+        "einsammeln",
+        `übernimmt ${src.label} ${c.path} (${c.evidence.length} ${c.evidence.length === 1 ? "Zeitbeleg" : "Zeitbelege"})`,
+      );
       seen.set(c.sha256, src);
       result.sources.push(src);
     }

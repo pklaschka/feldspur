@@ -11,6 +11,7 @@
  * Direkte Importe von node:child_process sind außerhalb dieser Datei per Lint-Regel gesperrt.
  */
 import { spawn } from "node:child_process";
+import { log, logCommand, logSince } from "./log.ts";
 import { toolPaths } from "./tools.ts";
 
 export type Tool = "ffmpeg" | "ffprobe";
@@ -53,6 +54,8 @@ export const STALL_MS = 120_000;
 const STDERR_KEEP = 4000;
 /** So lange darf ein Prozess nach dem Beenden-Signal brauchen, bevor er hart beendet wird. */
 const KILL_GRACE_MS = 5000;
+/** Laufende Nummer der Prozesse, damit Start und Ende im Protokoll zusammenfinden. */
+let runCount = 0;
 /** So lange nach dem Prozessende auf das Schließen von stdout/stderr warten, wenn wir ihn selbst beendet haben. */
 const PIPE_GRACE_MS = 1000;
 
@@ -65,6 +68,9 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
   return new Promise((resolve, reject) => {
     // stdin wie bei execFile als Leitung, gleich geschlossen: ffmpeg liest dort Tastenbefehle und sieht so sofort das Ende.
     const child = spawn(toolPaths()[tool], args, { stdio: ["pipe", "pipe", "pipe"] });
+    const run = ++runCount;
+    const started = performance.now();
+    log("ffmpeg", `#${run} startet ${logCommand(tool, args)}`);
     child.stdin.on("error", () => {});
     child.stdin.end();
     const out: Buffer[] = [];
@@ -148,6 +154,7 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
     child.on("error", (e) => {
       // Startfehler (Programm fehlt) oder Fehler beim Beenden; ohne Prozess kommt kein close.
       if (child.pid === undefined) {
+        log("ffmpeg", `#${run} lässt sich nicht starten: ${e.message}`);
         finish(() =>
           reject(new ToolError(`${tool} lässt sich nicht starten: ${e.message}`, tool, null, err, { cause: e })),
         );
@@ -164,8 +171,16 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
     });
     child.on("close", (code) => {
       finish(() => {
-        if (stopReason !== null) return reject(stopReason);
-        if (code !== 0) return reject(new ToolError(failMessage(tool, code, err), tool, code, err));
+        if (stopReason !== null) {
+          const why = stopReason instanceof Error ? stopReason.message : String(stopReason);
+          log("ffmpeg", `#${run} beendet nach ${logSince(started)} (${why})`);
+          return reject(stopReason);
+        }
+        if (code !== 0) {
+          log("ffmpeg", `#${run} gescheitert nach ${logSince(started)}: ${failMessage(tool, code, err)}`);
+          return reject(new ToolError(failMessage(tool, code, err), tool, code, err));
+        }
+        log("ffmpeg", `#${run} fertig nach ${logSince(started)}`);
         resolve(opts.onStdout ? "" : Buffer.concat(out).toString());
       });
     });
