@@ -167,15 +167,15 @@ describe("Reihenfolge der Stellen", () => {
   const ids = (r: { id: string } | undefined) => r?.id;
 
   it.each`
-    taste            | richtung | von          | nach    | fall
-    ${"N"}           | ${1}     | ${null}      | ${"g1"} | ${"ohne Auswahl zur ersten Stelle"}
-    ${"N"}           | ${1}     | ${"g1"}      | ${"a"}  | ${"über die Gruppe hinweg"}
-    ${"N"}           | ${1}     | ${"g2"}      | ${"a"}  | ${"ein Gruppenmitglied zählt als seine Gruppe"}
-    ${"N"}           | ${1}     | ${"b"}       | ${"g1"} | ${"nach der letzten wieder vorn"}
-    ${"N"}           | ${1}     | ${"fremd"}   | ${"g1"} | ${"von einer anderen Quelle zur ersten Stelle"}
-    ${"Umschalt+N"}  | ${-1}    | ${"a"}       | ${"g1"} | ${"zurück zur Gruppe"}
-    ${"Umschalt+N"}  | ${-1}    | ${"g2"}      | ${"b"}  | ${"vor der ersten wieder hinten"}
-    ${"Umschalt+N"}  | ${-1}    | ${null}      | ${"b"}  | ${"ohne Auswahl zur letzten Stelle"}
+    taste           | richtung | von        | nach    | fall
+    ${"N"}          | ${1}     | ${null}    | ${"g1"} | ${"ohne Auswahl zur ersten Stelle"}
+    ${"N"}          | ${1}     | ${"g1"}    | ${"a"}  | ${"über die Gruppe hinweg"}
+    ${"N"}          | ${1}     | ${"g2"}    | ${"a"}  | ${"ein Gruppenmitglied zählt als seine Gruppe"}
+    ${"N"}          | ${1}     | ${"b"}     | ${"g1"} | ${"nach der letzten wieder vorn"}
+    ${"N"}          | ${1}     | ${"fremd"} | ${"g1"} | ${"von einer anderen Quelle zur ersten Stelle"}
+    ${"Umschalt+N"} | ${-1}    | ${"a"}     | ${"g1"} | ${"zurück zur Gruppe"}
+    ${"Umschalt+N"} | ${-1}    | ${"g2"}    | ${"b"}  | ${"vor der ersten wieder hinten"}
+    ${"Umschalt+N"} | ${-1}    | ${null}    | ${"b"}  | ${"ohne Auswahl zur letzten Stelle"}
   `("$taste von $von springt zu $nach: $fall", ({ richtung, von, nach }) => {
     expect(ids(stepPlace(q, groups, von, richtung))).toBe(nach);
   });
@@ -209,13 +209,13 @@ describe("Reihenfolge der Stellen", () => {
     }) as unknown as Parameters<typeof canConfirm>[0];
 
   it.each`
-    quelle                                                      | passt    | fall
-    ${lage({})}                                                 | ${true}  | ${"unsichere Lage ohne Widerspruch"}
-    ${lage({ status: "ok" })}                                   | ${false} | ${"sichere Lage"}
-    ${lage({ kind: "diary" })}                                  | ${false} | ${"Tagebuchseite"}
-    ${lage({ partOf: "x" })}                                    | ${false} | ${"weiteres Bild einer Seite"}
-    ${lage({ conflict: { state: "open" } })}                    | ${false} | ${"offener Widerspruch"}
-    ${lage({ evidence: [{ kind: "checked", chosen: true }] })}  | ${false} | ${"schon geprüft"}
+    quelle                                                     | passt    | fall
+    ${lage({})}                                                | ${true}  | ${"unsichere Lage ohne Widerspruch"}
+    ${lage({ status: "ok" })}                                  | ${false} | ${"sichere Lage"}
+    ${lage({ kind: "diary" })}                                 | ${false} | ${"Tagebuchseite"}
+    ${lage({ partOf: "x" })}                                   | ${false} | ${"weiteres Bild einer Seite"}
+    ${lage({ conflict: { state: "open" } })}                   | ${false} | ${"offener Widerspruch"}
+    ${lage({ evidence: [{ kind: "checked", chosen: true }] })} | ${false} | ${"schon geprüft"}
   `("„Lage passt“ gibt es: $passt bei $fall", ({ quelle, passt }) => {
     expect(canConfirm(quelle)).toBe(passt);
   });
@@ -223,15 +223,15 @@ describe("Reihenfolge der Stellen", () => {
 
 describe("Hinweise der Zeitbestimmung", () => {
   it.each`
-    hinweis                       | geraet       | satz
-    ${"Uhr weicht ab?"}           | ${"Handy"}   | ${"Die Uhr von Handy ist noch nicht abgeglichen."}
-    ${"Uhr weicht ab?"}           | ${undefined} | ${"Die Uhr von diesem Gerät ist noch nicht abgeglichen."}
-    ${"Keine Referenzuhr gewählt"} | ${"x"}      | ${"Es ist noch keine Referenzuhr gewählt."}
-    ${"nur Minute"}               | ${"x"}       | ${"Die Uhrzeit ist nur minutengenau bekannt."}
-    ${"± 2:00"}                   | ${"x"}       | ${"Die Uhrzeit ist nur ungefähr bekannt (± 2:00)."}
-    ${"Widerspruch 3:00"}         | ${"x"}       | ${"Zeitbelege widersprechen sich (3:00)."}
-    ${"Entscheidung neu prüfen"}  | ${"x"}       | ${"Seit der Entscheidung hat sich ein Zeitbeleg geändert."}
-    ${"etwas anderes"}            | ${"x"}       | ${"etwas anderes"}
+    hinweis                        | geraet       | satz
+    ${"Uhr weicht ab?"}            | ${"Handy"}   | ${"Die Uhr von Handy ist noch nicht abgeglichen."}
+    ${"Uhr weicht ab?"}            | ${undefined} | ${"Die Uhr von diesem Gerät ist noch nicht abgeglichen."}
+    ${"Keine Referenzuhr gewählt"} | ${"x"}       | ${"Es ist noch keine Referenzuhr gewählt."}
+    ${"nur Minute"}                | ${"x"}       | ${"Die Uhrzeit ist nur minutengenau bekannt."}
+    ${"± 2:00"}                    | ${"x"}       | ${"Die Uhrzeit ist nur ungefähr bekannt (± 2:00)."}
+    ${"Widerspruch 3:00"}          | ${"x"}       | ${"Zeitbelege widersprechen sich (3:00)."}
+    ${"Entscheidung neu prüfen"}   | ${"x"}       | ${"Seit der Entscheidung hat sich ein Zeitbeleg geändert."}
+    ${"etwas anderes"}             | ${"x"}       | ${"etwas anderes"}
   `("„$hinweis“ ($geraet) heißt: $satz", ({ hinweis, geraet, satz }) => {
     expect(checkReason(hinweis, geraet)).toBe(satz);
   });

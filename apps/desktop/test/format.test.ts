@@ -31,27 +31,25 @@ describe("Uhrabweichung eingeben", () => {
   });
 
   it.each`
-    eingabe               | ms                | fall
-    ${"−2:47"}            | ${-167_000}       | ${"Minuten und Sekunden"}
-    ${"+0:04"}            | ${4_000}          | ${"nur Sekunden mit Doppelpunkt"}
-    ${"-247"}             | ${-167_000}       | ${"Ziffern ohne Doppelpunkt"}
-    ${"+4"}               | ${4_000}          | ${"eine Ziffer"}
-    ${"+10247"}           | ${3_767_000}      | ${"Stunden ohne Doppelpunkt"}
-    ${"-167"}             | ${null}           | ${"67 Sekunden gibt es nicht"}
-    ${"1,5"}              | ${1_500}          | ${"Komma"}
-    ${"+2:00:00"}         | ${7_200_000}      | ${"Stunden"}
-    ${"+1 Tag 2:00:00"}   | ${93_600_000}     | ${"Tag und Stunden"}
-    ${"−3 Tage"}          | ${-259_200_000}   | ${"Tage"}
-    ${"+2 h 5 min"}       | ${7_500_000}      | ${"h und min"}
-    ${"1d 0:00:30"}       | ${86_430_000}     | ${"d und Sekunden"}
-    ${""}                 | ${null}           | ${"leer ist Unsinn"}
-    ${"abc"}              | ${null}           | ${"Buchstaben sind Unsinn"}
-    ${"3 Wochen"}         | ${null}           | ${"Wochen kennt die App nicht"}
+    eingabe             | ms              | fall
+    ${"−2:47"}          | ${-167_000}     | ${"Minuten und Sekunden"}
+    ${"+0:04"}          | ${4_000}        | ${"nur Sekunden mit Doppelpunkt"}
+    ${"-247"}           | ${-167_000}     | ${"Ziffern ohne Doppelpunkt"}
+    ${"+4"}             | ${4_000}        | ${"eine Ziffer"}
+    ${"+10247"}         | ${3_767_000}    | ${"Stunden ohne Doppelpunkt"}
+    ${"-167"}           | ${null}         | ${"67 Sekunden gibt es nicht"}
+    ${"1,5"}            | ${1_500}        | ${"Komma"}
+    ${"+2:00:00"}       | ${7_200_000}    | ${"Stunden"}
+    ${"+1 Tag 2:00:00"} | ${93_600_000}   | ${"Tag und Stunden"}
+    ${"−3 Tage"}        | ${-259_200_000} | ${"Tage"}
+    ${"+2 h 5 min"}     | ${7_500_000}    | ${"h und min"}
+    ${"1d 0:00:30"}     | ${86_430_000}   | ${"d und Sekunden"}
+    ${""}               | ${null}         | ${"leer ist Unsinn"}
+    ${"abc"}            | ${null}         | ${"Buchstaben sind Unsinn"}
+    ${"3 Wochen"}       | ${null}         | ${"Wochen kennt die App nicht"}
   `("„$eingabe“ ergibt $ms ms: $fall", ({ eingabe, ms }) => {
     expect(parseOffset(eingabe)).toBe(ms);
   });
-
-
 
   it.each([0, -167_000, 7_200_000, 93_600_000, -259_205_000])("Anzeige und Eingabe passen zusammen: %d ms", (ms) => {
     expect(parseOffset(offsetText(ms))).toBe(ms);
@@ -77,17 +75,16 @@ describe("Uhrzeit als Maskenfeld", () => {
     expect(maskClock(getippt)).toBe(feld);
   });
 
-
   it.each`
-    feld        | marke | ergebnis                             | fall
-    ${"1:00"}   | ${1}  | ${{ value: "1:00", caret: 1 }}       | ${"aus „15:00“ die 5 gelöscht"}
-    ${"16:00"}  | ${2}  | ${{ value: "16:00", caret: 2 }}      | ${"dann 6 getippt"}
-    ${"165:00"} | ${2}  | ${{ value: "16:00", caret: 2 }}      | ${"Ziffer in volle Stunde überschreibt die folgende"}
-    ${"10:0"}   | ${3}  | ${{ value: "10:0", caret: 3 }}       | ${"aus „10:30“ die 3 gelöscht"}
-    ${"10:40"}  | ${4}  | ${{ value: "10:40", caret: 4 }}      | ${"dann 4 getippt"}
-    ${"10:430"} | ${4}  | ${{ value: "10:40", caret: 4 }}      | ${"4 hinter dem Doppelpunkt überschreibt die 3"}
-    ${"1500"}   | ${2}  | ${{ value: "15:00", caret: 2 }}      | ${"Doppelpunkt gelöscht: Ziffern fließen wie beim Tippen"}
-    ${"103"}    | ${3}  | ${{ value: "10:3", caret: 4 }}       | ${"am Ende tippen wie bisher"}
+    feld        | marke | ergebnis                        | fall
+    ${"1:00"}   | ${1}  | ${{ value: "1:00", caret: 1 }}  | ${"aus „15:00“ die 5 gelöscht"}
+    ${"16:00"}  | ${2}  | ${{ value: "16:00", caret: 2 }} | ${"dann 6 getippt"}
+    ${"165:00"} | ${2}  | ${{ value: "16:00", caret: 2 }} | ${"Ziffer in volle Stunde überschreibt die folgende"}
+    ${"10:0"}   | ${3}  | ${{ value: "10:0", caret: 3 }}  | ${"aus „10:30“ die 3 gelöscht"}
+    ${"10:40"}  | ${4}  | ${{ value: "10:40", caret: 4 }} | ${"dann 4 getippt"}
+    ${"10:430"} | ${4}  | ${{ value: "10:40", caret: 4 }} | ${"4 hinter dem Doppelpunkt überschreibt die 3"}
+    ${"1500"}   | ${2}  | ${{ value: "15:00", caret: 2 }} | ${"Doppelpunkt gelöscht: Ziffern fließen wie beim Tippen"}
+    ${"103"}    | ${3}  | ${{ value: "10:3", caret: 4 }}  | ${"am Ende tippen wie bisher"}
   `("korrigiert mitten in der Uhrzeit: $fall", ({ feld, marke, ergebnis }) => {
     expect(maskClockAt(feld, marke)).toEqual(ergebnis);
   });
@@ -221,13 +218,13 @@ describe("Einsatzdatum und Dateien", () => {
 
 describe("Dauern ohne Doppelpunkt", () => {
   it.each`
-    ziffern    | ms             | fall
-    ${"45"}    | ${45_000}      | ${"Sekunden"}
-    ${"320"}   | ${200_000}     | ${"Minuten und Sekunden"}
-    ${"7500"}  | ${4_500_000}   | ${"Minuten über 59"}
-    ${"10320"} | ${3_800_000}   | ${"Stunden"}
-    ${"390"}   | ${null}        | ${"90 Sekunden gibt es nicht"}
-    ${"3:20"}  | ${undefined}   | ${"mit Doppelpunkt: nicht zuständig"}
+    ziffern    | ms           | fall
+    ${"45"}    | ${45_000}    | ${"Sekunden"}
+    ${"320"}   | ${200_000}   | ${"Minuten und Sekunden"}
+    ${"7500"}  | ${4_500_000} | ${"Minuten über 59"}
+    ${"10320"} | ${3_800_000} | ${"Stunden"}
+    ${"390"}   | ${null}      | ${"90 Sekunden gibt es nicht"}
+    ${"3:20"}  | ${undefined} | ${"mit Doppelpunkt: nicht zuständig"}
   `("Ziffern „$ziffern“ füllen von rechts: $fall", ({ ziffern, ms }) => {
     expect(digitsDurationMs(ziffern)).toBe(ms);
   });

@@ -3,10 +3,10 @@ import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } f
 
 describe("Mitschreiben: Hilfen", () => {
   it.each`
-    stelleMs   | breiteMs  | ausschnitt                               | fall
-    ${0}       | ${30_000} | ${{ fromMs: 0, toMs: 30_000 }}           | ${"am Anfang"}
-    ${100_000} | ${40_000} | ${{ fromMs: 90_000, toMs: 130_000 }}     | ${"läuft mit, Stelle im ersten Viertel"}
-    ${595_000} | ${30_000} | ${{ fromMs: 570_000, toMs: 600_000 }}    | ${"am Ende der 10-Min.-Datei"}
+    stelleMs   | breiteMs  | ausschnitt                            | fall
+    ${0}       | ${30_000} | ${{ fromMs: 0, toMs: 30_000 }}        | ${"am Anfang"}
+    ${100_000} | ${40_000} | ${{ fromMs: 90_000, toMs: 130_000 }}  | ${"läuft mit, Stelle im ersten Viertel"}
+    ${595_000} | ${30_000} | ${{ fromMs: 570_000, toMs: 600_000 }} | ${"am Ende der 10-Min.-Datei"}
   `("Waveform-Ausschnitt bei $stelleMs ms: $fall", ({ stelleMs, breiteMs, ausschnitt }) => {
     expect(waveWindow(stelleMs, breiteMs, 600_000)).toEqual(ausschnitt);
   });
@@ -61,22 +61,22 @@ describe("Mitschreiben: Hilfen", () => {
     const field = {};
 
     it.each`
-      taste       | mit                   | ziel               | aktion       | fall
-      ${"Escape"} | ${{}}                 | ${body}            | ${"toggle"}  | ${"Esc ohne Fokus: Wiedergabe an/aus"}
-      ${"F8"}     | ${{}}                 | ${on("button")}    | ${"back"}    | ${"F8 auf einem Knopf: zurück"}
-      ${"F9"}     | ${{}}                 | ${on("textarea")}  | ${"forward"} | ${"F9 im Textfeld: vor"}
-      ${"F7"}     | ${{}}                 | ${null}            | ${"slower"}  | ${"F7: langsamer"}
-      ${"F7"}     | ${{ shiftKey: true }} | ${null}            | ${"faster"}  | ${"Umschalt+F7: schneller"}
-      ${"Escape"} | ${{}}                 | ${on("listbox")}   | ${null}      | ${"Esc in offener Auswahlliste bleibt dort"}
-      ${"F8"}     | ${{}}                 | ${on("menu")}      | ${null}      | ${"F8 im Menü bleibt dort"}
-      ${"Escape"} | ${{}}                 | ${on("alertdialog")} | ${null}    | ${"Esc in einer Rückfrage bleibt dort"}
-      ${"a"}      | ${{}}                 | ${body}            | ${"type"}    | ${"Tippen ohne Fokus springt in die neue Zeile"}
-      ${"a"}      | ${{}}                 | ${on("button")}    | ${"type"}    | ${"Tippen auf einem Knopf ebenso"}
-      ${" "}      | ${{}}                 | ${body}            | ${"type"}    | ${"Leertaste ohne Fokus ebenso"}
-      ${" "}      | ${{}}                 | ${on("button")}    | ${null}      | ${"Leertaste auf einem Knopf drückt ihn"}
-      ${"a"}      | ${{}}                 | ${on("textarea")}  | ${null}      | ${"Tippen im Textfeld bleibt dort"}
-      ${"k"}      | ${{ ctrlKey: true }}  | ${body}            | ${null}      | ${"Strg+K bleibt Kürzel"}
-      ${"Enter"}  | ${{ ctrlKey: true }}  | ${on("textarea")}  | ${null}      | ${"Strg+Enter im Textfeld bleibt dort"}
+      taste       | mit                   | ziel                 | aktion       | fall
+      ${"Escape"} | ${{}}                 | ${body}              | ${"toggle"}  | ${"Esc ohne Fokus: Wiedergabe an/aus"}
+      ${"F8"}     | ${{}}                 | ${on("button")}      | ${"back"}    | ${"F8 auf einem Knopf: zurück"}
+      ${"F9"}     | ${{}}                 | ${on("textarea")}    | ${"forward"} | ${"F9 im Textfeld: vor"}
+      ${"F7"}     | ${{}}                 | ${null}              | ${"slower"}  | ${"F7: langsamer"}
+      ${"F7"}     | ${{ shiftKey: true }} | ${null}              | ${"faster"}  | ${"Umschalt+F7: schneller"}
+      ${"Escape"} | ${{}}                 | ${on("listbox")}     | ${null}      | ${"Esc in offener Auswahlliste bleibt dort"}
+      ${"F8"}     | ${{}}                 | ${on("menu")}        | ${null}      | ${"F8 im Menü bleibt dort"}
+      ${"Escape"} | ${{}}                 | ${on("alertdialog")} | ${null}      | ${"Esc in einer Rückfrage bleibt dort"}
+      ${"a"}      | ${{}}                 | ${body}              | ${"type"}    | ${"Tippen ohne Fokus springt in die neue Zeile"}
+      ${"a"}      | ${{}}                 | ${on("button")}      | ${"type"}    | ${"Tippen auf einem Knopf ebenso"}
+      ${" "}      | ${{}}                 | ${body}              | ${"type"}    | ${"Leertaste ohne Fokus ebenso"}
+      ${" "}      | ${{}}                 | ${on("button")}      | ${null}      | ${"Leertaste auf einem Knopf drückt ihn"}
+      ${"a"}      | ${{}}                 | ${on("textarea")}    | ${null}      | ${"Tippen im Textfeld bleibt dort"}
+      ${"k"}      | ${{ ctrlKey: true }}  | ${body}              | ${null}      | ${"Strg+K bleibt Kürzel"}
+      ${"Enter"}  | ${{ ctrlKey: true }}  | ${on("textarea")}    | ${null}      | ${"Strg+Enter im Textfeld bleibt dort"}
     `("$fall", ({ taste, mit, ziel, aktion }) => {
       expect(transcriberKey(key(taste, mit), ziel, field)).toBe(aktion);
     });
@@ -87,12 +87,12 @@ describe("Mitschreiben: Hilfen", () => {
   });
 
   it.each`
-    anfang               | kuerzel                                  | fall
-    ${"B1: "}            | ${{ speaker: "B1", rest: "" }}           | ${"Kürzel mit Leerzeichen"}
-    ${"H: Zwölf Jahre"}  | ${{ speaker: "H", rest: "Zwölf Jahre" }} | ${"Kürzel und Text"}
-    ${"B1:"}             | ${null}                                  | ${"noch kein Leerzeichen"}
-    ${"10: Uhr"}         | ${null}                                  | ${"Zahl, kein Kürzel"}
-    ${"Interviewerin: ja"} | ${null}                                | ${"zu lang für ein Kürzel"}
+    anfang                 | kuerzel                                  | fall
+    ${"B1: "}              | ${{ speaker: "B1", rest: "" }}           | ${"Kürzel mit Leerzeichen"}
+    ${"H: Zwölf Jahre"}    | ${{ speaker: "H", rest: "Zwölf Jahre" }} | ${"Kürzel und Text"}
+    ${"B1:"}               | ${null}                                  | ${"noch kein Leerzeichen"}
+    ${"10: Uhr"}           | ${null}                                  | ${"Zahl, kein Kürzel"}
+    ${"Interviewerin: ja"} | ${null}                                  | ${"zu lang für ein Kürzel"}
   `("Sprecherkürzel beim Tippen von „$anfang“: $fall", ({ anfang, kuerzel }) => {
     expect(leadingSpeaker(anfang)).toEqual(kuerzel);
   });

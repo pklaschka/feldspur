@@ -37,10 +37,10 @@ describe("Versionen", () => {
   });
 
   it.each`
-    tags                                          | version         | seit             | fall
-    ${["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"]}   | ${"0.2.0"}      | ${"v0.1.0"}      | ${"Release: seit dem letzten Release"}
-    ${["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"]}   | ${"0.2.0-rc.3"} | ${"v0.2.0-rc.2"} | ${"Vorabversion: seit dem letzten Tag"}
-    ${[]}                                         | ${"0.1.0"}      | ${null}          | ${"erstes Release: von Anfang an"}
+    tags                                        | version         | seit             | fall
+    ${["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"]} | ${"0.2.0"}      | ${"v0.1.0"}      | ${"Release: seit dem letzten Release"}
+    ${["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"]} | ${"0.2.0-rc.3"} | ${"v0.2.0-rc.2"} | ${"Vorabversion: seit dem letzten Tag"}
+    ${[]}                                       | ${"0.1.0"}      | ${null}          | ${"erstes Release: von Anfang an"}
   `("sammelt für $version seit $seit ($fall)", ({ tags, version, seit }) => {
     expect(previousTag(tags, version)).toBe(seit);
   });

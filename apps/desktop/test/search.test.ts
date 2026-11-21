@@ -47,11 +47,11 @@ describe("Schnellsuche", () => {
   });
 
   it.each`
-    suche                  | treffer | fall
-    ${"STRASSE gesperrt"}  | ${1}    | ${"ß als ss, beide Wörter in einer Zeile"}
-    ${"strasse brunnen"}   | ${0}    | ${"Wörter in verschiedenen Zeilen"}
-    ${"gespräch"}          | ${1}    | ${"mit Umlaut"}
-    ${"gesprach"}          | ${1}    | ${"Umlaut ohne Punkte"}
+    suche                 | treffer | fall
+    ${"STRASSE gesperrt"} | ${1}    | ${"ß als ss, beide Wörter in einer Zeile"}
+    ${"strasse brunnen"}  | ${0}    | ${"Wörter in verschiedenen Zeilen"}
+    ${"gespräch"}         | ${1}    | ${"mit Umlaut"}
+    ${"gesprach"}         | ${1}    | ${"Umlaut ohne Punkte"}
   `("„$suche“ ergibt $treffer Treffer: $fall", ({ suche, treffer }) => {
     expect(search(items, suche).hits).toHaveLength(treffer);
   });

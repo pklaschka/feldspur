@@ -120,10 +120,10 @@ describe("Mitschrift", () => {
   });
 
   it.each`
-    zeile                      | geteilt                                                  | fall
-    ${"B1: Wie lange schon?"}  | ${{ speaker: "B1", text: "Wie lange schon?" }}           | ${"Kürzel am Anfang"}
-    ${"Händlerin: ja"}         | ${{ speaker: null, text: "Händlerin: ja" }}              | ${"ein Wort ist kein Kürzel"}
-    ${"Um 10:15 ging es los"}  | ${{ speaker: null, text: "Um 10:15 ging es los" }}       | ${"Doppelpunkt in einer Uhrzeit"}
+    zeile                     | geteilt                                            | fall
+    ${"B1: Wie lange schon?"} | ${{ speaker: "B1", text: "Wie lange schon?" }}     | ${"Kürzel am Anfang"}
+    ${"Händlerin: ja"}        | ${{ speaker: null, text: "Händlerin: ja" }}        | ${"ein Wort ist kein Kürzel"}
+    ${"Um 10:15 ging es los"} | ${{ speaker: null, text: "Um 10:15 ging es los" }} | ${"Doppelpunkt in einer Uhrzeit"}
   `("Sprecherkürzel in „$zeile“: $fall", ({ zeile, geteilt }) => {
     expect(splitSpeaker(zeile)).toEqual(geteilt);
   });

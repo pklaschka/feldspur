@@ -60,11 +60,13 @@ Tests werden im Review gelesen wie das Handbuch. Kein Gherkin, kein Cucumber und
   ```
 - **Gliederung mit Kommentaren**, sobald ein Test mehr als eine Handlung hat: `// Angenommen:` (Ausgangslage),
   `// Wenn:` (Handlung), `// Dann:` (Erwartung), jeweils mit einem kurzen Satz. Mehrere Runden im selben Test
-  dürfen sich wiederholen (`// Wenn: … // Dann: … // Wenn: …`). Ein Test aus einer einzigen Prüfung braucht
-  keine Kommentare.
+  dürfen sich wiederholen (`// Wenn: … // Dann: … // Wenn: …`), kurze Runden auch in einer Zeile
+  (`// Wenn: rückgängig, dann ist alles wie vorher`). Ein Test aus einer einzigen Prüfung braucht keine Kommentare.
 - **Oberflächentests** (`apps/desktop/test/*.e2e.ts`): in kleine Abläufe mit Namen teilen,
   `await ablauf("Einen Einsatz anlegen", async () => { … })` aus `test/ablauf.ts`, darin dieselben Kommentare.
-  `ablauf` druckt den Namen und nennt ihn im Fehler.
+  `ablauf` druckt den Namen und nennt ihn im Fehler; was spätere Abläufe brauchen, gibt er zurück
+  (`const id = await ablauf(…, async () => { …; return id; })`). Im Handbuch-Rundgang ist jedes `kapitel` selbst ein
+  Ablauf.
 - Kommentare beschreiben, was passiert, nicht wie der Code es macht. Ändert sich der Test, ändern sich die
   Kommentare mit.
 - Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label

@@ -192,9 +192,9 @@ describe("Zeiten von Hand", () => {
   });
 
   it.each`
-    eingabe   | fehler          | fall
-    ${"390"}  | ${/Sekunden/}   | ${"90 Sekunden gibt es nicht"}
-    ${"drei"} | ${/./}          | ${"Wörter"}
+    eingabe   | fehler        | fall
+    ${"390"}  | ${/Sekunden/} | ${"90 Sekunden gibt es nicht"}
+    ${"drei"} | ${/./}        | ${"Wörter"}
   `("Stelle „$eingabe“ wird abgelehnt: $fall", ({ eingabe, fehler }) => {
     expect(() => parseMediaPos(eingabe)).toThrow(fehler);
   });

@@ -36,25 +36,25 @@ describe("reviewKey", () => {
   });
 
   it.each`
-    taste      | mit                                 | ziel                  | dialog   | aktion       | fall
-    ${"n"}     | ${{}}                               | ${at()}               | ${false} | ${"next"}    | ${"N: nächste"}
-    ${"N"}     | ${{ shiftKey: true }}               | ${at()}               | ${false} | ${"prev"}    | ${"Umschalt+N: vorige"}
-    ${"Enter"} | ${{ ctrlKey: true }}                | ${at()}               | ${false} | ${"confirm"} | ${"Strg+Enter: bestätigen"}
-    ${"Enter"} | ${{ metaKey: true }}                | ${null}               | ${false} | ${"confirm"} | ${"⌘+Enter ohne Ziel: bestätigen"}
-    ${"n"}     | ${{ repeat: true }}                 | ${at()}               | ${false} | ${"next"}    | ${"gehaltenes N wiederholt"}
-    ${"N"}     | ${{ shiftKey: true, repeat: true }} | ${at()}               | ${false} | ${"prev"}    | ${"gehaltenes Umschalt+N wiederholt"}
-    ${"Enter"} | ${{ ctrlKey: true, repeat: true }}  | ${at()}               | ${false} | ${null}      | ${"gehaltenes Strg+Enter bestätigt nur einmal"}
-    ${"Enter"} | ${{ metaKey: true, repeat: true }}  | ${at()}               | ${false} | ${null}      | ${"gehaltenes ⌘+Enter bestätigt nur einmal"}
-    ${"Enter"} | ${{}}                               | ${at()}               | ${false} | ${null}      | ${"Enter allein bleibt frei"}
-    ${"n"}     | ${{ ctrlKey: true }}                | ${at()}               | ${false} | ${null}      | ${"Strg+N bleibt frei"}
-    ${"n"}     | ${{ altKey: true }}                 | ${at()}               | ${false} | ${null}      | ${"Alt+N bleibt frei"}
-    ${"m"}     | ${{}}                               | ${at()}               | ${false} | ${null}      | ${"andere Taste bleibt frei"}
-    ${"n"}     | ${{}}                               | ${at("textarea")}     | ${false} | ${null}      | ${"nicht im Textfeld"}
-    ${"Enter"} | ${{ ctrlKey: true }}                | ${at("input")}        | ${false} | ${null}      | ${"nicht im Eingabefeld"}
-    ${"n"}     | ${{}}                               | ${at("[role='menu']")}   | ${false} | ${null}   | ${"nicht im Menü"}
-    ${"n"}     | ${{}}                               | ${at("[role='dialog']")} | ${false} | ${null}   | ${"nicht in einem Dialog"}
-    ${"n"}     | ${{}}                               | ${at()}               | ${true}  | ${null}      | ${"nicht bei offenem Dialog"}
-    ${"n"}     | ${{ isComposing: true }}            | ${at()}               | ${false} | ${null}      | ${"nicht während das Eingabesystem Zeichen bildet"}
+    taste      | mit                                 | ziel                     | dialog   | aktion       | fall
+    ${"n"}     | ${{}}                               | ${at()}                  | ${false} | ${"next"}    | ${"N: nächste"}
+    ${"N"}     | ${{ shiftKey: true }}               | ${at()}                  | ${false} | ${"prev"}    | ${"Umschalt+N: vorige"}
+    ${"Enter"} | ${{ ctrlKey: true }}                | ${at()}                  | ${false} | ${"confirm"} | ${"Strg+Enter: bestätigen"}
+    ${"Enter"} | ${{ metaKey: true }}                | ${null}                  | ${false} | ${"confirm"} | ${"⌘+Enter ohne Ziel: bestätigen"}
+    ${"n"}     | ${{ repeat: true }}                 | ${at()}                  | ${false} | ${"next"}    | ${"gehaltenes N wiederholt"}
+    ${"N"}     | ${{ shiftKey: true, repeat: true }} | ${at()}                  | ${false} | ${"prev"}    | ${"gehaltenes Umschalt+N wiederholt"}
+    ${"Enter"} | ${{ ctrlKey: true, repeat: true }}  | ${at()}                  | ${false} | ${null}      | ${"gehaltenes Strg+Enter bestätigt nur einmal"}
+    ${"Enter"} | ${{ metaKey: true, repeat: true }}  | ${at()}                  | ${false} | ${null}      | ${"gehaltenes ⌘+Enter bestätigt nur einmal"}
+    ${"Enter"} | ${{}}                               | ${at()}                  | ${false} | ${null}      | ${"Enter allein bleibt frei"}
+    ${"n"}     | ${{ ctrlKey: true }}                | ${at()}                  | ${false} | ${null}      | ${"Strg+N bleibt frei"}
+    ${"n"}     | ${{ altKey: true }}                 | ${at()}                  | ${false} | ${null}      | ${"Alt+N bleibt frei"}
+    ${"m"}     | ${{}}                               | ${at()}                  | ${false} | ${null}      | ${"andere Taste bleibt frei"}
+    ${"n"}     | ${{}}                               | ${at("textarea")}        | ${false} | ${null}      | ${"nicht im Textfeld"}
+    ${"Enter"} | ${{ ctrlKey: true }}                | ${at("input")}           | ${false} | ${null}      | ${"nicht im Eingabefeld"}
+    ${"n"}     | ${{}}                               | ${at("[role='menu']")}   | ${false} | ${null}      | ${"nicht im Menü"}
+    ${"n"}     | ${{}}                               | ${at("[role='dialog']")} | ${false} | ${null}      | ${"nicht in einem Dialog"}
+    ${"n"}     | ${{}}                               | ${at()}                  | ${true}  | ${null}      | ${"nicht bei offenem Dialog"}
+    ${"n"}     | ${{ isComposing: true }}            | ${at()}                  | ${false} | ${null}      | ${"nicht während das Eingabesystem Zeichen bildet"}
   `("$fall", ({ taste, mit, ziel, dialog, aktion }) => {
     expect(reviewKey(ev(taste, mit), ziel, dialog)).toBe(aktion);
   });

@@ -9,16 +9,16 @@ describe("isEditable", () => {
     return d.firstElementChild;
   };
   it.each`
-    html                          | textfeld
-    ${"<textarea></textarea>"}    | ${true}
-    ${'<input type="text">'}      | ${true}
-    ${"<input>"}                  | ${true}
-    ${'<input type="checkbox">'}  | ${false}
-    ${'<input type="radio">'}     | ${false}
-    ${'<input type="button">'}    | ${false}
-    ${'<input type="submit">'}    | ${false}
-    ${'<input type="range">'}     | ${false}
-    ${"<button></button>"}        | ${false}
+    html                         | textfeld
+    ${"<textarea></textarea>"}   | ${true}
+    ${'<input type="text">'}     | ${true}
+    ${"<input>"}                 | ${true}
+    ${'<input type="checkbox">'} | ${false}
+    ${'<input type="radio">'}    | ${false}
+    ${'<input type="button">'}   | ${false}
+    ${'<input type="submit">'}   | ${false}
+    ${'<input type="range">'}    | ${false}
+    ${"<button></button>"}       | ${false}
   `("$html macht selbst rückgängig: $textfeld", ({ html, textfeld }) => {
     expect(isEditable(el(html))).toBe(textfeld);
   });

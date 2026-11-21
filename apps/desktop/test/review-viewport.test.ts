@@ -153,10 +153,10 @@ describe("Spuren", () => {
   });
 
   it.each`
-    quelle                                                                              | start | fall
-    ${row({ id: "a", startMs: 5 })}                                                     | ${5}  | ${"eigene Uhrzeit"}
+    quelle                                                                               | start | fall
+    ${row({ id: "a", startMs: 5 })}                                                      | ${5}  | ${"eigene Uhrzeit"}
     ${row({ id: "d", diaryWindow: { fromMs: 1, toMs: 9 } as SourceRow["diaryWindow"] })} | ${9}  | ${"sonst Ende des Tagebuch-Zeitraums"}
-    ${row({ id: "x" })}                                                                 | ${0}  | ${"sonst 0"}
+    ${row({ id: "x" })}                                                                  | ${0}  | ${"sonst 0"}
   `("Startzeit: $fall", ({ quelle, start }) => {
     expect(rowStart(quelle)).toBe(start);
   });

@@ -25,14 +25,14 @@ describe("Originale ausliefern", () => {
   });
 
   it.each`
-    kopf             | bereich      | fall
-    ${null}          | ${null}      | ${"ohne Range: ganze Datei"}
-    ${"bytes=2-5"}   | ${[2, 5]}    | ${"von–bis"}
-    ${"bytes=7-"}    | ${[7, 9]}    | ${"ab Stelle bis Ende"}
-    ${"bytes=-3"}    | ${[7, 9]}    | ${"die letzten 3 Bytes"}
-    ${"bytes=5-99"}  | ${[5, 9]}    | ${"über das Ende hinaus, gekürzt"}
-    ${"bytes=12-"}   | ${"invalid"} | ${"Beginn hinter dem Ende"}
-    ${"items=1-2"}   | ${"invalid"} | ${"andere Einheit"}
+    kopf            | bereich      | fall
+    ${null}         | ${null}      | ${"ohne Range: ganze Datei"}
+    ${"bytes=2-5"}  | ${[2, 5]}    | ${"von–bis"}
+    ${"bytes=7-"}   | ${[7, 9]}    | ${"ab Stelle bis Ende"}
+    ${"bytes=-3"}   | ${[7, 9]}    | ${"die letzten 3 Bytes"}
+    ${"bytes=5-99"} | ${[5, 9]}    | ${"über das Ende hinaus, gekürzt"}
+    ${"bytes=12-"}  | ${"invalid"} | ${"Beginn hinter dem Ende"}
+    ${"items=1-2"}  | ${"invalid"} | ${"andere Einheit"}
   `("Range $kopf bei 10 Bytes: $fall", ({ kopf, bereich }) => {
     expect(parseRange(kopf, 10)).toEqual(bereich);
   });

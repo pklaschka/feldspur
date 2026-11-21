@@ -7,15 +7,15 @@ const close = (a: { x: number; y: number; w: number; h: number }, b: typeof a) =
 describe("Rahmen verschieben und in der Größe ändern", () => {
   // Angenommen: ein Rahmen bei x 0,2 / y 0,2, 0,4 breit und 0,3 hoch
   it.each`
-    griff     | dx      | dy      | ergebnis                                | fall
-    ${"move"} | ${0.1}  | ${-0.1} | ${{ x: 0.3, y: 0.1, w: 0.4, h: 0.3 }}   | ${"verschoben"}
-    ${"move"} | ${1}    | ${1}    | ${{ x: 0.6, y: 0.7, w: 0.4, h: 0.3 }}   | ${"verschoben, bleibt rechts unten auf der Seite"}
-    ${"move"} | ${-1}   | ${-1}   | ${{ x: 0, y: 0, w: 0.4, h: 0.3 }}       | ${"verschoben, bleibt links oben auf der Seite"}
-    ${"e"}    | ${0.1}  | ${0.5}  | ${{ x: 0.2, y: 0.2, w: 0.5, h: 0.3 }}   | ${"rechte Kante, nur waagerecht"}
-    ${"w"}    | ${-0.1} | ${0}    | ${{ x: 0.1, y: 0.2, w: 0.5, h: 0.3 }}   | ${"linke Kante, rechte bleibt"}
-    ${"n"}    | ${0}    | ${0.1}  | ${{ x: 0.2, y: 0.3, w: 0.4, h: 0.2 }}   | ${"obere Kante, untere bleibt"}
-    ${"se"}   | ${0.1}  | ${0.1}  | ${{ x: 0.2, y: 0.2, w: 0.5, h: 0.4 }}   | ${"Ecke rechts unten"}
-    ${"nw"}   | ${-0.5} | ${-0.5} | ${{ x: 0, y: 0, w: 0.6, h: 0.5 }}       | ${"Ecke links oben, bis zum Seitenrand"}
+    griff     | dx      | dy      | ergebnis                              | fall
+    ${"move"} | ${0.1}  | ${-0.1} | ${{ x: 0.3, y: 0.1, w: 0.4, h: 0.3 }} | ${"verschoben"}
+    ${"move"} | ${1}    | ${1}    | ${{ x: 0.6, y: 0.7, w: 0.4, h: 0.3 }} | ${"verschoben, bleibt rechts unten auf der Seite"}
+    ${"move"} | ${-1}   | ${-1}   | ${{ x: 0, y: 0, w: 0.4, h: 0.3 }}     | ${"verschoben, bleibt links oben auf der Seite"}
+    ${"e"}    | ${0.1}  | ${0.5}  | ${{ x: 0.2, y: 0.2, w: 0.5, h: 0.3 }} | ${"rechte Kante, nur waagerecht"}
+    ${"w"}    | ${-0.1} | ${0}    | ${{ x: 0.1, y: 0.2, w: 0.5, h: 0.3 }} | ${"linke Kante, rechte bleibt"}
+    ${"n"}    | ${0}    | ${0.1}  | ${{ x: 0.2, y: 0.3, w: 0.4, h: 0.2 }} | ${"obere Kante, untere bleibt"}
+    ${"se"}   | ${0.1}  | ${0.1}  | ${{ x: 0.2, y: 0.2, w: 0.5, h: 0.4 }} | ${"Ecke rechts unten"}
+    ${"nw"}   | ${-0.5} | ${-0.5} | ${{ x: 0, y: 0, w: 0.6, h: 0.5 }}     | ${"Ecke links oben, bis zum Seitenrand"}
   `("$griff um $dx/$dy: $fall", ({ griff, dx, dy, ergebnis }) => {
     close(editBox(box, griff, dx, dy), ergebnis);
   });
@@ -32,7 +32,7 @@ describe("Rahmen verschieben und in der Größe ändern", () => {
   });
 
   it.each`
-    taste           | umschalt | alt      | ergebnis               | fall
+    taste           | umschalt | alt      | ergebnis                | fall
     ${"ArrowRight"} | ${false} | ${false} | ${{ ...box, x: 0.205 }} | ${"kleiner Schritt nach rechts"}
     ${"ArrowUp"}    | ${true}  | ${false} | ${{ ...box, y: 0.15 }}  | ${"großer Schritt nach oben"}
     ${"ArrowDown"}  | ${false} | ${true}  | ${{ ...box, h: 0.305 }} | ${"etwas höher"}
