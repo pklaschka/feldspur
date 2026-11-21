@@ -116,7 +116,7 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
     rmSync(docx);
     mkdirSync(docx);
     await expect(runExport(store, quiet, sessionId, out, { video: false })).rejects.toThrow();
-    // Dann: wurde nichts geschrieben, Stand und „Erneut ausgeben…“ samt Ordner bleiben
+    // Dann: wurde nichts geschrieben, Stand und „Erneut ausgeben“ samt Ordner bleiben
     expect(store.getExportRecord(sessionId)).toEqual(record);
     expect(
       existsSync(

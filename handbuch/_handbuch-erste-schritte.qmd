@@ -13,7 +13,7 @@ Die Pakete sind noch nicht signiert. Ohne Lieferling warnen Windows und macOS de
 
 ### Projekt und Einsatz
 
-Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt** oder
+Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt…** oder
 **Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter. Später wechselst du das Projekt links
 oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O); dort stehen die zuletzt geöffneten Projekte, **Anderes
 Projekt öffnen…** und **Neues Projekt…**. Nach der Installation öffnet auch ein Doppelklick auf
@@ -31,7 +31,7 @@ die meisten nach ihren Metadaten oder Dateinamen von einem anderen Tag, steht ü
 Knopf **Datum auf … setzen**. Das lässt sich rückgängig machen; von Hand eingetragene Uhrzeiten wandern mit. Liegen die
 Dateien auf mehreren Tagen, weist Feldspur sanft darauf hin, dass ein Einsatz ein Feldtag ist.
 
-Einen Testeinsatz oder einen doppelt angelegten Feldtag löschst du unter **Einsatzdaten bearbeiten** mit **Einsatz
+Einen Testeinsatz oder einen doppelt angelegten Feldtag löschst du unter **Einsatzdaten bearbeiten…** mit **Einsatz
 löschen…**. Nach einer Nachfrage verschwinden der Einsatz und alles, was in Feldspur dazu entstanden ist: Quellen,
 Zeitbelege, Anker, Tagebucheinträge, Mitschrift und Notizen. Originaldateien und frühere Ausgaben bleiben erhalten.
 Der Hinweis danach bietet **Rückgängig** an; das holt den Einsatz vollständig zurück, solange das Projekt offen ist und
@@ -47,7 +47,7 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 
 ### Einsatzdaten
 
-Über **Einsatzdaten bearbeiten** neben dem Titel trägst du ein, was zum Quellennachweis gehört:
+Über **Einsatzdaten bearbeiten…** neben dem Titel trägst du ein, was zum Quellennachweis gehört:
 
 - **Ort**, z. B. "Marktplatz".
 - **Zeitzone** des Einsatzes. Manche Geräte schreiben ihre Zeitstempel in UTC; Feldspur rechnet sie damit in die
@@ -68,7 +68,7 @@ Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass
 1. **Einsammeln** (@sec-einsammeln): alle Dateien hineinziehen, Feldspur ordnet sie Geräten zu.
 2. **Abgleichen** (@sec-abgleichen): die Uhren der Geräte aufeinander abstimmen.
 3. **Durchsehen** (@sec-durchsehen): alles auf der Zeitachse prüfen, Tagebuch abtippen, mitschreiben.
-4. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Montagevideo und Begleitprotokoll schreiben.
+4. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll schreiben, dazu auf Wunsch Montagevideo und Viewer.
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
 Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Notizen, Tagebuch,

@@ -109,7 +109,7 @@ console.log("— erste-schritte (Startbildschirm)");
 app = await launch([]);
 page = await app.firstWindow();
 await page.setViewportSize({ width: 1440, height: 900 });
-await siehe("Neues Projekt");
+await siehe("Neues Projekt…");
 await siehe("Projekt öffnen…");
 await app.close();
 
@@ -151,9 +151,9 @@ await kapitel("erste-schritte", async () => {
   });
 
   await ablauf("Einsatzdaten bearbeiten", async () => {
-    await knopf("Einsatzdaten bearbeiten").click();
+    await knopf("Einsatzdaten bearbeiten…").click();
     const d = page.getByTestId("session-details");
-    await siehe("Einsatzdaten bearbeiten", d);
+    await siehe("Einsatzdaten bearbeiten…", d);
     await siehe("Ort", d.getByLabel("Ort", { exact: true }));
     await siehe("Zeitzone", d.getByLabel("Zeitzone"));
     await siehe("Bezugszeitraum Tagebuch", d.getByText("Bezugszeitraum Tagebuch"));
@@ -489,9 +489,9 @@ await kapitel("mitschreiben", async () => {
       dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [f] })) as typeof dialog.showOpenDialog;
     }, vtt);
     await inspector().getByRole("button", { name: "Transkript importieren…" }).click();
-    await siehe("Zur Mitschrift hinzufügen …", page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }));
-    await siehe("Mitschrift ersetzen …", page.getByRole("menuitem", { name: "Mitschrift ersetzen …" }));
-    await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }).click();
+    await siehe("Zur Mitschrift hinzufügen…", page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen…" }));
+    await siehe("Mitschrift ersetzen…", page.getByRole("menuitem", { name: "Mitschrift ersetzen…" }));
+    await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen…" }).click();
   });
 });
 
@@ -513,7 +513,7 @@ await kapitel("ausgeben", async () => {
     ])
       await siehe(s, page.getByRole("switch", { name: new RegExp(`^${esc(s)}`) }));
     await siehe("Viewer zum Ansehen im Browser", page.getByRole("switch", { name: /^Viewer zum Ansehen im Browser/ }));
-    await siehe("Montage ansehen");
+    await siehe("Montage ansehen…");
     await siehe("Kontext", page.getByTestId("export-context"), { hinweis: "Karte Kontext links" });
     const offen = await page.getByText("Noch offen").count();
     await siehe(offen ? "Trotzdem ausgeben…" : "Ausgeben…", knopf(/^(Trotzdem a|A)usgeben…$/));
@@ -535,7 +535,7 @@ await kapitel("ausgeben", async () => {
     await page.getByRole("switch", { name: "Episoden bilden" }).click();
     await page.getByRole("tab", { name: /Ausgeben/ }).click();
     await siehe("Veraltet", page.getByText("Veraltet.", { exact: true }));
-    await siehe("Erneut ausgeben…");
+    await siehe("Erneut ausgeben");
     await siehe("In anderen Ordner ausgeben…");
   });
 
@@ -576,7 +576,7 @@ await kapitel("ausgeben", async () => {
     }
     await viewer.getByRole("button", { name: "Erweiterte Tonspurkontrolle" }).click();
     await viewer.locator("#ton-next").click();
-    await siehe("Video freigeben …", viewer.getByRole("button", { name: "Video freigeben …" }));
+    await siehe("Video freigeben…", viewer.getByRole("button", { name: "Video freigeben…" }));
     page = haupt;
   });
 });

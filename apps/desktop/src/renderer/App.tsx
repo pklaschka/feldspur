@@ -143,7 +143,7 @@ export function App() {
             </p>
             <div className="flex gap-2">
               <Button variant="primary" onClick={() => void guard(api.newProject).then(adopt)}>
-                Neues Projekt
+                Neues Projekt…
               </Button>
               <Button onClick={() => void guard(api.openProject).then(adopt)}>Projekt öffnen…</Button>
             </div>

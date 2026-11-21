@@ -167,7 +167,7 @@ export function remainingMs(job: ExportJob | null, now = Date.now()): number | n
 
 /** „noch ca. 25 Min.“ */
 export function remainingText(ms: number | null): string {
-  if (ms === null) return "Restzeit wird geschätzt …";
+  if (ms === null) return "Restzeit wird geschätzt…";
   if (ms < 60_000) return "noch unter einer Minute";
   const min = Math.round(ms / 60_000);
   if (min < 90) return `noch ca. ${min} Min.`;

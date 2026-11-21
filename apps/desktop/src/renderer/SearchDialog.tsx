@@ -59,7 +59,7 @@ export function SearchDialog({
           <input
             autoFocus
             className="m-3 rounded-lg border border-line bg-panel-2 px-3 py-2 text-[0.95rem]"
-            placeholder="Mitschrift, Notizen, Tagebuch, Quellen, Uhrzeit (z. B. 10:15) …"
+            placeholder="Mitschrift, Notizen, Tagebuch, Quellen, Episoden, Uhrzeit (z. B. 10:15)"
             aria-label="Suchen"
             role="combobox"
             aria-expanded={hits.length > 0}

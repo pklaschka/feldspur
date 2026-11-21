@@ -422,7 +422,7 @@ ${VIEWER_CSS}
       <div class="v-missing">
         <b>Das Montagevideo liegt nicht neben dieser Datei.</b>
         <p>Erwartet wird <code>${esc(opts.mediaFileName)}</code> im selben Ordner. Das Einsatztranskript rechts lässt sich auch ohne Video lesen.</p>
-        <button class="btn line" type="button" id="pick-video">Videodatei wählen …</button>
+        <button class="btn line" type="button" id="pick-video">Videodatei wählen…</button>
       </div>
     </div>
 
@@ -536,7 +536,7 @@ ${ctxItems}
       <code>${esc(opts.mediaFileName)}</code>
       <span>hierher ziehen</span>
       <span class="or">oder</span>
-      <button class="btn fill" type="button" id="ton-pick">Video freigeben …</button>
+      <button class="btn fill" type="button" id="ton-pick">Video freigeben…</button>
     </div>
     <div class="wiz-err" id="ton-err" role="alert" hidden>
       ${svg("M8 2.5 14 13H2ZM8 6.5v3M8 11.3h.01")}
@@ -544,7 +544,7 @@ ${ctxItems}
         <dl><dt>Gewählt</dt><dd class="num" id="ton-got"></dd><dt>Erwartet</dt><dd class="num" id="ton-exp"></dd></dl>
       </div>
     </div>
-    <p class="hint" id="ton-wait" hidden>Das Video wird gelesen …</p>
+    <p class="hint" id="ton-wait" hidden>Das Video wird gelesen…</p>
     <p class="hint">Chrome und Edge merken sich die Freigabe und fragen beim nächsten Öffnen nur kurz nach. In Safari ist dieser Schritt nicht nötig.</p>
   </div>
   <div class="wiz-foot" data-step="2"><button class="btn" type="button" id="ton-prev">Zurück</button><span class="grow"></span></div>

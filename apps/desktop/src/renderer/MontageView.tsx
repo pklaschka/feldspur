@@ -58,7 +58,7 @@ export function MontageView({
             <CloseButton onClick={() => onOpenChange(false)} />
           </div>
           {error && <p className="p-6 text-bad">{error}</p>}
-          {!error && !plan && <p className="p-6 text-muted">Lade…</p>}
+          {!error && !plan && <p className="p-6 text-muted">Wird geladen…</p>}
           {plan && plan.durationMs <= 0 && <p className="p-6 text-muted">Noch keine Quelle mit Uhrzeit.</p>}
           {plan && plan.durationMs > 0 && <Player plan={plan} levels={levels} />}
         </Dialog.Content>

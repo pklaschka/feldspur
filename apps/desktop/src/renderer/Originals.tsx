@@ -76,8 +76,8 @@ function useOriginalsProgress(sessionId: string): [OriginalsProgress | null, (p:
 }
 
 export function progressText(p: OriginalsProgress | null): string {
-  if (!p) return "Wird vorbereitet …";
-  if (p.phase === "suchen") return `${p.done} Dateien durchsucht …`;
+  if (!p) return "Wird vorbereitet…";
+  if (p.phase === "suchen") return `${p.done} Dateien durchsucht…`;
   if (!p.total) return `Prüfsumme: ${p.fileName}`;
   return `Prüfsummen ${Math.min(p.done + 1, p.total)} von ${p.total}${p.fileName ? `: ${p.fileName}` : ""}`;
 }
@@ -201,10 +201,10 @@ export function OriginalsDialog({
               disabled={!!busy || !open_.length}
               onClick={() => void searchFolder()}
             >
-              {busy === "search" ? "Sucht …" : "Ordner durchsuchen…"}
+              {busy === "search" ? "Sucht…" : "Ordner durchsuchen…"}
             </Button>
             <Button disabled={!!busy} onClick={() => void checkAll()}>
-              {busy === "check" ? "Prüft …" : "Alle Prüfsummen prüfen"}
+              {busy === "check" ? "Prüft…" : "Alle Prüfsummen prüfen"}
             </Button>
             {busy && <span className="text-[0.85rem] text-muted tabular-nums">{progressText(progress)}</span>}
           </div>

@@ -156,7 +156,7 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
             </DropdownMenu.Label>
             {(row.previewable || row.isPdf || AV.has(row.kind)) && (
               <DropdownMenu.Item className={item} onSelect={() => a.preview(row.id)}>
-                Groß ansehen
+                Groß ansehen…
               </DropdownMenu.Item>
             )}
             {AV.has(row.kind) && (
@@ -296,7 +296,7 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
                   </DropdownMenu.RadioItem>
                   <DropdownMenu.RadioItem value="other" className={item}>
                     <Dot on={device.timeZone !== null && device.timeZone !== "UTC"} />
-                    {device.timeZone !== null && device.timeZone !== "UTC" ? device.timeZone : "Andere …"}
+                    {device.timeZone !== null && device.timeZone !== "UTC" ? device.timeZone : "Andere…"}
                   </DropdownMenu.RadioItem>
                 </DropdownMenu.RadioGroup>
               </>

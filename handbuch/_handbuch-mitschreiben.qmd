@@ -57,6 +57,6 @@ Uhr korrigierst, wandert die Mitschrift mit.
 
 Hast du eine Aufnahme schon anderswo transkribiert, etwa mit Whisper oder in MAXQDA, kannst du das Transkript über
 **Transkript importieren…** in der Detailleiste einlesen. Feldspur versteht SRT, WebVTT, JSON (Whisper) und TSV.
-Gibt es schon Zeilen, wählst du **Zur Mitschrift hinzufügen …** oder **Mitschrift ersetzen …**. Der Import lässt sich mit **Rückgängig**
+Gibt es schon Zeilen, wählst du **Zur Mitschrift hinzufügen…** oder **Mitschrift ersetzen…**. Der Import lässt sich mit **Rückgängig**
 zurücknehmen, auch das Ersetzen. Zeilen hinter dem Ende der Aufnahme übernimmt Feldspur nicht; wie viele es waren,
 steht in der Meldung nach dem Import.

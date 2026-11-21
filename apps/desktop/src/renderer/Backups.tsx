@@ -92,7 +92,7 @@ export function Backups({
             </p>
           )}
           <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-line">
-            {overview === null && <p className="p-3 text-[0.9rem] text-muted">Wird geladen …</p>}
+            {overview === null && <p className="p-3 text-[0.9rem] text-muted">Wird geladen…</p>}
             {overview?.backups.length === 0 && (
               <p className="p-3 text-[0.9rem] text-muted">Noch keine Sicherungen in diesem Ordner.</p>
             )}
