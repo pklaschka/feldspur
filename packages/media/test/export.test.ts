@@ -238,4 +238,33 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     // Keine Standbilder mehr: Fotos und Scans stehen im Einsatztranskript.
     expect(xml).not.toMatch(/\.jpg"/);
   });
+  // So steht es im Handbuch (Abschnitt „Montage-ID“): Die ID hängt am Zeitgefüge, nicht am Text.
+  it("Montage-ID: gleich bei Textänderungen, neu bei anderer Lage oder anderen Quellen", () => {
+    const id = () => buildSessionTranscript(store, sessionId).header.montageId;
+    const before = id();
+    expect(id()).toBe(before);
+
+    // Mitschrift, Tagebuchtext und Angaben zum Einsatz ändern die ID nicht.
+    const line = store.addTranscriptLine({ sourceId: src("ZOOM0001.m4a").id, atMs: 12_000, text: "Seit sieben." });
+    const entry = store.listDiaryEntries(sessionId)[0]!;
+    store.updateDiaryEntry(entry.id, { shortText: "Ankunft, die Stände bauen auf" });
+    const session = store.getSession(sessionId);
+    store.updateSession(sessionId, { title: "Testmarkt (neu)", extra: { DOI: "10.0000/anders" } });
+    expect(id()).toBe(before);
+    store.deleteTranscriptLine(line.id);
+    store.updateDiaryEntry(entry.id, { shortText: entry.shortText });
+    store.updateSession(sessionId, { title: session.title, extra: session.extra });
+
+    // Ein Foto eine Sekunde später: andere Lage, andere ID. Zurückgestellt gilt wieder die alte.
+    const photo = src("IMG_20260914_101630.jpg");
+    const evs = store.listEvidence(sessionId).filter((e) => e.sourceId === photo.id);
+    expect(evs.length).toBeGreaterThan(0);
+    for (const e of evs) store.updateEvidenceTime(e.id, e.localMs + 1_000);
+    expect(id()).not.toBe(before);
+    for (const e of evs) store.updateEvidenceTime(e.id, e.localMs);
+    expect(id()).toBe(before);
+
+    // Die Art der Montage zählt ebenfalls.
+    expect(buildSessionTranscript(store, sessionId, { mode: "episodes" }).header.montageId).not.toBe(before);
+  });
 });

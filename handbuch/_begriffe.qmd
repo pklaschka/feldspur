@@ -38,7 +38,9 @@ Kontext
   **Kontextstück**.
 
 Montage-ID
-: Kennung wie `FS-XXXX-XXXX`, die Montagevideo und Einsatztranskript einander zuordnet.
+: Kennung wie `FS-XXXX-XXXX`, die Montagevideo und Einsatztranskript einander zuordnet. Feldspur errechnet sie aus
+  dem Einsatz, der Art der Montage und der Lage aller Quellen auf der Zeitachse; der Text des Einsatztranskripts
+  geht nicht ein (@sec-montage-id).
 
 Quelle
 : Eine Originaldatei mit Prüfsumme und Kurzzeichen (`V-01`, `A-01`, `F-001`, `T-01`).
