@@ -20,6 +20,15 @@
   set text(fill: umbra)
   block(above: 1.6em, below: 0.9em, stroke: (bottom: 0.8pt + sand), inset: (bottom: 0.4em), width: 100%, it)
 }
+// Jedes Kapitel (oberste Ebene) beginnt auf einer neuen Seite (Issue #174). Ausnahme: die Motivation folgt direkt
+// auf den einleitenden Text. `weak` entfällt, wo die Seite ohnehin neu beginnt (etwa nach dem Umbruch vor dem
+// Handbuch-Teil). Das Inhaltsverzeichnis (nicht im Verzeichnis selbst geführt) bleibt, wo es ist.
+// Steht nach den anderen Regeln für Überschriften, damit Typst sie zuerst anwendet und der Umbruch außerhalb
+// ihrer Blöcke landet.
+#show heading.where(level: 1): it => {
+  if it.outlined and it.at("label", default: none) != <sec-motivation> { pagebreak(weak: true) }
+  it
+}
 #show raw: set text(fill: tinte)
 #show raw.where(block: true): it => block(fill: salbei, inset: 8pt, radius: 3pt, width: 100%, it)
 #show outline.entry.where(level: 1): set text(fill: umbra, weight: "semibold")
