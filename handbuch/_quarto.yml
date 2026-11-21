@@ -88,3 +88,5 @@ format:
       - tasten.lua
       # Spaltenbreiten nach Inhalt, siehe tabellen.lua.
       - tabellen.lua
+      # Einleitungssatz und Liste nicht trennen, siehe zusammenhalt.lua.
+      - zusammenhalt.lua

@@ -240,6 +240,8 @@
   {
     set par(justify: false)
     set text(size: 9pt)
+    // Kurze Zeilen lesen sich bei 9 pt besser als die volle Satzbreite.
+    set block(width: 118mm)
     v(1fr)
     let item(label, body) = block(below: 4mm)[
       #text(font: sans, weight: "semibold", fill: umbra)[#label] \

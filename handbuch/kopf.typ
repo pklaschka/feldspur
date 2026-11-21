@@ -4,6 +4,15 @@
 // Farben und Schriftnamen stehen in typst-template.typ (vor diesem Kopf eingebunden).
 
 #set text(fill: tinte, number-type: "lining")
+// Keine einzelne erste Absatzzeile unten und keine einzelne letzte oben auf der Seite (Schusterjunge, Hurenkind).
+#set text(costs: (orphan: 300%, widow: 300%))
+// Abkürzungen aus zwei Teilen mit schmalem, festem Leerzeichen: „z. B.“ dehnt sich im Blocksatz nicht und bricht nie um.
+#show regex("\\b(z|u|d|o|s|v)\\.[ \u{a0}](B|a|Ä|h|J|o|u|g)\\."): it => {
+  let z = it.text.clusters()
+  z.slice(0, 2).join() + sym.space.nobreak.narrow + z.slice(-2).join()
+}
+// Die Zeilenmarke ▪ aus der App fehlt in den Schriften; gezeichnet wie in der Liste beim Mitschreiben.
+#show "▪": box(baseline: -0.15em, square(size: 0.42em, fill: tinte-2))
 #set par(leading: 0.68em)
 #show link: set text(fill: terrakotta)
 #show heading: set text(fill: umbra, weight: "semibold")
@@ -40,6 +49,8 @@
 // Tabellen (Issue #176): Spaltenbreiten nach Inhalt (tabellen.lua), etwas kleinerer Text, kein Blocksatz (reißt in
 // schmalen Spalten Lücken), Kopf in der Auszeichnungsschrift, feine Linien zwischen den Zeilen statt Leerraum.
 #show table: set par(justify: false, leading: 0.55em)
+// Im Flattersatz braucht es keine Silbentrennung; in schmalen Spalten bleiben sonst Stümpfe wie „Ti-mecode“.
+#show table: set text(hyphenate: false)
 #show table: set text(size: 0.9em)
 #set table(
   inset: (x: 5pt, y: 5pt),
@@ -104,9 +115,13 @@
 }
 // Begriff und Erklärung im Glossar nie getrennt: Begriff nie allein unten auf der Seite. Gleiche Darstellung
 // wie Quartos Vorgabe (definitions.typ), aber jeder Eintrag als ein Block, der nicht umbrochen wird.
+// Etwas kleiner und enger als der Fließtext wie das Literaturverzeichnis: Nachschlagestoff, und so passt das Glossar
+// auf eine Seite, statt mit zwei Einträgen einen ganzen Bogen anzufangen.
+#show terms: set text(size: 0.92em)
+#show terms: set par(leading: 0.6em)
 #show terms: it => {
   it.children
-    .map(child => block(breakable: false, width: 100%)[
+    .map(child => block(breakable: false, width: 100%, below: 0.9em)[
       #strong[#child.term]
       #block(inset: (left: 1.5em, top: -0.4em))[#child.description]
     ])

@@ -24,7 +24,7 @@ werden nicht doppelt übernommen. Landen Dateien anderswo im Fenster, übernimmt
 | andere Videos und Audio | `creation_time`, BWF-Felder von Rekordern | Sekunde |
 | Dateinamen | z. B. `IMG_20260914_104050`, `2026-09-14 10.32.15`; Pixel-Namen wie `PXL_20260914_103215123` mit Millisekunden | Sekunde, Pixel ± 0,25 s |
 
-: Woher Feldspur die Uhrzeiten nimmt {#tbl-zeitquellen}
+: Zeitquellen und ihre Genauigkeit {#tbl-zeitquellen}
 
 **Beginn oder Ende?** MP4-Dateien sagen nicht, ob `creation_time` den Aufnahmebeginn meint oder den Moment, in dem die
 Datei gespeichert wurde. Viele Android-Handys, etwa Google Pixel, schreiben das **Ende**. Feldspur erkennt das beim
@@ -67,8 +67,10 @@ Einsätze wechseln; das Einsammeln läuft weiter.
 - **Unlesbare Dateien** (fehlende Leserechte, defekte Verknüpfungen) überspringt Feldspur und nennt sie danach unter
   den Hinweisen; der Rest wird trotzdem eingesammelt.
 
-Tipp: Sehr große Bestände lieber in Etappen einsammeln, etwa eine Speicherkarte nach der anderen. Doppelte Dateien
-erkennt Feldspur an der Prüfsumme und übernimmt sie nicht zweimal.
+::: {.callout-tip}
+Sehr große Bestände lieber in Etappen einsammeln, etwa eine Speicherkarte nach der anderen. Doppelte Dateien erkennt
+Feldspur an der Prüfsumme und übernimmt sie nicht zweimal.
+:::
 
 ![Eingesammelte Quellen, nach Geräten gruppiert](bilder/einsammeln.png){#fig-einsammeln}
 
