@@ -40,7 +40,29 @@
 }
 #show raw: set text(fill: tinte)
 #show raw.where(block: true): it => block(fill: salbei, inset: 8pt, radius: 3pt, width: 100%, it)
-#show outline.entry.where(level: 1): set text(fill: umbra, weight: "semibold")
+// Inhaltsverzeichnis (Variante „ruhig“, Zuri 21.11.2026): keine Punktlinien, Kapitelnummer in Terrakotta,
+// Abschnitte eingerückt mit kleiner Nummer, Seitenzahlen leise rechts in der Sans, Kapitel mit Luft davor.
+#show outline.entry: it => {
+  let num = it.prefix()
+  let lvl1 = it.level == 1
+  set text(size: if lvl1 { 11.5pt } else { 10.5pt })
+  block(above: if lvl1 { 1.5em } else { 0.6em }, below: 0pt, link(it.element.location(), grid(
+    columns: (1.7em, 1fr, auto),
+    column-gutter: 0.4em,
+    // Nummer, Titel und Seitenzahl auf einer Grundlinie, obwohl die Größen verschieden sind.
+    align: bottom,
+    if it.level > 1 { [] } else { text(font: sans, fill: terrakotta, weight: "semibold", if num != none { num }) },
+    if lvl1 { text(fill: umbra, weight: "semibold", it.body()) } else {
+      grid(columns: (2.2em, 1fr), text(font: sans, size: 9pt, fill: tinte-2, if num != none { num }), it.body())
+    },
+    text(font: sans, size: 9pt, fill: tinte-2, number-type: "lining", it.page()),
+  )))
+}
+#show outline: it => {
+  // Die Einträge sind Links, sollen aber nicht in Linkfarbe stehen.
+  show link: set text(fill: tinte)
+  it
+}
 #show figure.caption: set text(font: sans, size: 9pt, fill: tinte-2)
 // Weniger Weißraum (Issue #176): Bildschirmfotos bleiben im Textfluss, also in ihrem Abschnitt und an ihrer
 // Stelle, aber etwas schmaler als der Satzspiegel. So passen sie öfter noch auf die angefangene Seite, statt mit
