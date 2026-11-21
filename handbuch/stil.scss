@@ -383,3 +383,23 @@ kbd {
   padding: 0.05em 0.35em;
   white-space: nowrap;
 }
+
+// Literaturverzeichnis wie im PDF: hängender Einzug (setzt Quarto), etwas Luft zwischen den Einträgen, etwas kleiner
+// als der Fließtext, Adressen gedämpft statt in der Linkfarbe, damit nicht jeder Eintrag rot leuchtet.
+#refs {
+  font-size: 0.94em;
+  .csl-entry {
+    margin-bottom: 0.6em;
+  }
+  a {
+    color: inherit;
+    opacity: 0.8;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-underline-offset: 0.15em;
+  }
+  a:hover {
+    opacity: 1;
+    text-decoration-color: currentColor;
+  }
+}

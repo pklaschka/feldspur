@@ -89,6 +89,16 @@
     .join(),
 )
 #show heading.where(level: 2): set block(above: 1.5em, below: 0.65em)
+// Literaturverzeichnis wie in Fachtexten üblich: hängender Einzug, damit die Autor*innen links eine Spalte bilden
+// und sich überfliegen lassen; Flattersatz statt Blocksatz (der riss um lange Adressen Lücken); etwas kleiner und
+// enger als der Fließtext; Adressen in Tinte statt Terrakotta, damit nicht jede Zeile rot leuchtet. Klickbar bleiben sie.
+#show <refs>: set par(justify: false, hanging-indent: 1.5em, leading: 0.6em)
+#show <refs>: set text(size: 0.92em)
+#show <refs>: set block(spacing: 0.85em)
+#show <refs>: it => {
+  show link: set text(fill: tinte-2)
+  it
+}
 // Begriff und Erklärung im Glossar nie getrennt: Begriff nie allein unten auf der Seite. Gleiche Darstellung
 // wie Quartos Vorgabe (definitions.typ), aber jeder Eintrag als ein Block, der nicht umbrochen wird.
 #show terms: it => {
