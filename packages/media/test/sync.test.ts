@@ -27,7 +27,9 @@ describe.skipIf(!hasFfmpeg())("Abgleich und Episoden an einem erzeugten Feldtag"
   });
 
   it("schlägt für beide Clips das Klatschen vor, mit Kamera +2:47", async () => {
+    // Wenn: der Tag analysiert wird (Rekorder als Referenz)
     const r = await analyzeSession(store, sessionId);
+    // Dann: zwei sichere Klatsch-Vorschläge, Kamera +2:47, auf 30 ms genau
     expect(r.failed).toEqual([]);
     expect(r.analyzed).toBe(3);
     const byClip = new Map(r.proposals.map((p) => [p.sourceId, p]));
@@ -41,25 +43,32 @@ describe.skipIf(!hasFfmpeg())("Abgleich und Episoden an einem erzeugten Feldtag"
   });
 
   it("Vorschläge zählen erst nach Bestätigung", () => {
+    // Angenommen: zwei Vorschläge, noch nicht bestätigt; die Kamera ist nicht abgeglichen
     const before = resolveTimeline(store.loadResolveInput(sessionId));
     expect(before.deviceClocks.get(src("C0001.MP4").deviceId!)!.offsetMs).toBeNull();
     const proposed = store.listAnchors(sessionId).filter((a) => a.proposed);
     expect(proposed).toHaveLength(2);
+    // Wenn: einer bestätigt wird
     store.confirmAnchor(proposed[0]!.id);
+    // Dann: liegen beide Clips richtig
     const after = resolveTimeline(store.loadResolveInput(sessionId));
     expect(formatClock(after.placements.get(src("C0001.MP4").id)!.startMs)).toBe("10:16:00");
     expect(formatClock(after.placements.get(src("C0002.MP4").id)!.startMs)).toBe("10:23:00");
   });
 
   it("zweite Analyse nutzt den Zwischenspeicher", async () => {
+    // Wenn: noch einmal analysiert wird
     const r = await analyzeSession(store, sessionId);
+    // Dann: wird keine Datei neu gerechnet
     expect(r.analyzed).toBe(0);
     // Nach der Bestätigung ist nichts mehr offen.
     expect(store.listAnchors(sessionId).filter((a) => a.proposed)).toHaveLength(0);
   });
 
   it("teilt den Tag in zwei Episoden, die Stille dazwischen ist Leerlauf", () => {
+    // Wenn: Episoden gebildet werden
     const { episodes, gaps } = sessionEpisodes(store, sessionId);
+    // Dann: zwei Episoden, dazwischen Leerlauf
     expect(episodes.map((e) => [formatClock(e.startMs), formatClock(e.endMs)])).toEqual([
       ["10:15:00", "10:16:30"],
       ["10:22:50", "10:25:00"],
@@ -97,7 +106,9 @@ describe.skipIf(!hasFfmpeg())("Abgleich bei sehr falsch gehender Uhr", () => {
   });
 
   it("findet Klatscher und Abweichung trotzdem, auch über Tage", async () => {
+    // Wenn: analysiert wird, obwohl die Kamera 29 Stunden vorgeht
     const r = await analyzeSession(store, sessionId);
+    // Dann: findet der Abgleich das Klatschen und die große Abweichung sicher
     expect(r.proposals.length).toBeGreaterThanOrEqual(2);
     const p = r.proposals.find((x) => x.method === "clap")!;
     // Kamera ging vorher 8:18:47 UTC = 10:18:47 Ortszeit; jetzt +29 h, Uhr zeigt Zeitstempel ohne UTC-Umrechnung.

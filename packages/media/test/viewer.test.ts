@@ -31,6 +31,8 @@ describe.skipIf(!hasFfmpeg())("Viewer neben dem Montagevideo", () => {
   let files: string[];
   const src = (n: string) => store.listSources(sessionId).find((s) => s.fileName === n)!;
 
+  // Angenommen: ein abgeglichener Markttag mit Tagebuch, Foto, zweitem Video und einer Mitschriftzeile mit HTML darin,
+  // ausgegeben mit Gerätespuren und Viewer
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "feldspur-viewer-"));
     const raw = join(dir, "roh");
@@ -104,9 +106,11 @@ describe.skipIf(!hasFfmpeg())("Viewer neben dem Montagevideo", () => {
   });
 
   it("findet die Tonspuren im Video und liest sie Paket für Paket wie ffmpeg", async () => {
+    // Wenn: das Skript die Tonspuren im Montagevideo liest
     const mp4 = readFileSync(join(out, files[0]!));
     const info = await readMp4Audio(async (o, l) => mp4.subarray(o, o + l), mp4.length);
     const titles = buildSessionTranscript(store, sessionId);
+    // Dann: Mischung und eine Spur je Gerät, AAC mit 48 kHz, Pakete bis zum Ende
     expect(info.audio.map((a) => a.title)).toEqual([
       "Mischung aller Geräte",
       ...deviceTracksOf(titles).map((d) => d.title),
@@ -122,7 +126,7 @@ describe.skipIf(!hasFfmpeg())("Viewer neben dem Montagevideo", () => {
       expect(a.times[0]!).toBeLessThanOrEqual(0);
       expect(a.offsets[last]! + a.sizes[last]!).toBeLessThanOrEqual(mp4.length);
     }
-    // Dieselben Bytes wie ffmpeg für Spur 2 (ADTS-Köpfe von 7 Byte abgezogen).
+    // Dann: dieselben Bytes wie ffmpeg für Spur 2 (ADTS-Köpfe von 7 Byte abgezogen)
     const adts = execFileSync(
       "ffmpeg",
       ["-v", "error", "-i", join(out, files[0]!), "-map", "0:a:1", "-c", "copy", "-f", "adts", "-"],
@@ -150,9 +154,11 @@ describe.skipIf(!hasFfmpeg())("Viewer neben dem Montagevideo", () => {
   });
 
   it("schreibt ohne Gerätespuren keine Spurdaten", () => {
+    // Wenn: der Viewer ohne Gerätespuren und ohne Bilder geschrieben wird
     const t = buildSessionTranscript(store, sessionId);
     const html = sessionTranscriptHtml(t, { mediaFileName: "x.mp4", stills: new Map() });
     const data = JSON.parse(/id="feldspur-daten">(.*?)<\/script>/s.exec(html)![1]!) as ReturnType<typeof viewerData>;
+    // Dann: nur die Mischung, keine Spur verweist auf Ton, Platzhalter statt Bild
     expect(data.audio).toHaveLength(1);
     expect(data.lanes.every((l) => l.audio === -1)).toBe(true);
     expect(html).toContain('<span class="noimg">');

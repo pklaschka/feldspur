@@ -23,6 +23,8 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
   let sessionId: string;
   let ids: { audio: string; foto: string; seite: string; notiz: string; d1: string };
 
+  // Angenommen: Rekorder ab 10:15, ein Foto von 9:41, eine Tagebuchseite mit einer Karte als Kontext (am Vorabend)
+  // und einem datierten Eintrag um 10:24, dazu eine Textdatei
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "feldspur-kontext-"));
     store = ProjectStore.open(":memory:");
@@ -98,8 +100,10 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
   const karteKey = () => `entry:${store.listDiaryEntries(sessionId).find((e) => e.role === "context")!.id}`;
 
   it("Kontext steht vorn, ohne Stelle im Video; Verweise hängen am datierten Eintrag", () => {
+    // Wenn: der datierte Eintrag auf die Karte verweist
     store.updateDiaryEntry(ids.d1, { contextRefs: [karteKey()] });
     const t = buildSessionTranscript(store, sessionId);
+    // Dann: steht die Karte vorn im Kontext, und der Eintrag nennt sie in seiner Zeile
     expect(t.context).toHaveLength(1);
     expect(t.context[0]).toMatchObject({
       head: "Kontext · Karte 2: Standplan",
@@ -113,9 +117,11 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
   });
 
   it("Foto und Textdatei als Kontext: Foto mit Bild, Textdatei mit Inhalt; Quellen im Kopf", () => {
+    // Wenn: auch Foto und Textdatei Kontext werden
     store.updateSource(ids.foto, { role: "context", contextOrder: 2 });
     store.updateSource(ids.notiz, { role: "context", contextOrder: 3, title: "Zwischenstand" });
     const t = buildSessionTranscript(store, sessionId);
+    // Dann: Foto mit Bild, Textdatei mit Inhalt, beide in der Quellenliste, das Foto nicht in der Chronologie
     expect(t.context.map((c) => c.head)).toEqual([
       "Kontext · Karte 2: Standplan",
       "Kontext · Foto F-001, IMG_0007.jpg",
@@ -129,6 +135,7 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
   });
 
   it("Begleitprotokoll und Variablen: neue Spalten nur mit Kontext", () => {
+    // Wenn: das Foto Kontext wird
     store.updateSource(ids.foto, { role: "context" });
     const t = buildSessionTranscript(store, sessionId);
     const rows = protocolCsv(store, t)
@@ -136,6 +143,7 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
       .trim()
       .split(/\r?\n/)
       .map((r) => r.split(";"));
+    // Dann: zeigen Begleitprotokoll und Variablen Rolle, Kontext und Entstehung
     const head = rows[0]!;
     const col = (row: string[], name: string) => row[head.indexOf(name)]?.replace(/^"|"$/g, "");
     const foto = rows.find((r) => r[0] === "F-001")!;
@@ -150,32 +158,40 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
   });
 
   it("ohne Kontext: keine neuen Spalten, kein neuer Abdruck", () => {
+    // Wenn: nichts Kontext ist
     for (const e of store.listDiaryEntries(sessionId)) store.updateDiaryEntry(e.id, { role: "timeline" });
     const t = buildSessionTranscript(store, sessionId);
+    // Dann: keine neuen Spalten oder Variablen
     expect(t.context).toEqual([]);
     expect(t.header).not.toHaveProperty("contextCount");
     expect(protocolCsv(store, t)).not.toContain("Rolle");
     expect(documentVariables(t, "x")[0]).not.toContain("Kontextstücke");
-    // Abdruck hängt nicht an den gespeicherten Kontext-Feldern, solange nichts Kontext ist.
+    // Dann: gespeicherte Kontext-Felder ändern den Abdruck nicht, solange nichts Kontext ist
     const before = exportFingerprint(store, sessionId, SETTINGS).content;
     store.updateSource(ids.foto, { contextMade: "egal", contextOrder: 4 });
     expect(exportFingerprint(store, sessionId, SETTINGS).content).toBe(before);
   });
 
   it("Abdruck: Titel oder Reihenfolge des Kontexts ändern macht die Ausgabe veraltet", () => {
+    // Angenommen: das Foto ist Kontext
     store.updateSource(ids.foto, { role: "context", contextOrder: 2 });
     const a = exportFingerprint(store, sessionId, SETTINGS).content;
+    // Wenn: Titel, dann Reihenfolge geändert werden
     store.updateSource(ids.foto, { title: "Lageplan" });
     const b = exportFingerprint(store, sessionId, SETTINGS).content;
     store.updateSource(ids.foto, { contextOrder: 0 });
     const c = exportFingerprint(store, sessionId, SETTINGS).content;
+    // Dann: ändert jede Änderung den Abdruck
     expect(new Set([a, b, c]).size).toBe(3);
   });
 
   it("Montage-ID bleibt, wenn ein Eintrag ohne Lage Kontext wird", () => {
+    // Angenommen: ein Eintrag ohne Uhrzeit (also ohne Lage)
     const e = store.addDiaryEntry({ sessionId, regions: [{ sourceId: ids.seite }], notedAtMs: null });
     const before = buildSessionTranscript(store, sessionId).header.montageId;
+    // Wenn: er Kontext wird
     store.updateDiaryEntry(e.id, { role: "context" });
+    // Dann: bleibt die Montage-ID
     expect(buildSessionTranscript(store, sessionId).header.montageId).toBe(before);
   });
 });

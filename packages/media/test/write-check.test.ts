@@ -7,22 +7,28 @@ import { ensureWritable, friendlyWriteError, friendlyWriteErrorIn, writeErrorTex
 const errno = (code: string, path?: string) =>
   Object.assign(new Error(`${code}: irgendwas, open '${path}'`), { code, path });
 
+const gesperrt =
+  "ist noch in einem anderen Programm geöffnet (z. B. Word, Excel oder MAXQDA). Bitte dort schließen und erneut ausgeben.";
+
 describe("writeErrorText", () => {
-  it("übersetzt gesperrte Dateien", () => {
-    const text =
-      "ist noch in einem anderen Programm geöffnet (z. B. Word, Excel oder MAXQDA). Bitte dort schließen und erneut ausgeben.";
-    expect(writeErrorText(errno("EBUSY", "/x/Tag.docx"))).toBe(`„Tag.docx“ ${text}`);
-    expect(writeErrorText(errno("EPERM", "C:\\x\\Tag.docx".replace(/\\/g, "/")))).toBe(`„Tag.docx“ ${text}`);
+  it.each`
+    code        | pfad               | ordner       | text
+    ${"EBUSY"}  | ${"/x/Tag.docx"}   | ${undefined} | ${`„Tag.docx“ ${gesperrt}`}
+    ${"EPERM"}  | ${"C:/x/Tag.docx"} | ${undefined} | ${`„Tag.docx“ ${gesperrt}`}
+    ${"ENOSPC"} | ${"/x/a.mp4"}      | ${undefined} | ${"Der Datenträger ist voll."}
+    ${"EACCES"} | ${"/x/a.mp4"}      | ${undefined} | ${"Keine Schreibrechte im Ordner „/x“."}
+    ${"EACCES"} | ${undefined}       | ${"/ziel"}   | ${"Keine Schreibrechte im Ordner „/ziel“."}
+  `("$code bei $pfad wird zu „$text“", ({ code, pfad, ordner, text }) => {
+    expect(writeErrorText(errno(code, pfad), ordner)).toBe(text);
   });
-  it("übersetzt volle Datenträger und fehlende Schreibrechte", () => {
-    expect(writeErrorText(errno("ENOSPC", "/x/a.mp4"))).toBe("Der Datenträger ist voll.");
-    expect(writeErrorText(errno("EACCES", "/x/a.mp4"))).toBe("Keine Schreibrechte im Ordner „/x“.");
-    expect(writeErrorText(errno("EACCES"), "/ziel")).toBe("Keine Schreibrechte im Ordner „/ziel“.");
-  });
-  it("lässt anderes unverändert", () => {
+
+  it("lässt andere Fehler unverändert", () => {
     expect(writeErrorText(errno("EIO", "/x"))).toContain("EIO");
     const other = new Error("ffmpeg kaputt");
     expect(friendlyWriteError(other)).toBe(other);
+  });
+
+  it("friendlyWriteError übersetzt die Meldung im Fehler selbst", () => {
     expect(friendlyWriteError(errno("EBUSY", "/x/a.docx"))).toMatchObject({
       message: expect.stringContaining("„a.docx“"),
     });
@@ -30,20 +36,19 @@ describe("writeErrorText", () => {
 });
 
 describe("friendlyWriteErrorIn", () => {
-  it("übersetzt nur Fehler im Ausgabeordner", () => {
-    expect(friendlyWriteErrorIn(errno("EBUSY", "/ziel/Tag/a.docx"), "/ziel/Tag")).toMatchObject({
-      message: expect.stringContaining("„a.docx“"),
-    });
-    const elsewhere = errno("EBUSY", "/tmp/feldspur-export-1/still-1.jpg");
-    expect(friendlyWriteErrorIn(elsewhere, "/ziel/Tag")).toBe(elsewhere);
-    const sibling = errno("EACCES", "/ziel/Tag2/a.docx");
-    expect(friendlyWriteErrorIn(sibling, "/ziel/Tag")).toBe(sibling);
-    expect(friendlyWriteErrorIn(errno("EACCES"), "/ziel/Tag")).toMatchObject({
-      message: "Keine Schreibrechte im Ordner „/ziel/Tag“.",
-    });
-    expect(friendlyWriteErrorIn(errno("ENOSPC", "/tmp/x.mp4"), "/ziel/Tag")).toMatchObject({
-      message: "Der Datenträger ist voll.",
-    });
+  it.each`
+    code        | pfad                                    | meldung
+    ${"EBUSY"}  | ${"/ziel/Tag/a.docx"}                   | ${`„a.docx“ ${gesperrt}`}
+    ${"EACCES"} | ${undefined}                            | ${"Keine Schreibrechte im Ordner „/ziel/Tag“."}
+    ${"ENOSPC"} | ${"/tmp/x.mp4"}                         | ${"Der Datenträger ist voll."}
+    ${"EBUSY"}  | ${"/tmp/feldspur-export-1/still-1.jpg"} | ${null}
+    ${"EACCES"} | ${"/ziel/Tag2/a.docx"}                  | ${null}
+  `("$code bei $pfad, Ausgabeordner /ziel/Tag: $meldung", ({ code, pfad, meldung }) => {
+    const e = errno(code, pfad);
+    const r = friendlyWriteErrorIn(e, "/ziel/Tag");
+    // Fehler außerhalb des Ausgabeordners (meldung null) bleiben unverändert; ein voller Datenträger gilt überall.
+    if (meldung === null) expect(r).toBe(e);
+    else expect(r).toMatchObject({ message: meldung });
   });
 });
 

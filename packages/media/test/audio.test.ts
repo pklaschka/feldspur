@@ -40,6 +40,7 @@ function talk(seconds: number, seed: number): Envelope {
 
 describe("Leerlauf", () => {
   it("findet lange Stille und meldet laute Stellen darin", () => {
+    // Angenommen: 1 Min. Gespräch, 10 Min. Stille mit einem Klatschen bei 5:00, 1 Min. Gespräch
     const e = withClap(
       env([
         [60, -25],
@@ -48,7 +49,9 @@ describe("Leerlauf", () => {
       ]),
       300,
     );
+    // Wenn: Leerlauf gesucht wird
     const r = detectIdle(e);
+    // Dann: ein Leerlauf von etwa 1:00 bis 11:00, das Klatschen darin wird gemeldet
     expect(r.idle).toHaveLength(1);
     expect(r.idle[0]!.startMs).toBeGreaterThanOrEqual(60_000);
     expect(r.idle[0]!.startMs).toBeLessThanOrEqual(65_000);
@@ -58,6 +61,7 @@ describe("Leerlauf", () => {
   });
 
   it("kurze Stille ist kein Leerlauf", () => {
+    // Zwei Minuten Stille zwischen Gesprächen sind zu kurz
     expect(
       detectIdle(
         env([
@@ -72,6 +76,7 @@ describe("Leerlauf", () => {
 
 describe("Sync-Signale", () => {
   it("erkennt Klatschen, aber nicht gleichmäßiges Sprechen", () => {
+    // Angenommen: 30 s Stille mit Klatschen bei 0:10, danach 30 s gleichmäßiges Sprechen
     const e = withClap(
       env([
         [30, -55],
@@ -79,29 +84,35 @@ describe("Sync-Signale", () => {
       ]),
       10,
     );
+    // Dann: nur das Klatschen gilt als Sync-Signal
     expect(detectTransients(e).map((t) => t.atMs)).toEqual([10_000]);
   });
 });
 
 describe("Tonspur-Vergleich", () => {
   it("findet den Versatz zweier Aufnahmen desselben Gesprächs", () => {
+    // Angenommen: ein 5-Min.-Gespräch auf Gerät A
     const a = talk(300, 42);
     // B beginnt 73,4 s nach A und ist 60 s lang, etwas leiser.
     const b: Envelope = { rate: 100, db: a.db.slice(7340, 13340).map((v) => v - 6) };
+    // Wenn: B gegen A verglichen wird
     const r = estimateOffset(a, b)!;
+    // Dann: 73,4 s Versatz auf 10 ms genau, mit deutlicher Spitze
     expect(r.lagMs).toBeGreaterThanOrEqual(73_390);
     expect(r.lagMs).toBeLessThanOrEqual(73_410);
     expect(r.distinctness).toBeGreaterThan(1.5);
   });
 
   it("sucht bei bekannter Erwartung nur im Fenster", () => {
+    // Angenommen: B beginnt 200 s nach A
     const a = talk(300, 7);
     const b: Envelope = { rate: 100, db: a.db.slice(20_000, 26_000) };
+    // Dann: mit Erwartung 190 s ± 30 s findet der Vergleich 200 s
     expect(estimateOffset(a, b, { expectedLagMs: 190_000, searchMs: 30_000 })!.lagMs).toBe(200_000);
   });
 });
 
-it("Hüllkurve packen und entpacken verliert höchstens 0,4 dB", () => {
+it("Hüllkurve packen und entpacken verliert höchstens 0,2 dB, Stille bleibt Stille", () => {
   const e = env([[2, -37.3]]);
   const back = unpackEnvelope(packEnvelope(e));
   for (let i = 0; i < e.db.length; i++) expect(Math.abs(back.db[i]! - e.db[i]!)).toBeLessThanOrEqual(0.21);
