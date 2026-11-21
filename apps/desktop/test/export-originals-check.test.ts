@@ -52,39 +52,44 @@ describe.skipIf(!hasFfmpeg())("Ausgabe: Originale prüfen als erster Schritt", (
 
   it("prüft zuerst die Originale (Fortschritt in Bytes) und gibt dann aus", async () => {
     const { steps, wc } = recorder();
+    // Wenn: ausgegeben wird
     const r = await runExport(store, wc, sessionId, join(dir, "ok"), { video: false });
     expect("files" in r).toBe(true);
+    // Dann: ist die Prüfung der erste Schritt und zählt die Bytes der Datei
     expect(steps[0]?.step).toBe(EXPORT_CHECK_STEP);
     const checks = steps.filter((p) => p.step === EXPORT_CHECK_STEP);
     expect(checks.at(-1)).toMatchObject({ done: checks.at(-1)!.total });
     expect(checks.at(-1)!.total).toBe(store.listSources(sessionId)[0]!.sizeBytes);
-    // Alle Prüfschritte kommen vor dem ersten Schritt, der schreibt.
+    // Dann: kommen alle Prüfschritte vor dem ersten Schritt, der schreibt
     const firstOther = steps.findIndex((p) => p.step !== EXPORT_CHECK_STEP);
     expect(steps.slice(firstOther).some((p) => p.step === EXPORT_CHECK_STEP)).toBe(false);
   });
 
   it("hält bei einem veränderten Original an, ohne zu schreiben, und nennt den gewählten Ordner", async () => {
-    // Gleiche Größe, anderer Inhalt: Das findet nur die Prüfsumme.
+    // Angenommen: das Video hat dieselbe Größe, aber anderen Inhalt (das findet nur die Prüfsumme)
     const fd = openSync(video, "r+");
     writeSync(fd, Buffer.from("FELDSPUR"), 0, 8, 2000);
     closeSync(fd);
+    // Wenn: ausgegeben wird, dann hält die Ausgabe an, ohne den Ordner anzulegen, und nennt ihn
     const parent = join(dir, "veraendert");
     const r = await runExport(store, recorder().wc, sessionId, parent, { video: false });
     expect(r).toMatchObject({ parent, originals: { blocking: [], warnings: [expect.any(String)] } });
     expect(existsSync(parent)).toBe(false);
     expect(exportRunning()).toBe(false);
 
-    // „Trotzdem ausgeben“: dieselbe Prüfung (aus dem Zwischenspeicher), dann die Ausgabe.
+    // Wenn: „Trotzdem ausgeben“ gewählt wird, dann folgt nach derselben Prüfung die Ausgabe
     const again = await runExport(store, recorder().wc, sessionId, parent, { video: false, acceptOriginals: true });
     expect("files" in again).toBe(true);
-    // Die Ausgabe gilt danach als aktuell (die Prüfung ändert am Stand nichts).
+    // Dann: gilt die Ausgabe als aktuell (die Prüfung ändert am Stand nichts)
     expect(exportStatus(store, sessionId, { video: false })?.differences).toEqual([]);
   });
 
   it("hält bei fehlender Pflichtdatei auch mit acceptOriginals an", async () => {
+    // Angenommen: das Video ist verschwunden
     const away = `${video}.weg`;
     renameSync(video, away);
     try {
+      // Wenn: trotzdem ausgegeben werden soll, dann hält die Ausgabe an, ohne zu schreiben
       const r = await runExport(store, recorder().wc, sessionId, join(dir, "fehlt"), {
         video: true,
         acceptOriginals: true,
@@ -97,14 +102,16 @@ describe.skipIf(!hasFfmpeg())("Ausgabe: Originale prüfen als erster Schritt", (
   });
 
   it("lässt sich schon während der Prüfung abbrechen", async () => {
-    // Datei neu stempeln, damit die Prüfsumme nicht aus dem Zwischenspeicher kommt.
+    // Angenommen: die Datei ist neu gestempelt, damit die Prüfsumme nicht aus dem Zwischenspeicher kommt
     const fd = openSync(video, "r+");
     writeSync(fd, Buffer.from("feldspur"), 0, 8, 2000);
     closeSync(fd);
+    // Wenn: während der Prüfung abgebrochen wird
     const wc = fakeWebContents((channel: string, p: ExportProgress) => {
       if (channel === IPC.exportProgress && p.step === EXPORT_CHECK_STEP) cancelExport(sessionId);
     });
     const r = await runExport(store, wc, sessionId, join(dir, "abbruch"), { video: false });
+    // Dann: meldet die App den Abbruch und hat nichts geschrieben
     expect(r).toEqual({ cancelled: true });
     expect(existsSync(join(dir, "abbruch"))).toBe(false);
     expect(exportRunning()).toBe(false);

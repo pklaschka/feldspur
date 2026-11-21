@@ -16,9 +16,11 @@ import type { SessionTranscriptPreviewEntry } from "../src/shared/api.ts";
 
 describe("Farben der Einsatztranskript-Vorschau", () => {
   it("hell sind es genau die Farben aus dem .docx", () => {
+    // Angenommen: die hellen Farbvariablen aus styles.css
     const css = readFileSync(join(import.meta.dirname, "../src/renderer/styles.css"), "utf8");
     const light = css.slice(css.indexOf(":root {"), css.indexOf("@media (prefers-color-scheme: dark)"));
     const value = (name: string) => light.match(new RegExp(`--st-${name}:\\s*#([0-9a-f]{6});`, "i"))?.[1];
+    // Dann: gleicht jede den Farben im .docx
     expect(value("clock")?.toUpperCase()).toBe(SESSION_TRANSCRIPT_CLOCK_COLOR);
     for (const [kind, hex] of Object.entries(SESSION_TRANSCRIPT_KIND_COLOR))
       expect(value(kind)?.toUpperCase(), kind).toBe(hex);

@@ -17,133 +17,149 @@ import {
 } from "../src/renderer/format.ts";
 
 describe("Uhrabweichung eingeben", () => {
-  it("unterscheidet leer, unlesbar und lesbar", () => {
-    expect(readOffsetInput("")).toBeNull();
-    expect(readOffsetInput("  ")).toBeNull();
-    expect(readOffsetInput("+2;47")).toBe("invalid");
-    expect(readOffsetInput("abc")).toBe("invalid");
-    expect(readOffsetInput("+2:47")).toBe(167_000);
-    expect(readOffsetInput("−0:30")).toBe(-30_000);
-    expect(readOffsetInput("± 0:00")).toBe(0);
+  it.each`
+    eingabe     | ergebnis     | fall
+    ${""}       | ${null}      | ${"leer"}
+    ${"  "}     | ${null}      | ${"nur Leerraum"}
+    ${"+2;47"}  | ${"invalid"} | ${"Strichpunkt statt Doppelpunkt"}
+    ${"abc"}    | ${"invalid"} | ${"Buchstaben"}
+    ${"+2:47"}  | ${167_000}   | ${"plus"}
+    ${"−0:30"}  | ${-30_000}   | ${"minus"}
+    ${"± 0:00"} | ${0}         | ${"keine Abweichung"}
+  `("„$eingabe“ ist $ergebnis ($fall)", ({ eingabe, ergebnis }) => {
+    expect(readOffsetInput(eingabe)).toBe(ergebnis);
   });
 
-  it("Minuten und Sekunden wie bisher", () => {
-    expect(parseOffset("−2:47")).toBe(-167_000);
-    expect(parseOffset("+0:04")).toBe(4_000);
-    expect(parseOffset("-247")).toBe(-167_000);
-    expect(parseOffset("+4")).toBe(4_000);
-    expect(parseOffset("+10247")).toBe(3_767_000);
-    expect(parseOffset("-167")).toBeNull(); // 67 Sekunden gibt es nicht
-    expect(parseOffset("1,5")).toBe(1_500);
+  it.each`
+    eingabe               | ms                | fall
+    ${"−2:47"}            | ${-167_000}       | ${"Minuten und Sekunden"}
+    ${"+0:04"}            | ${4_000}          | ${"nur Sekunden mit Doppelpunkt"}
+    ${"-247"}             | ${-167_000}       | ${"Ziffern ohne Doppelpunkt"}
+    ${"+4"}               | ${4_000}          | ${"eine Ziffer"}
+    ${"+10247"}           | ${3_767_000}      | ${"Stunden ohne Doppelpunkt"}
+    ${"-167"}             | ${null}           | ${"67 Sekunden gibt es nicht"}
+    ${"1,5"}              | ${1_500}          | ${"Komma"}
+    ${"+2:00:00"}         | ${7_200_000}      | ${"Stunden"}
+    ${"+1 Tag 2:00:00"}   | ${93_600_000}     | ${"Tag und Stunden"}
+    ${"−3 Tage"}          | ${-259_200_000}   | ${"Tage"}
+    ${"+2 h 5 min"}       | ${7_500_000}      | ${"h und min"}
+    ${"1d 0:00:30"}       | ${86_430_000}     | ${"d und Sekunden"}
+    ${""}                 | ${null}           | ${"leer ist Unsinn"}
+    ${"abc"}              | ${null}           | ${"Buchstaben sind Unsinn"}
+    ${"3 Wochen"}         | ${null}           | ${"Wochen kennt die App nicht"}
+  `("„$eingabe“ ergibt $ms ms: $fall", ({ eingabe, ms }) => {
+    expect(parseOffset(eingabe)).toBe(ms);
   });
 
-  it("Stunden und Tage", () => {
-    expect(parseOffset("+2:00:00")).toBe(7_200_000);
-    expect(parseOffset("+1 Tag 2:00:00")).toBe(93_600_000);
-    expect(parseOffset("−3 Tage")).toBe(-259_200_000);
-    expect(parseOffset("+2 h 5 min")).toBe(7_500_000);
-    expect(parseOffset("1d 0:00:30")).toBe(86_430_000);
-  });
 
-  it("lehnt Unsinn ab", () => {
-    expect(parseOffset("")).toBeNull();
-    expect(parseOffset("abc")).toBeNull();
-    expect(parseOffset("3 Wochen")).toBeNull();
-  });
 
-  it("Anzeige und Eingabe passen zusammen", () => {
-    for (const ms of [0, -167_000, 7_200_000, 93_600_000, -259_205_000]) expect(parseOffset(offsetText(ms))).toBe(ms);
+  it.each([0, -167_000, 7_200_000, 93_600_000, -259_205_000])("Anzeige und Eingabe passen zusammen: %d ms", (ms) => {
+    expect(parseOffset(offsetText(ms))).toBe(ms);
   });
 });
 
 describe("Uhrzeit als Maskenfeld", () => {
-  it("setzt den Doppelpunkt beim Tippen selbst", () => {
-    expect(maskClock("1")).toBe("1");
-    expect(maskClock("10")).toBe("10");
-    expect(maskClock("103")).toBe("10:3");
-    expect(maskClock("1030")).toBe("10:30");
-    expect(maskClock("10:30")).toBe("10:30");
-    expect(maskClock("10:305")).toBe("10:30");
-    expect(maskClock("10:")).toBe("10:");
-    expect(maskClock("10.3")).toBe("10:3");
+  it.each`
+    getippt     | feld       | fall
+    ${"1"}      | ${"1"}     | ${"eine Ziffer"}
+    ${"10"}     | ${"10"}    | ${"Stunden"}
+    ${"103"}    | ${"10:3"}  | ${"Doppelpunkt kommt von selbst"}
+    ${"1030"}   | ${"10:30"} | ${"ganze Uhrzeit"}
+    ${"10:30"}  | ${"10:30"} | ${"Doppelpunkt selbst getippt"}
+    ${"10:305"} | ${"10:30"} | ${"mehr Ziffern als Platz"}
+    ${"10:"}    | ${"10:"}   | ${"nach dem Doppelpunkt"}
+    ${"10.3"}   | ${"10:3"}  | ${"Punkt wird Doppelpunkt"}
+    ${"9"}      | ${"09"}    | ${"einstellige Stunde"}
+    ${"93"}     | ${"09:3"}  | ${"einstellige Stunde, dann Minuten"}
+    ${"9:"}     | ${"09:"}   | ${"einstellige Stunde mit Doppelpunkt"}
+    ${"9:15"}   | ${"09:15"} | ${"einstellige Stunde, ganze Uhrzeit"}
+  `("„$getippt“ zeigt „$feld“: $fall", ({ getippt, feld }) => {
+    expect(maskClock(getippt)).toBe(feld);
   });
 
-  it("erkennt einstellige Stunden", () => {
-    expect(maskClock("9")).toBe("09");
-    expect(maskClock("93")).toBe("09:3");
-    expect(maskClock("9:")).toBe("09:");
-    expect(maskClock("9:15")).toBe("09:15");
+
+  it.each`
+    feld        | marke | ergebnis                             | fall
+    ${"1:00"}   | ${1}  | ${{ value: "1:00", caret: 1 }}       | ${"aus „15:00“ die 5 gelöscht"}
+    ${"16:00"}  | ${2}  | ${{ value: "16:00", caret: 2 }}      | ${"dann 6 getippt"}
+    ${"165:00"} | ${2}  | ${{ value: "16:00", caret: 2 }}      | ${"Ziffer in volle Stunde überschreibt die folgende"}
+    ${"10:0"}   | ${3}  | ${{ value: "10:0", caret: 3 }}       | ${"aus „10:30“ die 3 gelöscht"}
+    ${"10:40"}  | ${4}  | ${{ value: "10:40", caret: 4 }}      | ${"dann 4 getippt"}
+    ${"10:430"} | ${4}  | ${{ value: "10:40", caret: 4 }}      | ${"4 hinter dem Doppelpunkt überschreibt die 3"}
+    ${"1500"}   | ${2}  | ${{ value: "15:00", caret: 2 }}      | ${"Doppelpunkt gelöscht: Ziffern fließen wie beim Tippen"}
+    ${"103"}    | ${3}  | ${{ value: "10:3", caret: 4 }}       | ${"am Ende tippen wie bisher"}
+  `("korrigiert mitten in der Uhrzeit: $fall", ({ feld, marke, ergebnis }) => {
+    expect(maskClockAt(feld, marke)).toEqual(ergebnis);
   });
 
-  it("korrigiert mitten in der Uhrzeit, ohne die Maske durcheinanderzubringen", () => {
-    // „15:00“, die 5 gelöscht (Marke danach an Stelle 1), dann 6 getippt.
-    expect(maskClockAt("1:00", 1)).toEqual({ value: "1:00", caret: 1 });
-    expect(maskClockAt("16:00", 2)).toEqual({ value: "16:00", caret: 2 });
-    // Ziffer in volle Stunde getippt: überschreibt die folgende.
-    expect(maskClockAt("165:00", 2)).toEqual({ value: "16:00", caret: 2 });
-    // In den Minuten: „10:30“, 3 gelöscht, 4 getippt.
-    expect(maskClockAt("10:0", 3)).toEqual({ value: "10:0", caret: 3 });
-    expect(maskClockAt("10:40", 4)).toEqual({ value: "10:40", caret: 4 });
-    // Oder ohne Löschen: in „10:30“ hinter dem Doppelpunkt 4 getippt, überschreibt die 3.
-    expect(maskClockAt("10:430", 4)).toEqual({ value: "10:40", caret: 4 });
-    // Doppelpunkt gelöscht: Ziffern fließen wie beim Tippen.
-    expect(maskClockAt("1500", 2)).toEqual({ value: "15:00", caret: 2 });
-    // Beim Tippen am Ende wie bisher.
-    expect(maskClockAt("103", 3)).toEqual({ value: "10:3", caret: 4 });
-  });
-
-  it("ergänzt und prüft beim Verlassen", () => {
-    expect(normalizeClock("")).toBe("");
-    expect(normalizeClock("10")).toBe("10:00");
-    expect(normalizeClock("930")).toBe("09:30");
-    expect(normalizeClock("10:5")).toBe("10:05");
-    expect(normalizeClock("10:30")).toBe("10:30");
-    expect(normalizeClock("25:00")).toBeNull();
-    expect(normalizeClock("10:75")).toBeNull();
-    expect(normalizeClock("ab")).toBeNull();
+  it.each`
+    feld       | ergebnis   | fall
+    ${""}      | ${""}      | ${"leer bleibt leer"}
+    ${"10"}    | ${"10:00"} | ${"volle Stunde"}
+    ${"930"}   | ${"09:30"} | ${"einstellige Stunde"}
+    ${"10:5"}  | ${"10:05"} | ${"einstellige Minute"}
+    ${"10:30"} | ${"10:30"} | ${"vollständig"}
+    ${"25:00"} | ${null}    | ${"Stunde zu groß"}
+    ${"10:75"} | ${null}    | ${"Minute zu groß"}
+    ${"ab"}    | ${null}    | ${"Buchstaben"}
+  `("beim Verlassen wird „$feld“ zu $ergebnis: $fall", ({ feld, ergebnis }) => {
+    expect(normalizeClock(feld)).toBe(ergebnis);
   });
 
   it("mit Sekunden: hh:mm:ss ohne Doppelpunkte", () => {
     const sec = { seconds: true };
+    // Wenn: getippt wird, dann setzt die Maske beide Doppelpunkte
     expect(maskClock("103045", undefined, sec)).toBe("10:30:45");
     expect(maskClock("10304", undefined, sec)).toBe("10:30:4");
     expect(maskClock("1030", undefined, sec)).toBe("10:30");
     expect(maskClock("1030:", undefined, sec)).toBe("10:30:");
     expect(maskClock("93045", undefined, sec)).toBe("09:30:45");
     expect(maskClock("10:30:455", undefined, sec)).toBe("10:30:45");
-    // Ohne Sekunden bleibt es bei hh:mm.
+    // Wenn: das Feld keine Sekunden hat, dann bleibt es bei hh:mm
     expect(maskClock("103045")).toBe("10:30");
-    // Korrektur in den Sekunden: „10:30:45“, die 4 überschreiben.
+    // Wenn: in den Sekunden von „10:30:45“ die 4 überschrieben wird, dann bleibt die Maske heil
     expect(maskClockAt("10:30:745", 7, sec)).toEqual({ value: "10:30:75", caret: 7 });
     expect(maskClockAt("10:30:45", 1, sec)).toEqual({ value: "10:30:45", caret: 1 });
     expect(maskClockAt("10304", 5, sec)).toEqual({ value: "10:30:4", caret: 7 });
+    // Wenn: das Feld verlassen wird, dann wird ergänzt und geprüft
     expect(normalizeClock("103045", sec)).toBe("10:30:45");
     expect(normalizeClock("10:30:5", sec)).toBe("10:30:05");
     expect(normalizeClock("1030", sec)).toBe("10:30");
     expect(normalizeClock("10:30:75", sec)).toBeNull();
     expect(normalizeClock("10:30:45")).toBeNull();
+    // Wenn: eine Pfeiltaste gedrückt wird, dann bleiben die Sekunden
     expect(stepClock("10:59:30", 1, sec)).toBe("11:00:30");
   });
 
-  it("Pfeiltasten verschieben um Minuten", () => {
-    expect(stepClock("10:30", 1)).toBe("10:31");
-    expect(stepClock("10:59", 1)).toBe("11:00");
-    expect(stepClock("00:00", -1)).toBe("23:59");
-    expect(stepClock("", 1)).toBe("");
+  it.each`
+    feld       | schritt | ergebnis   | fall
+    ${"10:30"} | ${1}    | ${"10:31"} | ${"eine Minute vor"}
+    ${"10:59"} | ${1}    | ${"11:00"} | ${"über die volle Stunde"}
+    ${"00:00"} | ${-1}   | ${"23:59"} | ${"über Mitternacht zurück"}
+    ${""}      | ${1}    | ${""}      | ${"leeres Feld bleibt leer"}
+  `("Pfeiltaste verschiebt um Minuten: $fall", ({ feld, schritt, ergebnis }) => {
+    expect(stepClock(feld, schritt)).toBe(ergebnis);
   });
 });
 
 describe("Zahlen als Text", () => {
-  it("dB mit Vorzeichen und Komma", () => {
-    expect(dbText(3.5)).toBe("+3,5 dB");
-    expect(dbText(-2)).toBe("−2,0 dB");
-    expect(dbText(0)).toBe("±0,0 dB");
+  it.each`
+    db     | text
+    ${3.5} | ${"+3,5 dB"}
+    ${-2}  | ${"−2,0 dB"}
+    ${0}   | ${"±0,0 dB"}
+  `("$db dB zeigt „$text“", ({ db, text }) => {
+    expect(dbText(db)).toBe(text);
   });
-  it("Dateigrößen", () => {
-    expect(bytes(512)).toBe("512 B");
-    expect(bytes(2048)).toBe("2 KB");
-    expect(bytes(5.25 * 1024 ** 2)).toBe("5,3 MB");
-    expect(bytes(3 * 1024 ** 3)).toBe("3,00 GB");
+
+  it.each`
+    groesse             | text
+    ${512}              | ${"512 B"}
+    ${2048}             | ${"2 KB"}
+    ${5.25 * 1024 ** 2} | ${"5,3 MB"}
+    ${3 * 1024 ** 3}    | ${"3,00 GB"}
+  `("$groesse Bytes zeigen „$text“", ({ groesse, text }) => {
+    expect(bytes(groesse)).toBe(text);
   });
 });
 
@@ -166,6 +182,7 @@ describe("Einsatzdatum und Dateien", () => {
   });
 
   it("zählt Handzeiten, Ansagen, Anker und unplatzierte Quellen nicht", () => {
+    // Wenn: nur ein Foto mit Metadaten zählt, dann gewinnt sein Tag
     expect(
       dominantDay([
         row("2026-11-18T10:00:00", "manual"),
@@ -176,6 +193,7 @@ describe("Einsatzdatum und Dateien", () => {
         row("2026-09-14T10:00:00", "metadata"),
       ]),
     ).toEqual({ day: "2026-09-14", count: 1, days: 1 });
+    // Wenn: nichts zählt, dann gibt es keinen Tag
     expect(dominantDay([row("2026-11-18T10:00:00", "manual")])).toBeNull();
     expect(dominantDay([])).toBeNull();
   });
@@ -202,18 +220,27 @@ describe("Einsatzdatum und Dateien", () => {
 });
 
 describe("Dauern ohne Doppelpunkt", () => {
-  it("füllen von rechts", () => {
-    expect(digitsDurationMs("45")).toBe(45_000);
-    expect(digitsDurationMs("320")).toBe(200_000);
-    expect(digitsDurationMs("7500")).toBe(4_500_000);
-    expect(digitsDurationMs("10320")).toBe(3_800_000);
-    expect(digitsDurationMs("390")).toBeNull();
-    expect(digitsDurationMs("3:20")).toBeUndefined();
-    expect(digitsDurationText("320")).toBe("3:20");
-    expect(digitsDurationText("0320")).toBe("3:20");
-    expect(digitsDurationText("10320")).toBe("1:03:20");
-    expect(digitsDurationText("45")).toBe("45");
-    expect(digitsDurationText("390")).toBe("390");
+  it.each`
+    ziffern    | ms             | fall
+    ${"45"}    | ${45_000}      | ${"Sekunden"}
+    ${"320"}   | ${200_000}     | ${"Minuten und Sekunden"}
+    ${"7500"}  | ${4_500_000}   | ${"Minuten über 59"}
+    ${"10320"} | ${3_800_000}   | ${"Stunden"}
+    ${"390"}   | ${null}        | ${"90 Sekunden gibt es nicht"}
+    ${"3:20"}  | ${undefined}   | ${"mit Doppelpunkt: nicht zuständig"}
+  `("Ziffern „$ziffern“ füllen von rechts: $fall", ({ ziffern, ms }) => {
+    expect(digitsDurationMs(ziffern)).toBe(ms);
+  });
+
+  it.each`
+    ziffern    | text
+    ${"320"}   | ${"3:20"}
+    ${"0320"}  | ${"3:20"}
+    ${"10320"} | ${"1:03:20"}
+    ${"45"}    | ${"45"}
+    ${"390"}   | ${"390"}
+  `("Ziffern „$ziffern“ zeigen „$text“", ({ ziffern, text }) => {
+    expect(digitsDurationText(ziffern)).toBe(text);
   });
 });
 

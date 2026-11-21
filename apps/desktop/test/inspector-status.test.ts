@@ -49,7 +49,7 @@ const view = (o: {
 
 const texts = (v: SessionView) => todos(v).map((t) => `${t.step}: ${t.text}`);
 
-describe("todos", () => {
+describe("Offene Punkte im Inspektor", () => {
   it("ohne Quellen: erst einsammeln", () => {
     expect(texts(view({}))).toEqual(["collect: Dateien des Einsatzes einsammeln."]);
   });
@@ -63,6 +63,7 @@ describe("todos", () => {
   });
 
   it("nennt Geräte ohne Abweichung, Vorschläge und Lagen in der Reihenfolge der Schritte", () => {
+    // Angenommen: Referenzuhr Kamera, zwei Geräte ohne Abweichung, ein Vorschlag, eine Lage zu prüfen, zwei Quellen ohne Uhrzeit
     const v = view({
       rows: [
         { id: "late", status: "check" },
@@ -77,6 +78,7 @@ describe("todos", () => {
       ],
       proposals: 1,
     });
+    // Dann: stehen die Punkte in der Reihenfolge der Schritte, der letzte führt zur ersten Quelle ohne Uhrzeit
     expect(texts(v)).toEqual([
       "sync: Abweichung für Handy, Rekorder klären.",
       "sync: 1 Vorschlag aus der Tonspur prüfen.",
@@ -87,6 +89,7 @@ describe("todos", () => {
   });
 
   it("springt zur frühesten Lage, die zu prüfen ist", () => {
+    // Angenommen: zwei Lagen zu prüfen, a liegt früher als b
     const v = view({
       rows: [
         { id: "b", status: "check" },
@@ -96,11 +99,13 @@ describe("todos", () => {
     const rows = v.rows as unknown as { id: string; startMs: number }[];
     rows[0]!.startMs = 2000;
     rows[1]!.startMs = 1000;
+    // Dann: führt der Punkt zu a
     expect(todos(v)[0]).toMatchObject({ text: "2 Lagen prüfen.", sourceId: "a" });
   });
 
   it("Widersprüche zuerst, stärkste vorn; eine Gruppe zählt als eine Stelle", () => {
     const c = (severity: "clear" | "strong", worstMs: number) => ({ state: "open", severity, worstMs });
+    // Angenommen: eine unsichere Lage, ein klarer und ein starker Widerspruch und eine Gruppe mit starkem Widerspruch
     const v = view({
       rows: [
         { id: "early", status: "check", startMs: 0 },
@@ -111,7 +116,9 @@ describe("todos", () => {
       ],
       groups: [{ sourceIds: ["g1", "g2"] }],
     });
+    // Dann: kommt die Gruppe zuerst, dann der starke, der klare und zuletzt die unsichere Lage
     expect(checkQueue(v.rows).map((r) => r.id)).toEqual(["g1", "g2", "big", "clear", "early"]);
+    // Dann: zählen die Widersprüche drei Stellen statt vier
     expect(todos(v).slice(0, 2)).toEqual([
       {
         text: "Zeitbelege widersprechen sich an 3 Stellen, davon 2 stark.",
@@ -124,15 +131,20 @@ describe("todos", () => {
   });
 
   it("Tonspuren noch nicht abgeglichen: Begründung hängt an Episoden", () => {
+    // Angenommen: zwei Ton- und Videoquellen, noch nicht abgeglichen
     const base = { rows: [{ id: "a", status: "ok" as const }], avCount: 2 };
+    // Dann: begründet der Punkt mit Klatschern
     expect(texts(view(base))).toEqual(["sync: Tonspuren abgleichen, damit Klatscher und Stille erkannt werden."]);
+    // Wenn: es Episoden gibt, dann mit Episoden
     expect(texts(view({ ...base, episodes: true }))).toEqual([
       "sync: Tonspuren abgleichen, damit Episoden und Stille erkannt werden.",
     ]);
+    // Wenn: eine Spur abgeglichen ist, dann entfällt der Punkt
     expect(texts(view({ ...base, analyzedCount: 1 }))).toEqual([]);
   });
 
   it("Tagebuchseiten ohne Randnotiz, weitere Bilder einer Seite zählen nicht", () => {
+    // Angenommen: zwei Seiten ohne Randnotiz, eine davon mit weiterem Bild
     const v = view({
       rows: [
         { id: "t1", status: "ok", kind: "diary" },
@@ -141,6 +153,7 @@ describe("todos", () => {
       ],
       diaryNoteless: ["t1", "t2", "t2b"],
     });
+    // Dann: zählt der Punkt zwei Seiten
     expect(todos(v)).toEqual([
       { text: "2 Tagebuchseiten ohne Randnotiz.", step: "collect", sourceId: "t1", action: "Erste ansehen" },
     ]);
@@ -148,66 +161,78 @@ describe("todos", () => {
 });
 
 describe("Reihenfolge der Stellen", () => {
-  // Erfundene Reihenfolge wie aus checkQueue: g1/g2 sind eine Gruppe (eine Stelle).
+  // Angenommen: eine erfundene Reihenfolge wie aus checkQueue, g1 und g2 sind eine Gruppe (eine Stelle)
   const q = ["g1", "g2", "a", "b"].map((id) => ({ id }));
   const groups = [{ sourceIds: ["g1", "g2"] }];
   const ids = (r: { id: string } | undefined) => r?.id;
 
-  it("N springt über die Stellen, ein Gruppenmitglied zählt als seine Gruppe", () => {
-    expect(ids(stepPlace(q, groups, null, 1))).toBe("g1");
-    expect(ids(stepPlace(q, groups, "g1", 1))).toBe("a");
-    expect(ids(stepPlace(q, groups, "g2", 1))).toBe("a");
-    expect(ids(stepPlace(q, groups, "b", 1))).toBe("g1");
-    expect(ids(stepPlace(q, groups, "fremd", 1))).toBe("g1");
+  it.each`
+    taste            | richtung | von          | nach    | fall
+    ${"N"}           | ${1}     | ${null}      | ${"g1"} | ${"ohne Auswahl zur ersten Stelle"}
+    ${"N"}           | ${1}     | ${"g1"}      | ${"a"}  | ${"über die Gruppe hinweg"}
+    ${"N"}           | ${1}     | ${"g2"}      | ${"a"}  | ${"ein Gruppenmitglied zählt als seine Gruppe"}
+    ${"N"}           | ${1}     | ${"b"}       | ${"g1"} | ${"nach der letzten wieder vorn"}
+    ${"N"}           | ${1}     | ${"fremd"}   | ${"g1"} | ${"von einer anderen Quelle zur ersten Stelle"}
+    ${"Umschalt+N"}  | ${-1}    | ${"a"}       | ${"g1"} | ${"zurück zur Gruppe"}
+    ${"Umschalt+N"}  | ${-1}    | ${"g2"}      | ${"b"}  | ${"vor der ersten wieder hinten"}
+    ${"Umschalt+N"}  | ${-1}    | ${null}      | ${"b"}  | ${"ohne Auswahl zur letzten Stelle"}
+  `("$taste von $von springt zu $nach: $fall", ({ richtung, von, nach }) => {
+    expect(ids(stepPlace(q, groups, von, richtung))).toBe(nach);
+  });
+
+  it("ohne Stellen springt N nirgendwohin", () => {
     expect(stepPlace([], groups, null, 1)).toBeUndefined();
   });
 
-  it("Umschalt+N geht zurück, ringsum", () => {
-    expect(ids(stepPlace(q, groups, "a", -1))).toBe("g1");
-    expect(ids(stepPlace(q, groups, "g2", -1))).toBe("b");
-    expect(ids(stepPlace(q, groups, null, -1))).toBe("b");
-  });
-
   it("nach „Lage passt“: die nächste noch offene Stelle in der alten Reihenfolge", () => {
+    // Wenn: an Stelle a „Lage passt“ gewählt wird, dann geht es in der alten Reihenfolge weiter
     const order = placesAfter(q, groups, "a");
     expect(order).toEqual(["b", "g1"]);
-    // b hat sich inzwischen mit erledigt: weiter zur Gruppe.
+    // Wenn: b sich inzwischen mit erledigt hat, dann geht es weiter zur Gruppe
     expect(ids(firstOpen(order, [{ id: "g1" }, { id: "g2" }], groups))).toBe("g1");
+    // Wenn: b noch offen ist, dann zu b; ist nichts mehr offen, dann nirgendwohin
     expect(ids(firstOpen(order, [{ id: "b" }, { id: "g1" }], groups))).toBe("b");
     expect(firstOpen(order, [], groups)).toBeUndefined();
-    // Bleibt nur die eigene Stelle übrig (z. B. noch nicht erledigt), gibt es keinen Sprung.
+    // Wenn: nur die eigene Stelle übrig bleibt (z. B. noch nicht erledigt), dann gibt es keinen Sprung
     expect(firstOpen(placesAfter([{ id: "a" }], [], "a"), [{ id: "a" }], [])).toBeUndefined();
   });
 
-  it("„Lage passt“ gibt es nur für unsichere Lagen ohne Widerspruch", () => {
-    const row = (o: object) =>
-      ({
-        status: "check",
-        startMs: 0,
-        kind: "photo",
-        partOf: null,
-        conflict: { state: "none" },
-        evidence: [],
-        ...o,
-      }) as unknown as Parameters<typeof canConfirm>[0];
-    expect(canConfirm(row({}))).toBe(true);
-    expect(canConfirm(row({ status: "ok" }))).toBe(false);
-    expect(canConfirm(row({ kind: "diary" }))).toBe(false);
-    expect(canConfirm(row({ partOf: "x" }))).toBe(false);
-    expect(canConfirm(row({ conflict: { state: "open" } }))).toBe(false);
-    expect(canConfirm(row({ evidence: [{ kind: "checked", chosen: true }] }))).toBe(false);
+  const lage = (o: object) =>
+    ({
+      status: "check",
+      startMs: 0,
+      kind: "photo",
+      partOf: null,
+      conflict: { state: "none" },
+      evidence: [],
+      ...o,
+    }) as unknown as Parameters<typeof canConfirm>[0];
+
+  it.each`
+    quelle                                                      | passt    | fall
+    ${lage({})}                                                 | ${true}  | ${"unsichere Lage ohne Widerspruch"}
+    ${lage({ status: "ok" })}                                   | ${false} | ${"sichere Lage"}
+    ${lage({ kind: "diary" })}                                  | ${false} | ${"Tagebuchseite"}
+    ${lage({ partOf: "x" })}                                    | ${false} | ${"weiteres Bild einer Seite"}
+    ${lage({ conflict: { state: "open" } })}                    | ${false} | ${"offener Widerspruch"}
+    ${lage({ evidence: [{ kind: "checked", chosen: true }] })}  | ${false} | ${"schon geprüft"}
+  `("„Lage passt“ gibt es: $passt bei $fall", ({ quelle, passt }) => {
+    expect(canConfirm(quelle)).toBe(passt);
   });
 });
 
-describe("checkReason", () => {
-  it("übersetzt die Hinweise der Zeitbestimmung", () => {
-    expect(checkReason("Uhr weicht ab?", "Handy")).toBe("Die Uhr von Handy ist noch nicht abgeglichen.");
-    expect(checkReason("Uhr weicht ab?", undefined)).toBe("Die Uhr von diesem Gerät ist noch nicht abgeglichen.");
-    expect(checkReason("Keine Referenzuhr gewählt", "x")).toBe("Es ist noch keine Referenzuhr gewählt.");
-    expect(checkReason("nur Minute", "x")).toBe("Die Uhrzeit ist nur minutengenau bekannt.");
-    expect(checkReason("± 2:00", "x")).toBe("Die Uhrzeit ist nur ungefähr bekannt (± 2:00).");
-    expect(checkReason("Widerspruch 3:00", "x")).toBe("Zeitbelege widersprechen sich (3:00).");
-    expect(checkReason("Entscheidung neu prüfen", "x")).toBe("Seit der Entscheidung hat sich ein Zeitbeleg geändert.");
-    expect(checkReason("etwas anderes", "x")).toBe("etwas anderes");
+describe("Hinweise der Zeitbestimmung", () => {
+  it.each`
+    hinweis                       | geraet       | satz
+    ${"Uhr weicht ab?"}           | ${"Handy"}   | ${"Die Uhr von Handy ist noch nicht abgeglichen."}
+    ${"Uhr weicht ab?"}           | ${undefined} | ${"Die Uhr von diesem Gerät ist noch nicht abgeglichen."}
+    ${"Keine Referenzuhr gewählt"} | ${"x"}      | ${"Es ist noch keine Referenzuhr gewählt."}
+    ${"nur Minute"}               | ${"x"}       | ${"Die Uhrzeit ist nur minutengenau bekannt."}
+    ${"± 2:00"}                   | ${"x"}       | ${"Die Uhrzeit ist nur ungefähr bekannt (± 2:00)."}
+    ${"Widerspruch 3:00"}         | ${"x"}       | ${"Zeitbelege widersprechen sich (3:00)."}
+    ${"Entscheidung neu prüfen"}  | ${"x"}       | ${"Seit der Entscheidung hat sich ein Zeitbeleg geändert."}
+    ${"etwas anderes"}            | ${"x"}       | ${"etwas anderes"}
+  `("„$hinweis“ ($geraet) heißt: $satz", ({ hinweis, geraet, satz }) => {
+    expect(checkReason(hinweis, geraet)).toBe(satz);
   });
 });

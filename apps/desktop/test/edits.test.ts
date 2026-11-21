@@ -99,9 +99,11 @@ const row = (sessionId: string, id: string) => buildSessionView(store, sessionId
 describe("Lage prüfen", () => {
   it("Bestätigungen eines Geräts gesammelt entfernen", () => {
     const { session, cam, video } = seed();
+    // Angenommen: eine Lage der Kamera ist bestätigt
     confirmPlacement(store, video.id, row(session.id, video.id).startMs!);
     const device = () => buildSessionView(store, session.id).allDevices.find((d) => d.id === cam.id)!;
     expect(device().checkedCount).toBe(1);
+    // Wenn: die Bestätigungen der Kamera entfernt werden, dann ist die Lage wieder zu prüfen
     expect(clearDeviceChecks(store, cam.id)).toBe(session.id);
     expect(device().checkedCount).toBe(0);
     expect(row(session.id, video.id).status).toBe("check");
@@ -109,8 +111,10 @@ describe("Lage prüfen", () => {
 
   it("unsichere Lage bestätigen, zurücknehmen und durch Handeingabe ersetzen", () => {
     const { session, video } = seed();
+    // Angenommen: die Lage des Videos ist unsicher, denn die Kamera-Uhr ist unbekannt
     const before = row(session.id, video.id);
     expect(before.status).toBe("check"); // Kamera-Uhr unbekannt
+    // Wenn: sie bestätigt wird, dann gilt sie als sicher, an derselben Stelle, mit eigenem Beleg „geprüft“
     confirmPlacement(store, video.id, before.startMs!);
     const after = row(session.id, video.id);
     expect(after.status).toBe("ok");
@@ -119,9 +123,11 @@ describe("Lage prüfen", () => {
     const check = after.evidence[0]!;
     expect(check).toMatchObject({ kind: "checked", chosen: true, own: true });
 
+    // Wenn: die Bestätigung entfernt wird, dann ist sie wieder zu prüfen
     removeEvidence(store, check.id);
     expect(row(session.id, video.id).status).toBe("check");
 
+    // Wenn: nach erneuter Bestätigung eine Zeit von Hand kommt, dann ersetzt sie die Bestätigung
     confirmPlacement(store, video.id, before.startMs!);
     addTimeEvidence(store, {
       sourceId: video.id,
@@ -146,6 +152,7 @@ describe("Lage prüfen", () => {
 describe("Einsatzdatum ändern", () => {
   it("geprüfte Lage aus Metadaten bleibt auf dem Tag der Datei, Prüfung einer Handeingabe wandert mit", () => {
     const { session, video, photo } = seed();
+    // Angenommen: das Video ist nach Metadaten bestätigt, das Foto nach einer Zeit von Hand
     const before = row(session.id, video.id);
     confirmPlacement(store, video.id, before.startMs!);
     addTimeEvidence(store, {
@@ -159,8 +166,10 @@ describe("Einsatzdatum ändern", () => {
     const photoBefore = row(session.id, photo.id);
     confirmPlacement(store, photo.id, photoBefore.startMs!);
 
+    // Wenn: das Einsatzdatum einen Tag später gesetzt wird
     updateSessionDetails(store, session.id, { date: "2026-09-15" });
 
+    // Dann: bleibt das Video auf dem Tag seiner Datei, das Foto wandert mit
     const videoAfter = row(session.id, video.id);
     expect(videoAfter.startMs).toBe(before.startMs);
     expect(videoAfter.evidence.find((e) => e.chosen)?.kind).toBe("checked");
@@ -169,21 +178,31 @@ describe("Einsatzdatum ändern", () => {
 });
 
 describe("Zeiten von Hand", () => {
-  it("Stellen in Aufnahmen lesen", () => {
-    expect(parseMediaPos("")).toBe(0);
-    expect(parseMediaPos("3:20")).toBe(200_000);
-    expect(parseMediaPos("1:03:20")).toBe(3_800_000);
-    expect(parseMediaPos("12,5")).toBe(12_500);
-    expect(parseMediaPos("320")).toBe(200_000);
-    expect(parseMediaPos("10320")).toBe(3_800_000);
-    expect(parseMediaPos("45")).toBe(45_000);
-    expect(() => parseMediaPos("390")).toThrow(/Sekunden/);
-    expect(() => parseMediaPos("drei")).toThrow();
+  it.each`
+    eingabe      | ms           | fall
+    ${""}        | ${0}         | ${"leer ist der Anfang"}
+    ${"3:20"}    | ${200_000}   | ${"Minuten und Sekunden"}
+    ${"1:03:20"} | ${3_800_000} | ${"Stunden"}
+    ${"12,5"}    | ${12_500}    | ${"Sekunden mit Komma"}
+    ${"320"}     | ${200_000}   | ${"Ziffern ohne Doppelpunkt"}
+    ${"10320"}   | ${3_800_000} | ${"Ziffern mit Stunden"}
+    ${"45"}      | ${45_000}    | ${"nur Sekunden"}
+  `("Stelle „$eingabe“ in einer Aufnahme ist $ms ms: $fall", ({ eingabe, ms }) => {
+    expect(parseMediaPos(eingabe)).toBe(ms);
+  });
+
+  it.each`
+    eingabe   | fehler          | fall
+    ${"390"}  | ${/Sekunden/}   | ${"90 Sekunden gibt es nicht"}
+    ${"drei"} | ${/./}          | ${"Wörter"}
+  `("Stelle „$eingabe“ wird abgelehnt: $fall", ({ eingabe, fehler }) => {
+    expect(() => parseMediaPos(eingabe)).toThrow(fehler);
   });
 
   it("Foto ohne Zeit bekommt eine Uhrzeit von Hand", () => {
     const { session, photo } = seed();
     expect(row(session.id, photo.id).status).toBe("unplaced");
+    // Wenn: das Foto ohne Zeit eine ungefähre Uhrzeit von Hand bekommt
     addTimeEvidence(store, {
       sourceId: photo.id,
       kind: "manual",
@@ -192,6 +211,7 @@ describe("Zeiten von Hand", () => {
       precision: "approx",
       note: "",
     });
+    // Dann: liegt es dort, auf die Minute genau
     const r = row(session.id, photo.id);
     expect(formatClock(r.startMs!)).toBe("10:40:00");
     expect(r.evidence[0]).toMatchObject({ kind: "manual", own: true, chosen: true, uncertaintyMs: 60_000 });
@@ -199,7 +219,7 @@ describe("Zeiten von Hand", () => {
 
   it("angesagte Uhrzeit im Video gleicht die Kamera ab", () => {
     const { session, video, cam } = seed();
-    // Bei 0:20 sagt jemand „zehn Uhr sechzehn und zwanzig Sekunden“; die Kamera zeigt dort 10:19:07.
+    // Wenn: bei 0:20 jemand „zehn Uhr sechzehn und zwanzig Sekunden“ sagt (die Kamera zeigt dort 10:19:07)
     addTimeEvidence(store, {
       sourceId: video.id,
       kind: "spoken",
@@ -208,6 +228,7 @@ describe("Zeiten von Hand", () => {
       precision: "exact",
       note: "",
     });
+    // Dann: weicht die Kamera um 2:47 ab, und das Video beginnt um 10:16
     const view = buildSessionView(store, session.id);
     const d = view.devices.find((x) => x.id === cam.id)!;
     expect(d.offsetBasis).toBe("spoken");
@@ -217,6 +238,7 @@ describe("Zeiten von Hand", () => {
 
   it("Zeit von Hand in einem Clip richtet die Uhr des Geräts, die übrigen Clips folgen", () => {
     const { session, video, cam } = seed();
+    // Angenommen: ein zweiter Clip derselben Kamera
     const second = store.addSource({
       sessionId: session.id,
       originalPath: "/x",
@@ -236,11 +258,12 @@ describe("Zeiten von Hand", () => {
       uncertaintyMs: 1000,
       detail: "Metadaten",
     });
-    // Ohne die Option gilt die Angabe nur für den einen Clip.
+    // Wenn: eine Zeit von Hand ohne Geräteabgleich eingetragen wird, dann gilt sie nur für den einen Clip
     const t = { clock: "10:16:20", precision: "exact" as const, note: "", atMedia: "0:20", kind: "manual" as const };
     addTimeEvidence(store, { ...t, sourceId: video.id });
     expect(buildSessionView(store, session.id).devices.find((d) => d.id === cam.id)!.offsetMs).toBeNull();
-    // Mit der Option wird aus der Angabe die Abweichung der Kamera (Uhr zeigte 10:19:07, echt 10:16:20).
+    // Wenn: sie mit Geräteabgleich eingetragen wird, dann wird daraus die Abweichung der Kamera
+    // (Uhr zeigte 10:19:07, echt 10:16:20), und der zweite Clip rückt mit
     addTimeEvidence(store, { ...t, sourceId: video.id, syncDevice: true });
     const view = buildSessionView(store, session.id);
     const d = view.devices.find((x) => x.id === cam.id)!;
@@ -251,6 +274,7 @@ describe("Zeiten von Hand", () => {
   it("Geräteabgleich per Hand nur mit Geräteuhr und ohne Referenzgerät", () => {
     const { audio, photo } = seed();
     const t = { clock: "10:00", precision: "exact" as const, note: "", atMedia: "", kind: "manual" as const };
+    // Wenn: der Abgleich am Referenzgerät oder an einer Quelle ohne Geräteuhr versucht wird, dann lehnt die App ab
     expect(() => addTimeEvidence(store, { ...t, sourceId: audio.id, syncDevice: true })).toThrow(/Referenzuhr/);
     expect(() => addTimeEvidence(store, { ...t, sourceId: photo.id, syncDevice: true })).toThrow(/Geräteuhr/);
   });
@@ -258,6 +282,7 @@ describe("Zeiten von Hand", () => {
   it("angesagte Zeit nur in Audio und Video, Stelle nicht hinter dem Ende", () => {
     const { photo, video } = seed();
     const t = { clock: "10:00", precision: "exact" as const, note: "" };
+    // Wenn: ein Foto eine angesagte Zeit, eine Stelle hinter dem Ende oder 25 Uhr bekommen soll, dann lehnt die App ab
     expect(() => addTimeEvidence(store, { ...t, sourceId: photo.id, kind: "spoken", atMedia: "" })).toThrow(
       /Audio und Video/,
     );
@@ -270,15 +295,19 @@ describe("Zeiten von Hand", () => {
   it("gelesene Belege lassen sich abschalten, aber nicht löschen", () => {
     const { session, video } = seed();
     const ev = row(session.id, video.id).evidence[0]!;
+    // Wenn: der Beleg aus den Metadaten gelöscht werden soll, dann lehnt die App ab
     expect(() => removeEvidence(store, ev.id)).toThrow(/abschalten/);
+    // Wenn: er abgeschaltet wird, dann hat das Video keine Lage mehr
     toggleEvidence(store, ev.id, false);
     expect(row(session.id, video.id).status).toBe("unplaced");
+    // Wenn: er wieder eingeschaltet wird, dann liegt es wieder
     toggleEvidence(store, ev.id, true);
     expect(row(session.id, video.id).startMs).not.toBeNull();
   });
 
   it("eigene Belege lassen sich löschen", () => {
     const { session, photo } = seed();
+    // Angenommen: das Foto hat eine grobe Zeit von Hand mit Notiz
     addTimeEvidence(store, {
       sourceId: photo.id,
       kind: "manual",
@@ -289,12 +318,14 @@ describe("Zeiten von Hand", () => {
     });
     const ev = row(session.id, photo.id).evidence[0]!;
     expect(ev.detail).toBe("Von Hand: geschätzt");
+    // Wenn: sie gelöscht wird, dann hat das Foto keine Lage mehr
     removeEvidence(store, ev.id);
     expect(row(session.id, photo.id).status).toBe("unplaced");
   });
 
   it("Anker von Hand verbindet Rekorder und Kamera", () => {
     const { session, audio, video, cam } = seed();
+    // Wenn: 1:20 im Ton und 0:20 im Video als derselbe Moment gesetzt werden
     addManualAnchor(store, {
       aSourceId: audio.id,
       aAt: "1:20",
@@ -303,6 +334,7 @@ describe("Zeiten von Hand", () => {
       precision: "exact",
       note: "Tür knallt",
     });
+    // Dann: weicht die Kamera um 2:47 ab, und der Anker ist beschrieben
     const view = buildSessionView(store, session.id);
     expect(view.devices.find((d) => d.id === cam.id)!.offsetMs).toBe(167_000);
     expect(view.anchors).toEqual([
@@ -313,6 +345,7 @@ describe("Zeiten von Hand", () => {
         conflictMs: null,
       }),
     ]);
+    // Wenn: ein Anker zweimal dieselbe Quelle verbindet, dann lehnt die App ab
     expect(() =>
       addManualAnchor(store, {
         aSourceId: audio.id,
@@ -329,6 +362,7 @@ describe("Zeiten von Hand", () => {
 describe("Feinabgleich", () => {
   it("ersetzt einen Anker durch einen fein justierten mit Millisekunden", () => {
     const { session, cam, audio, video } = seed();
+    // Angenommen: ein Anker von Hand auf ganze Sekunden
     addManualAnchor(store, {
       aSourceId: audio.id,
       aAt: "1:20",
@@ -339,6 +373,7 @@ describe("Feinabgleich", () => {
     });
     const old = buildSessionView(store, session.id).anchors[0]!;
     expect(old.a).toEqual({ sourceId: audio.id, atMs: 80_000 });
+    // Wenn: er fein justiert auf Millisekunden ersetzt wird
     replaceAnchor(store, old.id, {
       aSourceId: audio.id,
       aAt: "80.000",
@@ -348,6 +383,7 @@ describe("Feinabgleich", () => {
       uncertaintyMs: 20,
       note: "Feinabgleich",
     });
+    // Dann: bleibt es ein Anker, mit Millisekunden in Lage und Abweichung
     const view = buildSessionView(store, session.id);
     expect(view.anchors).toHaveLength(1);
     expect(view.anchors[0]!.b.atMs).toBe(20_347);
@@ -357,6 +393,7 @@ describe("Feinabgleich", () => {
 
   it("ein justierter Vorschlag erledigt die übrigen Vorschläge des Geräts", () => {
     const { session, audio, video } = seed();
+    // Angenommen: zwei Klatscher-Vorschläge zwischen Ton und Video
     store.replaceProposedAnchors(session.id, [
       {
         sessionId: session.id,
@@ -376,6 +413,7 @@ describe("Feinabgleich", () => {
       },
     ]);
     const [p] = buildSessionView(store, session.id).proposals;
+    // Wenn: der erste fein justiert übernommen wird
     replaceAnchor(store, p!.anchorId, {
       aSourceId: audio.id,
       aAt: "80",
@@ -385,6 +423,7 @@ describe("Feinabgleich", () => {
       uncertaintyMs: 20,
       note: "",
     });
+    // Dann: ist auch der zweite erledigt
     const view = buildSessionView(store, session.id);
     expect(view.proposals).toHaveLength(0);
     expect(view.anchors).toHaveLength(1);
@@ -394,8 +433,10 @@ describe("Feinabgleich", () => {
 describe("Lautstärke", () => {
   it("speichert die Einstellung und zeigt die geltende Verstärkung", () => {
     const { session, audio, photo } = seed();
+    // Angenommen: der Ton steht auf automatisch, ein Foto hat keine Lautstärke
     expect(row(session.id, audio.id).level).toMatchObject({ mode: "auto", gainDb: 0, measured: false, compress: true });
     expect(row(session.id, photo.id).level).toBeNull();
+    // Wenn: von Hand 55 dB eingestellt werden, dann gelten höchstens 40
     setLevel(store, audio.id, { mode: "manual", manualGainDb: 55, compress: false });
     expect(row(session.id, audio.id).level).toMatchObject({
       mode: "manual",
@@ -403,12 +444,13 @@ describe("Lautstärke", () => {
       gainDb: 40,
       compress: false,
     });
+    // Wenn: ein Foto eine Lautstärke bekommen soll, dann lehnt die App ab
     expect(() => setLevel(store, photo.id, { mode: "auto", manualGainDb: 0, compress: true })).toThrow(/keinen Ton/);
   });
 
   it("automatisch: nach dem gemessenen Sprachpegel, alte Analysen werden nachgerechnet", () => {
     const { session, audio } = seed();
-    // Analyse aus einer älteren Version: ohne Pegel, Hüllkurve −38 dBFS (1 Byte je Wert).
+    // Angenommen: eine Analyse aus einer älteren Version, ohne Pegel, Hüllkurve −38 dBFS (1 Byte je Wert)
     const byte = Math.round(((-38 + 100) / 100) * 250);
     store.saveAudioAnalysis({
       sourceId: audio.id,
@@ -420,6 +462,7 @@ describe("Lautstärke", () => {
       version: 1,
       analyzedAt: new Date().toISOString(),
     });
+    // Dann: gilt der Pegel als gemessen, und die Verstärkung bringt ihn auf −20 dB
     const level = row(session.id, audio.id).level!;
     expect(level.measured).toBe(true);
     expect(level.measuredDb).toBeCloseTo(-38, 0);
@@ -470,15 +513,18 @@ describe("Widerspruch entscheiden", () => {
   it("verwendeten Beleg bestätigen: sicher, nachvollziehbar, auch nach dem Wiederöffnen", () => {
     const { session, mk } = conflicted();
     const { src, exif } = mk(0);
+    // Angenommen: ein Foto, dessen EXIF-Zeit und Dateiname sich stark widersprechen
     const before = row(session.id, src.id);
     expect(before.status).toBe("check");
     expect(before.conflict).toMatchObject({ state: "open", severity: "strong" });
+    // Wenn: die EXIF-Zeit mit Begründung bestätigt wird
     decidePlacement(store, {
       sourceId: src.id,
       evidenceId: exif.id,
       expectedStartMs: before.startMs!,
       reason: "umbenannt",
     });
+    // Dann: ist die Lage sicher und die Entscheidung samt Begründung nachzulesen
     const after = row(session.id, src.id);
     expect(after.status).toBe("ok");
     expect(after.conflict.state).toBe("decided");
@@ -487,6 +533,7 @@ describe("Widerspruch entscheiden", () => {
       "Entschieden: Metadaten gelten (10:32:07). Dateiname weicht ab (+13:23). Begründung: umbenannt",
     );
 
+    // Wenn: das Projekt neu geöffnet wird, dann gilt die Entscheidung weiter
     const path = store.path;
     store.close();
     store = ProjectStore.open(path);
@@ -499,7 +546,9 @@ describe("Widerspruch entscheiden", () => {
     const { session, mk } = conflicted();
     const { src, name } = mk(0);
     const before = row(session.id, src.id);
+    // Wenn: im Widerspruch der Dateiname gewählt wird
     decidePlacement(store, { sourceId: src.id, evidenceId: name.id, expectedStartMs: before.startMs!, reason: "" });
+    // Dann: rückt das Foto auf 10:45:30, nur minutengenau, und gilt als entschieden
     const after = row(session.id, src.id);
     expect(formatClock(after.startMs!)).toBe("10:45:30");
     expect(after.uncertaintyMs).toBe(30_000);
@@ -510,12 +559,14 @@ describe("Widerspruch entscheiden", () => {
   it("neuer widersprechender Beleg: Entscheidung neu prüfen", () => {
     const { session, mk } = conflicted();
     const { src, exif } = mk(0);
+    // Angenommen: der Widerspruch ist zugunsten der EXIF-Zeit entschieden
     decidePlacement(store, {
       sourceId: src.id,
       evidenceId: exif.id,
       expectedStartMs: row(session.id, src.id).startMs!,
       reason: "",
     });
+    // Wenn: eine angesagte Zeit dazukommt, die wieder widerspricht
     store.addEvidence({
       sourceId: src.id,
       kind: "spoken",
@@ -524,6 +575,7 @@ describe("Widerspruch entscheiden", () => {
       uncertaintyMs: 1000,
       detail: "angesagt",
     });
+    // Dann: ist die Entscheidung neu zu prüfen
     const r = row(session.id, src.id);
     expect(r.status).toBe("check");
     expect(r.conflict.state).toBe("stale");
@@ -534,6 +586,7 @@ describe("Widerspruch entscheiden", () => {
     const { session, mk } = conflicted();
     const { src, exif } = mk(0);
     const start = row(session.id, src.id).startMs!;
+    // Wenn: die Lage sich inzwischen verschoben hat, dann lehnt die App die Entscheidung ab
     expect(() =>
       decidePlacement(store, { sourceId: src.id, evidenceId: exif.id, expectedStartMs: start + 1, reason: "" }),
     ).toThrow(/geändert/);
@@ -542,10 +595,13 @@ describe("Widerspruch entscheiden", () => {
 
   it("gleichartige Widersprüche eines Geräts bilden eine Gruppe und lassen sich auf einmal entscheiden", () => {
     const { session, mk } = conflicted();
+    // Angenommen: drei Fotos desselben Geräts mit demselben Widerspruch
     const ids = [0, 1, 2].map((n) => mk(n).src.id);
+    // Dann: bilden sie eine Gruppe
     const view = buildSessionView(store, session.id);
     expect(view.conflictGroups).toHaveLength(1);
     expect(view.conflictGroups[0]).toMatchObject({ usedKind: "metadata", otherKind: "filename", sourceIds: ids });
+    // Wenn: die Gruppe auf einmal entschieden wird, dann sind alle drei entschieden
     decideMany(store, { sourceIds: ids, kind: "metadata", reason: "Kamera benennt beim Kopieren um" });
     const after = buildSessionView(store, session.id);
     expect(after.conflictGroups).toHaveLength(0);
@@ -554,22 +610,29 @@ describe("Widerspruch entscheiden", () => {
 });
 
 describe("Uhrzeiten prüfen", () => {
-  it("zerlegt gültige Eingaben", () => {
-    expect(parseClock("9:05")).toEqual({ h: 9, mi: 5, se: 0 });
-    expect(parseClock(" 23.59.59 ")).toEqual({ h: 23, mi: 59, se: 59 });
-    expect(parseClock("00:00")).toEqual({ h: 0, mi: 0, se: 0 });
+  it.each`
+    eingabe         | teile
+    ${"9:05"}       | ${{ h: 9, mi: 5, se: 0 }}
+    ${" 23.59.59 "} | ${{ h: 23, mi: 59, se: 59 }}
+    ${"00:00"}      | ${{ h: 0, mi: 0, se: 0 }}
+  `("zerlegt „$eingabe“", ({ eingabe, teile }) => {
+    expect(parseClock(eingabe)).toEqual(teile);
   });
 
-  it("weist Werte außerhalb des Bereichs mit verständlichem Fehler ab", () => {
-    expect(() => parseClock("99:99")).toThrow("„99:99“ ist keine gültige Uhrzeit (hh:mm oder hh:mm:ss).");
-    expect(() => parseClock("24:00")).toThrow("keine gültige Uhrzeit");
-    expect(() => parseClock("12:60")).toThrow("keine gültige Uhrzeit");
-    expect(() => parseClock("12:30:60")).toThrow("keine gültige Uhrzeit");
-    expect(() => parseClock("abc")).toThrow("„abc“ ist keine gültige Uhrzeit");
+  it.each`
+    eingabe       | meldung
+    ${"99:99"}    | ${"„99:99“ ist keine gültige Uhrzeit (hh:mm oder hh:mm:ss)."}
+    ${"24:00"}    | ${"keine gültige Uhrzeit"}
+    ${"12:60"}    | ${"keine gültige Uhrzeit"}
+    ${"12:30:60"} | ${"keine gültige Uhrzeit"}
+    ${"abc"}      | ${"„abc“ ist keine gültige Uhrzeit"}
+  `("weist „$eingabe“ mit verständlichem Fehler ab", ({ eingabe, meldung }) => {
+    expect(() => parseClock(eingabe)).toThrow(meldung);
   });
 
   it("erlaubt für Randnotizen keine Sekunden", () => {
     expect(parseClock("10:15", { seconds: false })).toEqual({ h: 10, mi: 15, se: 0 });
+    // Wenn: eine Randnotiz Sekunden hat, dann lehnt die App mit Hinweis auf hh:mm ab
     expect(() => parseClock("10:15:30", { seconds: false })).toThrow("„10:15:30“ ist keine gültige Uhrzeit (hh:mm).");
     expect(() => parseClockOnDate("2024-05-01", "99:99", { seconds: false })).toThrow(
       "„99:99“ ist keine gültige Uhrzeit (hh:mm).",
@@ -580,6 +643,7 @@ describe("Uhrzeiten prüfen", () => {
 describe("Alle eindeutigen Vorschläge übernehmen", () => {
   it("je Gerät den sichersten, ohne Fehler und als ein Verlaufsschritt", () => {
     const { session, cam, audio, video } = seed();
+    // Angenommen: zwei Vorschläge für zwei Clips derselben Kamera, einer schwach, einer stark
     const video2 = store.addSource({
       sessionId: session.id,
       deviceId: cam.id,
@@ -604,20 +668,24 @@ describe("Alle eindeutigen Vorschläge übernehmen", () => {
     ]);
     const before = store.history.state().serial;
 
+    // Wenn: alle übernommen werden, dazu einer, den es nicht gibt
     const n = store.history.record("2 Vorschläge übernommen", () =>
       confirmAnchors(store, session.id, [weak!.id, strong!.id, "gibt-es-nicht"]),
     );
 
+    // Dann: gilt nur der starke, in einem Verlaufsschritt
     expect(n).toBe(1);
     const anchors = store.listAnchors(session.id);
     expect(anchors.map((a) => [a.id, a.proposed])).toEqual([[strong!.id, false]]);
     expect(store.history.state().serial).toBe(before + 1);
+    // Wenn: rückgängig, dann sind beide wieder Vorschläge
     expect(store.history.undo()).toBe("2 Vorschläge übernommen");
     expect(store.listAnchors(session.id).filter((a) => a.proposed)).toHaveLength(2);
   });
 
   it("wählt je Gerät die höchste Sicherheit, Vorschläge ohne Gerät zählen einzeln", () => {
     expect(
+      // Angenommen: zwei Vorschläge der Kamera, einer vom Handy ohne Sicherheit, zwei ohne Gerät
       pickBestPerDevice([
         { id: "a", deviceId: "cam", confidence: 0.6 },
         { id: "b", deviceId: "cam", confidence: 0.8 },
@@ -633,14 +701,15 @@ describe("Einsatz über Mitternacht (Issue #152)", () => {
   const d = (day: number, h: number, m: number, sec = 0) => Date.UTC(2026, 8, day, h, m, sec);
 
   it("ordnet Uhrzeiten ohne Datum dem Tag zu, der zu den Aufnahmen passt", () => {
+    // Wenn: die Aufnahmen über Mitternacht gehen, dann gilt der Tag, der zu ihnen passt
     const night = { fromMs: d(14, 23, 55), toMs: d(15, 0, 5) };
     expect(parseClockNear("2026-09-14", "00:02", night)).toBe(d(15, 0, 2));
     expect(parseClockNear("2026-09-14", "23:58", night)).toBe(d(14, 23, 58));
-    // Stelle in einer Aufnahme kurz nach Mitternacht, angesagt wird noch der alte Tag.
+    // Wenn: an einer Stelle kurz nach Mitternacht noch der alte Tag angesagt wird, dann gilt der alte Tag
     const point = { fromMs: d(15, 0, 0, 5), toMs: d(15, 0, 0, 5) };
     expect(parseClockNear("2026-09-14", "23:59:50", point)).toBe(d(14, 23, 59, 50));
     expect(parseClockNear("2026-09-14", "00:03:10", point)).toBe(d(15, 0, 3, 10));
-    // Ein Tag ohne Mitternacht bleibt beim Einsatztag, auch bei Zeiten weit daneben.
+    // Wenn: die Aufnahmen nicht über Mitternacht gehen, dann bleibt es beim Einsatztag, auch weit daneben
     const day = { fromMs: d(14, 8, 0), toMs: d(14, 9, 0) };
     expect(parseClockNear("2026-09-14", "21:00", day)).toBe(d(14, 21, 0));
     expect(parseClockNear("2026-09-14", "00:30", day)).toBe(d(14, 0, 30));
@@ -648,6 +717,7 @@ describe("Einsatz über Mitternacht (Issue #152)", () => {
   });
 
   it("Randnotiz und angesagte Uhrzeit nach Mitternacht landen am Folgetag", () => {
+    // Angenommen: ein Einsatz am 14.9., Ton ab 23:55, Video ab 0:03 des Folgetags, eine Tagebuchseite
     const session = store.addSession({ title: "Nacht", date: "2026-09-14", place: "", extra: {} });
     const rec = store.addDevice({ sessionId: session.id, label: "Rekorder" });
     const cam = store.addDevice({ sessionId: session.id, label: "Kamera" });
@@ -680,10 +750,12 @@ describe("Einsatz über Mitternacht (Issue #152)", () => {
     store.addEvidence({ ...ev, sourceId: audio.id, localMs: d(14, 23, 55) });
     store.addEvidence({ ...ev, sourceId: video.id, localMs: d(15, 0, 3) });
 
+    // Wenn: eine Randnotiz um 00:02 notiert wird, dann am Folgetag
     const entry = createEntry(store, page.id, { x: 0, y: 0, w: 1, h: 1 }).entry.id;
     patchEntry(store, entry, { notedAt: "00:02" });
     expect(store.getDiaryEntry(entry).notedAtMs).toBe(d(15, 0, 2));
 
+    // Wenn: im Video 00:03:10 angesagt wird, dann ebenso, ohne Widerspruch
     addTimeEvidence(store, {
       sourceId: video.id,
       kind: "spoken",

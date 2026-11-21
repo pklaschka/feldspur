@@ -27,6 +27,7 @@ const view = {
 
 describe("SearchDialog", () => {
   it("meldet den gewählten Treffer per aria-activedescendant und nennt die Trefferzahl", () => {
+    // Angenommen: eine Aufnahme mit 70 Zeilen, die Suche ist offen
     const root = createRoot(document.createElement("div"));
     act(() => root.render(<SearchDialog view={view} open onOpenChange={() => {}} onPick={() => {}} />));
     const input = document.querySelector<HTMLInputElement>("input[role=combobox]")!;
@@ -35,12 +36,15 @@ describe("SearchDialog", () => {
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, v);
         input.dispatchEvent(new Event("input", { bubbles: true }));
       });
+    // Wenn: „zeile“ gesucht wird
     type("zeile");
+    // Dann: zeigt die Liste die ersten 60 und der erste Treffer ist gewählt
     const options = () => [...document.querySelectorAll<HTMLElement>("[role=option]")];
     expect(options()).toHaveLength(60);
     expect(input.getAttribute("aria-expanded")).toBe("true");
     expect(input.getAttribute("aria-controls")).toBe(document.querySelector("[role=listbox]")!.id);
     expect(input.getAttribute("aria-activedescendant")).toBe(options()[0]!.id);
+    // Wenn: Pfeil nach unten gedrückt wird, dann ist der zweite gewählt und die Zahl wird genannt
     act(() => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     });
@@ -49,8 +53,10 @@ describe("SearchDialog", () => {
     expect(document.querySelector("[role=status]")!.textContent).toBe(
       "Erste 60 von 70 Treffern. Suche eingrenzen, z. B. mit einer Uhrzeit.",
     );
+    // Wenn: die Suche eingegrenzt wird, dann bleibt ein Treffer
     type("zeile 30");
     expect(document.querySelector("[role=status]")!.textContent).toBe("1 Treffer.");
+    // Wenn: nichts passt, dann ist nichts gewählt und die Liste zu
     type("gibtsnicht");
     expect(input.getAttribute("aria-activedescendant")).toBeNull();
     expect(input.getAttribute("aria-expanded")).toBe("false");
