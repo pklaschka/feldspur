@@ -70,7 +70,11 @@ try {
   const shot = async (suffix: string) => {
     if (!process.env.FELDSPUR_SCREENSHOT) return;
     await page.waitForTimeout(150);
-    await page.screenshot({ path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, `${suffix}.png`) });
+    // Hinweise wie „Rückgängig gemacht: …“ gehören nicht ins Handbuchbild.
+    await page.screenshot({
+      path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, `${suffix}.png`),
+      style: "[data-testid='undo-toast'] { visibility: hidden !important; }",
+    });
   };
 
   const sessionId = await ablauf("Einen Einsatz anlegen und Dateien einsammeln", async () => {
@@ -477,10 +481,16 @@ try {
     await shot("-wiedergabe");
     await page.getByRole("button", { name: "Abbrechen" }).click();
     await page.getByRole("button", { name: "Schließen" }).click();
-    await page.mouse.move(xAt(10 * 60 + 16), box.y + 30 + 40 + 26);
+    // Fürs Bild wieder nach oben, damit die Überschrift zu sehen ist (die Klicks oben scrollen die Ansicht).
+    await page
+      .locator("canvas")
+      .evaluate((c) => c.closest(".overflow-auto")?.scrollTo({ top: 0, behavior: "instant" }));
+    await page.waitForTimeout(200);
+    const top = (await page.locator("canvas").boundingBox())!;
+    await page.mouse.move(xAt(10 * 60 + 16), top.y + 30 + 40 + 26);
     await shot("-durchsehen");
     // Die Karte zur untersten Spur darf nicht am Rand der Zeitachse abgeschnitten werden.
-    await page.mouse.move(xAt(10 * 60 + 11.5), box.y + 30 + 40 + (tracks.length - 0.5) * trackH);
+    await page.mouse.move(xAt(10 * 60 + 11.5), top.y + 30 + 40 + (tracks.length - 0.5) * trackH);
     const card = page.getByTestId("timeline-hover");
     await card.waitFor();
     const cardBox = (await card.boundingBox())!;
@@ -490,7 +500,7 @@ try {
       cardBox.y >= 0 &&
       cardBox.x + cardBox.width <= view.width &&
       cardBox.y + cardBox.height <= view.height;
-    const outsideAxis = cardBox.y + cardBox.height > box.y + box.height;
+    const outsideAxis = cardBox.y + cardBox.height > top.y + top.height;
     console.log(
       `Zeitachsen-Karte: ${inWindow ? "ganz im Fenster" : "abgeschnitten"}${outsideAxis ? ", ragt über die Achse hinaus" : ""}`,
     );
@@ -1152,7 +1162,9 @@ try {
     if (await viewer.locator("#ton-btn").isHidden()) throw new Error("Viewer: Knopf für die Tonspuren fehlt");
     if (viewerErrors.length) throw new Error(`Viewer: ${viewerErrors.join("; ")}`);
     if (process.env.FELDSPUR_SCREENSHOT) {
-      await viewer.waitForTimeout(500);
+      // Fürs Bild eine Zeile, zu der auch Video läuft.
+      await lines.filter({ hasText: "Das hört man auch im Video" }).click();
+      await viewer.waitForTimeout(800);
       await viewer.screenshot({ path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, "-viewer.png") });
     }
     await viewer.close();
