@@ -138,14 +138,28 @@ Ausgaben:
 
 : Zwei Montage-IDs vergleichen {#tbl-montage-id-lesen}
 
-| Die Montage ändert sich, wenn&nbsp;… | Nur der Text ändert sich, wenn&nbsp;… | Nichts ändert sich, wenn&nbsp;… |
-|:---|:---|:---|
-| eine Quelle dazukommt, wegfällt oder Kontext wird | du mitschreibst oder eine Mitschrift korrigierst | du ohne Änderung noch einmal ausgibst |
-| eine Quelle auf der Zeitachse anders liegt (neuer Abgleich, andere Uhrkorrektur, Uhrzeit von Hand) | du Tagebuchtext abtippst oder änderst | du mit anderen Optionen für Ton, Viewer oder Schnittliste ausgibst |
-| eine Tagebuchseite ihre erste oder eine frühere Randnotiz bekommt | du Einsatzdaten, weitere Angaben, Personen oder Kurzzeichen änderst | du Lautstärken änderst |
-| du Episoden ein- oder ausschaltest oder anders ausgibst (in Echtzeit, nach Episoden) | du Kontext ergänzt, änderst oder umsortierst | du das Projekt verschiebst, sicherst oder wiederherstellst |
-| sich die Länge der Montage ändert | | |
-| dieselben Dateien in einem neuen Einsatz oder Projekt liegen | | |
++-------------------------+--------------------------------------------------------------------------------------+
+| Was sich ändert         | Wann                                                                                 |
++:========================+:=====================================================================================+
+| **Montage**             | - eine Quelle kommt dazu, fällt weg oder wird Kontext                                |
+| (Blöcke 1 und 2)        | - eine Quelle liegt auf der Zeitachse anders (neuer Abgleich, andere Uhrkorrektur,   |
+|                         |   Uhrzeit von Hand)                                                                  |
+|                         | - eine Tagebuchseite bekommt ihre erste oder eine frühere Randnotiz                  |
+|                         | - du schaltest Episoden ein oder aus oder gibst anders aus (in Echtzeit, nach        |
+|                         |   Episoden)                                                                          |
+|                         | - die Länge der Montage ändert sich                                                  |
+|                         | - dieselben Dateien liegen in einem neuen Einsatz oder Projekt                       |
++-------------------------+--------------------------------------------------------------------------------------+
+| **nur der Text**        | - du schreibst mit oder korrigierst eine Mitschrift                                  |
+| (Block 3)               | - du tippst Tagebuchtext ab oder änderst ihn                                         |
+|                         | - du änderst Einsatzdaten, weitere Angaben, Personen oder Kurzzeichen                |
+|                         | - du ergänzt, änderst oder sortierst Kontext um                                      |
++-------------------------+--------------------------------------------------------------------------------------+
+| **nichts**              | - du gibst ohne Änderung noch einmal aus                                             |
+|                         | - du gibst mit anderen Optionen für Ton, Viewer oder Schnittliste aus                |
+|                         | - du änderst Lautstärken                                                             |
+|                         | - du verschiebst, sicherst oder stellst das Projekt wieder her                       |
++-------------------------+--------------------------------------------------------------------------------------+
 
 : Wovon die Montage-ID abhängt {#tbl-montage-id}
 
