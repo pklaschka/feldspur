@@ -8,3 +8,7 @@ format:
   typst:
     output-file: Feldspur-Handbuch-Druck.pdf
     beschnitt: 3mm
+    # Impressum für verteilte Druckexemplare (Art. 7 BayPrG): Name und Anschrift der Herausgeberin und der Druckerei.
+    # Erscheint auf der Rückseite der Titelseite, sobald gesetzt.
+    # herausgabe: "Name, Straße Nr., PLZ Ort"
+    # druck: "Firma, Ort"
