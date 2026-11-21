@@ -33,6 +33,12 @@
 #show raw.where(block: true): it => block(fill: salbei, inset: 8pt, radius: 3pt, width: 100%, it)
 #show outline.entry.where(level: 1): set text(fill: umbra, weight: "semibold")
 #show figure.caption: set text(font: sans, size: 9pt, fill: tinte-2)
+// Weniger Weißraum (Issue #176): Bildschirmfotos dürfen an den oberen oder unteren Rand der Seite (oder der
+// nächsten) rücken, statt mit ihrer ganzen Höhe auf die nächste Seite zu springen und eine halbe Seite leer zu
+// lassen. Der Text läuft dazwischen weiter; im Text stehen Verweise wie „Abbildung 3“.
+#show figure.where(kind: "quarto-float-fig"): set figure(placement: auto)
+// Tabellen mit Beschriftung dürfen wie Tabellen ohne über den Seitenrand umbrechen; der Kopf wiederholt sich.
+#show figure.where(kind: "quarto-float-tbl"): set block(breakable: true)
 #show heading.where(level: 2): set block(above: 1.5em, below: 0.65em)
 // Begriff und Erklärung im Glossar nie getrennt: Begriff nie allein unten auf der Seite. Gleiche Darstellung
 // wie Quartos Vorgabe (definitions.typ), aber jeder Eintrag als ein Block, der nicht umbrochen wird.
