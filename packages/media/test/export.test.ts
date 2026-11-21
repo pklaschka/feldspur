@@ -261,10 +261,11 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   // So steht es im Handbuch (Abschnitt „Montage-ID“): Die ID hängt am Zeitgefüge, nicht am Text.
   it("Montage-ID: gleich bei Textänderungen, neu bei anderer Lage oder anderen Quellen", () => {
     const id = () => buildSessionTranscript(store, sessionId).header.montageId;
+    // Angenommen: die ID des Einsatzes, sie bleibt bei erneuter Berechnung gleich
     const before = id();
     expect(id()).toBe(before);
 
-    // Mitschrift, Tagebuchtext und Angaben zum Einsatz ändern die ID nicht.
+    // Wenn: Mitschrift, Tagebuchtext und Angaben zum Einsatz geändert werden, dann bleibt die ID
     const line = store.addTranscriptLine({ sourceId: src("ZOOM0001.m4a").id, atMs: 12_000, text: "Seit sieben." });
     const entry = store.listDiaryEntries(sessionId)[0]!;
     store.updateDiaryEntry(entry.id, { shortText: "Ankunft, die Stände bauen auf" });
@@ -275,7 +276,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     store.updateDiaryEntry(entry.id, { shortText: entry.shortText });
     store.updateSession(sessionId, { title: session.title, extra: session.extra });
 
-    // Ein Foto eine Sekunde später: andere Lage, andere ID. Zurückgestellt gilt wieder die alte.
+    // Wenn: ein Foto eine Sekunde später liegt, dann ist die ID neu; zurückgestellt gilt wieder die alte
     const photo = src("IMG_20260914_101630.jpg");
     const evs = store.listEvidence(sessionId).filter((e) => e.sourceId === photo.id);
     expect(evs.length).toBeGreaterThan(0);
@@ -284,7 +285,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     for (const e of evs) store.updateEvidenceTime(e.id, e.localMs);
     expect(id()).toBe(before);
 
-    // Die Art der Montage zählt ebenfalls.
+    // Wenn: nach Episoden statt in Echtzeit montiert wird, dann ist die ID ebenfalls neu
     expect(buildSessionTranscript(store, sessionId, { mode: "episodes" }).header.montageId).not.toBe(before);
   });
 });
