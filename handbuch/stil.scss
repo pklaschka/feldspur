@@ -388,8 +388,9 @@ kbd {
 // als der Fließtext, Adressen gedämpft statt in der Linkfarbe, damit nicht jeder Eintrag rot leuchtet.
 #refs {
   font-size: 0.94em;
+  hyphens: manual;
   .csl-entry {
-    margin-bottom: 0.6em;
+    margin-bottom: 0.8em;
   }
   a {
     color: inherit;

@@ -90,13 +90,16 @@
 )
 #show heading.where(level: 2): set block(above: 1.5em, below: 0.65em)
 // Literaturverzeichnis wie in Fachtexten üblich: hängender Einzug, damit die Autor*innen links eine Spalte bilden
-// und sich überfliegen lassen; Flattersatz statt Blocksatz (der riss um lange Adressen Lücken); etwas kleiner und
+// und sich überfliegen lassen; Flattersatz ohne Silbentrennung statt Blocksatz (der riss um lange Adressen Lücken); etwas kleiner und
 // enger als der Fließtext; Adressen in Tinte statt Terrakotta, damit nicht jede Zeile rot leuchtet. Klickbar bleiben sie.
 #show <refs>: set par(justify: false, hanging-indent: 1.5em, leading: 0.6em)
-#show <refs>: set text(size: 0.92em)
-#show <refs>: set block(spacing: 0.85em)
+#show <refs>: set text(size: 0.92em, hyphenate: false)
+#show <refs>: set block(spacing: 1.2em)
 #show <refs>: it => {
   show link: set text(fill: tinte-2)
+  // „Dieselben Autor*innen wie oben“ setzt der Zitierstil als drei Geviertstriche (———), die mit Lücken dazwischen
+  // ausfransen. Stattdessen eine durchgehende Linie in derselben Länge, auf Höhe der Striche.
+  show "———": box(width: 2.4em, baseline: -0.32em, line(length: 100%, stroke: 0.6pt + tinte))
   it
 }
 // Begriff und Erklärung im Glossar nie getrennt: Begriff nie allein unten auf der Seite. Gleiche Darstellung
