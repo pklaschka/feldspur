@@ -65,7 +65,7 @@ describe("Dokumentvariablen für MAXQDA", () => {
       reference: "ZOOM",
       sources: ["A-01", "V-01"],
       extra: { DOI: "10.1234/abc", Ort: "doppelt", " ": "leer" },
-      montageId: "FS-ABCD-EFGH",
+      montageId: "FS-ABCD-EFGH-JKLM",
       montageVideoId: "FS-ABCD-EFGH",
       modeLabel: "Echtzeit",
     },
@@ -102,6 +102,8 @@ describe("Dokumentvariablen für MAXQDA", () => {
       "Videolänge (Min.)": 1.5,
       DOI: "10.1234/abc",
       "Ort (Einsatz)": "doppelt",
+      // die ganze Montage-ID mit allen drei Blöcken, nicht nur die beiden aus dem Video
+      "Montage-ID": "FS-ABCD-EFGH-JKLM",
     });
     expect(head).not.toContain(" ");
   });
