@@ -70,7 +70,11 @@ try {
   const shot = async (suffix: string) => {
     if (!process.env.FELDSPUR_SCREENSHOT) return;
     await page.waitForTimeout(150);
-    await page.screenshot({ path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, `${suffix}.png`) });
+    // Hinweise wie „Rückgängig gemacht: …“ gehören nicht ins Handbuchbild.
+    await page.screenshot({
+      path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, `${suffix}.png`),
+      style: "[data-testid='undo-toast'] { visibility: hidden !important; }",
+    });
   };
 
   const sessionId = await ablauf("Einen Einsatz anlegen und Dateien einsammeln", async () => {
@@ -1152,7 +1156,9 @@ try {
     if (await viewer.locator("#ton-btn").isHidden()) throw new Error("Viewer: Knopf für die Tonspuren fehlt");
     if (viewerErrors.length) throw new Error(`Viewer: ${viewerErrors.join("; ")}`);
     if (process.env.FELDSPUR_SCREENSHOT) {
-      await viewer.waitForTimeout(500);
+      // Fürs Bild eine Zeile, zu der auch Video läuft.
+      await lines.filter({ hasText: "Das hört man auch im Video" }).click();
+      await viewer.waitForTimeout(800);
       await viewer.screenshot({ path: process.env.FELDSPUR_SCREENSHOT.replace(/\.png$/, "-viewer.png") });
     }
     await viewer.close();
