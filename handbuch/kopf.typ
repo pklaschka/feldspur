@@ -58,6 +58,13 @@
 })
 // Tastenkürzel als Tastenkappen (tasten.lua): `tasten("Strg", "+", "O")`, „+“ und „/“ stehen zwischen den Tasten.
 // Bleiben als Ganzes in einer Zeile.
+#let symbol-taste(pfad) = box(image(
+  bytes(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='2.5 2.5 19 19'><path d='" + pfad
+      + "' fill='none' stroke='" + tinte.to-hex() + "' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/></svg>",
+  ),
+  height: 0.66em,
+))
 #let taste(name) = box(
   fill: papier,
   stroke: (paint: tinte-2.transparentize(55%), thickness: 0.5pt),
@@ -65,8 +72,12 @@
   inset: (x: 0.28em),
   outset: (y: 0.2em),
   {
-    // ⌘ und ⇧ fehlen in Source Sans; die Ersatzschrift setzt sie sonst zu groß und zu fett.
-    show regex("[⌘⇧⌥]"): set text(size: 0.8em, weight: "regular")
+    // ⌘ und ⇧ fehlen in Source Sans. Eine Ersatzschrift setzt sie je nach Rechner anders groß und verrutscht, deshalb
+    // sind sie hier gezeichnet: so hoch wie ein Großbuchstabe, auf der Grundlinie.
+    show "⌘": symbol-taste(
+      "M9 6v12M15 6v12M6 9h12M6 15h12M9 9H6a3 3 0 1 1 3-3M15 9V6a3 3 0 1 1 3 3M15 15h3a3 3 0 1 1-3 3M9 15v3a3 3 0 1 1-3-3",
+    )
+    show "⇧": symbol-taste("M12 3.5 4 12h4.5v8h7v-8H20Z")
     text(font: sans, size: 0.82em, weight: "medium", fill: tinte, name)
   },
 )
