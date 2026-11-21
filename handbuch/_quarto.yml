@@ -4,6 +4,7 @@ project:
   # Das Logo wird nur aus CSS und Kopf verlinkt, Quarto kopiert es deshalb nicht von selbst.
   resources:
     - bilder/logo.svg
+    - bilder/social-preview.png
   # Bricht ab, wenn die Webseite etwas von fremden Servern lädt.
   # Stand in die Zitierangaben der Webseite (siehe zitierangaben.ts), das Tastenkürzel-Spickblatt als PDF
   # (spickblatt.ts), danach die Prüfung.
@@ -39,8 +40,22 @@ format:
     respect-user-color-scheme: true
     html-math-method: plain
     lightbox: false
+    # Vorschaukarte beim Teilen des Links (Open Graph, Twitter-Card). Das Bild braucht eine vollständige Adresse;
+    # dasselbe Bild ist als Social Preview des Repositorys auf GitHub hinterlegt.
     include-in-header:
-      text: <link rel="icon" href="bilder/logo.svg" type="image/svg+xml">
+      text: |
+        <link rel="icon" href="bilder/logo.svg" type="image/svg+xml">
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="Feldspur">
+        <meta property="og:title" content="Feldspur">
+        <meta property="og:description" content="Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen. Begleittext und Handbuch">
+        <meta property="og:locale" content="de_DE">
+        <meta property="og:image" content="https://pklaschka.github.io/feldspur/bilder/social-preview.png">
+        <meta property="og:image:type" content="image/png">
+        <meta property="og:image:width" content="1280">
+        <meta property="og:image:height" content="640">
+        <meta property="og:image:alt" content="Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse. Darunter eine Zeitachse mit vier Spuren für Ton, Video, Fotos und Notizen.">
+        <meta name="twitter:card" content="summary_large_image">
     toc: true
     toc-depth: 3
     toc-title: "Inhalt"
