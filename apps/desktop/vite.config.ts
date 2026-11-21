@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import { readFileSync } from "node:fs";
 import { defineConfig, type UserConfig } from "vite-plus";
 
 type PackConfig = Extract<NonNullable<UserConfig["pack"]>, unknown[]>[number];
@@ -7,8 +8,15 @@ type PackConfig = Extract<NonNullable<UserConfig["pack"]>, unknown[]>[number];
 // Haupt- und Preload-Prozess: `vp pack` (tsdown), beide als CommonJS, weil
 // sandboxed Preloads kein ESM können. Die Workspace-Pakete liegen als
 // TypeScript vor und werden deshalb mit eingebündelt.
+// Erscheinungsdatum der Version für „Feldspur zitieren“: setzt der Release-Workflow in CITATION.cff.
+const released = /^date-released:\s*"?(\d{4}-\d{2}-\d{2})"?/m.exec(
+  readFileSync(new URL("../../CITATION.cff", import.meta.url), "utf8"),
+)?.[1];
+if (!released) throw new Error("CITATION.cff: date-released fehlt");
+
 const shared: PackConfig = {
   outDir: "out/main",
+  define: { __FELDSPUR_RELEASED__: JSON.stringify(released) },
   format: "cjs",
   platform: "node",
   target: "node22",

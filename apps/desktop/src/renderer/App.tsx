@@ -13,6 +13,7 @@ import { HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
 import { SessionPane } from "./app/SessionPane.tsx";
 import { StrayDropHint, useStrayDrop } from "./app/strayDrop.tsx";
 import { DeletedToast, SESSION_DELETED } from "./app/history.tsx";
+import { AppFooter } from "./app/footer.tsx";
 
 const api = window.feldspur;
 
@@ -178,7 +179,7 @@ export function App() {
               label="Breite der Seitenleiste"
               left={`calc(100% - ${inspector.width}px)`}
             />
-            <nav className="overflow-auto bg-rail px-2.5 py-4.5 text-rail-ink">
+            <nav className="flex flex-col overflow-auto bg-rail px-2.5 pt-4.5 text-rail-ink">
               <div className="px-2">
                 <Logo small />
                 <ProjectMenu
@@ -216,6 +217,7 @@ export function App() {
                 onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)}
                 onRequestOpen={sessionId ? undefined : () => document.getElementById(HERO_TITLE_ID)?.focus()}
               />
+              <AppFooter />
             </nav>
             {sessionId ? (
               <SessionPane

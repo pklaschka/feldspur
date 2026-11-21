@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, protocol, shell } from "electron";
 import {
   backupDir,
   checkProjectFile,
@@ -112,6 +112,8 @@ import { buildSessionView } from "./view.ts";
 import { checkOriginals, relinkDuplicates, relinkFile, searchOriginals, unreachableForAnalysis } from "./originals.ts";
 import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 import { AUTO_BACKUP_CHECK_MS, AutoBackup } from "./backup.ts";
+import { cancelCitationLookup, citationInfo, lookupCitationDoi } from "./citation.ts";
+import { isCitationLink } from "../shared/citation.ts";
 
 let store: ProjectStore | null = null;
 /** Laufendes Einsammeln je Einsatz, zum Abbrechen. */
@@ -345,6 +347,13 @@ function registerIpc(): void {
   ipcMain.handle(IPC.forgetRecent, (_e, path: string) => forgetProject(path));
 
   ipcMain.handle(IPC.backups, () => autoBackup.overview());
+  ipcMain.handle(IPC.citationInfo, () => citationInfo());
+  ipcMain.handle(IPC.lookupCitationDoi, () => lookupCitationDoi());
+  ipcMain.handle(IPC.cancelCitationLookup, () => cancelCitationLookup());
+  ipcMain.handle(IPC.copyText, (_e, text: string) => clipboard.writeText(String(text)));
+  ipcMain.handle(IPC.openCitationLink, async (_e, url: string) => {
+    if (isCitationLink(String(url))) await shell.openExternal(String(url));
+  });
   ipcMain.handle(IPC.createBackup, async () => {
     const s = requireStore();
     const dir = backupDir(s.path);

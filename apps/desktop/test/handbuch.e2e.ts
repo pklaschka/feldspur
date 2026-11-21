@@ -10,7 +10,7 @@
  *   FELDSPUR_SCREENSHOT=rundgang.png …           ein Bildschirmfoto je Kapitel (rundgang-einsammeln.png …)
  *   FELDSPUR_HANDBUCH_BERICHT=bericht.md …       alle Prüfungen als Tabelle
  */
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron, type ElectronApplication, type Locator, type Page } from "playwright-core";
@@ -22,7 +22,14 @@ const handbuch = join(import.meta.dirname, "../../../handbuch");
 const kapitelText = new Map<string, string>();
 const textOf = (k: string) => {
   if (!kapitelText.has(k))
-    kapitelText.set(k, readFileSync(join(handbuch, `_handbuch-${k}.qmd`), "utf8").replace(/\s*\n\s*/g, " "));
+    kapitelText.set(
+      k,
+      // Kapitel der Anleitung heißen _handbuch-*.qmd, Abschnitte des Begleittexts (etwa „zitieren“) nur _*.qmd.
+      readFileSync(
+        join(handbuch, existsSync(join(handbuch, `_handbuch-${k}.qmd`)) ? `_handbuch-${k}.qmd` : `_${k}.qmd`),
+        "utf8",
+      ).replace(/\s*\n\s*/g, " "),
+    );
   return kapitelText.get(k)!;
 };
 
@@ -193,6 +200,22 @@ await kapitel("erste-schritte", async () => {
     });
     await siehe("Andere Datei als Kopie öffnen…");
     await siehe("Ordner zeigen");
+    await schliessen();
+  });
+
+  await ablauf("Feldspur zitieren", async () => {
+    const zitieren = { kapitel: "zitieren" };
+    await siehe("Zitieren…", knopf("Zitieren…"), zitieren);
+    await knopf("Zitieren…").click();
+    const d = page.getByTestId("citation-dialog");
+    await siehe("Feldspur zitieren", d.getByRole("heading", { name: "Feldspur zitieren" }), zitieren);
+    await siehe("Zitat kopieren", d.getByRole("button", { name: "Zitat kopieren" }), zitieren);
+    await siehe("DOI für alle Versionen", d.getByText(/DOI für alle Versionen/).first(), zitieren);
+    await siehe(
+      "DOI bei Zenodo nachschlagen",
+      d.getByRole("button", { name: "DOI bei Zenodo nachschlagen" }),
+      zitieren,
+    );
     await schliessen();
   });
 });

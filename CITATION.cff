@@ -14,7 +14,7 @@ authors:
   - given-names: Zuri Nimca
     family-names: Klaschka
     orcid: "https://orcid.org/0009-0005-9995-5687"
-# Übergreifende DOI (alle Versionen); die DOI einer Version steht auf deren Zenodo-Seite.
+# DOI für alle Versionen; die DOI von Version x steht auf deren Zenodo-Seite.
 doi: 10.5281/zenodo.24289969
 repository-code: "https://purl.archive.org/feldspur/repo"
 url: "https://purl.archive.org/feldspur"

@@ -120,10 +120,16 @@ samt PDF übernehmen können.
 Die vollständigen Angaben zum Programm stehen in
 [`CITATION.cff`](https://github.com/pklaschka/feldspur/blob/main/CITATION.cff); GitHub bietet daraus „Cite this
 repository“ (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Für das
-Programm ist sie die beste Angabe: die DOI der verwendeten Version (sie steht auf deren Zenodo-Seite), die
-übergreifende DOI [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (alle Versionen, führt immer
-zur neuesten) nur, wenn es um Feldspur im Allgemeinen geht. Zenodo archiviert dabei den Quellcode, nicht das PDF
-dieses Texts. Den Text deshalb mit den Adressen oben und dem Stand zitieren.
+Programm ist sie die beste Angabe: die **DOI von Version** x (sie steht auf deren Zenodo-Seite), die **DOI für alle
+Versionen** [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (führt immer zur neuesten) nur, wenn
+es um Feldspur im Allgemeinen geht. Auch Vorabversionen (etwa 0.3.0-rc.1) erhalten eine eigene DOI. Zenodo archiviert dabei den Quellcode, nicht das PDF dieses Texts. Den Text deshalb mit den Adressen oben und dem
+Stand zitieren.
+
+In der App steht die laufende Version unten in der Einsatzliste. **Zitieren…** daneben öffnet den Dialog **Feldspur
+zitieren** mit einer fertigen Quellenangabe für genau diese Version, als APA, BibTeX oder nur DOI, und **Zitat
+kopieren**. Zunächst steht darin die DOI für alle Versionen. **DOI bei Zenodo nachschlagen** setzt die DOI von
+dieser Version ein; erst dann ruft Feldspur die Versionsliste von zenodo.org ab, aus dem Projekt wird nichts
+übertragen. Die gefundene DOI merkt sich Feldspur und fragt danach nicht noch einmal.
 
 Feldspur steht unter der [EUPL-1.2](https://eupl.eu/1.2/de/). Dieser Text steht unter
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de).
@@ -281,9 +287,9 @@ Versioniert wird nur die App (Tags `v0.2.0`, `v0.2.0-rc.1`); `packages/*` laufen
 Eine Release startet von Hand: **Actions → Release → Run workflow**, Version eintragen.
 
 - **Version:** `0.2.0` für ein Release, `0.2.0-rc.1` (oder `-alpha.N`, `-beta.N`) für eine Vorabversion.
-- **Sichtbarkeit:** Standard ist „Vorabversionen als Entwurf“. Entwürfe sehen nur Personen mit Schreibrechten, und
-  Zenodo archiviert sie nicht. So bekommen Release Candidates keine eigene DOI. Ein Entwurf lässt sich später unter
-  Releases von Hand veröffentlichen; dann archiviert Zenodo ihn doch.
+- **Sichtbarkeit:** Standard ist „immer veröffentlichen“. Zenodo archiviert jede veröffentlichte Release mit eigener
+  DOI, auch Vorabversionen. „immer als Entwurf“ legt sie nur für Personen mit Schreibrechten an; Zenodo archiviert sie
+  erst, wenn der Entwurf unter Releases von Hand veröffentlicht wird.
 - **Probelauf:** baut alles und zeigt Changelog und Release-Text in der Zusammenfassung, pusht aber nichts.
 
 **Hotfix** (z. B. `0.2.1`, während `main` schon auf `0.3.0` zugeht): kurzlebigen Branch `claude/hotfix-…` vom letzten

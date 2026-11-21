@@ -633,6 +633,22 @@ export interface HistoryResult {
   target: HistoryTarget | null;
 }
 
+/** Angaben für „Feldspur zitieren“ (Issue #163). */
+export interface CitationInfo {
+  /** Laufende Version der App. */
+  version: string;
+  /** Erscheinungsdatum dieser Version, `YYYY-MM-DD` (aus CITATION.cff beim Bauen). */
+  released: string;
+  /** Schon nachgeschlagene DOI dieser Version. */
+  versionDoi: { doi: string; url: string; checkedAt: string } | null;
+}
+
+export type CitationLookup =
+  | { state: "found"; versionDoi: { doi: string; url: string; checkedAt: string } }
+  | { state: "missing" }
+  | { state: "offline" }
+  | { state: "cancelled" };
+
 export interface FeldspurApi {
   newProject(): Promise<ProjectInfo | null>;
   openProject(): Promise<ProjectInfo | null>;
@@ -651,6 +667,15 @@ export interface FeldspurApi {
   openBackupCopy(path?: string): Promise<ProjectInfo | null>;
   /** Sicherungsordner im Dateimanager zeigen. */
   showBackupFolder(): Promise<void>;
+  /** Version, Erscheinungsdatum und gemerkte DOI der Version für „Feldspur zitieren“. Fragt nichts im Netz ab. */
+  citationInfo(): Promise<CitationInfo>;
+  /** DOI der laufenden Version bei Zenodo nachschlagen (nur auf Knopfdruck). */
+  lookupCitationDoi(): Promise<CitationLookup>;
+  cancelCitationLookup(): Promise<void>;
+  /** Text in die Zwischenablage. */
+  copyText(text: string): Promise<void>;
+  /** Eine Adresse bei doi.org oder zenodo.org im Browser öffnen. */
+  openCitationLink(url: string): Promise<void>;
   currentProject(): Promise<ProjectInfo | null>;
   createSession(input: NewSessionInput): Promise<ProjectInfo>;
   getSession(sessionId: string): Promise<SessionView>;
@@ -860,6 +885,11 @@ export const IPC = {
   createBackup: "backup:create",
   openBackupCopy: "backup:open-copy",
   showBackupFolder: "backup:show-folder",
+  citationInfo: "citation:info",
+  lookupCitationDoi: "citation:lookup",
+  cancelCitationLookup: "citation:cancel",
+  copyText: "clipboard:write",
+  openCitationLink: "citation:open-link",
   currentProject: "project:current",
   createSession: "session:create",
   getSession: "session:get",

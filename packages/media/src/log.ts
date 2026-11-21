@@ -9,7 +9,15 @@
  *   12:04:31.207 ausgabe   schreibt Einsatztranskript …/2026-09-14_Testmarkt.docx (48 kB)
  */
 
-export type LogArea = "einsammeln" | "prüfen" | "ausgabe" | "montage" | "ffmpeg" | "sicherung" | "originale";
+export type LogArea =
+  | "einsammeln"
+  | "prüfen"
+  | "ausgabe"
+  | "montage"
+  | "ffmpeg"
+  | "sicherung"
+  | "originale"
+  | "zitieren";
 
 export type LogSink = (line: string) => void;
 
