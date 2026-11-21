@@ -88,6 +88,7 @@ function seed() {
 describe("Quellen pflegen", () => {
   it("entfernt eine Quelle und das dann leere Gerät", () => {
     const { session, p1b, diaryB } = seed();
+    // Wenn: die einzige Seite eines Tagebuchs entfernt wird, dann ist auch das Tagebuch weg
     removeSource(store, p1b.id);
     expect(store.listSources(session.id).some((x) => x.id === p1b.id)).toBe(false);
     expect(store.listDevices(session.id).some((d) => d.id === diaryB.id)).toBe(false);
@@ -95,12 +96,16 @@ describe("Quellen pflegen", () => {
 
   it("verschiebt eine Quelle in ein anderes oder neues Gerät", () => {
     const { session, p1b, diaryA } = seed();
+    // Wenn: die Seite in ein anderes Tagebuch verschoben wird, dann gehört sie dorthin
     moveSource(store, p1b.id, diaryA.id);
     expect(store.getSource(p1b.id).deviceId).toBe(diaryA.id);
+    // Wenn: sie in ein neues Gerät verschoben wird, dann trägt es den Namen
     moveSource(store, p1b.id, { newLabel: "Feldnotizen" });
     const dev = store.getDevice(store.getSource(p1b.id).deviceId!);
     expect(dev.label).toBe("Feldnotizen");
+    // Wenn: der Name leer ist, dann lehnt die App ab
     expect(() => moveSource(store, p1b.id, { newLabel: "  " })).toThrow(/Namen/);
+    // Dann: ist das leere alte Tagebuch weg
     expect(
       store
         .listDevices(session.id)
@@ -111,25 +116,31 @@ describe("Quellen pflegen", () => {
 
   it("legt Geräte zusammen und reicht die Referenz weiter", () => {
     const { session, rec, gopro, g1 } = seed();
+    // Wenn: der Rekorder in die GoPro übergeht, dann liegen alle Quellen dort und die GoPro wird Referenzuhr
     mergeDevices(store, rec.id, gopro.id);
     expect(store.getSource(g1.id).deviceId).toBe(gopro.id);
     expect(store.listSources(session.id).filter((x) => x.deviceId === gopro.id)).toHaveLength(5);
     expect(store.getDevice(gopro.id).isReference).toBe(true);
+    // Wenn: ein Gerät mit sich selbst zusammengelegt werden soll, dann lehnt die App ab
     expect(() => mergeDevices(store, gopro.id, gopro.id)).toThrow();
   });
 
   it("verbindet Bilder zu einer Seite", () => {
     const { p1, p1b, a1, diaryA } = seed();
+    // Wenn: ein Bild an eine Seite gehängt wird, dann wird es Tagebuch und kommt ins selbe Gerät
     setPartOf(store, p1b.id, p1.id);
     expect(store.getSource(p1b.id)).toMatchObject({ partOf: p1.id, deviceId: diaryA.id, kind: "diary" });
+    // Wenn: eine Seite an sich selbst oder Ton an eine Seite soll, dann lehnt die App ab
     expect(() => setPartOf(store, p1.id, p1b.id)).toThrow(/sich selbst/);
     expect(() => setPartOf(store, a1.id, p1.id)).toThrow(/Fotos und Tagebuchseiten/);
+    // Wenn: die Verbindung gelöst wird, dann steht das Bild wieder allein
     setPartOf(store, p1b.id, null);
     expect(store.getSource(p1b.id).partOf).toBeNull();
   });
 
   it("ein angehängtes Foto wird Tagebuchseite mit T-Kurzzeichen", () => {
     const { p1, session } = seed();
+    // Angenommen: ein Foto F-001 allein auf dem Gerät Fotos
     const fotos = store.addDevice({ sessionId: session.id, label: "Fotos" });
     const f = store.addSource({
       sessionId: session.id,
@@ -143,6 +154,7 @@ describe("Quellen pflegen", () => {
       metadata: {},
     });
     expect(f.label).toBe("F-001");
+    // Wenn: es an eine Tagebuchseite gehängt wird, dann heißt es T-03 und das leere Gerät ist weg
     setPartOf(store, f.id, p1.id);
     expect(store.getSource(f.id)).toMatchObject({ kind: "diary", label: "T-03" });
     expect(store.listDevices(session.id).some((d) => d.id === fotos.id)).toBe(false);
@@ -150,20 +162,25 @@ describe("Quellen pflegen", () => {
 
   it("erkennt Folgeaufnahmen an der Zeit und am GoPro-Namen, aber nicht über eine Lücke", () => {
     const { session, a1, a2, a3, g1, g2 } = seed();
+    // Wenn: Folgeaufnahmen gesucht werden, dann gelten a2 und g2 als Fortsetzung, a3 nach der Lücke nicht
     expect(linkFollowUps(store, session.id)).toBe(2);
     expect(store.getSource(a2.id).follows).toBe(a1.id);
     expect(store.getSource(a3.id).follows).toBeNull();
     expect(store.getSource(g2.id).follows).toBe(g1.id);
+    // Wenn: noch einmal gesucht wird, dann kommt nichts dazu
     expect(linkFollowUps(store, session.id)).toBe(0);
   });
 
-  it("Folgeaufnahmen von Hand, ohne Kreise und Doppelungen", () => {
+  it("Folgeaufnahmen lassen sich von Hand setzen, ohne Kreise und Doppelungen", () => {
     const { a1, a2, a3, p1 } = seed();
+    // Angenommen: a2 setzt a1 fort, a3 setzt a2 fort
     setFollows(store, a2.id, a1.id);
     setFollows(store, a3.id, a2.id);
+    // Wenn: daraus ein Kreis, eine zweite Fortsetzung oder ein Foto würde, dann lehnt die App ab
     expect(() => setFollows(store, a1.id, a3.id)).toThrow(/Kreis/);
     expect(() => setFollows(store, a3.id, a1.id)).toThrow(/schon fort/);
     expect(() => setFollows(store, p1.id, a1.id)).toThrow(/Audio- und Video/);
+    // Wenn: die Fortsetzung gelöst wird, dann steht a3 allein
     setFollows(store, a3.id, null);
     expect(store.getSource(a3.id).follows).toBeNull();
   });
@@ -197,18 +214,22 @@ describe("Bild als Tagebuchseite oder Foto behandeln", () => {
     return { session, phone, photo, part };
   }
 
-  it("Foto wird Tagebuchseite: Kurzzeichen F→T, Gerät Tagebuch, leeres Altgerät weg, Rückgängig", () => {
+  it("ein Foto wird Tagebuchseite: Kurzzeichen F→T, Gerät Tagebuch, leeres Altgerät weg, rückgängig zu machen", () => {
     const { session, phone, photo, part } = seedPhoto();
     expect(store.getSource(photo.id).label).toBe("F-001");
+    // Wenn: das Foto mit weiterem Bild Tagebuchseite wird
     store.history.record("Bildart geändert", () => setSourceKind(store, photo.id, "diary"));
     const page = store.getSource(photo.id);
+    // Dann: heißen beide T, liegen im neuen Tagebuch, und das leere Handy-Gerät ist weg
     const devices = store.listDevices(session.id);
     expect(devices).toHaveLength(1);
     expect(devices[0]).toMatchObject({ label: "Tagebuch", matchKey: "diary" });
     expect(page).toMatchObject({ kind: "diary", label: "T-01", deviceId: devices[0]!.id });
     expect(store.getSource(part.id)).toMatchObject({ kind: "diary", label: "T-02", deviceId: devices[0]!.id });
+    // Wenn: nur das weitere Bild Foto werden soll, dann lehnt die App ab
     expect(() => setSourceKind(store, part.id, "photo")).toThrow(/Hauptseite/);
 
+    // Wenn: rückgängig, dann ist alles wie vorher, das Handy wieder Referenzuhr
     expect(store.history.undo()).toBe("Bildart geändert");
     expect(store.getSource(photo.id)).toMatchObject({ kind: "photo", label: "F-001", deviceId: phone.id });
     expect(store.getSource(part.id)).toMatchObject({ kind: "photo", deviceId: phone.id });
@@ -217,7 +238,9 @@ describe("Bild als Tagebuchseite oder Foto behandeln", () => {
 
   it("nutzt ein vorhandenes Tagebuch-Gerät", () => {
     const { session, photo } = seedPhoto();
+    // Angenommen: es gibt schon ein Tagebuch-Gerät
     const diary = store.addDevice({ sessionId: session.id, label: "Tagebuch", matchKey: "diary" });
+    // Wenn: das Foto Tagebuchseite wird, dann kommt es dorthin
     setSourceKind(store, photo.id, "diary");
     expect(store.getSource(photo.id).deviceId).toBe(diary.id);
   });
@@ -225,27 +248,33 @@ describe("Bild als Tagebuchseite oder Foto behandeln", () => {
   it("Tagebuchseite liegt nur nach ihren Randnotizen; als Foto wieder nach EXIF", () => {
     const { session, photo } = seedPhoto();
     const row = () => buildSessionView(store, session.id).rows.find((r) => r.id === photo.id)!;
+    // Angenommen: das Foto liegt nach seinen EXIF-Daten
     expect(row().startMs).toBe(Date.UTC(2026, 8, 14, 10, 12, 34));
+    // Wenn: es Tagebuchseite wird
     setSourceKind(store, photo.id, "diary");
-    // Die Aufnahmezeit des Fotos ist keine Notierzeit: ohne Randnotiz bleibt die Seite unverortet.
+    // Dann: bleibt die Seite ohne Lage, denn die Aufnahmezeit des Fotos ist keine Notierzeit
     expect(row().startMs).toBeNull();
     expect(store.listEvidence(session.id).filter((e) => e.sourceId === photo.id)).toHaveLength(1);
+    // Wenn: eine Randnotiz mit Notierzeit dazukommt, dann liegt die Seite danach und kann kein Foto mehr werden
     const e = createEntry(store, photo.id, { x: 0, y: 0, w: 1, h: 1 }).entry;
     patchEntry(store, e.id, { notedAt: "14:30" });
     expect(row().startMs).toBe(Date.UTC(2026, 8, 14, 14, 30));
     expect(() => setSourceKind(store, photo.id, "photo")).toThrow(/einen Tagebucheintrag/);
 
+    // Wenn: die Notiz gelöscht und die Seite wieder Foto wird
     store.deleteDiaryEntry(e.id);
     setSourceKind(store, photo.id, "photo");
+    // Dann: heißt es wieder F-001 und liegt nach EXIF
     const back = store.getSource(photo.id);
     expect(back).toMatchObject({ kind: "photo", label: "F-001" }); // F-001 ist wieder frei
-    // Gerät wie beim Einsammeln: nach dem Modell aus den EXIF-Daten.
+    // Dann: kommt es wie beim Einsammeln zum Gerät nach dem Modell aus den EXIF-Daten
     expect(store.getDevice(back.deviceId!)).toMatchObject({ matchKey: "model:fairphone fp5", label: "Fairphone FP5" });
     expect(row().startMs).toBe(Date.UTC(2026, 8, 14, 10, 12, 34));
   });
 
   it("eine als Tagebuch eingesammelte Datei bekommt als Foto ihre Zeitbelege nach", () => {
     const { session, diaryA } = seed();
+    // Angenommen: ein Bild mit Uhrzeit im Namen wurde als Tagebuchseite eingesammelt
     const scan = store.addSource({
       sessionId: session.id,
       deviceId: diaryA.id,
@@ -257,7 +286,9 @@ describe("Bild als Tagebuchseite oder Foto behandeln", () => {
       durationMs: null,
       metadata: {},
     });
+    // Wenn: es Foto wird
     setSourceKind(store, scan.id, "photo");
+    // Dann: heißt es F-001, liegt bei den Fotos, und die Uhrzeit aus dem Namen gilt als Beleg
     const src = store.getSource(scan.id);
     expect(src.label).toBe("F-001");
     expect(store.getDevice(src.deviceId!).label).toMatch(/^Fotos/);
@@ -266,7 +297,7 @@ describe("Bild als Tagebuchseite oder Foto behandeln", () => {
     expect(evs.map((e) => e.kind)).toEqual(["filename"]);
   });
 
-  it("lehnt andere Arten ab", () => {
+  it("nur Fotos und Tagebuchseiten lassen sich umstellen", () => {
     const { a1 } = seed();
     expect(() => setSourceKind(store, a1.id, "diary")).toThrow(/Nur Fotos/);
   });

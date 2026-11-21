@@ -21,23 +21,36 @@ export function unzip(buf: Buffer): Record<string, string> {
 }
 
 describe("Excel-Datei", () => {
-  it("benennt Spalten wie Excel", () => {
-    expect([0, 1, 25, 26, 27, 701, 702].map(columnName)).toEqual(["A", "B", "Z", "AA", "AB", "ZZ", "AAA"]);
+  it.each`
+    nummer | spalte
+    ${0}   | ${"A"}
+    ${1}   | ${"B"}
+    ${25}  | ${"Z"}
+    ${26}  | ${"AA"}
+    ${27}  | ${"AB"}
+    ${701} | ${"ZZ"}
+    ${702} | ${"AAA"}
+  `("Spalte $nummer heißt $spalte wie in Excel", ({ nummer, spalte }) => {
+    expect(columnName(nummer)).toBe(spalte);
   });
 
   it("schreibt Text und Zahlen in ein gültiges Archiv", () => {
+    // Wenn: eine Tabelle mit Sonderzeichen, Zahl und leerer Zeile geschrieben wird
     const buf = xlsx([
       ["Name", "Zahl"],
       ["Ä & <b>", 1.5],
       [null, ""],
     ]);
+    // Dann: ein gültiges Archiv mit maskiertem Text, Zahl und leerer Zeile
     const files = unzip(buf);
     expect(Object.keys(files)).toContain("[Content_Types].xml");
     const sheet = files["xl/worksheets/sheet1.xml"]!;
     expect(sheet).toContain('<c r="A2" t="inlineStr"><is><t xml:space="preserve">Ä &amp; &lt;b&gt;</t></is></c>');
     expect(sheet).toContain('<c r="B2"><v>1.5</v></c>');
     expect(sheet).toContain('<row r="3"></row>');
-    // Gleicher Inhalt → gleiche Datei.
+  });
+
+  it("gleicher Inhalt ergibt Byte für Byte dieselbe Datei", () => {
     expect(xlsx([["Name"]]).equals(xlsx([["Name"]]))).toBe(true);
   });
 });
@@ -71,7 +84,9 @@ describe("Dokumentvariablen für MAXQDA", () => {
   } as unknown as SessionTranscript;
 
   it("beginnt mit Dokumentgruppe und Dokumentname, danach eine Spalte je Variable", () => {
+    // Wenn: die Variablen für das Dokument „Feldtag_2026-09-14_Testmarkt“ gebildet werden
     const [head, row] = documentVariables(transcript, "Feldtag_2026-09-14_Testmarkt");
+    // Dann: erst Gruppe und Name, danach die Angaben; ein doppelter Name bekommt „(Einsatz)“, ein leerer fällt weg
     expect(head!.slice(0, 2)).toEqual(["Dokumentgruppe", "Dokumentname"]);
     expect(row!.slice(0, 2)).toEqual(["", "Feldtag_2026-09-14_Testmarkt"]);
     const v = Object.fromEntries(head!.map((k, i) => [k, row![i]]));

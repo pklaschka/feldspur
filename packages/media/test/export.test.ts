@@ -14,11 +14,14 @@ import { unzip } from "./xlsx.test.ts";
 import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay, makeSyncVideo } from "./fixtures.ts";
 
 describe("Zeitmarken", () => {
-  it("schreibt #hh:mm:ss-z# mit Zehntelsekunden", () => {
-    expect(timestamp(0)).toBe("#00:00:00-0#");
-    expect(timestamp(86_000)).toBe("#00:01:26-0#");
-    expect(timestamp(192_940)).toBe("#00:03:12-9#");
-    expect(timestamp(3_723_450)).toBe("#01:02:03-5#");
+  it.each`
+    videozeitMs  | marke
+    ${0}         | ${"#00:00:00-0#"}
+    ${86_000}    | ${"#00:01:26-0#"}
+    ${192_940}   | ${"#00:03:12-9#"}
+    ${3_723_450} | ${"#01:02:03-5#"}
+  `("$videozeitMs ms wird zu $marke (MAXQDA, mit Zehntelsekunde)", ({ videozeitMs, marke }) => {
+    expect(timestamp(videozeitMs)).toBe(marke);
   });
 });
 
@@ -28,6 +31,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   let sessionId: string;
   const src = (n: string) => store.listSources(sessionId).find((s) => s.fileName === n)!;
 
+  // Angenommen: ein abgeglichener Markttag mit Tagebucheintrag (10:12), Foto, zweitem Video und einer Mitschriftzeile
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "feldspur-export-"));
     const raw = join(dir, "roh");
@@ -63,7 +67,9 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("ordnet Tafel, Episoden, Mitschrift und Fotos nach Uhrzeit", () => {
+    // Wenn: das Einsatztranskript nach Episoden gebaut wird
     const transcript = buildSessionTranscript(store, sessionId, { mode: "episodes" });
+    // Dann: Tafel mit Tagebuch vorn, Mitschrift und Foto an ihrer Uhrzeit in der Episode
     expect(transcript.episodes).toBe(true);
     const lines = transcript.entries.map(entryText);
     // Tagebuch vor der ersten Aufnahme: eigene Tafel ganz vorne.
@@ -83,7 +89,9 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("läuft ohne Wunsch in Echtzeit und nennt keine Episoden", () => {
+    // Wenn: das Einsatztranskript ohne Wunsch gebaut wird
     const transcript = buildSessionTranscript(store, sessionId);
+    // Dann: Echtzeit ohne Episoden, Videozeit folgt der Uhrzeit
     expect(transcript.plan.mode).toBe("realtime");
     expect(transcript.episodes).toBe(false);
     expect(transcript.header.modeLabel).toBe("Echtzeit");
@@ -94,7 +102,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const first = transcript.plan.segments[0]!.fromMs;
     expect(entryText(line)).toContain("Uhrzeit 10:15:10 · B1: Wie lange schon?");
     expect(transcript.plan.toMontage(first + 60_000)).toBe(60_000);
-    // Mit benannten Episoden bleibt die Echtzeit-Montage gleich lang, nur mit Episodenzeilen.
+    // Wenn: Episoden benannt werden, dann bleibt die Echtzeit-Montage gleich lang, nur mit Episodenzeilen
     const named = buildSessionTranscript(store, sessionId, { episodes: true });
     expect(named.plan.durationMs).toBe(transcript.plan.durationMs);
     expect(named.entries.some((e) => e.kind === "episode")).toBe(true);
@@ -102,8 +110,10 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("schreibt Video, Einsatztranskript und Begleitprotokoll", { timeout: 180_000 }, async () => {
+    // Wenn: mit Gerätespuren ausgegeben wird
     const out = join(dir, "export");
     const r = await exportSession(store, sessionId, out, { deviceTracks: true });
+    // Dann: vier Dateien; Bild und Ton gleich lang; Mischung und je Gerät eine Tonspur; .docx, Variablen und Protokoll lesbar
     expect(r.files).toEqual([
       "Feldtag_2026-09-14_Testmarkt.mp4",
       "Feldtag_2026-09-14_Testmarkt.docx",
@@ -166,10 +176,12 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("bricht mit vorab abgebrochenem Signal ab, ohne etwas zu schreiben", async () => {
+    // Wenn: mit einem schon abgebrochenen Signal ausgegeben wird
     const out = join(dir, "abgebrochen");
     await expect(exportSession(store, sessionId, out, { signal: AbortSignal.abort() })).rejects.toMatchObject({
       name: "AbortError",
     });
+    // Dann: Abbruch, und der Ordner entsteht gar nicht
     expect(existsSync(out)).toBe(false);
   });
 
@@ -178,6 +190,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const cacheDir = join(dir, "zwischenspeicher");
     const ctrl = new AbortController();
     const chunk = /^[0-9a-f]{40}\.mp4$/;
+    // Wenn: abgebrochen wird, sobald der erste Abschnitt fertig ist
     const run = exportSession(store, sessionId, out, {
       cacheDir,
       signal: ctrl.signal,
@@ -187,14 +200,17 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
           ctrl.abort();
       },
     });
+    // Dann: Abbruch, nichts im Ausgabeordner, fertige Abschnitte bleiben im Zwischenspeicher
     await expect(run).rejects.toMatchObject({ name: "AbortError" });
     expect(readdirSync(out)).toEqual([]);
     expect(readdirSync(cacheDir).filter((f) => chunk.test(f)).length).toBeGreaterThan(0);
   });
 
   it("zeigt gleichzeitige Videos nebeneinander und mischt den Ton aller Geräte", () => {
+    // Wenn: die Montage geplant wird
     const transcript = buildSessionTranscript(store, sessionId);
     const both = montagePreview(transcript).pieces.find((p) => p.videos.length === 2)!;
+    // Dann: zwei gleichzeitige Videos nebeneinander, Ton von drei Geräten, Referenz zuerst
     expect(both.videos.map((v) => v.label).join(" | ")).toMatch(/V-0\d .* \| V-0\d /);
     // Hauptton zuerst (Referenzgerät), danach die Kameras.
     expect(both.audios[0]!.sourceId).toBe(src("ZOOM0001.m4a").id);
@@ -202,8 +218,10 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("plant die Montage zum Ansehen in der App wie das Video", () => {
+    // Wenn: die Montage zum Ansehen in der App geplant wird
     const transcript = buildSessionTranscript(store, sessionId);
     const p = montagePreview(transcript);
+    // Dann: so lang wie das Video, lückenlos, mit Ton aus echten Quellen und einer Montage-ID
     expect(p.durationMs).toBeCloseTo(transcript.plan.durationMs, -2);
     let at = 0;
     for (const piece of p.pieces) {
@@ -216,8 +234,10 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   });
 
   it("schreibt eine Schnittliste für DaVinci Resolve", async () => {
+    // Wenn: nur die Schnittliste für Resolve nach Episoden ausgegeben wird
     const out = join(dir, "resolve");
     const r = await exportSession(store, sessionId, out, { video: false, resolve: true, mode: "episodes" });
+    // Dann: lückenlose Hauptspur, Mitschrift als Marker, Episoden als Kapitel, keine Standbilder
     expect(r.files).toContain("Feldtag_2026-09-14_Testmarkt_Episoden.docx");
     const name = r.files.find((f) => f.endsWith(".fcpxml"))!;
     const xml = readFileSync(join(out, name), "utf8");
@@ -241,10 +261,11 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
   // So steht es im Handbuch (Abschnitt „Montage-ID“): Die ID hängt am Zeitgefüge, nicht am Text.
   it("Montage-ID: gleich bei Textänderungen, neu bei anderer Lage oder anderen Quellen", () => {
     const id = () => buildSessionTranscript(store, sessionId).header.montageId;
+    // Angenommen: die ID des Einsatzes, sie bleibt bei erneuter Berechnung gleich
     const before = id();
     expect(id()).toBe(before);
 
-    // Mitschrift, Tagebuchtext und Angaben zum Einsatz ändern die ID nicht.
+    // Wenn: Mitschrift, Tagebuchtext und Angaben zum Einsatz geändert werden, dann bleibt die ID
     const line = store.addTranscriptLine({ sourceId: src("ZOOM0001.m4a").id, atMs: 12_000, text: "Seit sieben." });
     const entry = store.listDiaryEntries(sessionId)[0]!;
     store.updateDiaryEntry(entry.id, { shortText: "Ankunft, die Stände bauen auf" });
@@ -255,7 +276,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     store.updateDiaryEntry(entry.id, { shortText: entry.shortText });
     store.updateSession(sessionId, { title: session.title, extra: session.extra });
 
-    // Ein Foto eine Sekunde später: andere Lage, andere ID. Zurückgestellt gilt wieder die alte.
+    // Wenn: ein Foto eine Sekunde später liegt, dann ist die ID neu; zurückgestellt gilt wieder die alte
     const photo = src("IMG_20260914_101630.jpg");
     const evs = store.listEvidence(sessionId).filter((e) => e.sourceId === photo.id);
     expect(evs.length).toBeGreaterThan(0);
@@ -264,7 +285,7 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     for (const e of evs) store.updateEvidenceTime(e.id, e.localMs);
     expect(id()).toBe(before);
 
-    // Die Art der Montage zählt ebenfalls.
+    // Wenn: nach Episoden statt in Echtzeit montiert wird, dann ist die ID ebenfalls neu
     expect(buildSessionTranscript(store, sessionId, { mode: "episodes" }).header.montageId).not.toBe(before);
   });
 });

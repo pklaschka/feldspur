@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
+import { ablauf } from "./ablauf.ts";
 import { makePhoto, makeSyncAudio } from "../../../packages/media/test/fixtures.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "feldspur-widerspruch-"));
@@ -54,109 +55,130 @@ const shot = async (suffix: string) => {
 };
 try {
   await page.setViewportSize({ width: vw!, height: vh! });
-  await page.getByText("+ neuer Einsatz").click();
-  await page.getByLabel("Titel").fill("Testmarkt");
-  await page.getByLabel("Datum").fill("2026-09-14");
-  await page.getByRole("button", { name: "Anlegen" }).click();
-  await page.getByRole("heading", { name: "Testmarkt" }).waitFor();
-  const sessionId = await page.evaluate(async () => (await window.feldspur.currentProject())!.sessions[0]!.id);
-  await page.evaluate(async ([id, p]) => window.feldspur.importPaths(id!, [p!]), [sessionId, src]);
-  // Rekorder als Referenz, die Uhren beider Fotogeräte gelten als richtig gestellt.
-  await page.evaluate(async (id) => {
-    const v = await window.feldspur.getSession(id);
-    for (const d of v.devices) {
-      if (d.kind === "audio") await window.feldspur.setReference(d.id);
-      else await window.feldspur.setDeviceOffset(d.id, 0);
-    }
-  }, sessionId);
-  await page.reload();
-  await page.getByRole("tab", { name: /Durchsehen/ }).click();
-  const list = page.getByTestId("check-list");
-  await list.waitFor();
+  const list = await ablauf("Einen Einsatz mit widersprüchlichen Fotos einsammeln", async () => {
+    // Angenommen: ein Rekorder als Referenzuhr und zwei Fotogeräte mit richtig gestellter Uhr
+    await page.getByText("+ neuer Einsatz").click();
+    await page.getByLabel("Titel").fill("Testmarkt");
+    await page.getByLabel("Datum").fill("2026-09-14");
+    await page.getByRole("button", { name: "Anlegen" }).click();
+    await page.getByRole("heading", { name: "Testmarkt" }).waitFor();
+    const sessionId = await page.evaluate(async () => (await window.feldspur.currentProject())!.sessions[0]!.id);
+    await page.evaluate(async ([id, p]) => window.feldspur.importPaths(id!, [p!]), [sessionId, src]);
+    await page.evaluate(async (id) => {
+      const v = await window.feldspur.getSession(id);
+      for (const d of v.devices) {
+        if (d.kind === "audio") await window.feldspur.setReference(d.id);
+        else await window.feldspur.setDeviceOffset(d.id, 0);
+      }
+    }, sessionId);
+    await page.reload();
+    await page.getByRole("tab", { name: /Durchsehen/ }).click();
+    const list = page.getByTestId("check-list");
+    await list.waitFor();
+    return list;
+  });
 
-  // Überblick: Stand des Einsatzes nennt die Widersprüche, die Prüfliste sortiert die starken nach oben.
-  await page.getByText(/Zeitbelege widersprechen sich an \d Stellen/).waitFor();
-  const strong = await page.getByTestId("filter-strong").innerText();
-  const clear = await page.getByTestId("filter-clear").innerText();
-  console.log(`Filter: ${strong.replace(/\s+/g, " ")} | ${clear.replace(/\s+/g, " ")}`);
-  if (!(await list.getByTestId("check-group").count())) throw new Error("Kamera Stativ fehlt als Gruppe");
-  if (await list.getByTestId("check-row").filter({ hasText: "IMG_20260914_1018" }).count())
-    throw new Error("Rundung darf nicht in der Prüfliste stehen");
-  await shot("ueberblick");
+  await ablauf("Überblick über die Widersprüche", async () => {
+    // Dann: nennt der Stand des Einsatzes die Widersprüche, die Prüfliste sortiert die starken nach oben
+    await page.getByText(/Zeitbelege widersprechen sich an \d Stellen/).waitFor();
+    const strong = await page.getByTestId("filter-strong").innerText();
+    const clear = await page.getByTestId("filter-clear").innerText();
+    console.log(`Filter: ${strong.replace(/\s+/g, " ")} | ${clear.replace(/\s+/g, " ")}`);
+    if (!(await list.getByTestId("check-group").count())) throw new Error("Kamera Stativ fehlt als Gruppe");
+    if (await list.getByTestId("check-row").filter({ hasText: "IMG_20260914_1018" }).count())
+      throw new Error("Rundung darf nicht in der Prüfliste stehen");
+    await shot("ueberblick");
+  });
 
-  // Starker Widerspruch: Kasten mit Vergleich, Vergleichslage auf der Zeitachse.
-  await list.getByTestId("check-row").filter({ hasText: "F-003" }).first().click();
-  const panel = page.getByTestId("conflict-panel");
-  await panel.waitFor();
-  await panel.getByTestId("evidence-strip").waitFor();
-  console.log(`Kasten: ${(await panel.innerText()).split("\n").slice(0, 3).join(" | ")}`);
-  await shot("offen");
+  const panel = await ablauf("Einen starken Widerspruch ansehen", async () => {
+    // Wenn: ein starker Widerspruch gewählt wird, dann zeigt der Kasten den Vergleich und die Zeitachse die Vergleichslage
+    await list.getByTestId("check-row").filter({ hasText: "F-003" }).first().click();
+    const panel = page.getByTestId("conflict-panel");
+    await panel.waitFor();
+    await panel.getByTestId("evidence-strip").waitFor();
+    console.log(`Kasten: ${(await panel.innerText()).split("\n").slice(0, 3).join(" | ")}`);
+    await shot("offen");
+    return panel;
+  });
 
-  // Anderen Beleg wählen: die Folge steht da, bevor gespeichert wird.
-  await panel.getByRole("radio").nth(1).check();
-  await panel.getByTestId("decision-consequence").waitFor();
-  await shot("anderer-beleg");
-  await panel.getByRole("radio").nth(0).check();
-  await panel.getByLabel("Begründung").fill("Datei beim Export umbenannt");
-  await panel.getByTestId("decide").click();
-  const done = page.getByTestId("conflict-decided");
-  await done.waitFor();
-  console.log(`Entschieden: ${(await done.innerText()).replace(/\s+/g, " ")}`);
-  await shot("entschieden");
+  await ablauf("Den Widerspruch entscheiden", async () => {
+    // Wenn: ein anderer Beleg gewählt wird, dann steht die Folge da, bevor gespeichert wird
+    await panel.getByRole("radio").nth(1).check();
+    await panel.getByTestId("decision-consequence").waitFor();
+    await shot("anderer-beleg");
+    // Wenn: doch der verwendete Beleg mit Begründung bestätigt wird, dann gilt er als entschieden
+    await panel.getByRole("radio").nth(0).check();
+    await panel.getByLabel("Begründung").fill("Datei beim Export umbenannt");
+    await panel.getByTestId("decide").click();
+    const done = page.getByTestId("conflict-decided");
+    await done.waitFor();
+    console.log(`Entschieden: ${(await done.innerText()).replace(/\s+/g, " ")}`);
+    await shot("entschieden");
+  });
 
-  // Gruppe: ganze Kamera auf einmal.
-  await list
-    .getByTestId("check-group")
-    .getByRole("button", { name: /Ursache klären|Entscheiden/ })
-    .click();
-  await panel.waitFor();
-  await panel.getByText(/Dasselbe bei 2 weiteren Dateien/).waitFor();
-  await panel.getByTestId("conflict-cause").waitFor();
-  await shot("gruppe");
-  await panel.getByRole("button", { name: /Für alle 3 gleich entscheiden/ }).click();
-  await shot("gruppe-alle");
-  await panel.getByTestId("group-decide").getByRole("button").first().click();
-  await page.getByTestId("conflict-decided").waitFor();
-  // Rückgängig wird angeboten.
-  await page
-    .getByText(/^Widersprüche entschieden/)
-    .first()
-    .waitFor();
-  const decidedCount = await page.getByTestId("filter-decided").innerText();
-  if (!/4/.test(decidedCount)) throw new Error(`Entschieden: ${decidedCount}`);
+  await ablauf("Eine ganze Kamera auf einmal entscheiden", async () => {
+    // Wenn: die Gruppe der Kamera gewählt wird, dann nennt der Kasten die weiteren Dateien und eine Ursache
+    await list
+      .getByTestId("check-group")
+      .getByRole("button", { name: /Ursache klären|Entscheiden/ })
+      .click();
+    await panel.waitFor();
+    await panel.getByText(/Dasselbe bei 2 weiteren Dateien/).waitFor();
+    await panel.getByTestId("conflict-cause").waitFor();
+    await shot("gruppe");
+    // Wenn: für alle drei gleich entschieden wird
+    await panel.getByRole("button", { name: /Für alle 3 gleich entscheiden/ }).click();
+    await shot("gruppe-alle");
+    await panel.getByTestId("group-decide").getByRole("button").first().click();
+    await page.getByTestId("conflict-decided").waitFor();
+    // Dann: sind alle entschieden, und Rückgängig wird angeboten
+    await page
+      .getByText(/^Widersprüche entschieden/)
+      .first()
+      .waitFor();
+    const decidedCount = await page.getByTestId("filter-decided").innerText();
+    if (!/4/.test(decidedCount)) throw new Error(`Entschieden: ${decidedCount}`);
+  });
 
-  // Neu öffnen: die Entscheidung ist mit Begründung da.
-  await app.close();
-  app = await launch();
-  page = await app.firstWindow();
-  await page.setViewportSize({ width: vw!, height: vh! });
-  await page.getByRole("tab", { name: /Durchsehen/ }).click();
-  await page.getByTestId("filter-decided").click();
-  await page.getByTestId("check-list").getByText("Datei beim Export umbenannt").waitFor();
-  await shot("wiedergeoeffnet");
+  await ablauf("Die Entscheidung nach dem Wiederöffnen", async () => {
+    // Wenn: das Projekt neu geöffnet wird, dann ist die Entscheidung mit Begründung da
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await page.setViewportSize({ width: vw!, height: vh! });
+    await page.getByRole("tab", { name: /Durchsehen/ }).click();
+    await page.getByTestId("filter-decided").click();
+    await page.getByTestId("check-list").getByText("Datei beim Export umbenannt").waitFor();
+    await shot("wiedergeoeffnet");
+  });
 
-  // Änderungsprotokoll mit sprechenden Einträgen.
-  await page.getByTestId("project-menu").click();
-  await page.getByRole("menuitem", { name: "Änderungsprotokoll…" }).click();
-  const log = page.getByTestId("change-log");
-  const step = log
-    .getByTestId("change-step")
-    .filter({ hasText: /Widerspruch entschieden: / })
-    .first();
-  await step.waitFor();
-  await step.getByRole("button").click();
-  await step
-    .getByText(/Stand beim Entscheiden/)
-    .first()
-    .waitFor();
-  await shot("protokoll");
-  await page.keyboard.press("Escape");
-  await log.waitFor({ state: "detached" });
+  await ablauf("Das Änderungsprotokoll lesen", async () => {
+    // Dann: hat das Änderungsprotokoll sprechende Einträge
+    await page.getByTestId("project-menu").click();
+    await page.getByRole("menuitem", { name: "Änderungsprotokoll…" }).click();
+    const log = page.getByTestId("change-log");
+    const step = log
+      .getByTestId("change-step")
+      .filter({ hasText: /Widerspruch entschieden: / })
+      .first();
+    await step.waitFor();
+    await step.getByRole("button").click();
+    await step
+      .getByText(/Stand beim Entscheiden/)
+      .first()
+      .waitFor();
+    await shot("protokoll");
+    await page.keyboard.press("Escape");
+    await log.waitFor({ state: "detached" });
+  });
 
-  await page.emulateMedia({ colorScheme: "dark" });
-  await page.getByTestId("filter-all").click();
-  await page.getByTestId("check-list").getByTestId("check-row").first().click();
-  await shot("dunkel");
+  await ablauf("Im dunklen Modus ansehen", async () => {
+    // Wenn: das System auf dunkel steht, dann ist die Prüfliste auch dunkel lesbar (Bildschirmfoto)
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.getByTestId("filter-all").click();
+    await page.getByTestId("check-list").getByTestId("check-row").first().click();
+    await shot("dunkel");
+  });
   console.log("Widersprüche ok");
 } catch (e) {
   failed = true;

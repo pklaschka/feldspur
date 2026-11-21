@@ -2,10 +2,13 @@ import { describe, expect, it } from "vite-plus/test";
 import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "../src/renderer/transcribe.ts";
 
 describe("Mitschreiben: Hilfen", () => {
-  it("Waveform-Ausschnitt läuft mit und bleibt in der Datei", () => {
-    expect(waveWindow(0, 30_000, 600_000)).toEqual({ fromMs: 0, toMs: 30_000 });
-    expect(waveWindow(100_000, 40_000, 600_000)).toEqual({ fromMs: 90_000, toMs: 130_000 });
-    expect(waveWindow(595_000, 30_000, 600_000)).toEqual({ fromMs: 570_000, toMs: 600_000 });
+  it.each`
+    stelleMs   | breiteMs  | ausschnitt                            | fall
+    ${0}       | ${30_000} | ${{ fromMs: 0, toMs: 30_000 }}        | ${"am Anfang"}
+    ${100_000} | ${40_000} | ${{ fromMs: 90_000, toMs: 130_000 }}  | ${"läuft mit, Stelle im ersten Viertel"}
+    ${595_000} | ${30_000} | ${{ fromMs: 570_000, toMs: 600_000 }} | ${"am Ende der 10-Min.-Datei"}
+  `("Waveform-Ausschnitt bei $stelleMs ms: $fall", ({ stelleMs, breiteMs, ausschnitt }) => {
+    expect(waveWindow(stelleMs, breiteMs, 600_000)).toEqual(ausschnitt);
   });
 
   it("teilt eine Zeile an der Schreibmarke und nimmt die aktuelle Stelle, wenn sie passt", () => {
@@ -18,15 +21,20 @@ describe("Mitschreiben: Hilfen", () => {
   });
 
   it("schätzt die Zeitmarke, wenn die Stelle außerhalb liegt", () => {
+    // Angenommen: eine Zeile ab 10 s, die nächste bei 30 s, die Wiedergabe steht woanders
     const line = { atMs: 10_000, text: "a".repeat(100) };
     const r = splitLine(line, 50, { posMs: 0, nextAtMs: 30_000, durationMs: 60_000 })!;
+    // Dann: liegt die geschätzte Marke zwischen beiden Zeilen
     expect(r.secondAtMs).toBeGreaterThan(10_000);
     expect(r.secondAtMs).toBeLessThan(30_000);
   });
 
-  it("teilt nicht, wenn ein Teil leer wäre", () => {
-    expect(splitLine({ atMs: 0, text: "Satz" }, 0, { posMs: 0, nextAtMs: null, durationMs: null })).toBeNull();
-    expect(splitLine({ atMs: 0, text: "Satz  " }, 4, { posMs: 0, nextAtMs: null, durationMs: null })).toBeNull();
+  it.each`
+    text        | marke | fall
+    ${"Satz"}   | ${0}  | ${"Marke am Anfang"}
+    ${"Satz  "} | ${4}  | ${"nach der Marke nur Leerraum"}
+  `("teilt nicht, wenn ein Teil leer wäre: $fall", ({ text, marke }) => {
+    expect(splitLine({ atMs: 0, text }, marke, { posMs: 0, nextAtMs: null, durationMs: null })).toBeNull();
   });
 
   it("macht aus eingefügten Zeilenumbrüchen Leerzeichen", () => {
@@ -52,37 +60,40 @@ describe("Mitschreiben: Hilfen", () => {
     const body = on();
     const field = {};
 
-    it("Esc, F7, F8, F9 gelten auch ohne Fokus im Textfeld", () => {
-      expect(transcriberKey(key("Escape"), body, field)).toBe("toggle");
-      expect(transcriberKey(key("F8"), on("button"), field)).toBe("back");
-      expect(transcriberKey(key("F9"), on("textarea"), field)).toBe("forward");
-      expect(transcriberKey(key("F7"), null, field)).toBe("slower");
-      expect(transcriberKey(key("F7", { shiftKey: true }), null, field)).toBe("faster");
+    it.each`
+      taste       | mit                   | ziel                 | aktion       | fall
+      ${"Escape"} | ${{}}                 | ${body}              | ${"toggle"}  | ${"Esc ohne Fokus: Wiedergabe an/aus"}
+      ${"F8"}     | ${{}}                 | ${on("button")}      | ${"back"}    | ${"F8 auf einem Knopf: zurück"}
+      ${"F9"}     | ${{}}                 | ${on("textarea")}    | ${"forward"} | ${"F9 im Textfeld: vor"}
+      ${"F7"}     | ${{}}                 | ${null}              | ${"slower"}  | ${"F7: langsamer"}
+      ${"F7"}     | ${{ shiftKey: true }} | ${null}              | ${"faster"}  | ${"Umschalt+F7: schneller"}
+      ${"Escape"} | ${{}}                 | ${on("listbox")}     | ${null}      | ${"Esc in offener Auswahlliste bleibt dort"}
+      ${"F8"}     | ${{}}                 | ${on("menu")}        | ${null}      | ${"F8 im Menü bleibt dort"}
+      ${"Escape"} | ${{}}                 | ${on("alertdialog")} | ${null}      | ${"Esc in einer Rückfrage bleibt dort"}
+      ${"a"}      | ${{}}                 | ${body}              | ${"type"}    | ${"Tippen ohne Fokus springt in die neue Zeile"}
+      ${"a"}      | ${{}}                 | ${on("button")}      | ${"type"}    | ${"Tippen auf einem Knopf ebenso"}
+      ${" "}      | ${{}}                 | ${body}              | ${"type"}    | ${"Leertaste ohne Fokus ebenso"}
+      ${" "}      | ${{}}                 | ${on("button")}      | ${null}      | ${"Leertaste auf einem Knopf drückt ihn"}
+      ${"a"}      | ${{}}                 | ${on("textarea")}    | ${null}      | ${"Tippen im Textfeld bleibt dort"}
+      ${"k"}      | ${{ ctrlKey: true }}  | ${body}              | ${null}      | ${"Strg+K bleibt Kürzel"}
+      ${"Enter"}  | ${{ ctrlKey: true }}  | ${on("textarea")}    | ${null}      | ${"Strg+Enter im Textfeld bleibt dort"}
+    `("$fall", ({ taste, mit, ziel, aktion }) => {
+      expect(transcriberKey(key(taste, mit), ziel, field)).toBe(aktion);
     });
 
-    it("lässt offene Auswahllisten, Menüs und weitere Dialoge in Ruhe", () => {
-      expect(transcriberKey(key("Escape"), on("listbox"), field)).toBeNull();
-      expect(transcriberKey(key("F8"), on("menu"), field)).toBeNull();
-      expect(transcriberKey(key("Escape"), on("alertdialog"), field)).toBeNull();
-    });
-
-    it("Tippen ohne Textfeld springt in die neue Zeile, Kürzel und Textfelder bleiben, wie sie sind", () => {
-      expect(transcriberKey(key("a"), body, field)).toBe("type");
-      expect(transcriberKey(key("a"), on("button"), field)).toBe("type");
-      expect(transcriberKey(key(" "), body, field)).toBe("type");
-      expect(transcriberKey(key(" "), on("button"), field)).toBeNull();
-      expect(transcriberKey(key("a"), on("textarea"), field)).toBeNull();
-      expect(transcriberKey(key("k", { ctrlKey: true }), body, field)).toBeNull();
-      expect(transcriberKey(key("Enter", { ctrlKey: true }), on("textarea"), field)).toBeNull();
+    it("ohne Zeilenfeld wird Tippen nicht umgeleitet", () => {
       expect(transcriberKey(key("a"), body, null)).toBeNull();
     });
   });
 
-  it("erkennt ein Sprecherkürzel am Zeilenanfang schon beim Tippen", () => {
-    expect(leadingSpeaker("B1: ")).toEqual({ speaker: "B1", rest: "" });
-    expect(leadingSpeaker("H: Zwölf Jahre")).toEqual({ speaker: "H", rest: "Zwölf Jahre" });
-    expect(leadingSpeaker("B1:")).toBeNull(); // noch kein Leerzeichen
-    expect(leadingSpeaker("10: Uhr")).toBeNull(); // Zahl, kein Kürzel
-    expect(leadingSpeaker("Interviewerin: ja")).toBeNull(); // zu lang für ein Kürzel
+  it.each`
+    anfang                 | kuerzel                                  | fall
+    ${"B1: "}              | ${{ speaker: "B1", rest: "" }}           | ${"Kürzel mit Leerzeichen"}
+    ${"H: Zwölf Jahre"}    | ${{ speaker: "H", rest: "Zwölf Jahre" }} | ${"Kürzel und Text"}
+    ${"B1:"}               | ${null}                                  | ${"noch kein Leerzeichen"}
+    ${"10: Uhr"}           | ${null}                                  | ${"Zahl, kein Kürzel"}
+    ${"Interviewerin: ja"} | ${null}                                  | ${"zu lang für ein Kürzel"}
+  `("Sprecherkürzel beim Tippen von „$anfang“: $fall", ({ anfang, kuerzel }) => {
+    expect(leadingSpeaker(anfang)).toEqual(kuerzel);
   });
 });

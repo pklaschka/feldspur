@@ -30,12 +30,14 @@ describe("createSerialQueue", () => {
   it("führt Aufträge nacheinander aus, auch nach einem Fehler", async () => {
     const q = createSerialQueue();
     const log: string[] = [];
+    // Wenn: ein langsamer Auftrag scheitert und ein zweiter wartet
     const a = q.run(async () => {
       await new Promise((r) => setTimeout(r, 10));
       log.push("a");
       throw new Error("x");
     });
     const b = q.run(async () => void log.push("b"));
+    // Dann: läuft der zweite erst danach, trotzdem
     await expect(a).rejects.toThrow();
     await b;
     await q.idle();

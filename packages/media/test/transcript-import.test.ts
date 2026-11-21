@@ -3,7 +3,7 @@ import { parseTranscript } from "../src/transcript-import.ts";
 
 // Erfundene Beispiele in den Formaten, die Whisper und verwandte Werkzeuge schreiben.
 describe("automatische Transkripte einlesen", () => {
-  it("SRT mit Sprechern aus der Diarisierung", () => {
+  it("liest SRT, Sprecher aus der Diarisierung werden zu S1, S2 …", () => {
     const srt = `1
 00:00:01,500 --> 00:00:04,000
 [SPEAKER_00]: Guten Morgen, ist hier noch frei?
@@ -18,7 +18,7 @@ describe("automatische Transkripte einlesen", () => {
     ]);
   });
 
-  it("WebVTT mit Stimmen-Tags und Stunden", () => {
+  it("liest WebVTT mit Stimmen-Tags und Stunden", () => {
     const vtt = `WEBVTT
 
 00:00.250 --> 00:02.000
@@ -33,7 +33,7 @@ Seit sieben.
     ]);
   });
 
-  it("Whisper-JSON und WhisperX mit Sprecherfeld", () => {
+  it("liest Whisper-JSON und WhisperX mit Sprecherfeld", () => {
     const json = JSON.stringify({
       text: "…",
       segments: [
@@ -47,12 +47,12 @@ Seit sieben.
     ]);
   });
 
-  it("Whisper-TSV in Millisekunden", () => {
+  it("liest Whisper-TSV mit Zeiten in Millisekunden", () => {
     const tsv = "start\tend\ttext\n0\t1800\tHallo.\n1800\t4000\tNoch was.\n";
     expect(parseTranscript(tsv, "a.tsv").map((l) => l.atMs)).toEqual([0, 1800]);
   });
 
-  it("meldet Unbekanntes und Leeres", () => {
+  it("meldet ein unbekanntes Format und eine leere Datei", () => {
     expect(() => parseTranscript("nur Text", "a.txt")).toThrow(/Format/);
     expect(() => parseTranscript("WEBVTT\n\n", "a.vtt")).toThrow(/keine Zeilen/);
   });

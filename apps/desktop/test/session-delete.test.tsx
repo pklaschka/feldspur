@@ -27,6 +27,7 @@ const button = (text: string) =>
 
 describe("Einsatz löschen", () => {
   it("fragt nach, nennt Titel und Zahl der Quellen und löscht erst nach Bestätigung", () => {
+    // Angenommen: die Einsatzdetails von „Testmarkt“ mit zwei Quellen sind offen
     const onDelete = vi.fn();
     const onOpenChange = vi.fn();
     const root = createRoot(document.createElement("div"));
@@ -35,7 +36,9 @@ describe("Einsatz löschen", () => {
         <SessionDetails view={view} open onOpenChange={onOpenChange} onSave={async () => true} onDelete={onDelete} />,
       ),
     );
+    // Wenn: „Einsatz löschen…“ gewählt wird
     act(() => button("Einsatz löschen…").click());
+    // Dann: fragt die App nach und sagt, was verloren geht und was bleibt
     const dialog = document.querySelector("[data-testid=delete-session]")!;
     expect(dialog.textContent).toContain("Einsatz „Testmarkt“ löschen?");
     expect(dialog.textContent).toContain("Alle 2 Quellen");
@@ -43,6 +46,7 @@ describe("Einsatz löschen", () => {
     // Der Verlauf ist nach dem Schließen, Einsammeln oder einer Analyse weg: das sagt die Nachfrage auch.
     expect(dialog.textContent).toContain("solange das Projekt offen ist");
     expect(onDelete).not.toHaveBeenCalled();
+    // Wenn: bestätigt wird, dann wird gelöscht und die Details schließen
     act(() => button("Einsatz löschen").click());
     expect(onDelete).toHaveBeenCalledOnce();
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -65,9 +69,10 @@ describe("Hinweis nach dem Löschen", () => {
   it("verschwindet, sobald der oberste Schritt nicht mehr das Löschen ist", () => {
     const { root, draw, onClose } = render(undefined);
     expect(button("Rückgängig")).toBeTruthy();
+    // Wenn: das Löschen der oberste Schritt ist, dann bleibt der Hinweis
     draw("Einsatz gelöscht");
     expect(onClose).not.toHaveBeenCalled();
-    // Etwas anderes wurde geändert; dort erscheint jetzt womöglich der UndoToast.
+    // Wenn: danach etwas anderes geändert wird, dann verschwindet er (dort erscheint womöglich der UndoToast)
     draw("Anker gesetzt");
     expect(onClose).toHaveBeenCalledOnce();
     expect(button("Rückgängig")).toBeUndefined();
@@ -77,8 +82,10 @@ describe("Hinweis nach dem Löschen", () => {
   it("verschwindet nach acht Sekunden wie der UndoToast", () => {
     vi.useFakeTimers();
     const { root, onClose } = render("Einsatz gelöscht");
+    // Wenn: knapp acht Sekunden vergehen, dann ist er noch da
     act(() => vi.advanceTimersByTime(7999));
     expect(onClose).not.toHaveBeenCalled();
+    // Wenn: die acht Sekunden voll sind, dann verschwindet er
     act(() => vi.advanceTimersByTime(1));
     expect(onClose).toHaveBeenCalledOnce();
     act(() => root.unmount());

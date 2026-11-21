@@ -7,8 +7,10 @@ import { renderHook } from "./render-hook.tsx";
 describe("useDraft", () => {
   it("behält eigene Eingaben, solange sich der Wert nicht ändert", () => {
     const h = renderHook((p: { v: string }) => useDraft(p.v), { v: "10:15" });
+    // Wenn: getippt wird, dann zeigt der Entwurf die Eingabe
     act(() => h.result()[1]("10:1"));
     expect(h.result()[0]).toBe("10:1");
+    // Wenn: derselbe Wert neu kommt, dann bleibt die Eingabe
     h.rerender({ v: "10:15" });
     expect(h.result()[0]).toBe("10:1");
     h.unmount();
@@ -16,6 +18,7 @@ describe("useDraft", () => {
 
   it("folgt einem neuen Wert von außen und verwirft dabei den Entwurf", () => {
     const h = renderHook((p: { v: string }) => useDraft(p.v), { v: "a" });
+    // Wenn: nach dem Tippen ein neuer Wert von außen kommt, dann gilt der neue Wert
     act(() => h.result()[1]("a, getippt"));
     h.rerender({ v: "b" });
     expect(h.result()[0]).toBe("b");
@@ -24,6 +27,7 @@ describe("useDraft", () => {
 
   it("setzt bei neuem resetKey zurück, auch wenn der Wert gleich bleibt", () => {
     const h = renderHook((p: { v: number; open: boolean }) => useDraft(p.v, p.open), { v: 3, open: false });
+    // Wenn: nach dem Tippen der Dialog neu öffnet, dann gilt wieder der Wert
     act(() => h.result()[1](7));
     h.rerender({ v: 3, open: true });
     expect(h.result()[0]).toBe(3);
@@ -59,7 +63,9 @@ describe("useLoaded", () => {
 
   it("lädt zum Schlüssel und meldet den Wert", async () => {
     const { h, settle } = setup();
+    // Wenn: noch nichts da ist, dann lädt es
     expect(h.result()).toMatchObject({ state: "loading", value: undefined });
+    // Wenn: die Antwort kommt, dann meldet es den Wert
     await settle("a", "A");
     expect(h.result()).toMatchObject({ state: "done", value: "A" });
     h.unmount();
@@ -68,11 +74,14 @@ describe("useLoaded", () => {
   it("beginnt bei neuem Schlüssel leer und ignoriert späte Antworten zum alten", async () => {
     const { h, settle } = setup();
     await settle("a", "A");
+    // Wenn: der Schlüssel wechselt, dann beginnt es leer
     h.rerender({ k: "b" });
     expect(h.result()).toMatchObject({ state: "loading", value: undefined });
+    // Wenn: noch einmal gewechselt wird und die Antwort zum alten kommt, dann zählt sie nicht
     h.rerender({ k: "c" });
     await settle("b", "B");
     expect(h.result().state).toBe("loading");
+    // Wenn: die Antwort zum neuen kommt, dann gilt sie
     await settle("c", "C");
     expect(h.result()).toMatchObject({ state: "done", value: "C" });
     h.unmount();
@@ -81,8 +90,10 @@ describe("useLoaded", () => {
   it("lädt nach null erneut, auch beim selben Schlüssel (Dialog wieder geöffnet)", async () => {
     const { h, pending, settle } = setup();
     await settle("a", "A");
+    // Wenn: der Dialog schließt, dann ruht es
     h.rerender({ k: null });
     expect(h.result()).toMatchObject({ state: "idle", value: undefined });
+    // Wenn: er mit demselben Schlüssel wieder öffnet, dann lädt es neu
     pending.clear();
     h.rerender({ k: "a" });
     expect(h.result().state).toBe("loading");
@@ -95,6 +106,7 @@ describe("useLoaded", () => {
   it("behält mit keep den letzten Wert, bis der neue da ist", async () => {
     const { h, settle } = setup(true);
     await settle("a", "A");
+    // Wenn: der Schlüssel wechselt, dann bleibt der alte Wert stehen, bis der neue da ist
     h.rerender({ k: "b" });
     expect(h.result()).toMatchObject({ state: "loading", value: "A" });
     await settle("b", "B");
@@ -114,6 +126,7 @@ describe("useLatest", () => {
   it("behält dasselbe Objekt und zeigt nach dem Rendern den neuen Wert", () => {
     const h = renderHook((p: { v: number }) => useLatest(p.v), { v: 1 });
     const ref = h.result();
+    // Wenn: neu gerendert wird, dann bleibt das Objekt und der Wert ist neu
     h.rerender({ v: 2 });
     expect(h.result()).toBe(ref);
     expect(ref.current).toBe(2);

@@ -14,7 +14,7 @@ const idle = new Map([["a", [{ startMs: 10 * MIN, endMs: 50 * MIN }]]]);
 const spans = (r: ReturnType<typeof computeEpisodes>) => r.episodes.map((e) => [e.startMs / MIN, e.endMs / MIN]);
 
 describe("Episoden von Hand", () => {
-  it("ohne Anpassung zwei Episoden um die Stille", () => {
+  it("ohne Anpassung entstehen zwei Episoden um die Stille herum", () => {
     const r = computeEpisodes([audio], resolved, idle, { padMs: 0 });
     expect(spans(r)).toEqual([
       [0, 10],
@@ -22,7 +22,7 @@ describe("Episoden von Hand", () => {
     ]);
   });
 
-  it("Mini-Episode in der Stille", () => {
+  it("eine von Hand eingeschlossene Minute wird zur Mini-Episode in der Stille", () => {
     const r = computeEpisodes([audio], resolved, idle, {
       padMs: 0,
       edits: [{ sourceId: "a", fromMs: 30 * MIN, toMs: 31 * MIN, mode: "include" }],
@@ -34,7 +34,7 @@ describe("Episoden von Hand", () => {
     ]);
   });
 
-  it("Grenze nach innen und nach außen", () => {
+  it("Grenzen lassen sich nach innen und nach außen verschieben", () => {
     const r = computeEpisodes([audio], resolved, idle, {
       padMs: 0,
       edits: [
@@ -48,7 +48,7 @@ describe("Episoden von Hand", () => {
     ]);
   });
 
-  it("spätere Anpassung gilt: erst heraus, dann wieder hinein", () => {
+  it("die spätere Anpassung gilt: erst heraus, dann teilweise wieder hinein", () => {
     const r = computeEpisodes([audio], resolved, idle, {
       padMs: 0,
       edits: [

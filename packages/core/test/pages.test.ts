@@ -15,11 +15,17 @@ describe("Seitenzählung im Tagebuch", () => {
     expect(diaryPageLabel(scan({ fileName: "Scan.pdf" }), { page: 1, x: 0, w: 1 })).toBe("T-01 S. 2");
   });
 
-  it("ordnet Rahmen auf einer Doppelseite der linken oder rechten Seite zu", () => {
-    expect(pageSide({ x: 0.05, w: 0.4 })).toBe("left");
-    expect(pageSide({ x: 0.1, w: 0.43 })).toBe("left"); // leicht über den Falz
-    expect(pageSide({ x: 0.52, w: 0.4 })).toBe("right");
-    expect(pageSide({ x: 0.2, w: 0.6 })).toBe("both");
+  it.each`
+    x       | w       | seite      | lage
+    ${0.05} | ${0.4}  | ${"left"}  | ${"links"}
+    ${0.1}  | ${0.43} | ${"left"}  | ${"leicht über den Falz"}
+    ${0.52} | ${0.4}  | ${"right"} | ${"rechts"}
+    ${0.2}  | ${0.6}  | ${"both"}  | ${"über beide Hälften"}
+  `("ein Rahmen $lage gehört auf der Doppelseite zu $seite", ({ x, w, seite }) => {
+    expect(pageSide({ x, w })).toBe(seite);
+  });
+
+  it("nennt die Seite einer Doppelseite im Kurzzeichen", () => {
     expect(diaryPageLabel(scan({ pageSpread: true }), { x: 0.6, w: 0.3 })).toBe("T-01 rechts");
   });
 
@@ -65,19 +71,20 @@ describe("Seitenzählung im Tagebuch", () => {
     expect(regionPageNo(scan(), { x: 0, w: 1 })).toBeNull();
   });
 
-  it("schlägt die Seite vom vorigen Eintrag aus vor", () => {
-    const a = { sourceId: "a", page: 0, x: 0, w: 0.4 };
+  const a = { sourceId: "a", page: 0, x: 0, w: 0.4 };
+  it("schlägt ohne vorigen Eintrag keine Seite vor", () => {
     expect(suggestPageNo(null, { region: a, spread: false })).toBeNull();
-    // gleicher Scan, gleiche Seite → gleiche Zahl
-    expect(suggestPageNo({ region: a, pageNo: 4, spread: false }, { region: { ...a, x: 0.1 }, spread: false })).toBe(4);
-    // Doppelseite: von links nach rechts → nächste
-    expect(suggestPageNo({ region: a, pageNo: 4, spread: true }, { region: { ...a, x: 0.6 }, spread: true })).toBe(5);
-    // nächste PDF-Seite oder nächster Scan → nächste
-    expect(suggestPageNo({ region: a, pageNo: 4, spread: false }, { region: { ...a, page: 1 }, spread: false })).toBe(
-      5,
-    );
+  });
+
+  it.each`
+    fall                                   | naechster                  | doppelseite | vorschlag
+    ${"gleicher Scan, gleiche Seite"}      | ${{ ...a, x: 0.1 }}        | ${false}    | ${4}
+    ${"Doppelseite von links nach rechts"} | ${{ ...a, x: 0.6 }}        | ${true}     | ${5}
+    ${"nächste PDF-Seite"}                 | ${{ ...a, page: 1 }}       | ${false}    | ${5}
+    ${"nächster Scan"}                     | ${{ ...a, sourceId: "b" }} | ${false}    | ${5}
+  `("schlägt nach Seite 4 vor: $fall → S. $vorschlag", ({ naechster, doppelseite, vorschlag }) => {
     expect(
-      suggestPageNo({ region: a, pageNo: 4, spread: false }, { region: { ...a, sourceId: "b" }, spread: false }),
-    ).toBe(5);
+      suggestPageNo({ region: a, pageNo: 4, spread: doppelseite }, { region: naechster, spread: doppelseite }),
+    ).toBe(vorschlag);
   });
 });

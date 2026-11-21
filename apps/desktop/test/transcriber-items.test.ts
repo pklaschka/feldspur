@@ -20,11 +20,14 @@ const line = (id: string, atMs: number) => ({ id, atMs }) as TranscriptRow;
 
 describe("lastAtOrBefore", () => {
   const lines = [line("a", 0), line("b", 1000), line("c", 1000), line("d", 5000)];
-  it("findet die letzte Zeile an oder vor der Stelle", () => {
-    expect(lastAtOrBefore(lines, 999)?.id).toBe("a");
-    expect(lastAtOrBefore(lines, 1000)?.id).toBe("c");
-    expect(lastAtOrBefore(lines, 4999)?.id).toBe("c");
-    expect(lastAtOrBefore(lines, 9999)?.id).toBe("d");
+  it.each`
+    stelleMs | zeile  | fall
+    ${999}   | ${"a"} | ${"kurz vor der zweiten Zeile"}
+    ${1000}  | ${"c"} | ${"genau an zwei Zeilen: die letzte"}
+    ${4999}  | ${"c"} | ${"zwischen zwei Zeilen"}
+    ${9999}  | ${"d"} | ${"hinter der letzten Zeile"}
+  `("bei $stelleMs ms gilt Zeile $zeile: $fall", ({ stelleMs, zeile }) => {
+    expect(lastAtOrBefore(lines, stelleMs)?.id).toBe(zeile);
   });
   it("vor der ersten Zeile und ohne Zeilen: keine", () => {
     expect(lastAtOrBefore(lines, -1)).toBeUndefined();
@@ -34,11 +37,13 @@ describe("lastAtOrBefore", () => {
 
 describe("noteBands", () => {
   it("nur Notizen mit Strecke, erledigte grün", () => {
+    // Angenommen: eine offene Notiz mit Strecke, eine ohne, eine erledigte mit Strecke
     const notes = [
       { fromMs: 0, toMs: 1000, done: false },
       { fromMs: 2000, toMs: null, done: false },
       { fromMs: 3000, toMs: 4000, done: true },
     ] as SourceNoteRow[];
+    // Dann: gibt es Bänder nur für Notizen mit Strecke
     expect(noteBands(notes)).toEqual([
       { fromMs: 0, toMs: 1000, tone: "warn" },
       { fromMs: 3000, toMs: 4000, tone: "good" },
@@ -48,6 +53,7 @@ describe("noteBands", () => {
 
 describe("sourceOptions", () => {
   it("erst dasselbe Gerät, dann mit Trennlinie die übrigen, jeweils natürlich sortiert", () => {
+    // Angenommen: a2 und a10 auf demselben Gerät, b1 auf einem anderen
     const me = row({ id: "a2" });
     const opts = sourceOptions(me, [row({ id: "b1", deviceId: "d2" }), row({ id: "a10" }), me]);
     expect(opts.map((o) => [o.value, o.groupStart])).toEqual([
@@ -59,6 +65,8 @@ describe("sourceOptions", () => {
 });
 
 describe("eventsIn", () => {
+  // Angenommen: Aufnahme a1 von 10:00 bis 10:30; daneben ein Video, ein Foto mit Folgebild, eine spätere Aufnahme,
+  // Mitschriftzeilen und ein Tagebucheintrag
   const me = row({ id: "a1", startMs: h(10, 0), endMs: h(10, 30) });
   const view = {
     rows: [
@@ -87,12 +95,14 @@ describe("eventsIn", () => {
   } as unknown as SessionView;
 
   it("Beginn anderer Aufnahmen, Fotos, fremde Zeilen und Tagebuch, als Stelle in dieser Aufnahme", () => {
+    // Dann: erscheinen nur Ereignisse in der eigenen Zeit, ohne eigene Zeilen, Folgebilder und Zeilen ohne Uhrzeit
     expect(eventsIn(view, me).map((e) => [e.atMs, e.text])).toEqual([
       [5 * 60_000, "V1 (Video) beginnt · v1.wav"],
       [6 * 60_000, "Foto P1 · p1.wav"],
       [5 * 60_000 + 2000, "V1: S1: Hallo"],
       [20 * 60_000, "Tagebuch T-01 S. 2, Eintrag 4 (notiert 10:20): Regen"],
     ]);
+    // Dann: führt eine fremde Zeile zurück zu ihrer Aufnahme
     expect(eventsIn(view, me)[2]!.other).toEqual({
       sourceId: "v1",
       atMs: 2000,

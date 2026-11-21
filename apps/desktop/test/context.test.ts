@@ -80,8 +80,11 @@ describe("Kontext führen (Issue #108)", () => {
   it("Foto ohne Zeit als Kontext: nicht mehr „ohne Uhrzeit“, offener Punkt verschwindet", () => {
     const { session, bare } = seed();
     const noTime = (v: ReturnType<typeof view>) => todos(v).find((t) => t.text.includes("keine Uhrzeit"))?.text;
+    // Angenommen: drei Quellen ohne Uhrzeit
     expect(noTime(view(session.id))).toBe("3 Quellen haben noch keine Uhrzeit.");
+    // Wenn: das Foto ohne Zeit Kontext wird
     setContext(store, `source:${bare.id}`, true);
+    // Dann: steht es unter Kontext und zählt nicht mehr als „ohne Uhrzeit“
     const v = view(session.id);
     expect(row(session.id, bare.id).status).toBe("context");
     expect(v.context.map((c) => c.key)).toEqual([`source:${bare.id}`]);
@@ -91,11 +94,13 @@ describe("Kontext führen (Issue #108)", () => {
   it("datiertes Foto: verlässt die Zeitachse, Rückweg nennt die Uhrzeit, zurück liegt es wie vorher", () => {
     const { session, dated } = seed();
     const before = row(session.id, dated.id).startMs;
+    // Wenn: das datierte Foto Kontext wird, dann verlässt es die Zeitachse, der Rückweg nennt seine Uhrzeit
     setContext(store, `source:${dated.id}`, true);
     const c = view(session.id).context[0]!;
     expect(row(session.id, dated.id).startMs).toBeNull();
     expect(c.wouldStartMs).toBe(before);
     expect(c.canReturn).toBe(true);
+    // Wenn: es zurückgestellt wird, dann liegt es wie vorher
     setContext(store, `source:${dated.id}`, false);
     expect(row(session.id, dated.id).startMs).toBe(before);
     expect(view(session.id).context).toEqual([]);
@@ -108,30 +113,37 @@ describe("Kontext führen (Issue #108)", () => {
 
   it("leere Tagebuchseite als Kontext: ein Eintrag über die ganze Seite, keine Randnotiz mehr offen", () => {
     const { session, p1 } = seed();
+    // Wenn: die leere Seite Kontext wird
     setContext(store, `source:${p1.id}`, true);
+    // Dann: gibt es einen Kontext-Eintrag über die ganze Seite, und nur die andere Seite fehlt noch
     const v = view(session.id);
     expect(v.diary.filter((e) => e.role === "context")).toHaveLength(1);
     expect(row(session.id, p1.id).status).toBe("context");
     expect(todos(v).find((t) => t.text.includes("ohne Randnotiz"))?.text).toBe("1 Tagebuchseite ohne Randnotiz.");
-    // Zurück: Die Einträge der Seite stehen wieder in der Chronologie (ohne Uhrzeit).
+    // Wenn: sie zurückgestellt wird, dann stehen ihre Einträge wieder in der Chronologie (ohne Uhrzeit)
     setContext(store, `source:${p1.id}`, false);
     expect(row(session.id, p1.id).status).not.toBe("context");
   });
 
   it("Seite mit datiertem Eintrag lässt sich nicht als Ganzes umstellen", () => {
     const { p1 } = seed();
+    // Angenommen: auf der Seite steht ein datierter Eintrag
     const e = createEntry(store, p1.id, { x: 0, y: 0, w: 1, h: 0.5 }).entry.id;
     patchEntry(store, e, { notedAt: "10:24" });
+    // Dann: lässt sich die Seite nicht als Ganzes umstellen
     expect(() => setContext(store, `source:${p1.id}`, true)).toThrow();
   });
 
   it("gemischte Seite: Karte als Kontext, Eintrag darunter datiert; Seite liegt weiter auf der Achse", () => {
     const { session, p1 } = seed();
+    // Angenommen: oben auf der Seite eine Karte, darunter eine datierte Notiz
     const karte = createEntry(store, p1.id, { x: 0, y: 0, w: 1, h: 0.4 }).entry.id;
     const notiz = createEntry(store, p1.id, { x: 0, y: 0.5, w: 1, h: 0.5 }).entry.id;
     patchEntry(store, notiz, { notedAt: "10:24" });
+    // Wenn: die Karte Kontext wird und einen Titel bekommt
     setContext(store, `entry:${karte}`, true);
     setContextDetails(store, `entry:${karte}`, { title: " Karte 2: Standplan ", made: "am Vorabend" });
+    // Dann: steht sie unter Kontext, die Seite liegt weiter auf der Achse
     const v = view(session.id);
     expect(v.context).toMatchObject([{ key: `entry:${karte}`, title: "Karte 2: Standplan", made: "am Vorabend" }]);
     expect(row(session.id, p1.id).status).not.toBe("context");
@@ -140,19 +152,22 @@ describe("Kontext führen (Issue #108)", () => {
 
   it("Reihenfolge: ↑↓ einen Schritt, Nach Seite ordnen, zurückkehrendes Stück bekommt seine Stelle wieder", () => {
     const { session, dated, bare, p1 } = seed();
+    // Angenommen: Foto ohne Zeit, datiertes Foto und Tagebuchseite werden nacheinander Kontext
     setContext(store, `source:${bare.id}`, true);
     setContext(store, `source:${dated.id}`, true);
     setContext(store, `source:${p1.id}`, true);
     const keys = () => view(session.id).context.map((c) => c.key);
     const pageKey = keys()[2]!;
     expect(keys()).toEqual([`source:${bare.id}`, `source:${dated.id}`, pageKey]);
+    // Wenn: die Seite nach oben rückt, dann steht sie vorn
     moveContext(store, pageKey, 1);
     expect(keys()).toEqual([pageKey, `source:${bare.id}`, `source:${dated.id}`]);
-    // hin, zurück, hin: wieder an Stelle 2
+    // Wenn: ein Stück hin, zurück und wieder hin wechselt, dann steht es wieder an Stelle 2
     setContext(store, `source:${bare.id}`, false);
     expect(keys()).toEqual([pageKey, `source:${dated.id}`]);
     setContext(store, `source:${bare.id}`, true);
     expect(keys()).toEqual([pageKey, `source:${bare.id}`, `source:${dated.id}`]);
+    // Wenn: nach Seite geordnet wird, dann steht das Tagebuch vor den Fotos
     sortContextByPage(store, session.id);
     expect(keys()[0]).toBe(pageKey); // Tagebuch vor Fotos
     expect(view(session.id).context.map((c) => c.position)).toEqual([1, 2, 3]);
@@ -160,16 +175,20 @@ describe("Kontext führen (Issue #108)", () => {
 
   it("Verweise: am datierten Eintrag, Erwähnt in, und weg, wenn das Ziel gelöscht wird", () => {
     const { session, p1, bare } = seed();
+    // Angenommen: ein Foto als Kontext, ein datierter Eintrag und ein Kontext-Text
     setContext(store, `source:${bare.id}`, true);
     const notiz = createEntry(store, p1.id, { x: 0, y: 0, w: 1, h: 1 }).entry.id;
     patchEntry(store, notiz, { notedAt: "10:24" });
     const text = createContextText(store, session.id, { title: "Zwischenstand", text: "erste Runde" });
+    // Wenn: der Eintrag beide nennt, doppelt und sich selbst
     setEntryRefs(store, notiz, [`source:${bare.id}`, `entry:${text}`, `entry:${text}`, `entry:${notiz}`]);
+    // Dann: zählt jeder Verweis einmal, und der Text weiß, wo er erwähnt wird
     let v = view(session.id);
     expect(v.diary.find((e) => e.id === notiz)!.refs).toEqual([`source:${bare.id}`, `entry:${text}`]);
     expect(v.context.find((c) => c.entryId === text)!.mentionedBy).toMatchObject([
       { entryId: notiz, notedAt: "10:24" },
     ]);
+    // Wenn: der Text gelöscht wird, dann verschwindet auch der Verweis
     deleteEntry(store, text);
     v = view(session.id);
     expect(v.diary.find((e) => e.id === notiz)!.refs).toEqual([`source:${bare.id}`]);
@@ -177,8 +196,10 @@ describe("Kontext führen (Issue #108)", () => {
 
   it("Text ohne Scan: bearbeitbar, kein Rückweg in die Chronologie", () => {
     const { session } = seed();
+    // Wenn: ein Text ohne Scan angelegt und geschrieben wird
     const id = createContextText(store, session.id, { title: "", text: "" });
     patchEntry(store, id, { fullText: "Liste der Stände" });
+    // Dann: ist er bearbeitbar, aber ohne Rückweg in die Chronologie
     const c = view(session.id).context[0]!;
     expect(c).toMatchObject({ find: "Text ohne Scan", textEditable: true, canReturn: false, text: "Liste der Stände" });
     expect(() => setContext(store, `entry:${id}`, false)).toThrow();
@@ -186,17 +207,21 @@ describe("Kontext führen (Issue #108)", () => {
 
   it("Gerät nur mit Kontext braucht keinen Abgleich", () => {
     const { session, bare } = seed();
+    // Angenommen: das Foto ohne Zeit liegt allein auf einem eigenen Gerät
     const own = store.addDevice({ sessionId: session.id, label: "Fotos Lageplan" });
     store.updateSource(bare.id, { deviceId: own.id });
     expect(view(session.id).devices.map((d) => d.label)).toContain("Fotos Lageplan");
+    // Wenn: es Kontext wird, dann fällt das Gerät aus dem Abgleich
     setContext(store, `source:${bare.id}`, true);
     expect(view(session.id).devices.map((d) => d.label)).not.toContain("Fotos Lageplan");
   });
 
-  it("Summary-Zähler: Kontext zählt nicht als offen", () => {
+  it("in der Übersicht zählt Kontext nicht als offen", () => {
     const { session, bare, dated } = seed();
+    // Wenn: beide Fotos Kontext sind
     setContext(store, `source:${bare.id}`, true);
     setContext(store, `source:${dated.id}`, true);
+    // Dann: bleiben nur die beiden Tagebuchseiten offen
     const v = view(session.id);
     expect(v.rows.filter((r) => r.status === "unplaced")).toHaveLength(2); // die beiden Tagebuchseiten
     expect(v.rows.filter((r) => r.status === "context")).toHaveLength(2);
