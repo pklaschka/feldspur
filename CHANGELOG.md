@@ -4,6 +4,24 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.3.0-rc.2 – 2026-11-21 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at 2e7c382123c7a0e8b2e8ec98a208df891f8b18d9 -->
+
+### Behoben
+
+- Nach und nach eingesammelte Clips, kurze Pixel-Videos und Uhrzeiten nach Mitternacht liegen richtig ([#155](https://github.com/pklaschka/feldspur/pull/155), @pklaschka)
+
+### Dokumentation
+
+- Handbuch nennt Knöpfe und Menüs so, wie sie in der App heißen ([#156](https://github.com/pklaschka/feldspur/pull/156), @pklaschka)
+
+### Hinter den Kulissen
+
+- Workflow-Artefakte kürzer aufbewahren ([#158](https://github.com/pklaschka/feldspur/pull/158), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0-rc.1...v0.3.0-rc.2
+
 ## 0.3.0-rc.1 – 2026-11-20 (Vorabversion)
 
 <!-- Release notes generated using configuration in .github/release.yml at a9dce054f2f223e42a43e94555e62e5e4ad5bc5d -->
