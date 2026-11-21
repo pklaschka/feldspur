@@ -1,6 +1,6 @@
 {
   "name": "feldspur",
-  "version": "0.3.0-rc.3",
+  "version": "0.3.0-rc.4",
   "private": true,
   "description": "Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen",
   "license": "EUPL-1.2",

@@ -4,6 +4,25 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.3.0-rc.4 – 2026-11-21 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at c81801ae5338a310e3d7bde02f3a1419021e2daf -->
+
+### Behoben
+
+- Zenodo-Abfrage der Versions-DOI funktioniert wieder ([#182](https://github.com/pklaschka/feldspur/pull/182), @pklaschka)
+- Zenodo-DOI auch bei mehr als 25 Versionen finden ([#183](https://github.com/pklaschka/feldspur/pull/183), @pklaschka)
+
+### Dokumentation
+
+- Bildschirmfotos im Handbuch und README erneuert ([#179](https://github.com/pklaschka/feldspur/pull/179), @pklaschka)
+
+### Hinter den Kulissen
+
+- CI-Ressourcenverbrauch um rund 75 % senken ([#181](https://github.com/pklaschka/feldspur/pull/181), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0-rc.3...v0.3.0-rc.4
+
 ## 0.3.0-rc.3 – 2026-11-21 (Vorabversion)
 
 <!-- Release notes generated using configuration in .github/release.yml at 5b4aa320dd9f48a1599054d08cba03cd4f3858f0 -->
