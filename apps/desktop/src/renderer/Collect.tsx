@@ -1,4 +1,5 @@
-import { useEffect, useState, type DragEvent } from "react";
+import { isScrollingList, openStatusCounts } from "./collectLayout.ts";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { bytes, dominantDay, formatDate, hm, KIND_LABEL, lage, STATUS_TEXT } from "./format.ts";
@@ -181,7 +182,7 @@ export function Collect({
             <span className="flex-1" />
             <StatusLegend context={view.rows.some((r) => r.status === "context")} />
           </div>
-          <div className="columns-[300px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
+          <div className="columns-[340px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
             {view.allDevices.map((d) => (
               <DeviceCard
                 key={d.id}
@@ -201,7 +202,7 @@ export function Collect({
                   <Glyph kind="other" />
                   <span className="font-semibold">Ohne Gerät</span>
                 </header>
-                <SourceList view={view} rows={unassigned} selected={selected} onSelect={onSelect} />
+                <SourceList view={view} name="Ohne Gerät" rows={unassigned} selected={selected} onSelect={onSelect} />
               </section>
             )}
           </div>
@@ -391,7 +392,7 @@ function DeviceCard({
           </Button>
         )}
       </div>
-      <SourceList view={view} rows={rows} selected={selected} onSelect={onSelect} />
+      <SourceList view={view} name={device.label} rows={rows} selected={selected} onSelect={onSelect} />
     </section>
   );
 }
@@ -410,62 +411,113 @@ function ordered(rows: SourceRow[]): { row: SourceRow; nested: boolean }[] {
 
 function SourceList({
   view,
+  name,
   rows,
   selected,
   onSelect,
 }: {
   view: SessionView;
+  name: string;
   rows: SourceRow[];
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
   const label = (id: string | null) => view.rows.find((r) => r.id === id)?.label ?? "?";
+  const all = ordered(rows);
+  const scrolling = isScrollingList(all.length);
+  const listRef = useRef<HTMLUListElement>(null);
+  // Ausgewählte Datei (auch aus der Suche oder über die Fußzeile) in der scrollenden Liste in Sicht holen.
+  useEffect(() => {
+    if (!scrolling || !selected) return;
+    listRef.current?.querySelector(`[data-source-id="${CSS.escape(selected)}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [scrolling, selected]);
+  const open = scrolling ? openStatusCounts(all.map((e) => e.row.status)) : [];
   return (
-    <ul className="border-t border-line pb-1">
-      {ordered(rows).map(({ row: r, nested }) => (
-        <li
-          key={r.id}
-          className={cx("group flex items-center pr-1.5", selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2")}
-        >
-          <button
-            data-testid="source"
-            data-label={r.label}
-            className={cx(
-              "grid min-w-0 flex-1 cursor-pointer grid-cols-[3.4rem_minmax(0,1fr)_auto_8px] items-center gap-2.5 py-1.5 pr-1.5 text-left",
-              nested ? "pl-7" : "pl-3",
-            )}
-            onClick={() => onSelect(r.id)}
+    <div className="border-t border-line">
+      <ul
+        ref={listRef}
+        aria-label={`Dateien von ${name}`}
+        className={cx(
+          "pb-1",
+          scrolling &&
+            "scroll-fade max-h-[18rem] scroll-py-2 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin]",
+        )}
+        data-testid="source-list"
+      >
+        {all.map(({ row: r, nested }) => (
+          <li
+            key={r.id}
+            data-source-id={r.id}
+            className={cx("group flex items-center pr-1.5", selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2")}
           >
-            <span className={`k-${r.kind} font-mono text-[0.82rem] font-medium text-k`}>
-              {nested && <span className="mr-1 text-muted">↳</span>}
-              {r.label}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate" title={r.fileName}>
-                {r.fileName}
+            <button
+              data-testid="source"
+              data-label={r.label}
+              aria-current={selected === r.id || undefined}
+              className={cx(
+                "grid min-w-0 flex-1 cursor-pointer grid-cols-[3.4rem_minmax(0,1fr)_auto_8px] items-center gap-2.5 py-1.5 pr-1.5 text-left",
+                nested ? "pl-7" : "pl-3",
+              )}
+              onClick={() => onSelect(r.id)}
+            >
+              <span className={`k-${r.kind} font-mono text-[0.82rem] font-medium text-k`}>
+                {nested && <span className="mr-1 text-muted">↳</span>}
+                {r.label}
               </span>
-              {r.follows && <span className="block text-[0.8rem] text-muted">setzt {label(r.follows)} fort</span>}
-              {nested && <span className="block text-[0.8rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
-            </span>
-            <span className="font-mono text-[0.82rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
-              {r.status === "context"
-                ? "Kontext"
-                : r.startMs === null
-                  ? "–"
-                  : r.endMs !== null && r.endMs !== r.startMs
-                    ? `${hm(r.startMs)}–${hm(r.endMs)}`
-                    : lage(r.startMs, null)}
-            </span>
-            <Tip content={STATUS_TEXT[r.status]}>
-              <span>
-                <StatusDot status={r.status} />
+              <span className="min-w-0">
+                <span className="block truncate" title={r.fileName}>
+                  {r.fileName}
+                </span>
+                {r.follows && <span className="block text-[0.8rem] text-muted">setzt {label(r.follows)} fort</span>}
+                {nested && <span className="block text-[0.8rem] text-muted">weiteres Bild zu {label(r.partOf)}</span>}
               </span>
-            </Tip>
-          </button>
-          <SourceMenu row={r} view={view} />
-        </li>
-      ))}
-    </ul>
+              <span className="font-mono text-[0.82rem] whitespace-nowrap text-ink-2" title={lage(r.startMs, r.endMs)}>
+                {r.status === "context"
+                  ? "Kontext"
+                  : r.startMs === null
+                    ? "–"
+                    : r.endMs !== null && r.endMs !== r.startMs
+                      ? `${hm(r.startMs)}–${hm(r.endMs)}`
+                      : lage(r.startMs, null)}
+              </span>
+              <Tip content={STATUS_TEXT[r.status]}>
+                <span>
+                  <StatusDot status={r.status} />
+                </span>
+              </Tip>
+            </button>
+            <SourceMenu row={r} view={view} />
+          </li>
+        ))}
+      </ul>
+      {scrolling && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line px-3 py-1.5 text-[0.85rem]"
+          data-testid="source-list-footer"
+        >
+          <span className="text-muted">{all.length} Dateien · scrollen für alle</span>
+          <span className="flex flex-wrap items-center gap-x-3">
+            {open.map(({ status, count }) => (
+              <Button
+                key={status}
+                variant="link"
+                className="inline-flex items-center gap-1.5 text-[0.85rem]"
+                title={
+                  status === "unplaced" ? "Zur ersten Datei ohne Zeit springen" : "Zur ersten Datei zum Prüfen springen"
+                }
+                onClick={() => {
+                  const first = all.find((e) => e.row.status === status);
+                  if (first) onSelect(first.row.id);
+                }}
+              >
+                <StatusDot status={status} decorative />
+                {count} {STATUS_TEXT[status]}
+              </Button>
+            ))}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 

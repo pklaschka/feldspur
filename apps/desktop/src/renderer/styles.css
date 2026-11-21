@@ -205,3 +205,27 @@
     background-image: repeating-linear-gradient(135deg, var(--hatch, var(--line-2)) 0 3px, transparent 3px 7px);
   }
 }
+
+/*
+ * Scrollende Dateiliste im Schritt Einsammeln (Issue #166): Die Unterkante blendet aus, solange noch etwas folgt,
+ * und wird am Ende der Liste wieder scharf (scrollgesteuerte Animation, nur Chromium nötig).
+ */
+@property --scroll-fade {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+.scroll-fade {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--scroll-fade)), transparent);
+  animation: scroll-fade linear both;
+  animation-timeline: scroll(self);
+}
+@keyframes scroll-fade {
+  0%,
+  92% {
+    --scroll-fade: 1.75rem;
+  }
+  100% {
+    --scroll-fade: 0px;
+  }
+}
