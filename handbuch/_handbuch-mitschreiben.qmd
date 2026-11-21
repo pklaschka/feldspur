@@ -7,14 +7,16 @@ setzt die Zeitmarken für dich.
 
 ### So geht's
 
-Öffne in der Detailleiste einer Audio- oder Videoquelle das Mitschreiben und wähle die **Tonquelle**. Dann:
+Öffne das Mitschreiben mit **Mitschreiben…** in der Detailleiste oder im Menü einer Audio- oder Videoquelle und wähle
+die **Tonquelle**. Dann:
 
 - Tippe los. **Enter** legt die Zeile an und beginnt die nächste. Die Zeitmarke ist die Stelle, an der du angefangen
   hast zu tippen.
   Eine angefangene Zeile wird beim Schließen angelegt.
 - Beginnt eine Zeile mit einem Kürzel wie `B1:` und einem Leerzeichen, wechselt der **Sprecher** sofort: Das Kürzel
   wandert ins Sprecherfeld. In einer bestehenden Zeile geht das genauso.
-- Eine Zeitmarke lässt sich nachträglich auf die aktuelle Stelle setzen; **Hierhin springen** spielt eine Zeile ab.
+- **Zeit hierher** setzt die Zeitmarke einer Zeile nachträglich auf die aktuelle Stelle. Ein Klick auf die Zeitmarke
+  springt an die Stelle der Zeile.
 - Über der Liste läuft eine **Waveform** mit (Ausschnitt 10 s, 30 s oder 2 min, logarithmisch oder linear). Sie zeigt,
   wo gesprochen wird, dazu die Zeilen und Notizen; ein Klick spult dorthin.
 - **Liste läuft mit** hält beim Abspielen die aktuelle Zeile im Blick, auch bei langen Mitschriften.
@@ -55,6 +57,6 @@ Uhr korrigierst, wandert die Mitschrift mit.
 
 Hast du eine Aufnahme schon anderswo transkribiert, etwa mit Whisper oder in MAXQDA, kannst du das Transkript über
 **Transkript importieren…** in der Detailleiste einlesen. Feldspur versteht SRT, WebVTT, JSON (Whisper) und TSV.
-Wähle, ob es **zur Mitschrift hinzugefügt** wird oder sie **ersetzt**. Der Import lässt sich mit **Rückgängig**
+Gibt es schon Zeilen, wählst du **Zur Mitschrift hinzufügen …** oder **Mitschrift ersetzen …**. Der Import lässt sich mit **Rückgängig**
 zurücknehmen, auch das Ersetzen. Zeilen hinter dem Ende der Aufnahme übernimmt Feldspur nicht; wie viele es waren,
 steht in der Meldung nach dem Import.

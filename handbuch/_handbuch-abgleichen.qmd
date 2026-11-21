@@ -31,7 +31,7 @@ Daraus entstehen **Vorschläge** ("Uhr geht +2:47, gefunden in V-01"). Ein Vorsc
 (siehe unten). Was nicht passt, **verwirfst** du. Sind mehrere Vorschläge eindeutig, übernimmst du sie mit **Alle
 eindeutigen übernehmen** auf einmal. Hat ein Gerät mehrere eindeutige Vorschläge, zählt dabei der sicherste, und
 **Rückgängig** nimmt die ganze Übernahme in einem Schritt zurück. Stimmen alle Uhren, sagt Feldspur das ("Alle 5 Uhren stimmen jetzt überein"), und
-**Weiter** wird zum Hauptknopf.
+**Weiter: Durchsehen →** wird zum Hauptknopf.
 
 Dabei erkennt Feldspur auch längere **Stille** (ab 5 Minuten) und laute Stellen darin. Das braucht es später für die
 Episoden (@sec-durchsehen).
@@ -57,14 +57,16 @@ danach auf etwa ± 20 ms genau.
 ### Uhrzeit von Hand
 
 Hat eine Quelle gar keine Zeit, oder ist eine Uhrzeit in der Aufnahme angesagt ("Es ist jetzt 10 Uhr 15"), trägst du
-sie in der Detailleiste mit **+ Uhrzeit eintragen** ein:
+sie in der Detailleiste mit **+ Uhrzeit eintragen** ein (bei Ton und Video heißt der Link **+ Uhrzeit eintragen oder
+Ansage markieren**) und bestätigst mit **Eintragen**:
 
 - **Angesagt**: eine Uhrzeit, die an einer Stelle der Aufnahme zu hören ist. Hat die Aufnahme auch eine Zeit der
   Geräteuhr, gleicht das die Uhr des ganzen Geräts ab; die übrigen Clips rücken mit.
-- **Von Hand**: gilt nur für diese Quelle und hat Vorrang vor gelesenen Zeiten.
+- **Von Hand**: gilt nur für diese Quelle und hat Vorrang vor gelesenen Zeiten. Hat die Quelle auch eine Zeit der
+  Geräteuhr, kannst du **Uhr von „Gerät“ danach richten** ankreuzen; dann rücken die übrigen Dateien des Geräts mit.
 
 Doppelpunkte musst du nirgends tippen. Bei Uhrzeiten setzt Feldspur sie beim Tippen selbst: "103045" wird 10:30:45,
-"1030" wird 10:30 (die Sekunden darfst du weglassen), mit ↑ und ↓ verschiebst du um eine Minute. Bei einer **Stelle
+"1030" wird 10:30 (die Sekunden darfst du weglassen), mit ↑ und ↓ verschiebst du um eine Minute, mit Umschalt um zehn. Bei einer **Stelle
 in der Aufnahme** füllen die Ziffern von rechts: "320" wird 3:20, "10320" wird 1:03:20, "45" sind 45 Sekunden.
 Dasselbe gilt für die Stellen beim Setzen eines Ankers.
 

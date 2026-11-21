@@ -10,14 +10,14 @@ Im Schritt **Durchsehen** liegt alles auf einer Zeitachse: eine Spur pro Gerät,
   Beim Abspielen läuft die Zeitachse mit.
 - Das **Mausrad** zoomt an der Mausposition, mit **Umschalt** (oder waagerechtem Wischen) verschiebst du die Achse.
   Du kannst sie auch mit gedrückter **mittlerer Maustaste** (Mausrad drücken) ziehen.
-  Regler und +/− zoomen um die Abspielposition.
+  Regler und Lupen zoomen um die Abspielposition; **Einpassen** zeigt wieder den ganzen Einsatz.
 - Ein Klick auf eine Quelle öffnet sie in der Detailleiste.
 - Tagebuchbalken zeigen ihre Kurzform oder die erste Zeile, Clips zeigen ihre Mitschrift-Zeilen als Striche. Fährst
   du mit der Maus darüber, steht der Text dabei.
 
 Die Legende unter der Zeitachse erklärt die Zeichen:
 
-- **Stille (ab 5 Min.)** ist schraffiert, **laute Stellen in der Stille** sind als Strich markiert, damit nichts
+- **Stille (≥ 5 Min.)** ist schraffiert, eine **laute Stelle in der Stille** ist als Strich markiert, damit nichts
   Wichtiges im Leerlauf untergeht.
 - **Tagebuch**: der Verlauf zeigt den Bezugszeitraum, die Kante die Notierzeit.
 - **Lage prüfen** (gestrichelt): Die Lage dieser Quelle ist unsicher.
@@ -29,10 +29,10 @@ Die Legende unter der Zeitachse erklärt die Zeichen:
 Ist die Lage einer Quelle unsicher, zeigt die Zeitachse oben einen Knopf wie **3 zu prüfen · Nächste →**. Er springt
 der Reihe nach zu diesen Stellen, in der Reihenfolge der Liste **Zu prüfen** (siehe unten); mehrere Dateien mit
 demselben Widerspruch zählen als eine Stelle. Passt die Lage, bestätigst du das rechts in der Detailleiste mit
-**✓ Lage passt**; dort steht dann **Von Hand geprüft: Die Lage passt.** Danach wählt Feldspur gleich die nächste zu
+**✓ Lage passt, als geprüft markieren**; dort steht dann **Von Hand geprüft: Die Lage passt.** Danach wählt Feldspur gleich die nächste zu
 prüfende Stelle und holt sie ins Bild. Ist keine mehr übrig, bleibt die Auswahl stehen und der Hinweis unten meldet
-**Alle Stellen geprüft**. Die Bestätigung ist ein eigener Zeitbeleg und lässt sich wieder löschen. Ist die Uhr des
-ganzen Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt.
+**Alle Stellen geprüft**. Die Bestätigung ist ein eigener Zeitbeleg und lässt sich mit **Zurücknehmen** wieder löschen. Ist die Uhr des
+ganzen Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt (**Uhr von … stimmt**).
 
 Tastenkürzel in Durchsehen (nicht, solange du in einem Textfeld schreibst oder ein Dialog offen ist):
 
@@ -55,13 +55,14 @@ abgeglichen sind, steht dort nur **Uhr nicht abgeglichen** statt eines Widerspru
 ![Ein starker Widerspruch: rechts der Vergleich der Belege, auf der Zeitachse die Vergleichslage](bilder/widerspruch.png){#fig-widerspruch}
 
 Unter der Zeitachse sammelt die Liste **Zu prüfen** alles, was Aufmerksamkeit braucht, die starken Widersprüche
-zuerst. Filter zeigen nur starke, nur deutliche, nur unsichere Lagen oder das bereits **Entschiedene**. Haben mehrere
+zuerst (umstellbar auf **nach Uhrzeit**). Die Filter **Widerspruch stark**, **Widerspruch deutlich** und **Unsichere
+Lage** grenzen ein, **Entschieden** zeigt, was du schon entschieden hast. Haben mehrere
 Dateien eines Geräts denselben Widerspruch, etwa weil die Kamera zwei Stunden falsch ging, stehen sie als eine Zeile
 da.
 
 Wählst du eine Quelle mit Widerspruch, zeigt die Detailleiste:
 
-1. **Die Belege im Vergleich**: jeden Wert mit Herkunft, Genauigkeit und Abstand zum verwendeten Beleg, darüber
+1. Die Belege im Vergleich: jeden Wert mit Herkunft, Genauigkeit und Abstand zum verwendeten Beleg, darüber
    ein kleines Zeitband.
 2. **Wahrscheinliche Ursache**, wenn Feldspur eine erkennt, mit dem passenden Knopf, zum Beispiel **Als Ortszeit lesen**
    für alle Dateien des Geräts oder **Uhr in Abgleichen ansehen**.
@@ -71,7 +72,8 @@ Wählst du eine Quelle mit Widerspruch, zeigt die Detailleiste:
    Darunter wählst du **Für alle 3 gleich entscheiden** (dann zum Beispiel **Dateiname gilt**; jede Datei behält
    ihren eigenen Wert dieser Art) oder **Nur für diese Datei entscheiden**.
 
-Passt keiner der Belege, trägst du die Uhrzeit von Hand ein (@sec-abgleichen). Einen einzelnen Beleg kannst du auch
+Passt keiner der Belege, trägst du die Uhrzeit über **Keine der beiden: Uhrzeit von Hand eintragen** selbst ein
+(@sec-abgleichen). Einen einzelnen Beleg kannst du auch
 abschalten, dann zählt er nicht mehr.
 
 Die Entscheidung wird im Projekt gespeichert, mit Datum, gewähltem Beleg, Begründung und dem Stand der Belege zu
@@ -81,7 +83,7 @@ nicht mehr zum Stand passt, etwa durch einen neuen Abgleich, meldet Feldspur **E
 
 ### Ohne Uhrzeit
 
-Quellen, für die Feldspur noch keine Uhrzeit kennt, liegen direkt unter der Zeitachse im Bereich **Ohne Uhrzeit**. Wähle sie aus und gib
+Quellen, für die Feldspur noch keine Uhrzeit kennt, liegen unter der Zeitachse im Bereich **Ohne Uhrzeit**. Wähle sie aus und gib
 ihnen eine Zeit (@sec-abgleichen). Gehört eine Quelle gar nicht in den Ablauf, etwa eine Kartenzeichnung, führst du
 sie stattdessen als Kontext (@sec-kontext). Sie steht dann in der Kontext-Zeile über der Zeitachse.
 
@@ -90,8 +92,8 @@ sie stattdessen als Kontext (@sec-kontext). Sie steht dann in der Kontext-Zeile 
 ### Lautstärke angleichen
 
 Verschiedene Geräte nehmen oft sehr unterschiedlich laut auf. In der Detailleiste einer Audio- oder Videoquelle
-stellst du unter **Lautstärke** ein, ob sie automatisch auf einen gleichen Sprachpegel gebracht wird, um einen festen
-Wert in dB verstärkt wird oder unverändert bleibt. **Leise Stellen anheben** schaltet zusätzlich einen Kompressor
+stellst du unter **Lautstärke** ein, ob sie automatisch auf einen gleichen Sprachpegel gebracht wird (**automatisch**), um einen festen
+Wert in dB verstärkt wird (**von Hand**) oder unverändert bleibt (**aus**). **Leise Stellen anheben** schaltet zusätzlich einen Kompressor
 ein. Das gilt beim Abhören, beim Mitschreiben und im Montagevideo; die Originaldatei bleibt unverändert, und das
 Begleitprotokoll vermerkt die Verstärkung.
 
