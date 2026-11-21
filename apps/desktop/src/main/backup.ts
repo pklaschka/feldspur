@@ -11,6 +11,7 @@
  */
 import { BACKUP_KEEP, backupDir, listBackups, nextBackupPath, rotateBackups, type ProjectStore } from "@feldspur/core";
 import type { BackupOverview } from "../shared/api.ts";
+import { log } from "@feldspur/media";
 
 export const AUTO_BACKUP_INTERVAL_MS = 30 * 60_000;
 /** So oft schaut die App nach, ob eine Sicherung fällig ist. */
@@ -65,13 +66,16 @@ export class AutoBackup {
     const s = this.store;
     if (!s) return;
     try {
-      s.backupTo(nextBackupPath(s.path, "automatisch", new Date(this.now())));
+      const target = nextBackupPath(s.path, "automatisch", new Date(this.now()));
+      s.backupTo(target);
+      log("sicherung", `automatische Sicherung ${target}`);
       rotateBackups(s.path, "automatisch");
       this.lastAt = this.now();
       this.lastCount = s.changeCount();
       this.lastError = null;
     } catch (e) {
       this.lastError = `Automatische Sicherung fehlgeschlagen: ${(e as Error).message}`;
+      log("sicherung", this.lastError);
       // Nicht bei jedem Blick erneut versuchen, sondern erst nach dem nächsten Abstand.
       this.lastAt = this.now();
     }

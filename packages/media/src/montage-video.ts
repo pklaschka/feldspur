@@ -25,6 +25,7 @@ import { formatClock, type Id, type Placement, type Source } from "@feldspur/cor
 import type { SessionTranscript } from "./session-transcript.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
+import { log } from "./log.ts";
 import { probeMedia } from "./probe.ts";
 import { PROBE_TIMEOUT_MS, runTool, STALL_MS } from "./process.ts";
 
@@ -447,7 +448,11 @@ export async function renderMontage(
       .digest("hex");
     const cached = join(cacheDir, `ton-${audioKey}.m4a`);
     used.add(basename(cached));
-    if (await exists(cached)) return cached;
+    if (await exists(cached)) {
+      log("montage", `Ton aus dem Zwischenspeicher: ${cached}`);
+      return cached;
+    }
+    log("montage", `mischt Ton neu: ${cached}`);
     const aList: string[] = [];
     for (const [i, p] of pieces.entries()) {
       signal?.throwIfAborted();
@@ -566,12 +571,18 @@ export async function renderMontage(
         const vOut = join(cacheDir, `${key}.mp4`);
         vFiles[i] = vOut;
         used.add(`${key}.mp4`);
+        const what = `Abschnitt ${i + 1}/${parts.length} (${durS.toFixed(1).replace(".", ",")} s, ${p.videos.length} ${p.videos.length === 1 ? "Video" : "Videos"})`;
         if (await exists(vOut)) {
+          log("montage", `${what} aus dem Zwischenspeicher: ${vOut}`);
           doneFrames.set(i, frameCount);
           report();
           return;
         }
 
+        log(
+          "montage",
+          `${what} wird gerechnet: ${p.videos.map((v) => v.source.originalPath).join(", ") || "nur Einblendungen"}`,
+        );
         const pdir = join(dir, `p${i}`);
         await mkdir(pdir, { recursive: true });
         // Ohne Video ändert sich das Bild höchstens einmal je Sekunde: mit 1 Bild/s zusammensetzen,
@@ -655,6 +666,7 @@ export async function renderMontage(
       ...audio.perDevice.map((d) => ({ file: d.file, title: d.track.title })),
     ];
     const meta = 1 + tracks.length;
+    log("montage", `setzt ${vFiles.length} Abschnitte und ${tracks.length} Tonspuren zusammen: ${outFile}`);
     // Abgebrochen oder gescheitert: keine halbe Videodatei im Ausgabeordner liegen lassen.
     await ff(
       [
@@ -696,7 +708,11 @@ export async function renderMontage(
       throw e;
     });
     // Zwischenspeicher aufräumen: nur behalten, was diese Ausgabe gebraucht hat.
-    for (const f of await readdir(cacheDir)) if (!used.has(f)) await rm(join(cacheDir, f), { force: true });
+    for (const f of await readdir(cacheDir)) {
+      if (used.has(f)) continue;
+      log("montage", `räumt Zwischenspeicher auf: ${join(cacheDir, f)}`);
+      await rm(join(cacheDir, f), { force: true });
+    }
     return {
       audioTracks: [
         { title: tracks[0]!.title },

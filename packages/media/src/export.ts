@@ -19,6 +19,7 @@ import {
 } from "./session-transcript.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 import { excelCsv } from "./csv.ts";
+import { log, logSince, logSize } from "./log.ts";
 import { sessionTranscriptHtml } from "./viewer/html.ts";
 import { xlsx, type Cell } from "./xlsx.ts";
 import { ensureWritable, ExportPrecheckError, friendlyWriteError, friendlyWriteErrorIn } from "./write-check.ts";
@@ -222,11 +223,28 @@ async function stillOf(
   name: string,
   opts: ExportOptions,
 ): Promise<Still | null> {
-  if (canRenderStill(src)) return renderStill(src, ref, work, { name, signal: opts.signal });
-  if (!opts.renderImage) return null;
+  if (canRenderStill(src)) {
+    log("ausgabe", `Standbild ${name} aus ${src.originalPath}`);
+    return renderStill(src, ref, work, { name, signal: opts.signal });
+  }
+  if (!opts.renderImage) {
+    log("ausgabe", `kein Standbild für ${src.originalPath} (Format ohne Vorschau)`);
+    return null;
+  }
+  log("ausgabe", `Standbild ${name} aus ${src.originalPath} über die Oberfläche`);
   const data = await opts.renderImage(src, ref).catch(() => null);
   const size = data && jpegSize(data);
+  if (!data || !size) log("ausgabe", `  Standbild ${name} fehlgeschlagen`);
   return data && size ? { data, ...size } : null;
+}
+
+/** Schreibt eine Ausgabedatei und vermerkt sie im Protokoll. */
+async function writeOut(path: string, data: string | Uint8Array, what: string): Promise<void> {
+  await writeFile(path, data, typeof data === "string" ? "utf8" : undefined);
+  log(
+    "ausgabe",
+    `schreibt ${what} ${path} (${logSize(typeof data === "string" ? Buffer.byteLength(data) : data.byteLength)})`,
+  );
 }
 
 /** Pfad einer Ausgabedatei im Zielordner; bricht ab, falls ein Name doch aus dem Ordner herausführen würde. */
@@ -253,6 +271,11 @@ export async function exportSession(
         : "Nichts zu exportieren: keine Quelle hat eine Uhrzeit",
     );
   const base = baseName(transcript);
+  const started = performance.now();
+  log(
+    "ausgabe",
+    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
+  );
   try {
     await mkdir(outDir, { recursive: true });
     // Gesperrte oder schreibgeschützte Dateien (z. B. noch in Word offen) sofort melden, nicht erst nach dem Video.
@@ -269,9 +292,11 @@ export async function exportSession(
   } catch (e) {
     // Noch nichts geschrieben: eigene Klasse, damit die App den Stand einer früheren Ausgabe behält.
     const friendly = friendlyWriteError(e, outDir);
+    log("ausgabe", `Vorprüfung gescheitert: ${friendly instanceof Error ? friendly.message : String(friendly)}`);
     throw new ExportPrecheckError(friendly instanceof Error ? friendly.message : String(friendly), { cause: e });
   }
   const work = await mkdtemp(join(tmpdir(), "feldspur-export-"));
+  log("ausgabe", `Zielordner beschreibbar; Arbeitsordner ${work}`);
   try {
     const sources = new Map(transcript.input.sources.map((s) => [s.id, s]));
     const withImages = transcript.entries.filter((e) => e.images.length);
@@ -322,14 +347,14 @@ export async function exportSession(
 
     if (opts.resolve) {
       const xml = montageFcpxml(transcript, planPieces(transcript), { projectName: base, audioMix: opts.audioMix });
-      await writeFile(outPath(outDir, `${base}_Resolve.fcpxml`), xml, "utf8");
+      await writeOut(outPath(outDir, `${base}_Resolve.fcpxml`), xml, "Schnittliste");
       files.push(`${base}_Resolve.fcpxml`);
     }
 
     signal?.throwIfAborted();
     opts.onProgress?.("Einsatztranskript", 0, 1);
     const docx = await sessionTranscriptDocx(transcript, { mediaFileName: media, stills, contextStills });
-    await writeFile(outPath(outDir, `${base}.docx`), docx);
+    await writeOut(outPath(outDir, `${base}.docx`), docx, "Einsatztranskript");
     files.push(`${base}.docx`);
     if (montage && opts.viewer) {
       opts.onProgress?.("Viewer", 0, 1);
@@ -343,24 +368,34 @@ export async function exportSession(
           store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, unpackEnvelope(a.envelope, a.envelopeRate)]),
         ),
       });
-      await writeFile(outPath(outDir, `${base}.html`), html, "utf8");
+      await writeOut(outPath(outDir, `${base}.html`), html, "Viewer");
       files.push(`${base}.html`);
     }
-    await writeFile(
+    await writeOut(
       outPath(outDir, `${base}_Variablen.xlsx`),
       xlsx(documentVariables(transcript, base), "Dokumentvariablen"),
+      "Dokumentvariablen",
     );
     files.push(`${base}_Variablen.xlsx`);
-    await writeFile(outPath(outDir, `${base}_Begleitprotokoll.csv`), protocolCsv(store, transcript, levels), "utf8");
+    await writeOut(
+      outPath(outDir, `${base}_Begleitprotokoll.csv`),
+      protocolCsv(store, transcript, levels),
+      "Begleitprotokoll",
+    );
     files.push(`${base}_Begleitprotokoll.csv`);
     opts.onProgress?.("Fertig", 1, 1);
+    log("ausgabe", `fertig nach ${logSince(started)}: ${files.join(", ")}`);
     return { dir: outDir, files, durationMs: transcript.plan.durationMs };
   } catch (e) {
+    log("ausgabe", `abgebrochen nach ${logSince(started)}: ${e instanceof Error ? e.message : String(e)}`);
     throw friendlyWriteErrorIn(e, outDir);
   } finally {
     // Nach einem Abbruch hält ffmpeg unter Windows Dateien im Arbeitsordner noch kurz offen (EBUSY). Mehrmals
     // versuchen; scheitert das Aufräumen trotzdem, bleibt der Ordner im Temp-Verzeichnis, statt den eigentlichen
     // Fehler oder Abbruch zu verdecken.
-    await rm(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {});
+    await rm(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).then(
+      () => log("ausgabe", `Arbeitsordner entfernt`),
+      (e: unknown) => log("ausgabe", `Arbeitsordner bleibt liegen (${e instanceof Error ? e.message : String(e)})`),
+    );
   }
 }
