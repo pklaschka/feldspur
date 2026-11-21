@@ -308,7 +308,7 @@ mit Installern, `SHA256SUMS.txt` und dem PDF-Handbuch an. Das Handbuch rendert [
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an, dazu eine Druckfassung mit 3 mm Beschnitt rundum
 (`Feldspur-Handbuch-<version>-Druck.pdf`, 216 × 303 mm, Endformat A4; lokal: `vp run handbook:druck`).
 
-**Unveränderliche Releases:** Im Repository ist "Release immutability" eingeschaltet (Settings → General →
+**Unveränderliche Releases:** Im Repository ist „Release immutability“ eingeschaltet (Settings → General →
 Releases). Eine veröffentlichte Release lässt sich danach nicht mehr ändern: Tag und Dateien bleiben, wie sie sind,
 und GitHub stellt dazu eine prüfbare Bestätigung aus (`gh release verify v<version>`). Der Workflow legt die Release
 deshalb zuerst als Entwurf an, lädt alle Dateien hoch, vergleicht GitHubs Prüfsummen mit `SHA256SUMS.txt` und
