@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vite-plus/test";
-import { SHORT_COUNT, visibleCount } from "../src/renderer/collectLayout.ts";
+import { isScrollingList, openStatusCounts } from "../src/renderer/collectLayout.ts";
 
 describe("Lange Dateilisten beim Einsammeln", () => {
   it.each`
-    dateien | aufgeklappt | ausgewählt | sichtbar
-    ${3}    | ${false}    | ${-1}      | ${3}
-    ${12}   | ${false}    | ${-1}      | ${12}
-    ${13}   | ${false}    | ${-1}      | ${SHORT_COUNT}
-    ${40}   | ${false}    | ${2}       | ${SHORT_COUNT}
-    ${40}   | ${true}     | ${-1}      | ${40}
-    ${40}   | ${false}    | ${30}      | ${40}
-  `(
-    "$dateien Dateien, aufgeklappt $aufgeklappt, Auswahl an Stelle $ausgewählt: $sichtbar sichtbar",
-    ({ dateien, aufgeklappt, ausgewählt, sichtbar }) => {
-      expect(visibleCount(dateien, aufgeklappt, ausgewählt)).toBe(sichtbar);
-    },
-  );
+    dateien | scrollt
+    ${3}    | ${false}
+    ${12}   | ${false}
+    ${13}   | ${true}
+    ${40}   | ${true}
+  `("$dateien Dateien: Liste scrollt in der Karte: $scrollt", ({ dateien, scrollt }) => {
+    expect(isScrollingList(dateien)).toBe(scrollt);
+  });
+
+  it("nennt in der Fußzeile zuerst Dateien ohne Zeit, dann zu prüfende, aber keine sicheren", () => {
+    expect(openStatusCounts(["ok", "check", "unplaced", "check", "context", "ok"])).toEqual([
+      { status: "unplaced", count: 1 },
+      { status: "check", count: 2 },
+    ]);
+  });
+
+  it("zeigt nichts, wenn alle Dateien sicher sind", () => {
+    expect(openStatusCounts(["ok", "ok"])).toEqual([]);
+  });
 });

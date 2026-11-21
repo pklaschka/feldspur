@@ -1,19 +1,19 @@
 /**
- * Lange Dateilisten im Schritt Einsammeln (Issue #166): Ein Gerät mit vielen Dateien zeigt zunächst nur die ersten
- * und darunter „Alle … zeigen“. So bleiben alle Gerätekarten gleich breit und ungefähr gleich hoch, und die Spalten
- * füllen sich gleichmäßig statt mit einer einzigen langen Karte.
+ * Lange Dateilisten im Schritt Einsammeln (Issue #166): Ein Gerät mit vielen Dateien zeigt seine Liste in fester
+ * Höhe, die in der Karte scrollt. So bleiben alle Gerätekarten gleich breit und ungefähr gleich hoch, nichts springt
+ * beim Durchsehen, und die Fußzeile nennt, wie viele Dateien noch zu prüfen sind oder keine Zeit haben.
  */
 
-/** Ab so vielen Dateien wird gekürzt; darunter lohnt sich der Knopf nicht. */
-export const SHORTEN_FROM = 13;
-/** So viele Dateien zeigt eine gekürzte Karte. */
-export const SHORT_COUNT = 8;
+/** Ab so vielen Dateien scrollt die Liste in der Karte; darunter wächst die Karte einfach mit. */
+export const SCROLL_FROM = 13;
 
-/**
- * Wie viele Einträge sichtbar sind. Eine ausgewählte Datei (etwa aus der Suche) bleibt nie verborgen: Dann geht die
- * Karte von selbst auf.
- */
-export function visibleCount(total: number, expanded: boolean, selectedIndex: number): number {
-  if (expanded || total < SHORTEN_FROM || selectedIndex >= SHORT_COUNT) return total;
-  return SHORT_COUNT;
+export const isScrollingList = (total: number) => total >= SCROLL_FROM;
+
+export type RowStatus = "ok" | "check" | "unplaced" | "context";
+
+/** Hinweise in der Fußzeile, in dieser Reihenfolge: was noch Arbeit macht. „sicher“ und „Kontext“ nicht. */
+export function openStatusCounts(statuses: RowStatus[]): { status: "unplaced" | "check"; count: number }[] {
+  return (["unplaced", "check"] as const)
+    .map((status) => ({ status, count: statuses.filter((s) => s === status).length }))
+    .filter((c) => c.count > 0);
 }
