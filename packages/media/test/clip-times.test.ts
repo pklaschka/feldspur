@@ -55,6 +55,7 @@ const ct = (c: ImportCandidate) => c.evidence.find((e) => e.raw.startsWith("crea
 
 describe("creation_time: Beginn oder Ende?", () => {
   it("erkennt das Ende, wenn Dateiname + Länge zum Stempel passen", () => {
+    // Angenommen: drei Pixel-Clips, deren Name den Beginn und deren Stempel das Ende trägt
     const [a, b, short] = pixel();
     expect(creationTimeMeans(a!)).toBe("end");
     expect(creationTimeMeans(b!)).toBe("end");
@@ -63,7 +64,9 @@ describe("creation_time: Beginn oder Ende?", () => {
   });
 
   it("liest alle Clips des Geräts als Ende, auch die kurzen", () => {
+    // Wenn: die Clip-Zeiten verfeinert werden
     const out = refineClipTimes(pixel());
+    // Dann: gilt jeder Stempel als Aufnahmeende
     for (const c of out) {
       expect(ct(c).atMediaMs).toBe(c.durationMs);
       expect(ct(c).uncertaintyMs).toBe(END_STAMP_UNCERTAINTY_MS);
@@ -72,6 +75,7 @@ describe("creation_time: Beginn oder Ende?", () => {
   });
 
   it("lässt Geräte, die den Beginn schreiben, unverändert", () => {
+    // Angenommen: zwei Clips, deren Stempel zum Beginn im Namen passt
     const cs = [
       cand("VID_20260914_101441.mp4", probe(177_000, { creation_time: "2026-09-14T08:14:42.000000Z" }), "x"),
       cand("VID_20260914_101905.mp4", probe(46_000, { creation_time: "2026-09-14T08:19:05.000000Z" }), "x"),
@@ -82,12 +86,14 @@ describe("creation_time: Beginn oder Ende?", () => {
   });
 
   it("ohne Uhrzeit im Namen: Überlappung verrät das Ende", () => {
+    // Angenommen: zwei Clips ohne Uhrzeit im Namen, die sich als Beginn gelesen überlappen würden
     const cs = [
       cand("CLIP0001.mp4", probe(177_000, { creation_time: "2026-09-14T08:17:41.000000Z" }), "y"),
       cand("CLIP0002.mp4", probe(46_000, { creation_time: "2026-09-14T08:19:55.000000Z" }), "y"),
     ];
+    // Dann: schreibt das Gerät das Ende
     expect(deviceWritesEnd(cs)).toBe(true);
-    // Ohne Überlappung bleibt es beim Beginn: kein Anlass, etwas anderes anzunehmen.
+    // Wenn: sich die Clips nicht überlappen, dann bleibt es beim Beginn: kein Anlass, etwas anderes anzunehmen
     const apart = [
       cand("CLIP0003.mp4", probe(60_000, { creation_time: "2026-09-14T08:00:00.000000Z" }), "z"),
       cand("CLIP0004.mp4", probe(60_000, { creation_time: "2026-09-14T08:05:00.000000Z" }), "z"),
@@ -96,11 +102,14 @@ describe("creation_time: Beginn oder Ende?", () => {
   });
 
   it("Pixel: Name in UTC, kein Ortszeit-Gerät, keine Überlappung, kein Widerspruch", () => {
+    // Angenommen: die drei Pixel-Clips
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
     const plan = pixel();
     expect(stampsLookLocal(refineClipTimes(plan), "Europe/Berlin")).toBe(false);
+    // Wenn: sie eingesammelt werden
     const res = applyImport(store, session.id, plan);
+    // Dann: gilt das Gerät als UTC, die Clips liegen nacheinander nach Dateiname, ohne Widerspruch
     expect(res.devicesCreated[0]!.timestampsAreUtc).toBe(true);
     const r = resolveTimeline(store.loadResolveInput(session.id));
     const [a, b, c] = res.sources.map((s) => r.placements.get(s.id)!);
@@ -118,12 +127,15 @@ describe("creation_time: Beginn oder Ende?", () => {
 
 describe("Kamera-XML", () => {
   it("liest den Aufnahmebeginn mit Zeitzone der Kamera", () => {
+    // Angenommen: Kamera-XML mit Beginn 10:18:27+01:00
     const xml =
       '<?xml version="1.0"?>\n<ClipMain><ClipContent><ClipMetadata><Access><CreationDate>2026-09-14T10:18:27+01:00</CreationDate></Access>' +
       "<Shoot><StartDate>2026-09-14T10:18:27+01:00</StartDate><EndDate>2026-09-14T10:19:26+01:00</EndDate></Shoot></ClipMetadata></ClipContent></ClipMain>";
+    // Wenn: die Metadaten gelesen werden
     const ev = evidenceFromMediaTags(
       probe(59_040, { "com.panasonic.semi-pro.metadata.xml": xml, creation_time: "2026-09-14T09:18:27.000000Z" }),
     );
+    // Dann: ein Beleg mit der Uhrzeit der Kamera und dem richtigen UTC
     expect(ev).toHaveLength(1);
     expect(ev[0]!.detail).toBe("Metadaten (Aufnahmebeginn, Kamera-XML, Zeitzone der Kamera +01:00)");
     expect(formatLocal(ev[0]!.localMs)).toBe("2026-09-14T10:18:27");
@@ -132,18 +144,23 @@ describe("Kamera-XML", () => {
 });
 
 describe("Kamera-Timecode", () => {
-  it("rechnet Timecode in Bilder um, auch bei 29,97", () => {
-    expect(timecodeFrames("10:34:39:08", 50)).toBe((10 * 3600 + 34 * 60 + 39) * 50 + 8);
-    expect(timecodeFrames("10:34:39:50", 50)).toBeNull();
-    expect(timecodeFrames("10:34:39;08", 30)).toBeNull(); // Drop-Frame: nicht unterstützt
+  it.each`
+    timecode         | bilderJeSekunde | bilder                                 | fall
+    ${"10:34:39:08"} | ${50}           | ${(10 * 3600 + 34 * 60 + 39) * 50 + 8} | ${"gültig"}
+    ${"10:34:39:50"} | ${50}           | ${null}                                | ${"Bildnummer zu groß"}
+    ${"10:34:39;08"} | ${30}           | ${null}                                | ${"Drop-Frame, nicht unterstützt"}
+  `("Timecode $timecode bei $bilderJeSekunde Bildern/s: $fall", ({ timecode, bilderJeSekunde, bilder }) => {
+    expect(timecodeFrames(timecode, bilderJeSekunde)).toBe(bilder);
   });
 
   it("schätzt den Abstand zur Uhr aus mehreren Clips enger als eine Sekunde", () => {
     // Echter Abstand 0:16:12.37; die Uhr schneidet auf ganze Sekunden ab.
     const true_ = -(16 * 60 + 12) * 1000 - 370;
     const clip = (tcMs: number) => ({ clockMs: Math.floor((tcMs + true_) / 1000) * 1000, tcMs, frameMs: 20 });
+    // Wenn: nur ein Clip da ist, dann keine Schätzung
     const one = timecodeOffset([clip(38_079_160)]);
     expect(one).toBeNull();
+    // Wenn: vier Clips da sind, dann liegt die Schätzung unter 250 ms genau
     const off = timecodeOffset([clip(38_079_160), clip(38_200_540), clip(38_350_900), clip(39_000_020)])!;
     expect(Math.abs(off.offsetMs - true_)).toBeLessThanOrEqual(off.uncertaintyMs);
     expect(off.uncertaintyMs).toBeLessThan(250);
@@ -170,7 +187,9 @@ describe("Kamera-Timecode", () => {
       // Einzelner Ausreißer ohne Partner.
       at("05:00:00:00", "14:00:00"),
     ];
+    // Wenn: Abschnitte gebildet und der Abstand geschätzt wird
     const groups = timecodeGroups(day);
+    // Dann: zwei Abschnitte ohne den Ausreißer, Abstand −1:16:12 auf 150 ms genau
     expect(groups).toEqual([
       [0, 1, 2, 3, 4, 5, 6],
       [7, 8],
@@ -222,6 +241,7 @@ describe("Kamera-Timecode", () => {
         join(dir, name),
       );
     }
+    // Wenn: die drei Clips eingesammelt werden
     const plan = await scanPaths([dir]);
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "UTC" });
@@ -230,6 +250,7 @@ describe("Kamera-Timecode", () => {
     const starts = res.sources
       .toSorted((a, b) => a.fileName.localeCompare(b.fileName))
       .map((s) => r.placements.get(s.id)!);
+    // Dann: liegen sie über den Timecode auf 200 ms genau, untereinander bildgenau
     for (const p of starts) expect(p.basis.detail).toMatch(/^Kamera-Timecode/);
     const expected = ["09:18:27.400", "09:25:03.900", "09:40:12.620"].map((t) => {
       const [h, m, s] = t.split(":").map(Number) as [number, number, number];
@@ -248,9 +269,12 @@ describe("Zeitzone der Kamera", () => {
       `<ClipMain><Shoot><StartDate>2026-09-14T10:18:27${zone}</StartDate></Shoot></ClipMain>`;
     const at = (zone: string, key: string) =>
       cand(`P012C00${key}.MOV`, probe(59_040, { "x.metadata.xml": xml(zone) }), `cam${key}`);
+    // Angenommen: zwei Kameras zeigen 10:18:27, eine mit Zone +01:00, eine mit +02:00 (wie der Einsatz)
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
+    // Wenn: sie eingesammelt werden
     const res = applyImport(store, session.id, [at("+01:00", "1"), at("+02:00", "2")]);
+    // Dann: gilt nur die passende Kamera als UTC, und beide liegen bei 10:18:27
     const utc = Object.fromEntries(res.devicesCreated.map((d) => [d.matchKey, d.timestampsAreUtc]));
     expect(utc).toEqual({ cam1: false, cam2: true });
     const r = resolveTimeline(store.loadResolveInput(session.id));
@@ -273,6 +297,7 @@ describe("Zeitbelege neu lesen", () => {
       ...c,
       metadata: { media: { ...(c.metadata.media as MediaProbe), frameRate: undefined } },
     }));
+    // Angenommen: zwei Clips im Stand einer älteren Fassung, ein Beleg ausgeschaltet, eine Handeingabe
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "UTC" });
     const res = applyImport(
@@ -294,11 +319,13 @@ describe("Zeitbelege neu lesen", () => {
       uncertaintyMs: 1000,
       detail: "Von Hand",
     });
+    // Wenn: die Zeitbelege neu gelesen werden
     const changed = applyReread(
       store,
       session.id,
       res.sources.map((s, i) => ({ source: s, metadata: fresh[i]!.metadata, evidence: fresh[i]!.evidence })),
     );
+    // Dann: zwei Timecode-Belege dazu, Handeingabe und ausgeschalteter Beleg bleiben
     expect(changed).toBe(2);
     const after = store.listEvidence(session.id);
     expect(after.filter((e) => e.detail.startsWith("Kamera-Timecode"))).toHaveLength(2);
@@ -306,7 +333,7 @@ describe("Zeitbelege neu lesen", () => {
     // Unveränderter Beleg: gleiche Kennung, bleibt ausgeschaltet.
     expect(after.find((e) => e.id === keep.id)?.enabled).toBe(false);
     expect((store.getSource(a!.id).metadata.media as MediaProbe).frameRate).toEqual({ num: 50, den: 1 });
-    // Zweites Mal: nichts mehr zu tun.
+    // Wenn: noch einmal neu gelesen wird, dann gibt es nichts mehr zu tun
     const again = res.sources.map((s, i) => ({
       source: store.getSource(s.id),
       metadata: fresh[i]!.metadata,
@@ -322,11 +349,13 @@ describe("RC-Funde v0.3.0", () => {
     [...resolveTimeline(store.loadResolveInput(sessionId)).placements.values()].flatMap((p) => p.conflicts);
 
   it("kurzer Pixel-Clip allein: Stempel als Ende, kein Widerspruch (Issue #151)", () => {
+    // Angenommen: ein einzelner kurzer Pixel-Clip, Stempel 15 s nach dem Namen
     const c = cand("PXL_20260914_083000789.mp4", probe(15_000, { creation_time: "2026-09-14T08:30:16.000000Z" }));
     expect(creationTimeMeans(c)).toBe("end");
-    // Ein kurzer Clip eines Geräts, das den Beginn schreibt, bleibt beim Beginn.
+    // Wenn: der Stempel zum Beginn passt, dann bleibt auch ein kurzer Clip beim Beginn
     const start = cand("PXL_20260914_083000789.mp4", probe(15_000, { creation_time: "2026-09-14T08:30:01.000000Z" }));
     expect(creationTimeMeans(start)).toBe("start");
+    // Wenn: er eingesammelt wird, dann liegt er am Namen, ohne Widerspruch
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
     const res = applyImport(store, session.id, [c]);
@@ -337,23 +366,26 @@ describe("RC-Funde v0.3.0", () => {
   });
 
   it("nach und nach eingesammelt: Aufnahmeende wie beim Einsammeln auf einmal (Issue #150)", () => {
+    // Angenommen: zwei umbenannte Teile eines Interviews, die einzeln eingesammelt werden
     const parts = [
       cand("Interview_Teil1.mp4", probe(120_000, { creation_time: "2026-09-14T08:42:00.000000Z" }), "renamed"),
       cand("Interview_Teil2.mp4", probe(90_000, { creation_time: "2026-09-14T08:43:35.000000Z" }), "renamed"),
     ];
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
+    // Wenn: Teil 1 allein kommt, dann bleibt er beim Beginn
     const first = applyImport(store, session.id, [parts[0]!]);
     expect(first.refreshed).toBe(0);
+    // Wenn: Teil 2 dazukommt
     const second = applyImport(store, session.id, [parts[1]!]);
-    // Teil 1 wird nachgezogen: Mit Teil 2 zusammen überlappen sich die Clips nur, wenn der Stempel der Beginn wäre.
+    // Dann: Teil 1 wird nachgezogen: Mit Teil 2 zusammen überlappen sich die Clips nur, wenn der Stempel der Beginn wäre
     expect(second.refreshed).toBe(1);
     const r = resolveTimeline(store.loadResolveInput(session.id));
     const [a, b] = [first.sources[0]!, second.sources[0]!].map((s) => r.placements.get(s.id)!);
     expect(formatLocal(a!.startMs)).toBe("2026-09-14T10:40:00");
     expect(formatLocal(b!.startMs)).toBe("2026-09-14T10:42:05");
     expect(a!.basis.detail).toMatch(/Aufnahmeende/);
-    // Dieselbe Datei noch einmal: Dublette, sie zählt nicht als dritter Clip.
+    // Wenn: dieselbe Datei noch einmal kommt, dann ist sie eine Dublette und zählt nicht als dritter Clip
     const again = applyImport(store, session.id, [parts[1]!]);
     expect(again.duplicates).toHaveLength(1);
     expect(again.refreshed).toBe(0);
@@ -368,9 +400,11 @@ describe("RC-Funde v0.3.0", () => {
       cand("P001C002.MOV", tcProbe("2026-09-14T09:25:03.000000Z", "10:41:16:03"), "cam"),
       cand("P001C003.MOV", tcProbe("2026-09-14T09:40:12.000000Z", "10:56:24:35"), "cam"),
     ];
+    // Wenn: drei Clips mit Timecode einzeln eingesammelt werden
     const store = ProjectStore.open(":memory:");
     const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "UTC" });
     for (const c of clips) applyImport(store, session.id, [JSON.parse(JSON.stringify(c)) as ImportCandidate]);
+    // Dann: haben alle drei einen Timecode-Beleg aus allen Clips
     const tc = store.listEvidence(session.id).filter((e) => e.detail.startsWith("Kamera-Timecode"));
     expect(tc).toHaveLength(3);
     for (const e of tc) expect(e.detail).toMatch(/aus 3 Clips/);
@@ -387,17 +421,21 @@ describe("RC-Funde v0.3.0", () => {
     applyImport(store, session.id, [
       { ...old, evidence: old.evidence.map((e) => ({ ...e, detail: "Metadaten alt" })) },
     ]);
+    // Wenn: ein neuer Clip dazukommt
     const next = cand("Interview_Teil2.mp4", probe(90_000, { creation_time: "2026-09-14T08:43:35.000000Z" }), "r");
+    // Dann: bleiben die alten Belege, bis jemand „Zeitbelege neu lesen“ wählt
     expect(applyImport(store, session.id, [next]).refreshed).toBe(0);
     expect(store.listEvidence(session.id).some((e) => e.detail === "Metadaten alt")).toBe(true);
     store.close();
   });
 
-  it("formatiert den Abstand Uhr − Timecode auf den Tag bezogen (Issue #154)", () => {
-    const day = 86_400_000;
-    expect(formatOffset(-972_160)).toBe("−0:16:12.2");
-    expect(formatOffset(Date.UTC(2026, 8, 14) - 972_160)).toBe("−0:16:12.2");
-    expect(formatOffset(Date.UTC(2026, 8, 14) + 3_600_000)).toBe("+1:00:00.0");
-    expect(formatOffset(day - 59_960)).toBe("−0:01:00.0");
+  it.each`
+    abstandMs                            | text            | fall
+    ${-972_160}                          | ${"−0:16:12.2"} | ${"negativ"}
+    ${Date.UTC(2026, 8, 14) - 972_160}   | ${"−0:16:12.2"} | ${"ms seit 1970, negativ"}
+    ${Date.UTC(2026, 8, 14) + 3_600_000} | ${"+1:00:00.0"} | ${"ms seit 1970, positiv"}
+    ${86_400_000 - 59_960}               | ${"−0:01:00.0"} | ${"knapp ein Tag"}
+  `("formatiert den Abstand Uhr − Timecode auf den Tag bezogen: $fall → $text (Issue #154)", ({ abstandMs, text }) => {
+    expect(formatOffset(abstandMs)).toBe(text);
   });
 });

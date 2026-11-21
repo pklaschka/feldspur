@@ -57,8 +57,10 @@ describe("Rundung und Unsicherheit", () => {
   });
 
   it("2: aufgerundete Minute ist Rundung, kein Widerspruch", () => {
+    // Wenn: die Metadaten in derselben Minute liegen, dann passt der Dateiname
     const ok = photo([{ id: "exif", kind: "metadata", localMs: T(10, 32, 58) }, minuteName(10, 32)], known);
     expect(verdict(ok.of("name"))).toBe("agrees");
+    // Wenn: die Metadaten 8 s nach der Minute liegen, dann ist es Rundung, kein Widerspruch
     const r = photo([{ id: "exif", kind: "metadata", localMs: T(10, 33, 8) }, minuteName(10, 32)], known);
     expect(verdict(r.of("name"))).toBe("rounding");
     expect(r.p.status).toBe("ok");
@@ -74,6 +76,7 @@ describe("Rundung und Unsicherheit", () => {
   });
 
   it("4: zwei sekundengenaue Angaben: 4 s Rundung, 9 s Widerspruch", () => {
+    // Wenn: 4 s auseinander, dann Rundung
     const a = photo(
       [
         { id: "exif", kind: "metadata", localMs: T(10, 32, 7) },
@@ -82,6 +85,7 @@ describe("Rundung und Unsicherheit", () => {
       known,
     );
     expect(verdict(a.of("name"))).toBe("rounding");
+    // Wenn: 9 s auseinander, dann Widerspruch
     const b = photo(
       [
         { id: "exif", kind: "metadata", localMs: T(10, 32, 7) },
@@ -153,14 +157,17 @@ describe("Zeitzonen und UTC", () => {
   });
 
   it("10: falsche Lesart „Sind UTC“ bleibt ein starker Widerspruch mit Ursache utc", () => {
+    // Angenommen: der Stempel ist schon Ortszeit, das Gerät steht aber auf „Sind UTC“
     const { of, p, input } = photo([stamp(10, 18, 47), { id: "name", kind: "filename", localMs: T(10, 18, 47) }], {
       ...known,
       timestampsAreUtc: true,
     });
+    // Dann: starker Widerspruch mit Ursache utc
     const conflicting = p.comparison.find((c) => c.verdict === "conflict")!;
     expect(conflicting).toMatchObject({ severity: "strong", cause: "utc", utcEvidenceId: "meta" });
     expect(p.status).toBe("check");
     // Umgestellt auf „schon Ortszeit“: passt.
+    // Wenn: das Gerät auf „schon Ortszeit“ umgestellt wird, dann passt es
     input.devices.find((d) => d.id === "cam")!.timestampsAreUtc = false;
     const after = resolveTimeline(input).placements.get("P.jpg")!;
     expect(after.conflict.state).toBe("none");
@@ -196,12 +203,14 @@ describe("Zeitzonen und UTC", () => {
         ],
         known,
       ).of("exif");
+    // Dann: ganze Stunden daneben heißt Ursache „Stunden“, krumme Abstände Ursache „Uhr“
     expect(at(12, 32)).toMatchObject({ verdict: "conflict", severity: "strong", cause: "hours" });
     expect(at(11, 32)).toMatchObject({ cause: "hours" });
     expect(at(11, 40).cause).toBe("clock");
   });
 
   it("14: Viertelstunden-Raster (z. B. 5:30 Stunden)", () => {
+    // 5:30 Stunden und 4 s ist ein Stundenversatz, 5:37 Stunden nicht
     expect(assessDeviation(5.5 * 3_600_000 + 4_000, 2_000)).toMatchObject({ verdict: "conflict", hours: true });
     expect(assessDeviation(5.5 * 3_600_000 + 7 * 60_000, 2_000).hours).toBeUndefined();
   });
@@ -260,10 +269,13 @@ describe("Geräteabweichung", () => {
   });
 
   it("verwendeter Beleg nennt den Grund für seinen Vorrang", () => {
+    // Wenn: Metadaten und Dateiname, dann gewinnt die genauere Angabe
     const { p } = photo([{ id: "exif", kind: "metadata", localMs: T(10, 32, 7) }, minuteName(10, 32)], known);
     expect(p.basis.reason).toBe("genaueste Angabe (sekundengenau statt nur Minute)");
+    // Wenn: zusätzlich von Hand, dann gewinnt die Handeingabe
     const hand = photo([{ id: "exif", kind: "metadata", localMs: T(10, 32, 7) }, manualAt(T(10, 32, 7))], known).p;
     expect(hand.basis.reason).toContain("von Hand");
+    // Wenn: nur ein Beleg, dann gilt er als einziger
     const only = photo([{ id: "exif", kind: "metadata", localMs: T(10, 32, 7) }], known).p;
     expect(only.basis.reason).toBe("einziger Zeitbeleg");
   });
@@ -344,8 +356,10 @@ describe("Entscheidungen", () => {
   });
 
   it("ein passender neuer Beleg und abgeschaltete Belege ändern nichts", () => {
+    // Wenn: eine passende Ansage dazukommt, dann bleibt die Entscheidung gültig
     const fits: Ev = { id: "ansage", kind: "spoken", localMs: T(10, 32, 7) };
     expect(state(photo([exif, name, fits, checked(decision(seenNow))], known).p)).toEqual(["decided", "ok"]);
+    // Wenn: der widersprechende Beleg abgeschaltet ist, dann gibt es keinen Widerspruch
     const off = { ...name, enabled: false };
     expect(photo([exif, off, checked(decision(seenNow))], known).p.conflict.state).toBe("none");
   });
@@ -359,12 +373,15 @@ describe("Entscheidungen", () => {
 });
 
 describe("Genauigkeit als Text", () => {
-  it("nennt Einzahl und Mehrzahl richtig", () => {
-    expect(precisionText(500)).toBe("sekundengenau");
-    expect(precisionText(30_000)).toBe("nur Minute");
-    expect(precisionText(5_000)).toBe("auf 5 Sekunden genau");
-    expect(precisionText(60_000)).toBe("auf 1 Minute genau");
-    expect(precisionText(61_000)).toBe("auf 1 Minute genau");
-    expect(precisionText(120_000)).toBe("auf 2 Minuten genau");
+  it.each`
+    unsicherheitMs | text
+    ${500}         | ${"sekundengenau"}
+    ${30_000}      | ${"nur Minute"}
+    ${5_000}       | ${"auf 5 Sekunden genau"}
+    ${60_000}      | ${"auf 1 Minute genau"}
+    ${61_000}      | ${"auf 1 Minute genau"}
+    ${120_000}     | ${"auf 2 Minuten genau"}
+  `("± $unsicherheitMs ms heißt „$text“", ({ unsicherheitMs, text }) => {
+    expect(precisionText(unsicherheitMs)).toBe(text);
   });
 });

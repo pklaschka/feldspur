@@ -15,7 +15,7 @@ const diary = (o: Partial<SourceRow> & { id: string }) =>
   }) as SourceRow;
 
 describe("navPages", () => {
-  it("Bild mit weiteren Bildern ist eine Seite, sortiert nach Kurzzeichen; andere Arten fehlen", () => {
+  it("ein Bild mit weiteren Bildern ist eine Seite, sortiert nach Kurzzeichen; andere Arten fehlen", () => {
     const rows = [
       diary({ id: "t-02" }),
       diary({ id: "t-01" }),
@@ -29,7 +29,7 @@ describe("navPages", () => {
     ]);
   });
 
-  it("PDF je Seite, weitere Bilder an der letzten Seite", () => {
+  it("ein PDF hat je Seite einen Eintrag, weitere Bilder hängen an der letzten Seite", () => {
     const rows = [diary({ id: "scan", isPdf: true }), diary({ id: "rueck", partOf: "scan" })];
     const pages = navPages(rows, new Map([["scan", 3]]));
     expect(pages.map((p) => [p.key, p.label, p.surfaces.map(sKey)])).toEqual([
@@ -46,12 +46,13 @@ describe("navPages", () => {
 });
 
 describe("fitBox", () => {
-  it("noch nicht gemessen: nichts", () => {
-    expect(fitBox({ w: 0, h: 500 }, false)).toEqual({ w: 0, h: 0 });
-  });
-  it("Innenabstand ab, bei mehreren Bildern Platz für die Beschriftung, nie unter 200 px", () => {
-    expect(fitBox({ w: 800, h: 600 }, false)).toEqual({ w: 768, h: 568 });
-    expect(fitBox({ w: 800, h: 600 }, true)).toEqual({ w: 768, h: 544 });
-    expect(fitBox({ w: 100, h: 100 }, true)).toEqual({ w: 200, h: 200 });
+  it.each`
+    flaeche               | mehrereBilder | bild                  | fall
+    ${{ w: 0, h: 500 }}   | ${false}      | ${{ w: 0, h: 0 }}     | ${"noch nicht gemessen: nichts"}
+    ${{ w: 800, h: 600 }} | ${false}      | ${{ w: 768, h: 568 }} | ${"Innenabstand ab"}
+    ${{ w: 800, h: 600 }} | ${true}       | ${{ w: 768, h: 544 }} | ${"bei mehreren Bildern Platz für die Beschriftung"}
+    ${{ w: 100, h: 100 }} | ${true}       | ${{ w: 200, h: 200 }} | ${"nie unter 200 px"}
+  `("$fall", ({ flaeche, mehrereBilder, bild }) => {
+    expect(fitBox(flaeche, mehrereBilder)).toEqual(bild);
   });
 });

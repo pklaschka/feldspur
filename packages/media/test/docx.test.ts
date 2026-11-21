@@ -46,6 +46,7 @@ function documentXml(buf: Buffer): string {
 
 describe("Einsatztranskript-.docx: Zeilenumbrüche", () => {
   it("setzt einen Umbruch im selben Absatz, nicht rohe Zeilenumbrüche", async () => {
+    // Angenommen: ein Tagebucheintrag mit drei Zeilen (LF und CRLF)
     const e: SessionTranscriptEntry = {
       montageMs: 1000,
       kind: "diary",
@@ -54,7 +55,9 @@ describe("Einsatztranskript-.docx: Zeilenumbrüche", () => {
       body: "Volltext: a\nb\r\nc",
       images: [],
     };
+    // Wenn: das Einsatztranskript als .docx geschrieben wird
     const xml = documentXml(await sessionTranscriptDocx(fake([e]), { mediaFileName: "m.mp4", stills: new Map() }));
+    // Dann: zwei Umbrüche im selben Absatz, keine rohen Zeilenenden, eine Zeitmarke
     expect(xml).toContain("<w:br/>");
     expect(xml.match(/<w:br\/>/g)).toHaveLength(2);
     expect(xml).not.toMatch(/<w:t[^>]*>[^<]*\n/);
@@ -84,9 +87,11 @@ describe("Einsatztranskript-.docx: Kontext (Issue #108)", () => {
   const text = (xml: string) => xml.replace(/<[^>]+>/g, "");
 
   it("steht vor der ersten Zeitmarke, ohne Zeitmarke, mit Überschriften", async () => {
+    // Wenn: ein Transkript mit einer Karte als Kontext geschrieben wird
     const xml = documentXml(
       await sessionTranscriptDocx(fake([line], [karte]), { mediaFileName: "m.mp4", stills: new Map() }),
     );
+    // Dann: Kontext und Überschriften stehen vor der ersten Zeitmarke, selbst ohne Zeitmarke
     const t = text(xml);
     const firstStamp = t.indexOf("#00:");
     expect(t.indexOf("Kontext · Karte 2: Standplan")).toBeGreaterThan(-1);

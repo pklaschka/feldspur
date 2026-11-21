@@ -7,6 +7,7 @@ const at = (h: number, m: number, s = 0) => Date.UTC(2026, 8, 14, h, m, s);
 
 describe("Einsatztranskript nach Episoden", () => {
   it("ordnet Zeilen an derselben Stelle (Zwischentafel) nach Uhrzeit, nicht nach Art (Issue #153)", () => {
+    // Angenommen: ein Tagebucheintrag um 10:05 und ein Foto um 10:10, beide vor der ersten Aufnahme um 10:15
     const store = ProjectStore.open(":memory:");
     const sessionId = store.addSession({ title: "Test", date: "2026-09-14" }).id;
     const device = store.addDevice({ sessionId, label: "Rekorder" });
@@ -25,7 +26,9 @@ describe("Einsatztranskript nach Episoden", () => {
       mode: "short",
       shortText: "Ankunft",
     });
+    // Wenn: das Einsatztranskript nach Episoden gebaut wird
     const t = buildSessionTranscript(store, sessionId, { mode: "episodes" });
+    // Dann: stehen beide auf der Zwischentafel, der frühere Eintrag zuerst
     const kinds = t.entries.filter((e) => e.montageMs === 0).map((e) => e.kind);
     expect(kinds[0]).toBe("card");
     expect(kinds.indexOf("diary")).toBeLessThan(kinds.indexOf("photo"));

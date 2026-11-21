@@ -55,8 +55,8 @@ describe.skipIf(!hasFfmpeg() || process.platform === "win32")("Montagevideo bei 
   });
 
   it("bricht den laufenden Abschnitt ab und meldet den ersten Fehler", { timeout: 120_000 }, async () => {
+    // Angenommen: ein 150-s-Video, drei Abschnitte; der zweite scheitert an seinen Einblendungen
     const transcript = buildSessionTranscript(store, sessionId);
-    // Der erste Abschnitt rechnet; der zweite scheitert kurz danach an seinen Einblendungen.
     const overlay: OverlayRenderer = async (_h, frames) => {
       if (frames[0]!.montageMs >= 60_000) {
         await new Promise((r) => setTimeout(r, 800));
@@ -65,6 +65,7 @@ describe.skipIf(!hasFfmpeg() || process.platform === "win32")("Montagevideo bei 
       return frames.map(() => png);
     };
     const cacheDir = join(dir, "zwischenspeicher");
+    // Wenn: die Montage mit zwei Abschnitten gleichzeitig läuft, dann kommt der erste Fehler zurück
     await expect(
       renderMontage(transcript, join(dir, "montage.mp4"), {
         workDir: join(dir, "arbeit"),
@@ -73,7 +74,7 @@ describe.skipIf(!hasFfmpeg() || process.platform === "win32")("Montagevideo bei 
         parallel: 2,
       }),
     ).rejects.toThrow("Einblendung kaputt");
-    // Kein ffmpeg mehr für dieses Video (Bild oder Ton), und der erste Abschnitt wurde nicht zu Ende gerechnet.
+    // Dann: kein ffmpeg mehr für dieses Video (Bild oder Ton), und der erste Abschnitt wurde nicht zu Ende gerechnet.
     expect(running(dir)).toEqual([]);
     expect(readdirSync(cacheDir).filter((f) => f.endsWith(".mp4"))).toEqual([]);
   });

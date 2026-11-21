@@ -10,8 +10,10 @@ const setting = (patch: Partial<Parameters<typeof effectiveGainDb>[0]> = {}) => 
 
 describe("Sprachpegel", () => {
   it("misst das Gesprochene, lange Pausen ändern ihn kaum", () => {
+    // Angenommen: 1000 Messpunkte Sprache bei −30 dB, dazu 9000 Messpunkte Pause bei −75 dB
     const talk = Array.from({ length: 1000 }, () => -30);
     const pause = Array.from({ length: 9000 }, () => -75);
+    // Dann: mit und ohne Pause bleibt der Sprachpegel bei −30 dB
     expect(speechLevelDb(talk)).toBeCloseTo(-30, 1);
     expect(speechLevelDb([...talk, ...pause])).toBeCloseTo(-30, 1);
   });
@@ -27,17 +29,23 @@ describe("Sprachpegel", () => {
 });
 
 describe("Verstärkung", () => {
-  it("gleicht automatisch auf den Zielpegel an, mit Grenzen", () => {
-    expect(effectiveGainDb(setting(), -38)).toBe(LEVEL_TARGET_DB + 38);
-    expect(effectiveGainDb(setting(), -8)).toBe(-12);
-    expect(effectiveGainDb(setting(), -80)).toBe(30);
-    expect(effectiveGainDb(setting(), null)).toBe(0);
+  it.each`
+    sprachpegelDb | verstaerkungDb          | fall
+    ${-38}        | ${LEVEL_TARGET_DB + 38} | ${"auf den Zielpegel"}
+    ${-8}         | ${-12}                  | ${"lautes Gespräch leiser"}
+    ${-80}        | ${30}                   | ${"höchstens 30 dB lauter"}
+    ${null}       | ${0}                    | ${"bei Stille gar nicht"}
+  `("gleicht automatisch an: $fall", ({ sprachpegelDb, verstaerkungDb }) => {
+    expect(effectiveGainDb(setting(), sprachpegelDb)).toBe(verstaerkungDb);
   });
 
-  it("von Hand und aus", () => {
+  it("von Hand gilt der eingestellte Wert bis 40 dB, ausgeschaltet nichts", () => {
     expect(effectiveGainDb(setting({ levelMode: "manual", levelGainDb: 7.5 }), -60)).toBe(7.5);
     expect(effectiveGainDb(setting({ levelMode: "manual", levelGainDb: 99 }), null)).toBe(40);
     expect(effectiveGainDb(setting({ levelMode: "off" }), -60)).toBe(0);
+  });
+
+  it("der Pegel wirkt, sobald er an ist und verstärkt oder komprimiert", () => {
     expect(levelActive(setting({ levelMode: "off" }), 0)).toBe(false);
     expect(levelActive(setting({ levelCompress: false }), 0)).toBe(false);
     expect(levelActive(setting(), 0)).toBe(true);

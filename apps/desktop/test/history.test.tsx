@@ -8,15 +8,22 @@ describe("isEditable", () => {
     d.innerHTML = html;
     return d.firstElementChild;
   };
-  it("Textfelder machen zuerst selbst rückgängig", () => {
-    expect(isEditable(el("<textarea></textarea>"))).toBe(true);
-    expect(isEditable(el('<input type="text">'))).toBe(true);
-    expect(isEditable(el("<input>"))).toBe(true);
+  it.each`
+    html                         | textfeld
+    ${"<textarea></textarea>"}   | ${true}
+    ${'<input type="text">'}     | ${true}
+    ${"<input>"}                 | ${true}
+    ${'<input type="checkbox">'} | ${false}
+    ${'<input type="radio">'}    | ${false}
+    ${'<input type="button">'}   | ${false}
+    ${'<input type="submit">'}   | ${false}
+    ${'<input type="range">'}    | ${false}
+    ${"<button></button>"}       | ${false}
+  `("$html macht selbst rückgängig: $textfeld", ({ html, textfeld }) => {
+    expect(isEditable(el(html))).toBe(textfeld);
   });
-  it("Knöpfe, Schalter und Schieber nicht, ebenso nichts", () => {
-    for (const t of ["checkbox", "radio", "button", "submit", "range"])
-      expect(isEditable(el(`<input type="${t}">`))).toBe(false);
-    expect(isEditable(el("<button></button>"))).toBe(false);
+
+  it("ohne Fokus macht das Projekt rückgängig", () => {
     expect(isEditable(null)).toBe(false);
   });
 });

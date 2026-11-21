@@ -8,43 +8,49 @@ const at = (name: string, pattern?: string) => {
 };
 
 describe("Uhrzeit aus Dateinamen", () => {
-  it.each([
-    ["IMG_20260914_104050.jpg", "2026-09-14T10:40:50.500", 500],
-    ["VID_20260914_103200.mp4", "2026-09-14T10:32:00.500", 500],
-    ["PXL_20260914_103215123.mp4", "2026-09-14T10:32:15.123", 250],
-    ["PXL_20260914_103215123.MP.jpg", "2026-09-14T10:32:15.123", 250],
-    ["2026-09-14 10.32.15.jpg", "2026-09-14T10:32:15.500", 500],
-    ["signal-2026-09-14-103215.m4a", "2026-09-14T10:32:15.500", 500],
-    ["Screenshot 2026-09-14 at 10.32.15.png", "2026-09-14T10:32:15.500", 500],
-    ["DJI_20260914103215_0001.MP4", "2026-09-14T10:32:15.500", 500],
-  ])("%s", (name, time, unc) => {
-    expect(at(name)).toEqual({ time, unc });
+  it.each`
+    datei                                      | uhrzeit                      | unsicherheitMs
+    ${"IMG_20260914_104050.jpg"}               | ${"2026-09-14T10:40:50.500"} | ${500}
+    ${"VID_20260914_103200.mp4"}               | ${"2026-09-14T10:32:00.500"} | ${500}
+    ${"PXL_20260914_103215123.mp4"}            | ${"2026-09-14T10:32:15.123"} | ${250}
+    ${"PXL_20260914_103215123.MP.jpg"}         | ${"2026-09-14T10:32:15.123"} | ${250}
+    ${"2026-09-14 10.32.15.jpg"}               | ${"2026-09-14T10:32:15.500"} | ${500}
+    ${"signal-2026-09-14-103215.m4a"}          | ${"2026-09-14T10:32:15.500"} | ${500}
+    ${"Screenshot 2026-09-14 at 10.32.15.png"} | ${"2026-09-14T10:32:15.500"} | ${500}
+    ${"DJI_20260914103215_0001.MP4"}           | ${"2026-09-14T10:32:15.500"} | ${500}
+    ${"REC_20260914_1032.m4a"}                 | ${"2026-09-14T10:32:30"}     | ${30_000}
+  `("$datei ergibt $uhrzeit ± $unsicherheitMs ms", ({ datei, uhrzeit, unsicherheitMs }) => {
+    expect(at(datei)).toEqual({ time: uhrzeit, unc: unsicherheitMs });
   });
 
-  it("Pixel-Namen tragen UTC, andere Ortszeit", () => {
-    expect(timeFromFilename("PXL_20260907_151441849.mp4")?.utc).toBe(true);
-    expect(timeFromFilename("IMG_20260914_104050.jpg")?.utc).toBeUndefined();
-    // Ein anderes Präfix mit derselben Ziffernfolge ist kein Pixel-Name.
-    expect(timeFromFilename("XPXL_20260914_103215123.mp4")?.utc).toBeUndefined();
+  it.each`
+    datei                            | zeitart
+    ${"PXL_20260907_151441849.mp4"}  | ${"UTC"}
+    ${"IMG_20260914_104050.jpg"}     | ${"Ortszeit"}
+    ${"XPXL_20260914_103215123.mp4"} | ${"Ortszeit"}
+  `("$datei trägt $zeitart (nur echte Pixel-Namen tragen UTC)", ({ datei, zeitart }) => {
+    expect(timeFromFilename(datei)?.utc ?? false).toBe(zeitart === "UTC");
   });
 
-  it("nur Minute: Mitte der Minute mit ± 30 s", () => {
-    expect(at("REC_20260914_1032.m4a")).toEqual({ time: "2026-09-14T10:32:30", unc: 30_000 });
+  it.each`
+    datei                         | grund
+    ${"C0012.MP4"}                | ${"nur Zählnummer"}
+    ${"ZOOM0004.m4a"}             | ${"nur Zählnummer"}
+    ${"IMG_0231.jpg"}             | ${"nur Zählnummer"}
+    ${"PTT-20260914-WA0001.opus"} | ${"Datum ohne Uhrzeit"}
+    ${"IMG_20261340_256199.jpg"}  | ${"Monat 13, Stunde 25"}
+  `("$datei liefert keine Uhrzeit ($grund)", ({ datei }) => {
+    expect(at(datei)).toBeNull();
   });
 
-  it("ignoriert Namen ohne Uhrzeit oder mit unmöglichen Werten", () => {
-    expect(at("C0012.MP4")).toBeNull();
-    expect(at("ZOOM0004.m4a")).toBeNull();
-    expect(at("IMG_0231.jpg")).toBeNull();
-    expect(at("PTT-20260914-WA0001.opus")).toBeNull();
-    expect(at("IMG_20261340_256199.jpg")).toBeNull();
-  });
-
-  it("eigenes Muster pro Gerät hat Vorrang", () => {
+  it("ein eigenes Muster am Gerät hat Vorrang", () => {
     expect(at("Interview_14.09.2026_1032.wav", "*DD.MM.YYYY_hhmm")).toEqual({
       time: "2026-09-14T10:32:30",
       unc: 30_000,
     });
+  });
+
+  it("ein Muster ohne Jahr wird abgelehnt", () => {
     expect(() => compileFilenamePattern("REC_hhmm")).toThrow(/YYYY/);
   });
 });

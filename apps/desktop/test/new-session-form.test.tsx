@@ -34,10 +34,12 @@ describe("NewSessionForm (Hero)", () => {
     const onCreate = vi.fn();
     const host = render(<NewSessionForm hero onCreate={onCreate} />);
     const [title, date, place] = [...host.querySelectorAll("input")];
+    // Wenn: Titel (mit Leerraum), Datum und Ort eingetragen und abgeschickt werden
     type(title!, "  Wochenmarkt Südstadt ");
     type(date!, "2026-09-14");
     type(place!, "Marktplatz");
     act(() => host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    // Dann: wird der Einsatz mit bereinigtem Titel angelegt
     expect(onCreate).toHaveBeenCalledWith({ title: "Wochenmarkt Südstadt", date: "2026-09-14", place: "Marktplatz" });
   });
 

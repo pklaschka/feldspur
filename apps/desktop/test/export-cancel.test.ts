@@ -41,19 +41,19 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
 
   it("meldet den Abbruch statt eines Fehlers und vergisst die alte Ausgabe im selben Ordner", async () => {
     const out = join(dir, "ausgabe");
-    // Zuerst eine fertige Ausgabe ohne Video: Sie steht danach als letzter Stand in der Projektdatei.
+    // Angenommen: eine fertige Ausgabe ohne Video, sie steht als letzter Stand in der Projektdatei
     const quiet = fakeWebContents();
     const first = await runExport(store, quiet, sessionId, out, { video: false });
     expect("cancelled" in first).toBe(false);
     expect(store.getExportRecord(sessionId)).not.toBeNull();
 
-    // Dann mit Video in denselben Ordner, abgebrochen, sobald das Video beginnt.
+    // Wenn: mit Video in denselben Ordner ausgegeben und beim Video abgebrochen wird
     const wc = fakeWebContents((channel: string, p: ExportProgress) => {
       if (channel === IPC.exportProgress && p.step === "Montagevideo") cancelExport(sessionId);
     });
     const r = await runExport(store, wc, sessionId, out, { video: true });
     expect(r).toEqual({ cancelled: true });
-    // Dort liegen womöglich halbe Dateien: Der alte Stand gilt nicht mehr, ein Video gibt es nicht.
+    // Dann: gilt der alte Stand nicht mehr (dort liegen womöglich halbe Dateien), ein Video gibt es nicht
     expect(store.getExportRecord(sessionId)).toBeNull();
     expect(readdirSync(join(out, readdirSync(out)[0]!)).some((f) => f.endsWith(".mp4"))).toBe(false);
     expect(exportRunning()).toBe(false);
@@ -65,7 +65,9 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
       if (channel === IPC.exportProgress)
         seen.push({ types: [...power.blocker.active.values()], throttling: wc.getBackgroundThrottling() });
     });
+    // Wenn: ausgegeben wird
     await runExport(store, wc, sessionId, join(dir, "wach"), { video: false });
+    // Dann: bleibt der Rechner bei jedem Schritt wach und das Fenster ungebremst, danach ist beides frei
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.every((x) => x.types.join() === "prevent-app-suspension" && !x.throttling)).toBe(true);
     expect(power.blocker.active.size).toBe(0);
@@ -76,6 +78,7 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
     const wc = fakeWebContents((channel: string, p: ExportProgress) => {
       if (channel === IPC.exportProgress && p.step === "Montagevideo") cancelExport(sessionId);
     });
+    // Wenn: beim Video abgebrochen wird, dann ist der Rechner danach frei
     expect(await runExport(store, wc, sessionId, join(dir, "wach-abbruch"), { video: true })).toEqual({
       cancelled: true,
     });
@@ -84,26 +87,28 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
 
   it("hängt nicht, wenn die Oberfläche während der Einblendungen neu lädt (Issue #137)", async () => {
     const out = join(dir, "neu-geladen");
-    // Die Oberfläche bekommt die Anfrage nach Einblendungen, antwortet nie und lädt stattdessen neu.
+    // Wenn: die Oberfläche die Anfrage nach Einblendungen bekommt, nie antwortet und stattdessen neu lädt
     const wc = fakeWebContents((channel: string) => {
       if (channel === IPC.overlayRequest)
         queueMicrotask(() => (wc as unknown as EventEmitter).emit("did-start-loading"));
     });
+    // Dann: bricht die Ausgabe mit einer Meldung ab, statt zu hängen
     await expect(runExport(store, wc, sessionId, out, { video: true })).rejects.toThrow(/neu geladen oder beendet/);
     expect(exportRunning()).toBe(false);
-    // Und die nächste Ausgabe ist wieder möglich.
+    // Dann: ist die nächste Ausgabe wieder möglich
     const again = await runExport(store, fakeWebContents(), sessionId, out, { video: false });
     expect("dir" in again).toBe(true);
   });
 
   it("behält den Stand der alten Ausgabe, wenn schon die Vorabprüfung scheitert", async () => {
     const out = join(dir, "vorab");
+    // Angenommen: eine fertige Ausgabe
     const quiet = fakeWebContents();
     await runExport(store, quiet, sessionId, out, { video: false });
     const record = store.getExportRecord(sessionId);
     expect(record).not.toBeNull();
 
-    // Zieldatei nicht beschreibbar (wie eine in Word geöffnete .docx; als Verzeichnis, damit es auch als root scheitert).
+    // Wenn: die .docx nicht beschreibbar ist (wie in Word geöffnet; als Ordner, damit es auch als root scheitert)
     const docx = join(
       record!.dir,
       record!.files.find((f) => f.endsWith(".docx"))!,
@@ -111,7 +116,7 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
     rmSync(docx);
     mkdirSync(docx);
     await expect(runExport(store, quiet, sessionId, out, { video: false })).rejects.toThrow();
-    // Geschrieben wurde nichts: Status und „Erneut ausgeben…“ samt Ordner bleiben.
+    // Dann: wurde nichts geschrieben, Stand und „Erneut ausgeben…“ samt Ordner bleiben
     expect(store.getExportRecord(sessionId)).toEqual(record);
     expect(
       existsSync(

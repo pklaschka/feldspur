@@ -36,6 +36,7 @@ const view = {
 } as unknown as SessionView;
 
 describe("Schnellsuche", () => {
+  // Angenommen: eine Aufnahme mit zwei Mitschriftzeilen, einer Notiz, einem Tagebucheintrag und einer Episode
   const items = searchItems(view);
 
   it("findet Mitschrift und Tagebuch ohne Rücksicht auf Groß-/Kleinschreibung", () => {
@@ -45,11 +46,14 @@ describe("Schnellsuche", () => {
     expect(hits[1]).toMatchObject({ target: "t1" });
   });
 
-  it("verlangt alle Wörter und faltet ß und Akzente", () => {
-    expect(search(items, "STRASSE gesperrt").hits).toHaveLength(1);
-    expect(search(items, "strasse brunnen").hits).toHaveLength(0);
-    expect(search(items, "gespräch").hits).toHaveLength(1);
-    expect(search(items, "gesprach").hits).toHaveLength(1);
+  it.each`
+    suche                 | treffer | fall
+    ${"STRASSE gesperrt"} | ${1}    | ${"ß als ss, beide Wörter in einer Zeile"}
+    ${"strasse brunnen"}  | ${0}    | ${"Wörter in verschiedenen Zeilen"}
+    ${"gespräch"}         | ${1}    | ${"mit Umlaut"}
+    ${"gesprach"}         | ${1}    | ${"Umlaut ohne Punkte"}
+  `("„$suche“ ergibt $treffer Treffer: $fall", ({ suche, treffer }) => {
+    expect(search(items, suche).hits).toHaveLength(treffer);
   });
 
   it("findet über die Uhrzeit und den Dateinamen", () => {
@@ -69,11 +73,14 @@ describe("Schnellsuche", () => {
   });
 
   it("zählt alle Treffer, auch wenn nur die ersten angezeigt werden", () => {
+    // Angenommen: fünf Einträge mit „Eintrag“
     const many = Array.from({ length: 5 }, (_, i) => ({ ...items[0]!, text: `Eintrag ${i}` }));
+    // Wenn: höchstens drei angezeigt werden, dann drei Treffer, gezählt fünf
     const r = search(many, "eintrag", 3);
     expect(r.hits).toHaveLength(3);
     expect(r.total).toBe(5);
     expect(search(many, "eintrag").total).toBe(5);
+    // Wenn: nur Leerraum gesucht wird, dann nichts
     expect(search(many, "  ")).toEqual({ hits: [], total: 0 });
   });
 

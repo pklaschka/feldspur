@@ -6,6 +6,7 @@ import { CONTEXT_DEFAULTS, T, testmarkt } from "./scenario.ts";
 const clock = (ms: number | undefined) => (ms === undefined ? undefined : formatClock(ms));
 
 describe("Zeitbestimmung am Testmarkt", () => {
+  // Angenommen: der erfundene Markttag aus scenario.ts (Rekorder als Referenz, Kamera mit Klatschen, zwei Handys)
   const input = testmarkt();
   const res = resolveTimeline(input);
   const p = (id: string) => res.placements.get(id)!;
@@ -46,7 +47,7 @@ describe("Zeitbestimmung am Testmarkt", () => {
     expect(clock(p("Tagebuch_S01.jpg").endMs)).toBe("10:12:00");
   });
 
-  it("keine Widersprüche", () => {
+  it("am Testmarkt gibt es keine Widersprüche", () => {
     expect(res.anchorConflicts).toEqual([]);
     for (const pl of res.placements.values()) expect(pl.conflicts).toEqual([]);
   });
@@ -54,6 +55,7 @@ describe("Zeitbestimmung am Testmarkt", () => {
 
 describe("Zeitbestimmung: Sonderfälle", () => {
   it("Quelle ohne eigene Zeit erbt die Lage über einen Anker", () => {
+    // Angenommen: ein Leihgerät ohne eigene Zeit, per Klatschen mit dem zweiten Kameraclip verbunden
     const input = testmarkt();
     input.sources.push({ ...input.sources[1]!, id: "LEIH.MP4", label: "V-03", deviceId: "leih" });
     input.anchors.push({
@@ -68,8 +70,10 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       proposed: false,
       confidence: null,
     });
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
     const pl = res.placements.get("LEIH.MP4")!;
+    // Dann: liegt es über den Anker 5 s vor dem Klatschen
     expect(formatClock(pl.startMs)).toBe("10:40:25");
     expect(pl.basis.kind).toBe("anchor");
     expect(pl.basis.detail).toBe("Sync-Signal mit V-02");
@@ -77,12 +81,15 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   });
 
   it("ohne Belege bleibt eine Quelle unplatziert", () => {
+    // Angenommen: dasselbe Leihgerät, aber ohne Anker
     const input = testmarkt();
     input.sources.push({ ...input.sources[1]!, id: "LEIH.MP4", label: "V-03", deviceId: "leih" });
+    // Dann: bekommt es keinen Platz auf der Zeitachse
     expect(resolveTimeline(input).placements.has("LEIH.MP4")).toBe(false);
   });
 
   it("manuelle Platzierung gewinnt, Widerspruch wird gemeldet", () => {
+    // Angenommen: ein Foto mit Metadaten 10:12:30 bekommt von Hand 10:20
     const input = testmarkt();
     input.evidence.push({
       id: "man",
@@ -97,7 +104,9 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       raw: "",
       enabled: true,
     });
+    // Wenn: Feldspur die Zeitachse berechnet
     const pl = resolveTimeline(input).placements.get("IMG_0231.jpg")!;
+    // Dann: gilt die Handeingabe, und der Unterschied zu den Metadaten wird gemeldet
     expect(formatClock(pl.startMs)).toBe("10:20:00");
     expect(pl.status).toBe("check");
     expect(pl.conflicts).toHaveLength(1);
@@ -105,6 +114,7 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   });
 
   it("angesagte Uhrzeit in einem Clip gleicht die ganze Kamera ab", () => {
+    // Angenommen: kein Klatschen, aber eine angesagte Uhrzeit im zweiten Kameraclip
     const input = testmarkt();
     input.anchors = [];
     // Im zweiten Clip sagt jemand bei 0:30 „zehn Uhr vierzig und vierzig Sekunden“.
@@ -121,7 +131,9 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       raw: "",
       enabled: true,
     });
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: gilt die Abweichung für die ganze Kamera, auch für den ersten Clip
     const cam = res.deviceClocks.get("camA")!;
     expect(cam.basis).toBe("spoken");
     expect(cam.offsetMs).toBe(167_000);
@@ -131,6 +143,7 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   });
 
   it("Anker schlägt eine minutengenaue Ansage derselben Kamera (#117)", () => {
+    // Angenommen: Klatschen und eine auf die Minute gerundete Ansage in derselben Kamera
     const input = testmarkt();
     // Angesagt „zehn Uhr vierzig“ bei 0:30, auf die Minute gerundet: 20 s neben dem Klatschen.
     input.evidence.push({
@@ -146,7 +159,9 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       raw: "",
       enabled: true,
     });
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: gilt der genauere Anker, ohne Widerspruch
     const cam = res.deviceClocks.get("camA")!;
     expect(cam.basis).toBe("anchor");
     expect(cam.offsetMs).toBe(167_000);
@@ -156,6 +171,7 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   });
 
   it("Anker gilt weiter, wenn der verankerte Clip selbst bestätigt ist (#117)", () => {
+    // Angenommen: Klatschen, minutengenaue Ansage und „Lage passt“ auf dem verankerten Clip
     const input = testmarkt();
     input.evidence.push(
       {
@@ -193,7 +209,9 @@ describe("Zeitbestimmung: Sonderfälle", () => {
         },
       },
     );
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: bleibt die Kamera am Anker, der bestätigte Clip behält seine Lage
     expect(res.deviceClocks.get("camA")!.basis).toBe("anchor");
     expect(formatClock(res.placements.get("C0012.MP4")!.startMs)).toBe("10:16:00");
     expect(res.placements.get("C0012.MP4")!.basis.kind).toBe("checked");
@@ -201,51 +219,66 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   });
 
   it("abgeschalteter Beleg zählt nicht", () => {
+    // Angenommen: der einzige Beleg eines Fotos ist abgeschaltet
     const input = testmarkt();
     input.evidence.find((e) => e.sourceId === "IMG_0231.jpg")!.enabled = false;
+    // Dann: hat das Foto keinen Platz auf der Zeitachse
     expect(resolveTimeline(input).placements.has("IMG_0231.jpg")).toBe(false);
   });
 
   it("Geräteeinstellung „Zeitstempel sind UTC“ rechnet in Ortszeit um", () => {
+    // Angenommen: Handy B schreibt UTC, und am Gerät ist „Zeitstempel sind UTC“ gesetzt
     const input = testmarkt();
     const ev = input.evidence.find((e) => e.sourceId === "IMG_20260914_104050.jpg")!;
     ev.utcMs = Date.UTC(2026, 8, 14, 8, 40, 50);
     input.devices.find((d) => d.id === "phoneB")!.timestampsAreUtc = true;
+    // Wenn: Feldspur die Zeitachse berechnet
     const pl = resolveTimeline(input).placements.get("IMG_20260914_104050.jpg")!;
+    // Dann: liegt das Foto in Berliner Ortszeit
     expect(formatClock(pl.startMs)).toBe("10:40:50");
   });
 
   it("Zeitzone der Geräteuhr: Ortszeit-Belege werden in die Einsatzzeit umgerechnet", () => {
+    // Angenommen: Handy B ist auf UTC gestellt und am Gerät steht die Zeitzone UTC
     const input = testmarkt();
     const ev = input.evidence.find((e) => e.sourceId === "IMG_20260914_104050.jpg")!;
     ev.localMs = Date.UTC(2026, 8, 14, 8, 40, 50); // Handy auf UTC gestellt
     input.devices.find((d) => d.id === "phoneB")!.timeZone = "UTC";
+    // Wenn: Feldspur die Zeitachse berechnet
     const pl = resolveTimeline(input).placements.get("IMG_20260914_104050.jpg")!;
+    // Dann: liegt das Foto in der Einsatzzeit
     expect(formatClock(pl.startMs)).toBe("10:40:50");
   });
 
   it("Zeitzone gilt nicht für angesagte oder von Hand gesetzte Zeiten", () => {
+    // Angenommen: das Gerät steht auf New York, die Uhrzeit wurde aber von Hand gesetzt
     const input = testmarkt();
     input.devices.find((d) => d.id === "phoneB")!.timeZone = "America/New_York";
     const ev = input.evidence.find((e) => e.sourceId === "IMG_20260914_104050.jpg")!;
     ev.kind = "manual";
     ev.clock = "true";
+    // Wenn: Feldspur die Zeitachse berechnet
     const pl = resolveTimeline(input).placements.get("IMG_20260914_104050.jpg")!;
+    // Dann: bleibt die Handeingabe unverändert
     expect(formatClock(pl.startMs)).toBe("10:40:50");
   });
 
-  it("ohne Referenzuhr ist nichts sicher", () => {
+  it("ohne Referenzuhr ist keine Lage sicher", () => {
+    // Angenommen: kein Gerät ist Referenz, keine Abweichung bekannt
     const input = testmarkt();
     for (const d of input.devices) {
       d.isReference = false;
       d.offsetBasis = "unknown";
     }
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: weist es darauf hin, und keine Kamerauhr ist abgeglichen
     expect(res.placements.get("ZOOM0004.m4a")!.notes).toContain("Keine Referenzuhr gewählt");
     expect(res.deviceClocks.get("camA")!.offsetMs).toBeNull();
   });
 
   it("widersprüchlicher zweiter Anker wird gemeldet", () => {
+    // Angenommen: ein zweiter Anker, der 10 s neben dem Klatschen liegt
     const input = testmarkt();
     input.anchors.push({
       id: "bad",
@@ -259,7 +292,9 @@ describe("Zeitbestimmung: Sonderfälle", () => {
       proposed: false,
       confidence: null,
     });
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: wird er mit dem Unterschied gemeldet
     expect(res.anchorConflicts).toEqual([{ anchorId: "bad", differenceMs: 10_000 }]);
   });
 
@@ -270,6 +305,7 @@ describe("Zeitbestimmung: Sonderfälle", () => {
 
 describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
   it("eine Folgeaufnahme beginnt am Ende der Vorgängerdatei, auch über mehrere Glieder", () => {
+    // Angenommen: zwei Folgeaufnahmen hängen hintereinander an A-01
     const input = testmarkt();
     const base = input.sources.find((s) => s.id === "ZOOM0004.m4a")!;
     input.sources.push(
@@ -290,7 +326,9 @@ describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
         follows: "ZOOM0004_002.m4a",
       },
     );
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: beginnt jede am Ende der vorigen
     const two = res.placements.get("ZOOM0004_002.m4a")!;
     expect(clock(two.startMs)).toBe("10:41:30");
     expect(two.basis.kind).toBe("follows");
@@ -300,6 +338,7 @@ describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
   });
 
   it("eine eigene Handeingabe geht der Verkettung vor", () => {
+    // Angenommen: eine Folgeaufnahme hat zusätzlich eine Uhrzeit von Hand
     const input = testmarkt();
     const base = input.sources.find((s) => s.id === "ZOOM0004.m4a")!;
     input.sources.push({
@@ -323,10 +362,12 @@ describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
       raw: "",
       enabled: true,
     });
+    // Dann: gilt die Handeingabe
     expect(clock(resolveTimeline(input).placements.get("Z2")!.startMs)).toBe("11:00:00");
   });
 
   it("ein weiteres Bild einer Seite liegt wie die Hauptquelle, Rahmen darauf zählen für sie", () => {
+    // Angenommen: ein zweites Bild von Tagebuchseite 2, darauf ein Rahmen notiert um 10:35
     const input = testmarkt();
     const page = input.sources.find((s) => s.id === "Tagebuch_S02.jpg")!;
     input.sources.push({ ...page, id: "S02b", label: "T-03", fileName: "S02b.jpg", partOf: "Tagebuch_S02.jpg" });
@@ -341,7 +382,9 @@ describe("Folgeaufnahmen und Seiten aus mehreren Bildern", () => {
       fullText: "",
       ...CONTEXT_DEFAULTS,
     });
+    // Wenn: Feldspur die Zeitachse berechnet
     const res = resolveTimeline(input);
+    // Dann: zählt der Rahmen für die Seite, und das Bild liegt wie die Seite
     const main = res.placements.get("Tagebuch_S02.jpg")!;
     const part = res.placements.get("S02b")!;
     expect(clock(main.endMs)).toBe("10:35:00");

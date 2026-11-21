@@ -13,6 +13,7 @@ describe.skipIf(!hasFfmpeg())("Abbrechen bei Analyse und Pegelmessung", () => {
   let store: ProjectStore;
   let sessionId: string;
 
+  // Angenommen: ein Einsatz mit dem erfundenen Markttag, noch nicht analysiert
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "feldspur-abbruch-"));
     makeSyncDay(dir);
@@ -25,7 +26,8 @@ describe.skipIf(!hasFfmpeg())("Abbrechen bei Analyse und Pegelmessung", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("sessionLevels gibt einen Abbruch weiter, statt den Pegel als unbekannt zu werten", async () => {
+  it("die Pegelmessung meldet einen Abbruch als Abbruch, nicht als unbekannten Pegel", async () => {
+    // Wenn: die Messung abgebrochen wird, sobald sie begonnen hat
     const ctrl = new AbortController();
     const run = sessionLevels(store, sessionId, {
       measureMissing: true,
@@ -34,10 +36,12 @@ describe.skipIf(!hasFfmpeg())("Abbrechen bei Analyse und Pegelmessung", () => {
         if (done === 0 && total > 0) queueMicrotask(() => ctrl.abort());
       },
     });
+    // Dann: endet sie mit einem Abbruch
     await expect(run).rejects.toMatchObject({ name: "AbortError" });
   });
 
-  it("analyzeSession bricht mitten in einer Datei ab, ohne sie als nicht lesbar zu melden", async () => {
+  it("die Tonspur-Analyse bricht mitten in einer Datei ab, ohne sie als nicht lesbar zu melden", async () => {
+    // Wenn: die Analyse abgebrochen wird, sobald die erste Datei läuft
     const ctrl = new AbortController();
     const run = analyzeSession(store, sessionId, {
       signal: ctrl.signal,
@@ -46,6 +50,7 @@ describe.skipIf(!hasFfmpeg())("Abbrechen bei Analyse und Pegelmessung", () => {
         if (done === 0 && total > 0) queueMicrotask(() => ctrl.abort());
       },
     });
+    // Dann: endet sie mit einem Abbruch und hinterlässt keine Vorschläge
     await expect(run).rejects.toMatchObject({ name: "AbortError" });
     expect(store.listAnchors(sessionId).filter((a) => a.proposed)).toEqual([]);
   });

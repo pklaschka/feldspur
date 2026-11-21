@@ -18,6 +18,7 @@ const SETTINGS: ExportSettings = {
 
 describe("Einstellungen im Vergleich", () => {
   it("nennt nur, was sich unterscheidet", () => {
+    // Gleiche Einstellungen: kein Unterschied; nur ohne Video: genau dieser
     expect(settingsDifference(SETTINGS, SETTINGS)).toEqual([]);
     expect(settingsDifference(SETTINGS, { ...SETTINGS, video: false })).toEqual([
       "damals mit Montagevideo, jetzt ohne Montagevideo",
@@ -25,7 +26,9 @@ describe("Einstellungen im Vergleich", () => {
   });
 
   it("liest eine ältere Ausgabe ohne Gerätespuren als „ohne“", () => {
+    // Angenommen: eine ältere Ausgabe kannte die Einstellung „Gerätespuren“ noch nicht
     const { deviceTracks: _d, ...older } = SETTINGS;
+    // Dann: gilt sie als „ohne“, im Vergleich mit „mit“ und mit „ohne“
     expect(settingsDifference(older as ExportSettings, SETTINGS)).toEqual([
       "damals ohne Tonspuren je Gerät, jetzt mit einer Tonspur je Gerät",
     ]);
@@ -79,62 +82,85 @@ describe.skipIf(!hasFfmpeg())("Stand der Ausgabe über Neustarts", () => {
   });
 
   it("unveränderte Daten und gleiche Einstellungen bleiben nach dem Neustart aktuell", () => {
+    // Angenommen: eine Ausgabe ist gespeichert
     record();
+    // Wenn: die App neu startet
     restart();
+    // Dann: ist die Ausgabe aktuell, keine Datei fehlt
     expect(status()).toMatchObject({ differences: [], missingFiles: [] });
   });
 
   it("eine Änderung am Einsatz macht die Ausgabe auch nach dem Neustart veraltet", () => {
+    // Angenommen: eine Ausgabe ist gespeichert, die App neu gestartet
     record();
     restart();
+    // Wenn: der Ort geändert und wieder neu gestartet wird
     store.updateSession(sessionId, { place: "Marktplatz" });
     restart();
+    // Dann: ist die Ausgabe veraltet (Inhalt)
     expect(status().differences.map((d) => d.kind)).toEqual(["content"]);
   });
 
   it("rückgängig gemacht ist sie wieder aktuell", () => {
+    // Angenommen: eine Ausgabe ist gespeichert
     record();
+    // Wenn: der Ort geändert wird, dann ist sie veraltet
     store.history.record("Ort", () => store.updateSession(sessionId, { place: "Marktplatz" }));
     expect(status().differences).toHaveLength(1);
+    // Wenn: das rückgängig gemacht wird, dann ist sie wieder aktuell
     store.history.undo();
     expect(status().differences).toEqual([]);
   });
 
   it("andere Einstellungen zählen als veraltet", () => {
+    // Angenommen: eine Ausgabe mit Montagevideo
     record();
+    // Wenn: jetzt ohne Montagevideo ausgegeben werden soll
     const st = status({ ...SETTINGS, video: false });
+    // Dann: ist sie veraltet und der Unterschied wird genannt
     expect(st.differences.map((d) => d.kind)).toEqual(["settings"]);
     expect(st.differences[0]!.text).toBe("Einstellung anders: damals mit Montagevideo, jetzt ohne Montagevideo.");
   });
 
   it("nennt veränderte und fehlende Originale mit Kurzzeichen", () => {
+    // Angenommen: eine Ausgabe ist gespeichert
     record();
+    // Wenn: ein Original verändert und eines gelöscht wird
     const [a, b] = store.listSources(sessionId);
     appendFileSync(a!.originalPath, "verändert");
     unlinkSync(b!.originalPath);
     const st = status();
+    // Dann: werden beide mit Kurzzeichen genannt
     expect(st.differences.find((d) => d.kind === "originals-changed")?.labels).toEqual([a!.label]);
     expect(st.differences.find((d) => d.kind === "originals-missing")?.labels).toEqual([b!.label]);
   });
 
   it("eine neue Quelle macht die Ausgabe veraltet", async () => {
+    // Angenommen: eine Ausgabe ist gespeichert
     record();
+    // Wenn: ein weiteres Foto eingesammelt wird
     makePhoto(join(raw, "IMG_20260914_103000.jpg"), "0x112233");
     applyImport(store, sessionId, await scanPaths([join(raw, "IMG_20260914_103000.jpg")]));
     const kinds = status().differences.map((d) => d.kind);
+    // Dann: ist sie veraltet (Inhalt und Quellen)
     expect(kinds).toContain("content");
     expect(kinds).toContain("sources");
   });
 
   it("ein Abdruck aus einer älteren Fassung gilt nie als aktuell", () => {
+    // Angenommen: eine Ausgabe mit dem Abdruck einer älteren Feldspur-Fassung
     const r = record();
     store.saveExportRecord({ ...r, fingerprint: { ...r.fingerprint, version: FINGERPRINT_VERSION - 1 } });
+    // Dann: gilt sie als veraltet (Fassung)
     expect(status().differences.map((d) => d.kind)).toEqual(["version"]);
   });
 
   it("meldet Dateien, die im Ausgabeordner fehlen", () => {
+    // Angenommen: eine Ausgabe ist gespeichert
     record();
+    // Wenn: die .docx im Ausgabeordner gelöscht wird
     unlinkSync(join(out, "Feldtag.docx"));
+    // Dann: wird sie als fehlend gemeldet, der Inhalt bleibt aktuell
     expect(status()).toMatchObject({ differences: [], missingFiles: ["Feldtag.docx"] });
   });
 });

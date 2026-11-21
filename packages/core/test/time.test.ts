@@ -15,19 +15,23 @@ describe("Ortszeit", () => {
     expect(() => parseLocal("gestern")).toThrow();
   });
 
-  it("formatiert Abweichungen wie im Konzept", () => {
-    expect(formatDuration(-167_000)).toBe("−2:47");
-    expect(formatDuration(4_000, { sign: true })).toBe("+0:04");
-    expect(formatDuration(3_723_000)).toBe("1:02:03");
-    expect(formatDuration(86_400_000 + 7_200_000, { sign: true })).toBe("+1 Tag 2:00:00");
-    expect(formatDuration(-3 * 86_400_000 - 5_000)).toBe("−3 Tage 0:00:05");
+  it.each`
+    ms                         | vorzeichen | text
+    ${-167_000}                | ${false}   | ${"−2:47"}
+    ${4_000}                   | ${true}    | ${"+0:04"}
+    ${3_723_000}               | ${false}   | ${"1:02:03"}
+    ${86_400_000 + 7_200_000}  | ${true}    | ${"+1 Tag 2:00:00"}
+    ${-3 * 86_400_000 - 5_000} | ${false}   | ${"−3 Tage 0:00:05"}
+  `("Abweichung $ms ms steht als $text", ({ ms, vorzeichen, text }) => {
+    expect(formatDuration(ms, { sign: vorzeichen })).toBe(text);
   });
 
-  it("rechnet UTC in Ortszeit um, auch über Sommerzeit", () => {
-    const summerUtc = Date.UTC(2026, 8, 14, 8, 15);
-    expect(formatLocal(utcToLocal(summerUtc, "Europe/Berlin"))).toBe("2026-09-14T10:15:00");
-    const winterUtc = Date.UTC(2026, 11, 1, 9, 0);
-    expect(formatLocal(utcToLocal(winterUtc, "Europe/Berlin"))).toBe("2026-12-01T10:00:00");
-    expect(localToUtc(parseLocal("2026-09-14T10:15:00"), "Europe/Berlin")).toBe(summerUtc);
+  it.each`
+    utc                             | ortszeit                 | jahreszeit
+    ${Date.UTC(2026, 8, 14, 8, 15)} | ${"2026-09-14T10:15:00"} | ${"Sommerzeit"}
+    ${Date.UTC(2026, 11, 1, 9, 0)}  | ${"2026-12-01T10:00:00"} | ${"Winterzeit"}
+  `("rechnet UTC in Berliner Ortszeit um ($jahreszeit) und zurück", ({ utc, ortszeit }) => {
+    expect(formatLocal(utcToLocal(utc, "Europe/Berlin"))).toBe(ortszeit);
+    expect(localToUtc(parseLocal(ortszeit), "Europe/Berlin")).toBe(utc);
   });
 });

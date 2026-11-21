@@ -49,14 +49,17 @@ run("Lautstärke angleichen mit FFmpeg", () => {
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   it("hebt eine leise Aufnahme auf den Zielpegel", async () => {
+    // Angenommen: eine Aufnahme, 24 dB leiser als normal
     const quiet = join(dir, "leise.wav");
     speech(quiet, { volumeDb: -24 });
     const before = speechLevelDb((await computeEnvelope(quiet)).db)!;
     expect(before).toBeLessThan(-30);
+    // Wenn: ohne Kompressor verstärkt wird, dann liegt sie bei −20 dB
     const out = join(dir, "angeglichen.wav");
     const gainDb = -20 - before;
     ff("-i", quiet, "-af", levelFilter({ gainDb, compress: false }), out);
     expect(speechLevelDb((await computeEnvelope(out)).db)!).toBeCloseTo(-20, 0);
+    // Wenn: mit Kompressor verstärkt wird, dann liegt sie auf 2 dB genau dort
     const comp = join(dir, "kompressor.wav");
     ff("-i", quiet, "-af", levelFilter({ gainDb, compress: true }), comp);
     const after = speechLevelDb((await computeEnvelope(comp)).db)!;
@@ -64,11 +67,14 @@ run("Lautstärke angleichen mit FFmpeg", () => {
   });
 
   it("begrenzt Spitzen nach starker Verstärkung", async () => {
+    // Angenommen: eine normal laute Aufnahme
     const loud = join(dir, "laut.wav");
     speech(loud, { volumeDb: 0 });
+    // Wenn: sie um 20 dB verstärkt wird
     const out = join(dir, "begrenzt.wav");
     ff("-i", loud, "-af", levelFilter({ gainDb: 20, compress: false }), out);
     const env = await computeEnvelope(out);
+    // Dann: bleiben die Spitzen unter −0,5 dB
     expect(Math.max(...env.db)).toBeLessThanOrEqual(-0.5);
   });
 });
@@ -80,28 +86,34 @@ run("Einrasten", () => {
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   it("findet die genaue Lage, auch bei anderem Pegel", async () => {
+    // Angenommen: dasselbe Geschehen auf zwei Geräten
     const a = join(dir, "a.wav");
     const b = join(dir, "b.wav");
     speech(a);
     // Dasselbe Geschehen, 1,234 s später auf dem zweiten Gerät, 18 dB leiser.
     speech(b, { delayMs: 1234, volumeDb: -18 });
     // Grob gezogen: 180 ms daneben.
+    // Wenn: von Hand 180 ms daneben gezogen und eingerastet wird
     const r = await refineAlignment({ aPath: a, aAtMs: 5000, bPath: b, bAtMs: 5000 + 1234 + 180, searchMs: 600 });
+    // Dann: liegt B auf 4 ms genau richtig
     expect(r).not.toBeNull();
     expect(Math.abs(r!.bAtMs - 6234)).toBeLessThanOrEqual(4);
     expect(r!.distinctness).toBeGreaterThan(1.2);
   });
 
   it("kommt nahe am Dateianfang zurecht", async () => {
+    // Angenommen: dasselbe Geschehen, in B nur 0,2 s nach Dateianfang
     const a = join(dir, "a2.wav");
     const b = join(dir, "b2.wav");
     speech(a, { delayMs: 3000 });
     speech(b, { delayMs: 200 });
+    // Wenn: mit großem Suchfenster eingerastet wird
     const r = await refineAlignment({ aPath: a, aAtMs: 3400, bPath: b, bAtMs: 700, searchMs: 1500 });
+    // Dann: liegt B trotzdem auf 4 ms genau richtig
     expect(Math.abs(r!.bAtMs - 600)).toBeLessThanOrEqual(4);
   });
 
-  it("bestLag: verschobene Folge", () => {
+  it("bestLag findet eine um 37 Schritte verschobene Folge", () => {
     const a = Float32Array.from({ length: 400 }, (_, i) => (Math.sin(i * 0.37) + Math.sin(i * 0.11) > 0.8 ? -20 : -60));
     const b = new Float32Array(600).fill(-60);
     b.set(a, 100 + 37);

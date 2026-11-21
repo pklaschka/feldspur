@@ -24,15 +24,18 @@ describe("Zeitstempel lesen", () => {
     expect(new Date(s.utc!).toISOString()).toBe("2026-09-14T08:15:00.000Z");
     expect(formatLocal(parseStamp("2026:09:14 10:12:34")!.local)).toBe("2026-09-14T10:12:34");
   });
-  it("verwirft Platzhalterdaten", () => {
-    expect(parseStamp("1970-01-01T00:00:00Z")).toBeNull();
-    expect(parseStamp("1904-01-01T00:00:00Z")).toBeNull();
-    expect(parseStamp("unbekannt")).toBeNull();
+  it.each`
+    stempel                   | grund
+    ${"1970-01-01T00:00:00Z"} | ${"Unix-Nullpunkt"}
+    ${"1904-01-01T00:00:00Z"} | ${"QuickTime-Nullpunkt"}
+    ${"unbekannt"}            | ${"kein Datum"}
+  `("verwirft $stempel ($grund)", ({ stempel }) => {
+    expect(parseStamp(stempel)).toBeNull();
   });
 });
 
 describe("Belege aus Metadaten", () => {
-  it("Apple-Aufnahmedatum hat Vorrang vor creation_time", () => {
+  it("das Apple-Aufnahmedatum hat Vorrang vor creation_time", () => {
     const ev = evidenceFromMediaTags(
       probe({
         "com.apple.quicktime.creationdate": "2026-09-14T10:15:00+0200",
@@ -43,7 +46,7 @@ describe("Belege aus Metadaten", () => {
     expect(ev[0]!.detail).toBe("Metadaten (Aufnahmebeginn, Apple)");
     expect(formatLocal(ev[0]!.localMs)).toBe("2026-09-14T10:15:00");
   });
-  it("EXIF mit Sekundenbruchteilen", () => {
+  it("EXIF mit Sekundenbruchteilen ergibt eine Zeit auf 50 ms genau", () => {
     const ev = evidenceFromExif({ dateTimeOriginal: "2026:09:14 10:12:34", subSec: "25" });
     expect(formatLocal(ev[0]!.localMs)).toBe("2026-09-14T10:12:34.250");
     expect(ev[0]!.uncertaintyMs).toBe(50);
@@ -51,22 +54,25 @@ describe("Belege aus Metadaten", () => {
 });
 
 describe("Quellenart und Gerätefamilie", () => {
-  it.each([
-    ["C0012.MP4", "video"],
-    ["ZOOM0004.WAV", "audio"],
-    ["IMG_0231.jpg", "photo"],
-    ["Tagebuch_S01.jpg", "diary"],
-    ["Feldnotizen S. 3.pdf", "diary"],
-    ["track.gpx", "gps"],
-    ["notizen.md", "note"],
-    ["readme.xyz", "other"],
-  ])("%s → %s", (name, kind) => expect(classify(name)).toBe(kind));
+  it.each`
+    datei                     | art
+    ${"C0012.MP4"}            | ${"video"}
+    ${"ZOOM0004.WAV"}         | ${"audio"}
+    ${"IMG_0231.jpg"}         | ${"photo"}
+    ${"Tagebuch_S01.jpg"}     | ${"diary"}
+    ${"Feldnotizen S. 3.pdf"} | ${"diary"}
+    ${"track.gpx"}            | ${"gps"}
+    ${"notizen.md"}           | ${"note"}
+    ${"readme.xyz"}           | ${"other"}
+  `("$datei gilt als $art", ({ datei, art }) => {
+    expect(classify(datei)).toBe(art);
+  });
 
   it("ein Foto mit Kamera-EXIF ist nie eine Tagebuchseite", () => {
     expect(classify("Scan_0001.jpg", { hasCameraExif: true })).toBe("photo");
   });
 
-  it("Familie ersetzt Ziffern, aber nicht in der Endung", () => {
+  it("die Gerätefamilie ersetzt Ziffern im Namen, aber nicht in der Endung", () => {
     expect(filenameFamily("/a/C0012.MP4")).toBe("C####.mp4");
     expect(filenameFamily("ZOOM0004.m4a")).toBe("ZOOM####.m4a");
   });

@@ -65,8 +65,11 @@ afterEach(() => {
 
 describe("ErrorBanner", () => {
   it("zeigt einen Fehler im offenen Dialog als role=alert, nicht auf der verdeckten Seite", () => {
+    // Angenommen: ein Dialog ist offen
     render(true);
+    // Wenn: ein Fehler kommt
     act(() => fail("Unbekannte Zeitzone: Mars/Olympus"));
+    // Dann: steht er einmal im Dialog und nicht auf der verdeckten Seite
     const alerts = document.querySelectorAll('[role="alert"]');
     expect(alerts).toHaveLength(1);
     expect(q("dialog").contains(alerts[0]!)).toBe(true);
@@ -77,6 +80,7 @@ describe("ErrorBanner", () => {
   it("lässt sich schließen", () => {
     render(true);
     act(() => fail("Datei fehlt"));
+    // Wenn: die Meldung geschlossen wird, dann ist sie weg
     const close = q("dialog").querySelector<HTMLButtonElement>('button[aria-label="Meldung schließen"]')!;
     act(() => close.click());
     expect(document.querySelector('[role="alert"]')).toBeNull();
@@ -84,6 +88,7 @@ describe("ErrorBanner", () => {
 
   it("ohne offenen Dialog erscheint der Fehler auf der Seite", () => {
     const { rerender } = render(true);
+    // Wenn: der Dialog schließt und dann ein Fehler kommt, dann steht er auf der Seite
     rerender(false);
     act(() => fail("Datei fehlt"));
     expect(q("page").querySelector('[role="alert"]')?.textContent).toContain("Datei fehlt");
@@ -91,18 +96,22 @@ describe("ErrorBanner", () => {
 
   it("verschachtelt: nur der oberste Dialog zeigt den Fehler, ein alter Fehler verschwindet beim Öffnen", () => {
     const { rerender } = render(true);
+    // Wenn: ein Fehler im Dialog steht und ein zweiter Dialog darüber öffnet, dann verschwindet er
     act(() => fail("Alter Fehler"));
     rerender(true, true);
     expect(document.querySelector('[role="alert"]')).toBeNull();
+    // Wenn: dann ein neuer Fehler kommt, dann steht er nur im obersten Dialog
     act(() => fail("Sicherung nicht lesbar"));
     const alerts = document.querySelectorAll('[role="alert"]');
     expect(alerts).toHaveLength(1);
     expect(q("inner").contains(alerts[0]!)).toBe(true);
+    // Wenn: der obere Dialog schließt, dann wandert der Fehler mit in den unteren
     rerender(true, false);
     expect(q("dialog").querySelector('[role="alert"]')?.textContent).toContain("Sicherung nicht lesbar");
   });
 
   it("Dialog Originale zeigt einen Fehler beim Prüfen in sich selbst", async () => {
+    // Angenommen: der Dialog Originale ist offen, und die Prüfung scheitert
     Object.assign(window, {
       feldspur: {
         onOriginalsProgress: () => () => {},
@@ -134,7 +143,9 @@ describe("ErrorBanner", () => {
     const check = [...q("originals-dialog").querySelectorAll("button")].find((b) =>
       b.textContent?.includes("Prüfsummen prüfen"),
     )!;
+    // Wenn: „Prüfsummen prüfen“ gewählt wird
     await act(async () => check.click());
+    // Dann: steht der Fehler im Dialog selbst
     const alerts = document.querySelectorAll('[role="alert"]');
     expect(alerts).toHaveLength(1);
     expect(q("originals-dialog").contains(alerts[0]!)).toBe(true);

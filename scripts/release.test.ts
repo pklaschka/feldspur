@@ -21,20 +21,28 @@ describe("Versionen", () => {
     expect(sorted).toEqual(["0.1.0", "0.2.0-alpha.1", "0.2.0-beta.1", "0.2.0-rc.2", "0.2.0-rc.10", "0.2.0"]);
   });
 
-  it("lehnt ungültige, doppelte und ältere Versionen ab", () => {
-    const tags = ["v0.1.0", "v0.2.0-rc.1", "irgendwas"];
-    expect(() => checkNewVersion(tags, "0.2")).toThrow(/keine gültige Version/);
-    expect(() => checkNewVersion(tags, "0.2.0-rc.1")).toThrow(/gibt es schon/);
-    expect(() => checkNewVersion(tags, "0.1.5")).toThrow(/kleiner/);
-    expect(() => checkNewVersion(tags, "0.2.0-rc.2")).not.toThrow();
-    expect(() => checkNewVersion(tags, "0.2.0")).not.toThrow();
+  const tags = ["v0.1.0", "v0.2.0-rc.1", "irgendwas"];
+
+  it.each`
+    version         | fehler                     | fall
+    ${"0.2"}        | ${/keine gültige Version/} | ${"ungültig"}
+    ${"0.2.0-rc.1"} | ${/gibt es schon/}         | ${"doppelt"}
+    ${"0.1.5"}      | ${/kleiner/}               | ${"älter als die letzte"}
+  `("lehnt $version ab: $fall", ({ version, fehler }) => {
+    expect(() => checkNewVersion(tags, version)).toThrow(fehler);
   });
 
-  it("sammelt für ein Release seit dem letzten Release, für eine Vorabversion seit dem letzten Tag", () => {
-    const tags = ["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"];
-    expect(previousTag(tags, "0.2.0")).toBe("v0.1.0");
-    expect(previousTag(tags, "0.2.0-rc.3")).toBe("v0.2.0-rc.2");
-    expect(previousTag([], "0.1.0")).toBeNull();
+  it.each(["0.2.0-rc.2", "0.2.0"])("nimmt %s als nächste Version an", (version) => {
+    expect(() => checkNewVersion(tags, version)).not.toThrow();
+  });
+
+  it.each`
+    tags                                        | version         | seit             | fall
+    ${["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"]} | ${"0.2.0"}      | ${"v0.1.0"}      | ${"Release: seit dem letzten Release"}
+    ${["v0.1.0", "v0.2.0-rc.1", "v0.2.0-rc.2"]} | ${"0.2.0-rc.3"} | ${"v0.2.0-rc.2"} | ${"Vorabversion: seit dem letzten Tag"}
+    ${[]}                                       | ${"0.1.0"}      | ${null}          | ${"erstes Release: von Anfang an"}
+  `("sammelt für $version seit $seit ($fall)", ({ tags, version, seit }) => {
+    expect(previousTag(tags, version)).toBe(seit);
   });
 });
 
@@ -51,7 +59,9 @@ const GENERATED = `## What's Changed
 
 describe("Changelog", () => {
   it("bringt GitHubs Notizen ins deutsche Format", () => {
+    // Wenn: GitHubs englische Notizen aufbereitet werden
     const notes = tidyGeneratedNotes(GENERATED);
+    // Dann: sind Überschriften und Einträge deutsch, mit Link und Person
     expect(notes).not.toContain("What's Changed");
     expect(notes).toContain(
       "- Zeitachse: Lagen prüfen ([#24](https://github.com/pklaschka/feldspur/pull/24), @pklaschka)",
@@ -65,11 +75,14 @@ describe("Changelog", () => {
   });
 
   it("legt das Changelog an und fasst Vorabversionen beim Release zusammen", () => {
+    // Wenn: das Changelog für die erste Vorabversion angelegt wird, dann steht sie oben
     let md = updateChangelog(null, "0.2.0-rc.1", "2026-11-15", "- A");
     expect(md).toMatch(/^# Changelog/);
     expect(md).toContain("## 0.2.0-rc.1 – 2026-11-15 (Vorabversion)\n\n- A");
+    // Wenn: eine zweite kommt, dann steht sie darüber
     md = updateChangelog(md, "0.2.0-rc.2", "2026-11-16", "- B");
     expect(md.indexOf("0.2.0-rc.2")).toBeLessThan(md.indexOf("0.2.0-rc.1"));
+    // Wenn: das Release kommt, dann fasst es die Vorabversionen zusammen, ältere Releases bleiben
     md = updateChangelog(md + "\n## 0.1.0 – 2026-11-01\n\n- Alt\n", "0.2.0", "2026-11-20", "- A\n- B");
     expect(md).not.toContain("rc.1");
     expect(md).not.toContain("rc.2");
@@ -79,14 +92,18 @@ describe("Changelog", () => {
     expect(changelogSection(md, "0.1.0")).toBe("- Alt");
   });
 
-  it("warnt im Release-Text vor Vorabversionen", () => {
-    expect(releaseBody("0.2.0-rc.1", "- A", "o/r")).toContain("Vorabversion zum Testen");
-    expect(releaseBody("0.2.0", "- A", "o/r")).toContain("Feldspur-0.2.0-win-x64.exe");
+  it.each`
+    version         | enthaelt
+    ${"0.2.0-rc.1"} | ${"Vorabversion zum Testen"}
+    ${"0.2.0"}      | ${"Feldspur-0.2.0-win-x64.exe"}
+  `("der Release-Text zu $version nennt „$enthaelt“", ({ version, enthaelt }) => {
+    expect(releaseBody(version, "- A", "o/r")).toContain(enthaelt);
   });
 });
 
 describe("Versionsdateien", () => {
   it("setzt Version und Stand in App, Metadaten, Zitierbeispielen und README", () => {
+    // Angenommen: ein Ordner mit allen Dateien, die Version oder Stand tragen
     const root = mkdtempSync(join(tmpdir(), "feldspur-release-"));
     mkdirSync(join(root, "apps", "desktop"), { recursive: true });
     writeFileSync(join(root, "package.json"), '{\n  "name": "feldspur",\n  "version": "0.1.0"\n}\n');
@@ -102,7 +119,9 @@ describe("Versionsdateien", () => {
       join(root, "README.md"),
       "**Zuri**<br>\nStand: 16. November 2026\n\n" + zitieren.replace("[Software]", "\\[Software\\]"),
     );
+    // Wenn: die Version auf 0.2.0-rc.1 vom 5. November gesetzt wird
     const touched = bumpFiles(root, "0.2.0-rc.1", "2026-11-05");
+    // Dann: sind alle Dateien angefasst und tragen Version und Stand
     expect(touched.sort()).toEqual([
       ".zenodo.json",
       "CITATION.cff",
