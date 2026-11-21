@@ -52,6 +52,8 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: handbuch/_site
+          # Wird nur im selben Lauf veröffentlicht.
+          retention-days: 1
 
   veroeffentlichen:
     name: veröffentlichen
