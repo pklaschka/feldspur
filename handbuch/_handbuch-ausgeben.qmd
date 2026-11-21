@@ -94,6 +94,47 @@ Solange die Ausgabe läuft, geht der Rechner nicht in den Ruhezustand. Der Bilds
 kannst das Fenster verdecken oder in den Hintergrund legen; die Ausgabe läuft weiter. Am Laptop lohnt trotzdem das
 Netzteil. Klappst du einen Mac zu, schläft er je nach Einstellung trotzdem ein; dann den Deckel offen lassen.
 
+### Montage-ID {#sec-montage-id}
+
+Die **Montage-ID** ist eine Kennung wie `FS-7KQ2-M9XD`. Sie steht oben rechts im Montagevideo, im Kopf des
+Einsatztranskripts, im Viewer und in den Dokumentvariablen. An ihr erkennst du, welches Video zu welchem
+Einsatztranskript gehört.
+
+Feldspur vergibt sie nicht fortlaufend und nicht bei jeder Ausgabe neu, sondern **errechnet** sie aus dem Zeitgefüge
+der Montage. Derselbe Stand ergibt deshalb immer dieselbe ID, auch nach einem Neustart, auf einem anderen Rechner
+oder in einer späteren Ausgabe. In die Rechnung gehen ein:
+
+- der **Einsatz** (seine interne Kennung in der Projektdatei, nicht Titel oder Datum),
+- die **Art der Montage**: in Echtzeit, in Echtzeit mit benannten Episoden oder nach Episoden geschnitten,
+- die **Länge** der Montage, auf die Millisekunde,
+- jede **Quelle, die auf der Zeitachse liegt**, mit der Prüfsumme ihrer Originaldatei und ihrem Beginn auf der
+  Zeitachse, ebenfalls auf die Millisekunde. Das sind Videos und Tonaufnahmen, aber auch Fotos und Tagebuchseiten
+  mit Uhrzeit.
+
+Daraus bildet Feldspur einen Fingerabdruck (SHA-1) und kürzt ihn auf acht Zeichen, ohne die leicht verwechselbaren
+0, O, 1 und I.
+
+| Die ID ändert sich, wenn … | Die ID bleibt gleich, wenn … |
+|:---|:---|
+| eine Quelle dazukommt, wegfällt oder Kontext wird | du mitschreibst oder eine Mitschrift korrigierst |
+| eine Quelle auf der Zeitachse anders liegt (neuer Abgleich, andere Uhrkorrektur, Uhrzeit von Hand) | du Tagebuchtext abtippst oder änderst |
+| eine Tagebuchseite ihre erste oder eine frühere Randnotiz bekommt | du Einsatzdaten, weitere Angaben, Geräte, Personen oder Kurzzeichen änderst |
+| du Episoden ein- oder ausschaltest oder anders ausgibst (in Echtzeit, nach Episoden) | du Kontext umsortierst oder Lautstärken änderst |
+| sich die Länge der Montage ändert | du mit anderen Optionen für Ton, Viewer oder Schnittliste ausgibst |
+| dieselben Dateien in einem neuen Einsatz oder Projekt liegen | du ohne Änderung noch einmal ausgibst |
+
+: Wovon die Montage-ID abhängt {#tbl-montage-id}
+
+Die Montage-ID beschreibt also, **welche Aufnahmen wann laufen**. Gleiche ID heißt: Eine Zeitmarke zeigt auf
+dieselbe Stelle in denselben Aufnahmen, und jede Uhrzeit liegt an derselben Stelle im Video. Sie beschreibt *nicht*,
+was im Einsatztranskript steht. Zwei Ausgaben mit derselben Montage-ID können sich im Text unterscheiden, etwa weil
+du dazwischen weiter mitgeschrieben hast. Das ist Absicht: Ein Montagevideo, das du schon in MAXQDA codiert hast,
+passt so auch zum nächsten Stand des Einsatztranskripts. Welcher Textstand vorliegt, sagt die ID aber eben nicht
+(@sec-stelle-zitieren).
+
+Umgekehrt reicht schon ein einzelnes zusätzliches Foto oder eine um eine Millisekunde verschobene Aufnahme für eine
+neue ID, auch wenn sich das Video dadurch kaum oder gar nicht ändert. Die ID ist an der Stelle bewusst streng.
+
 ### Viewer (.html) {#sec-viewer}
 
 Der **Viewer** ist eine einzelne HTML-Datei, die neben dem Montagevideo liegt. Du öffnest sie per Doppelklick in
@@ -167,3 +208,38 @@ im Text des Einsatztranskripts und, wo nichts verschriftlicht ist, direkt in Abs
 Ein Einsatz ergibt genau ein MAXQDA-Dokument. Die Dokumentvariablen liest du danach über **Variablen ›
 Dokumentvariablen importieren** aus der .xlsx-Datei ein; mehrere Einsätze kannst du dafür auch in einer Tabelle
 untereinander kopieren.
+
+### Aus der Ausgabe zitieren {#sec-stelle-zitieren}
+
+Einsatztranskript und Montagevideo beruhen auf den Aufzeichnungen aus dem Feld, sind aber etwas Eigenes: In ihnen
+stecken deine Entscheidungen. Welche Uhr gilt, was nebeneinanderliegt, was du wie verschriftlicht hast. Eine einzelne
+Videodatei steht für sich und ohne Zusammenhang da. Meine Empfehlung deshalb: Zitiere eine Stelle **aus der Ausgabe**,
+nicht aus der Originaldatei dahinter und auch nicht aus dem Projekt in Feldspur.
+
+Der Grund für das Zweite: Das Projekt ist ein Arbeitsstand und ändert sich mit jedem Handgriff. Die Ausgabe ist das,
+was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings erst, wenn du sie festhältst, denn
+**Erneut ausgeben…** überschreibt die Dateien im selben Ordner. So gehst du vor:
+
+1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
+   ist.
+2. Sichere den Ausgabeordner als Ganzes und unverändert (Einsatztranskript, Montagevideo, Viewer, Dokumentvariablen,
+   Begleitprotokoll). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
+   Adresse vergibt, etwa eine DOI.
+3. Zitiere aus genau dieser Fassung. Im Viewer legt **Stelle kopieren** die Angabe in die Zwischenablage:
+   Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID.
+4. Ergänze, **welche Fassung** du meinst: das Datum der Ausgabe oder die Adresse im Archiv. Die Montage-ID allein
+   reicht dafür nicht, weil sie den Textstand nicht kennt (@sec-montage-id).
+
+Eine Angabe kann dann so aussehen (die Werte sind erfunden):
+
+> Testperson A (2026): Feldtag Testmarkt, 14.09.2026. Einsatztranskript und Montagevideo FS-7KQ2-M9XD, Ausgabe vom
+> 21.11.2026, #00:05:02-0# (10:07:02 Uhr).
+
+Im Methodenteil erklärst du einmal, was ein Montagevideo und ein Einsatztranskript sind und womit sie entstanden sind
+(Feldspur mit Version, @sec-zitieren). Nachvollziehbar bleibt der Weg zurück zum Original trotzdem: Das
+Begleitprotokoll nennt für jede Datei Herkunft, Prüfsumme und den Zeitbeleg, auf dem ihre Lage beruht.
+
+Änderst du nach dem Zitieren noch etwas und gibst erneut aus, dann sichere die neue Ausgabe als eigene Fassung. Hat
+sie dieselbe Montage-ID, gelten deine Zeitmarken weiter, und nur der Text kann anders lauten. Hat sie eine neue
+Montage-ID, können sich die Stellen verschoben haben. Dann prüfst du die zitierten Zeitmarken anhand der Uhrzeit
+nach.
