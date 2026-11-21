@@ -65,6 +65,8 @@ Optionen:
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
+  Alles aus der Zeit dazwischen (Mitschrift, Fotos, Tagebuch) steht im Einsatztranskript an der Tafel, nach Uhrzeit
+  geordnet.
 - **Ton aller Geräte mischen**: sonst nur die Haupttonquelle.
 - **Zusätzlich eine Tonspur je Gerät** (Standard): Die Mischung (oder Haupttonquelle) bleibt Tonspur 1 und ist als
   Standard markiert; MAXQDA und jeder Player spielen sie wie bisher. Dahinter folgt für jedes Gerät mit Ton eine eigene

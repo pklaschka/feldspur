@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { formatClock, ProjectStore } from "@feldspur/core";
+import { formatClock, ProjectStore, resolveTimeline } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   addManualAnchor,
@@ -12,6 +12,7 @@ import {
   decideMany,
   decidePlacement,
   parseClock,
+  parseClockNear,
   parseClockOnDate,
   parseMediaPos,
   pickBestPerDevice,
@@ -20,6 +21,7 @@ import {
   setLevel,
   toggleEvidence,
 } from "../src/main/edits.ts";
+import { createEntry, patchEntry } from "../src/main/diary.ts";
 import { updateSessionDetails } from "../src/main/session.ts";
 import { buildSessionView } from "../src/main/view.ts";
 
@@ -624,5 +626,76 @@ describe("Alle eindeutigen Vorschläge übernehmen", () => {
         { id: "e", deviceId: null, confidence: 0.7 },
       ]),
     ).toEqual(["b", "c", "d", "e"]);
+  });
+});
+
+describe("Einsatz über Mitternacht (Issue #152)", () => {
+  const d = (day: number, h: number, m: number, sec = 0) => Date.UTC(2026, 8, day, h, m, sec);
+
+  it("ordnet Uhrzeiten ohne Datum dem Tag zu, der zu den Aufnahmen passt", () => {
+    const night = { fromMs: d(14, 23, 55), toMs: d(15, 0, 5) };
+    expect(parseClockNear("2026-09-14", "00:02", night)).toBe(d(15, 0, 2));
+    expect(parseClockNear("2026-09-14", "23:58", night)).toBe(d(14, 23, 58));
+    // Stelle in einer Aufnahme kurz nach Mitternacht, angesagt wird noch der alte Tag.
+    const point = { fromMs: d(15, 0, 0, 5), toMs: d(15, 0, 0, 5) };
+    expect(parseClockNear("2026-09-14", "23:59:50", point)).toBe(d(14, 23, 59, 50));
+    expect(parseClockNear("2026-09-14", "00:03:10", point)).toBe(d(15, 0, 3, 10));
+    // Ein Tag ohne Mitternacht bleibt beim Einsatztag, auch bei Zeiten weit daneben.
+    const day = { fromMs: d(14, 8, 0), toMs: d(14, 9, 0) };
+    expect(parseClockNear("2026-09-14", "21:00", day)).toBe(d(14, 21, 0));
+    expect(parseClockNear("2026-09-14", "00:30", day)).toBe(d(14, 0, 30));
+    expect(parseClockNear("2026-09-14", "00:30", null)).toBe(d(14, 0, 30));
+  });
+
+  it("Randnotiz und angesagte Uhrzeit nach Mitternacht landen am Folgetag", () => {
+    const session = store.addSession({ title: "Nacht", date: "2026-09-14", place: "", extra: {} });
+    const rec = store.addDevice({ sessionId: session.id, label: "Rekorder" });
+    const cam = store.addDevice({ sessionId: session.id, label: "Kamera" });
+    const base = { sessionId: session.id, originalPath: "/x", sizeBytes: 1, metadata: {} };
+    const audio = store.addSource({
+      ...base,
+      deviceId: rec.id,
+      kind: "audio",
+      fileName: "REC.m4a",
+      sha256: sha(11),
+      durationMs: 600_000,
+    });
+    const video = store.addSource({
+      ...base,
+      deviceId: cam.id,
+      kind: "video",
+      fileName: "C2.MP4",
+      sha256: sha(12),
+      durationMs: 60_000,
+    });
+    const page = store.addSource({
+      ...base,
+      deviceId: null,
+      kind: "diary",
+      fileName: "S01.jpg",
+      sha256: sha(13),
+      durationMs: null,
+    });
+    const ev = { kind: "metadata" as const, clock: "device" as const, uncertaintyMs: 1000, detail: "Metadaten" };
+    store.addEvidence({ ...ev, sourceId: audio.id, localMs: d(14, 23, 55) });
+    store.addEvidence({ ...ev, sourceId: video.id, localMs: d(15, 0, 3) });
+
+    const entry = createEntry(store, page.id, { x: 0, y: 0, w: 1, h: 1 }).entry.id;
+    patchEntry(store, entry, { notedAt: "00:02" });
+    expect(store.getDiaryEntry(entry).notedAtMs).toBe(d(15, 0, 2));
+
+    addTimeEvidence(store, {
+      sourceId: video.id,
+      kind: "spoken",
+      clock: "00:03:10",
+      atMedia: "0:10",
+      precision: "exact",
+      note: "",
+    });
+    const spoken = store.listEvidence(session.id).find((e) => e.kind === "spoken")!;
+    expect(spoken.localMs).toBe(d(15, 0, 3, 10));
+    const placed = resolveTimeline(store.loadResolveInput(session.id)).placements.get(video.id)!;
+    expect(placed.startMs).toBe(d(15, 0, 3));
+    expect(placed.conflicts).toEqual([]);
   });
 });

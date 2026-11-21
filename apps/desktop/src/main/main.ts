@@ -70,8 +70,9 @@ import {
   confirmPlacement,
   decideMany,
   decidePlacement,
-  parseClockOnDate,
+  parseClockNear,
   proposalsToConfirm,
+  sessionSpan,
   kindHolds,
   kindName,
   type DecideInput,
@@ -994,7 +995,9 @@ function setDiaryNote(s: ProjectStore, sourceId: string, clock: string): string 
   if (src.kind !== "diary") throw new Error("Keine Tagebuchseite");
   const session = s.getSession(src.sessionId);
   const entries = s.listDiaryEntries(session.id).filter((e) => e.regions.some((r) => r.sourceId === sourceId));
-  const notedAtMs = clock.trim() ? parseClockOnDate(session.date, clock, { seconds: false }) : null;
+  const notedAtMs = clock.trim()
+    ? parseClockNear(session.date, clock, sessionSpan(s, session.id), { seconds: false })
+    : null;
   const first = entries[0];
   if (first) s.updateDiaryEntry(first.id, { notedAtMs });
   else if (notedAtMs !== null) s.addDiaryEntry({ sessionId: session.id, regions: [{ sourceId }], notedAtMs });

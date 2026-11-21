@@ -307,6 +307,11 @@ export interface ApplyImportResult {
   devicesCreated: Device[];
   /** Schon im Einsatz vorhandene Dateien (gleiche Prüfsumme). */
   duplicates: { candidate: ImportCandidate; existing: Source }[];
+  /**
+   * Schon eingesammelte Quellen, deren gelesene Zeitbelege mit den neuen Clips desselben Geräts nachgeschärft wurden
+   * (Aufnahmeende, Kamera-Timecode; Issue #150).
+   */
+  refreshed: number;
 }
 
 /**
@@ -362,15 +367,31 @@ export function applyImport(
 ): ApplyImportResult {
   return store.transaction(() => {
     const devices = new Map(store.listDevices(sessionId).map((d) => [d.matchKey, d]));
-    const result: ApplyImportResult = { sources: [], devicesCreated: [], duplicates: [] };
+    const result: ApplyImportResult = { sources: [], devicesCreated: [], duplicates: [], refreshed: 0 };
     const seen = new Map<string, Source>();
-    // Chronologisch nach bestem Beleg, damit die Kurzzeichen der Reihenfolge im Feld folgen.
-    // Zeitbelege je Gerät nachschärfen (Aufnahmeende statt -beginn, Kamera-Timecode), dann chronologisch.
-    const ordered = refineClipTimes(candidates).toSorted(
-      (a, b) =>
-        (a.evidence[0]?.localMs ?? Infinity) - (b.evidence[0]?.localMs ?? Infinity) ||
-        a.fileName.localeCompare(b.fileName),
+    // Zeitbelege je Gerät nachschärfen (Aufnahmeende statt -beginn, Kamera-Timecode), zusammen mit den schon
+    // eingesammelten Clips desselben Geräts: Wer nach und nach einsammelt, bekommt dieselben Lagen wie auf einmal.
+    const earlier = earlierClips(store, sessionId, candidates, devices);
+    const refinedAll = refineClipTimes([...candidates, ...earlier.map((e) => e.candidate)]);
+    const refreshPlan = replacementPlan(
+      store,
+      sessionId,
+      earlier.map((e) => e.read),
+      refinedAll.slice(candidates.length).map((c) => c.evidence),
     );
+    for (const p of refreshPlan) {
+      for (const e of p.gone) store.deleteEvidence(e.id);
+      for (const e of p.added) store.addEvidence({ ...e, sourceId: p.source.id });
+    }
+    result.refreshed = refreshPlan.filter((p) => p.gone.length || p.added.length).length;
+    // Chronologisch nach bestem Beleg, damit die Kurzzeichen der Reihenfolge im Feld folgen.
+    const ordered = refinedAll
+      .slice(0, candidates.length)
+      .toSorted(
+        (a, b) =>
+          (a.evidence[0]?.localMs ?? Infinity) - (b.evidence[0]?.localMs ?? Infinity) ||
+          a.fileName.localeCompare(b.fileName),
+      );
     for (const c of ordered) {
       const existing = store.findSourceBySha(sessionId, c.sha256) ?? seen.get(c.sha256);
       if (existing) {
@@ -465,24 +486,74 @@ export function rereadChanges(store: ProjectStore, sessionId: Id, read: RereadSo
   return rereadPlan(store, sessionId, read).some((p) => p.gone.length || p.added.length || p.metadataChanged);
 }
 
+const asCandidate = (r: RereadSource, deviceKey = r.source.deviceId ?? r.source.id): ImportCandidate => ({
+  path: r.source.originalPath,
+  fileName: r.source.fileName,
+  sizeBytes: r.source.sizeBytes,
+  sha256: r.source.sha256,
+  kind: r.source.kind,
+  durationMs: r.source.durationMs,
+  metadata: r.metadata,
+  deviceKey,
+  deviceLabel: "",
+  evidence: r.evidence,
+  warnings: [],
+});
+
 function rereadPlan(store: ProjectStore, sessionId: Id, read: RereadSource[]) {
-  const asCandidates = read.map((r): ImportCandidate => ({
-    path: r.source.originalPath,
-    fileName: r.source.fileName,
-    sizeBytes: r.source.sizeBytes,
-    sha256: r.source.sha256,
-    kind: r.source.kind,
-    durationMs: r.source.durationMs,
-    metadata: r.metadata,
-    deviceKey: r.source.deviceId ?? r.source.id,
-    deviceLabel: "",
-    evidence: r.evidence,
-    warnings: [],
-  }));
-  const refined = refineClipTimes(asCandidates);
+  const refined = refineClipTimes(read.map((r) => asCandidate(r)));
+  return replacementPlan(
+    store,
+    sessionId,
+    read,
+    refined.map((c) => c.evidence),
+  );
+}
+
+/**
+ * Zeitbelege einer schon eingesammelten Quelle aus den gespeicherten Metadaten neu bilden, ohne die Datei zu öffnen.
+ * Nur für Audio und Video mit gespeicherter Medienprobe; sonst `null`.
+ */
+function storedRead(source: Source): RereadSource | null {
+  if (source.kind !== "audio" && source.kind !== "video") return null;
+  const probe = source.metadata.media as MediaProbe | undefined;
+  if (!probe) return null;
+  return { source, metadata: source.metadata, evidence: timeEvidenceOf(source.fileName, probe, null) };
+}
+
+/**
+ * Schon eingesammelte Clips der Geräte, zu denen neue Clips kommen, als Kandidaten (mit dem Geräteschlüssel der neuen).
+ * Ein Gerät zählt nur, wenn seine gespeicherten Belege genau dem entsprechen, was die gespeicherten Metadaten heute
+ * ergeben. Sonst stammen sie aus einer älteren Fassung oder wurden neu gelesen; das bleibt „Zeitbelege neu lesen“.
+ */
+function earlierClips(
+  store: ProjectStore,
+  sessionId: Id,
+  candidates: ImportCandidate[],
+  devices: Map<string, Device>,
+): { read: RereadSource; candidate: ImportCandidate }[] {
+  const keys = new Set(candidates.filter((c) => c.kind === "audio" || c.kind === "video").map((c) => c.deviceKey));
+  const shas = new Set(candidates.map((c) => c.sha256));
+  const sources = store.listSources(sessionId);
+  const out: { read: RereadSource; candidate: ImportCandidate }[] = [];
+  for (const key of keys) {
+    const device = devices.get(key);
+    if (!device) continue;
+    const own = sources.filter((x) => x.deviceId === device.id && (x.kind === "audio" || x.kind === "video"));
+    const read = own.flatMap((x) => storedRead(x) ?? []);
+    if (!read.length || read.length !== own.length) continue;
+    if (rereadPlan(store, sessionId, read).some((p) => p.gone.length || p.added.length)) continue;
+    // Doppelt eingesammelte Dateien nicht zweimal zählen (sie würden sich selbst überlappen).
+    for (const r of read) if (!shas.has(r.source.sha256)) out.push({ read: r, candidate: asCandidate(r, key) });
+  }
+  return out;
+}
+
+/** Was sich an gelesenen Belegen (Metadaten, Dateiname) ändert, wenn `fresh[i]` für `read[i]` gilt. */
+function replacementPlan(store: ProjectStore, sessionId: Id, read: RereadSource[], freshAll: EvidenceDraft[][]) {
   const all = store.listEvidence(sessionId);
   return read.map((r, i) => {
-    const fresh = refined[i]!.evidence;
+    const fresh = freshAll[i]!;
     const old = all.filter((e) => e.sourceId === r.source.id && READ_KINDS.has(e.kind));
     const freshKeys = new Set(fresh.map(evidenceKey));
     const oldKeys = new Set(old.map(evidenceKey));
