@@ -8,7 +8,7 @@ Im Schritt **Durchsehen** liegt alles auf einer Zeitachse: eine Spur pro Gerät,
 
 - Ein **Klick** in eine Audio- oder Videospur spult dorthin; die laufenden Aufnahmen erscheinen in der Wiedergabe.
   Beim Abspielen läuft die Zeitachse mit.
-- Das **Mausrad** zoomt an der Mausposition, mit **Umschalt** (oder waagerechtem Wischen) verschiebst du die Achse.
+- Das **Mausrad** zoomt an der Mausposition, mit [Umschalt]{.kbd} (oder waagerechtem Wischen) verschiebst du die Achse.
   Du kannst sie auch mit gedrückter **mittlerer Maustaste** (Mausrad drücken) ziehen.
   Regler und Lupen zoomen um die Abspielposition; **Einpassen** zeigt wieder den ganzen Einsatz.
 - Ein Klick auf eine Quelle öffnet sie in der Detailleiste.
@@ -36,8 +36,8 @@ ganzen Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätige
 
 Tastenkürzel in Durchsehen (nicht, solange du in einem Textfeld schreibst oder ein Dialog offen ist):
 
-- **N**: nächste zu prüfende Stelle, **Umschalt+N**: vorige,
-- **Strg+Enter** (macOS: **⌘+Enter**): **Lage passt** für die gewählte Quelle.
+- [N]{.kbd}: nächste zu prüfende Stelle, [Umschalt+N]{.kbd}: vorige,
+- [Strg+Enter]{.kbd} (macOS: [⌘+Enter]{.kbd}): **Lage passt** für die gewählte Quelle.
 
 ### Wenn Zeitbelege sich widersprechen {#sec-widersprueche}
 
@@ -117,7 +117,7 @@ Was Feldspur vorschlägt, kannst du direkt auf der Zeitachse anpassen:
   sie aus, damit Gesprächsstellen auffallen.
 
 Hast du etwas angepasst, steht unter "Episoden" **↺ zurücksetzen**; damit verwirfst du alle Anpassungen des Einsatzes.
-Jede Anpassung lässt sich auch einzeln rückgängig machen (Strg+Z). Feldspur speichert die Anpassung je Aufnahme ab
+Jede Anpassung lässt sich auch einzeln rückgängig machen ([Strg+Z]{.kbd}). Feldspur speichert die Anpassung je Aufnahme ab
 Dateibeginn, sie wandert also mit, wenn du den Abgleich der Uhren später änderst.
 
 Von hier aus geht es weiter zum Abtippen des Tagebuchs (@sec-tagebuch) und zum Mitschreiben (@sec-mitschreiben).

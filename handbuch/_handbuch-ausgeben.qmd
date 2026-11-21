@@ -105,7 +105,7 @@ des Einsatzes. Derselbe Stand ergibt deshalb immer dieselbe ID, auch nach einem 
 oder in einer späteren Ausgabe. Sie besteht aus zwei Teilen, die du einzeln lesen kannst:
 
 | Teil | im Beispiel | beschreibt |
-|:---|:---|:---|
+|:--|:-----|:----|
 | **Montage** | `FS-7KQ2-M9XD` (die ersten beiden Blöcke) | welche Aufnahmen wann laufen |
 | **Text** | `3F8A` (der dritte Block) | was im Einsatztranskript steht |
 
@@ -131,21 +131,35 @@ und I. Aus den Zeichen selbst lässt sich nichts zurückrechnen. Lesen lässt si
 Ausgaben:
 
 | Vergleich zweier IDs | Was das heißt |
-|:---|:---|
+|:---|:-------|
 | alle drei Blöcke gleich | Derselbe Stand. Zeitmarken und Wortlaut stimmen überein. |
 | Montage gleich, Text anders | Gleiches Video, gleiche Zeitmarken. Geändert hat sich nur etwas im Einsatztranskript: Mitschrift, Tagebuchtext, Kontext oder Angaben im Kopf. |
 | Montage anders | Auf der Zeitachse hat sich etwas geändert (oder es ist ein anderer Einsatz). Zeitmarken können auf andere Stellen zeigen, und das Video gehört nicht mehr dazu. Der Textblock ändert sich dabei in aller Regel mit, weil die Zeilen an anderen Stellen stehen. |
 
 : Zwei Montage-IDs vergleichen {#tbl-montage-id-lesen}
 
-| Die Montage ändert sich, wenn … | Nur der Text ändert sich, wenn … | Nichts ändert sich, wenn … |
-|:---|:---|:---|
-| eine Quelle dazukommt, wegfällt oder Kontext wird | du mitschreibst oder eine Mitschrift korrigierst | du ohne Änderung noch einmal ausgibst |
-| eine Quelle auf der Zeitachse anders liegt (neuer Abgleich, andere Uhrkorrektur, Uhrzeit von Hand) | du Tagebuchtext abtippst oder änderst | du mit anderen Optionen für Ton, Viewer oder Schnittliste ausgibst |
-| eine Tagebuchseite ihre erste oder eine frühere Randnotiz bekommt | du Einsatzdaten, weitere Angaben, Personen oder Kurzzeichen änderst | du Lautstärken änderst |
-| du Episoden ein- oder ausschaltest oder anders ausgibst (in Echtzeit, nach Episoden) | du Kontext ergänzt, änderst oder umsortierst | du das Projekt verschiebst, sicherst oder wiederherstellst |
-| sich die Länge der Montage ändert | | |
-| dieselben Dateien in einem neuen Einsatz oder Projekt liegen | | |
++-------------------------+--------------------------------------------------------------------------------------+
+| Was sich ändert         | Wann                                                                                 |
++:========================+:=====================================================================================+
+| **Montage**             | - eine Quelle kommt dazu, fällt weg oder wird Kontext                                |
+| (Blöcke 1 und 2)        | - eine Quelle liegt auf der Zeitachse anders (neuer Abgleich, andere Uhrkorrektur,   |
+|                         |   Uhrzeit von Hand)                                                                  |
+|                         | - eine Tagebuchseite bekommt ihre erste oder eine frühere Randnotiz                  |
+|                         | - du schaltest Episoden ein oder aus oder gibst anders aus (in Echtzeit, nach        |
+|                         |   Episoden)                                                                          |
+|                         | - die Länge der Montage ändert sich                                                  |
+|                         | - dieselben Dateien liegen in einem neuen Einsatz oder Projekt                       |
++-------------------------+--------------------------------------------------------------------------------------+
+| **nur der Text**        | - du schreibst mit oder korrigierst eine Mitschrift                                  |
+| (Block 3)               | - du tippst Tagebuchtext ab oder änderst ihn                                         |
+|                         | - du änderst Einsatzdaten, weitere Angaben, Personen oder Kurzzeichen                |
+|                         | - du ergänzt, änderst oder sortierst Kontext um                                      |
++-------------------------+--------------------------------------------------------------------------------------+
+| **nichts**              | - du gibst ohne Änderung noch einmal aus                                             |
+|                         | - du gibst mit anderen Optionen für Ton, Viewer oder Schnittliste aus                |
+|                         | - du änderst Lautstärken                                                             |
+|                         | - du verschiebst, sicherst oder stellst das Projekt wieder her                       |
++-------------------------+--------------------------------------------------------------------------------------+
 
 : Wovon die Montage-ID abhängt {#tbl-montage-id}
 
@@ -172,18 +186,18 @@ Tagebuch. Die Zeile, die gerade läuft, ist getönt, ihre Uhrzeit steht in Terra
 
 - Ein **Klick** auf eine Zeile springt im Video an diese Stelle. Markierst du Text, etwa zum Kopieren, springt das
   Video nicht.
-- Mit dem Schalter **Text läuft mit** (Taste **T**) folgt der Text dem Video. Scrollst du selbst, hält er an;
+- Mit dem Schalter **Text läuft mit** (Taste [T]{.kbd}) folgt der Text dem Video. Scrollst du selbst, hält er an;
   **Zur aktuellen Stelle** bringt dich zurück.
 - Die **Zeitleiste** zeigt Episoden, Zwischenzeiten, Fotos, Tagebuch und je Gerät eine Spur. Das **Mausrad** über der
-  Zeitleiste zoomt, ohne Strg oder ⌘, ebenso die Knöpfe und Tasten **+** und **−**. Mit **Umschalt** und Mausrad
+  Zeitleiste zoomt, ohne [Strg]{.kbd} oder [⌘]{.kbd}, ebenso die Knöpfe und Tasten [+]{.kbd} und [−]{.kbd}. Mit [Umschalt]{.kbd} und Mausrad
   oder durch Ziehen an der Uhrzeitleiste verschiebst du den Ausschnitt. **Alles** zeigt wieder den ganzen Einsatz.
   Beim Abspielen bleibt die Fahne, also der Zeitzeiger, im Ausschnitt.
 - Dazu kommen die **Suche** und das Fenster **Kontext** (@sec-kontext). Unter **Ansicht** blendest du Zeilenarten
   ein oder aus, änderst die Schriftgröße, wählst hell oder dunkel und legst fest, ob am Rand Uhrzeit, Videozeit oder
   `#Marke#` steht.
 - **Stelle kopieren** legt Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID in die Zwischenablage.
-- Ins **Vollbild** kommst du mit dem Knopf rechts in der Steuerleiste, mit der Taste **F** oder per Doppelklick ins
-  Video; **Esc** beendet es. Alle Tasten zeigt das Tastatur-Zeichen oben rechts oder die Taste **?**.
+- Ins **Vollbild** kommst du mit dem Knopf rechts in der Steuerleiste, mit der Taste [F]{.kbd} oder per Doppelklick ins
+  Video; [Esc]{.kbd} beendet es. Alle Tasten zeigt das Tastatur-Zeichen oben rechts oder die Taste [?]{.kbd}.
 
 Findet der Viewer das Video nicht, weil es fehlt oder anders heißt, steht dort ein Hinweis mit dem Knopf
 **Videodatei wählen…**. Das Einsatztranskript bleibt auch ohne Video lesbar.
@@ -198,8 +212,8 @@ tun musst, hängt vom Browser ab:
   sich die Freigabe und fragen beim nächsten Öffnen nur kurz nach (**Erneut freigeben**). In Firefox wählst du das
   Video jedes Mal neu.
 
-Danach hat jede Gerätespur die Knöpfe **S** (nur diese Spur hören) und **M** (stumm). Mit den Tasten **1** bis **9**
-hörst du nur ein Gerät, mit **0** oder **Alle hören** wieder die Mischung. Bei einem anderen Tempo als 1× ist immer
+Danach hat jede Gerätespur die Knöpfe **S** (nur diese Spur hören) und **M** (stumm). Mit den Tasten [1]{.kbd} bis [9]{.kbd}
+hörst du nur ein Gerät, mit [0]{.kbd} oder **Alle hören** wieder die Mischung. Bei einem anderen Tempo als 1× ist immer
 die Mischung zu hören.
 
 Der Viewer lädt nichts aus dem Netz und schickt nichts weg. Schriften, Bilder und Programm stecken in der Datei;

@@ -151,7 +151,7 @@ await kapitel("erste-schritte", async () => {
     await siehe("Wiederholen", knopf("Wiederholen"));
     await page.keyboard.press("Control+k");
     await siehe("Suchen", page.getByTestId("search"), {
-      handbuch: "(Strg+K, auf dem Mac ⌘K)",
+      handbuch: "([Strg+K]{.kbd}, auf dem Mac [⌘+K]{.kbd})",
       hinweis: "Strg+K öffnet die Suche",
     });
     await schliessen();

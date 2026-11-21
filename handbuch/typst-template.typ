@@ -122,6 +122,8 @@
   toc_depth: none,
   toc_indent: 1.5em,
   beschnitt: 0mm,
+  herausgabe: none,
+  druck: none,
   doc,
 ) = {
   set par(justify: true)
@@ -240,6 +242,8 @@
   {
     set par(justify: false)
     set text(size: 9pt)
+    // Kurze Zeilen lesen sich bei 9 pt besser als die volle Satzbreite.
+    set block(width: 118mm)
     v(1fr)
     let item(label, body) = block(below: 4mm)[
       #text(font: sans, weight: "semibold", fill: umbra)[#label] \
@@ -265,6 +269,13 @@
       Text: #link("https://creativecommons.org/licenses/by/4.0/deed.de")[CC BY 4.0]. Software:
       #link("https://eupl.eu/1.2/de/")[EUPL-1.2].
     ])
+    // Druckfassung (Profil „druck“): Impressum nach Art. 7 BayPrG, nur wenn die Angaben gesetzt sind.
+    if herausgabe != none or druck != none {
+      item("Impressum", [
+        #if herausgabe != none [Herausgeberin (Selbstverlag): #herausgabe \ ]
+        #if druck != none [Druck: #druck]
+      ])
+    }
     item("Interessenkonflikte", [
       Ich erkläre, dass keine Interessenkonflikte bestehen. Feldspur ist mein eigenes Forschungswerkzeug und
       (noch) kein Produkt; ich verdiene daran nichts. Wohlgemerkt: Ich entwickle das Werkzeug und forsche

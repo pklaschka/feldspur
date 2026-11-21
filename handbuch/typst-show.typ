@@ -89,6 +89,12 @@ $endif$
 $if(beschnitt)$
   beschnitt: $beschnitt$,
 $endif$
+$if(herausgabe)$
+  herausgabe: [$herausgabe$],
+$endif$
+$if(druck)$
+  druck: [$druck$],
+$endif$
   cols: $if(columns)$$columns$$else$1$endif$,
   doc,
 )

@@ -61,4 +61,12 @@ ersetzen(
   "Zitiervorschlag",
 );
 
+// Literaturverzeichnis: „Dieselben Autor*innen wie oben“ setzt der Zitierstil als drei Geviertstriche (———), die im
+// Browser mit Lücken dazwischen ausfransen. Wie im PDF (kopf.typ) wird daraus eine durchgehende Linie (stil.scss).
+// Citeproc läuft nach den Lua-Filtern, deshalb erst hier.
+html = html.replace(
+  /(class="csl-entry"[^>]*>\n?)———/g,
+  '$1<span class="wie-oben" role="img" aria-label="dieselben Autor*innen wie im Eintrag davor"></span>',
+);
+
 Deno.writeTextFileSync(datei, html);

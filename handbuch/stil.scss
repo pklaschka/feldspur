@@ -369,3 +369,45 @@ main code,
 .csl-entry {
   overflow-wrap: anywhere;
 }
+
+// Tastenkürzel als Tasten (tasten.lua) wie im PDF: helle Kappe mit feinem Rand statt Bootstraps dunklem Kasten.
+kbd {
+  font-family: $font-family-sans-serif;
+  font-size: 0.82em;
+  font-weight: 500;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 3px;
+  box-shadow: none;
+  padding: 0.05em 0.35em;
+  white-space: nowrap;
+}
+
+// Literaturverzeichnis wie im PDF: hängender Einzug (setzt Quarto), etwas Luft zwischen den Einträgen, etwas kleiner
+// als der Fließtext, Adressen gedämpft statt in der Linkfarbe, damit nicht jeder Eintrag rot leuchtet.
+#refs {
+  font-size: 0.94em;
+  hyphens: manual;
+  .csl-entry {
+    margin-bottom: 0.8em;
+  }
+  a {
+    color: inherit;
+    opacity: 0.8;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-underline-offset: 0.15em;
+  }
+  a:hover {
+    opacity: 1;
+    text-decoration-color: currentColor;
+  }
+  // Durchgehende Linie statt ——— (literatur.lua).
+  .wie-oben {
+    display: inline-block;
+    width: 2.4em;
+    vertical-align: 0.3em;
+    border-top: 1px solid currentColor;
+  }
+}

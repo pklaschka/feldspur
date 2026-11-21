@@ -20,6 +20,8 @@ lang: de
 # Gerade Anführungszeichen im Quelltext, deutsch gesetzt (siehe anfuehrungszeichen.lua).
 filters:
   - anfuehrungszeichen.lua
+  # Tastenkürzel als Tasten: [Strg+O]{.kbd}, siehe tasten.lua.
+  - tasten.lua
 number-sections: true
 fig-cap-location: bottom
 crossref:
@@ -83,3 +85,8 @@ format:
       # Überschriften ohne Nummer ohne Quartos Hülle setzen, siehe ueberschriften.lua.
       - at: pre-ast
         path: ueberschriften.lua
+      - tasten.lua
+      # Spaltenbreiten nach Inhalt, siehe tabellen.lua.
+      - tabellen.lua
+      # Einleitungssatz und Liste nicht trennen, siehe zusammenhalt.lua.
+      - zusammenhalt.lua

@@ -10,7 +10,7 @@ setzt die Zeitmarken für dich.
 Öffne das Mitschreiben mit **Mitschreiben…** in der Detailleiste oder im Menü einer Audio- oder Videoquelle und wähle
 die **Tonquelle**. Dann:
 
-- Tippe los. **Enter** legt die Zeile an und beginnt die nächste. Die Zeitmarke ist die Stelle, an der du angefangen
+- Tippe los. [Enter]{.kbd} legt die Zeile an und beginnt die nächste. Die Zeitmarke ist die Stelle, an der du angefangen
   hast zu tippen.
   Eine angefangene Zeile wird beim Schließen angelegt.
 - Beginnt eine Zeile mit einem Kürzel wie `B1:` und einem Leerzeichen, wechselt der **Sprecher** sofort: Das Kürzel
@@ -21,17 +21,17 @@ die **Tonquelle**. Dann:
   wo gesprochen wird, dazu die Zeilen und Notizen; ein Klick spult dorthin.
 - **Liste läuft mit** hält beim Abspielen die aktuelle Zeile im Blick, auch bei langen Mitschriften.
 
-Tastenkürzel:
+| Taste | Wirkung |
+|:--|:------|
+| [Esc]{.kbd} | Abspielen / anhalten (beim Fortsetzen springt die Wiedergabe 1 s zurück) |
+| [F8]{.kbd} / [F9]{.kbd} | 5 Sekunden zurück / vor |
+| [F7]{.kbd} | langsamer (mit [Umschalt]{.kbd} schneller) |
+| [Alt+↑]{.kbd} / [↓]{.kbd} | zur Zeile davor / danach (unten die neue Zeile) |
+| [Enter]{.kbd} | Zeile anlegen, nächste beginnen |
+| [Strg/⌘+Enter]{.kbd} | Zeile an der Schreibmarke teilen |
+| `B1: …` | Sprecher wechseln, wenn die Zeile so beginnt |
 
-| Taste         | Wirkung                                                                        |
-| ------------- | ------------------------------------------------------------------------------ |
-| Esc           | Abspielen / anhalten (beim Fortsetzen springt die Wiedergabe 1 s zurück)       |
-| F8 / F9       | 5 Sekunden zurück / vor                                                        |
-| F7            | langsamer (mit Umschalt schneller)                                             |
-| Alt+↑ / ↓     | zur Zeile davor / danach (unten die neue Zeile)                                |
-| Enter         | Zeile anlegen, nächste beginnen                                                |
-| Strg/⌘+Enter  | Zeile an der Schreibmarke teilen                                               |
-| `B1: …`       | Sprecher wechseln, wenn die Zeile so beginnt                                   |
+: Tastenkürzel beim Mitschreiben {#tbl-mitschreiben-tasten}
 
 Die Tasten gelten überall im Dialog, auch wenn du vorher auf das Video, die Waveform oder eine freie Fläche geklickt
 hast. Tippst du, während kein Textfeld ausgewählt ist, geht es in der neuen Zeile weiter. Zum Danebenlegen gibt es sie
