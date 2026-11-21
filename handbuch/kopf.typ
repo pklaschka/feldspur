@@ -12,7 +12,7 @@
 // reserviert jede Überschrift unsichtbar Platz für etwa zwei Zeilen darunter; passt der nicht mehr,
 // rückt sie auf die nächste Seite. Der Abstand zum folgenden Text bleibt gleich.
 #show heading: set block(sticky: true)
-#show heading: it => {
+#show heading.where(level: 2).or(heading.where(level: 3)): it => {
   block(breakable: false, { it; v(2.5em) })
   v(-2.5em, weak: false)
 }
@@ -33,10 +33,10 @@
 #show raw.where(block: true): it => block(fill: salbei, inset: 8pt, radius: 3pt, width: 100%, it)
 #show outline.entry.where(level: 1): set text(fill: umbra, weight: "semibold")
 #show figure.caption: set text(font: sans, size: 9pt, fill: tinte-2)
-// Weniger Weißraum (Issue #176): Bildschirmfotos dürfen an den oberen oder unteren Rand der Seite (oder der
-// nächsten) rücken, statt mit ihrer ganzen Höhe auf die nächste Seite zu springen und eine halbe Seite leer zu
-// lassen. Der Text läuft dazwischen weiter; im Text stehen Verweise wie „Abbildung 3“.
-#show figure.where(kind: "quarto-float-fig"): set figure(placement: auto)
+// Weniger Weißraum (Issue #176): Bildschirmfotos bleiben im Textfluss, also in ihrem Abschnitt und an ihrer
+// Stelle, aber etwas schmaler als der Satzspiegel. So passen sie öfter noch auf die angefangene Seite, statt mit
+// ihrer ganzen Höhe auf die nächste zu springen und unten eine halbe Seite leer zu lassen.
+#show figure.where(kind: "quarto-float-fig"): set image(width: 85%)
 // Tabellen mit Beschriftung dürfen wie Tabellen ohne über den Seitenrand umbrechen; der Kopf wiederholt sich.
 #show figure.where(kind: "quarto-float-tbl"): set block(breakable: true)
 #show heading.where(level: 2): set block(above: 1.5em, below: 0.65em)
