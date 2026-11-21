@@ -13,22 +13,15 @@ function render(el: React.ReactElement): HTMLElement {
 }
 
 describe("StatusDot", () => {
-  it("hat eine Bezeichnung für Screenreader", () => {
-    expect(
-      render(<StatusDot status="ok" />)
-        .querySelector('[role="img"]')
-        ?.getAttribute("aria-label"),
-    ).toBe("Zeit: sicher");
-    expect(
-      render(<StatusDot status="check" />)
-        .querySelector("[title]")
-        ?.getAttribute("title"),
-    ).toBe("Zeit: prüfen");
-    expect(
-      render(<StatusDot status="unplaced" />)
-        .querySelector('[role="img"]')
-        ?.getAttribute("aria-label"),
-    ).toBe("Zeit: ohne Zeit");
+  it.each`
+    status        | bezeichnung
+    ${"ok"}       | ${"Zeit: sicher"}
+    ${"check"}    | ${"Zeit: prüfen"}
+    ${"unplaced"} | ${"Zeit: ohne Zeit"}
+  `("heißt für Screenreader und als Tooltip „$bezeichnung“ ($status)", ({ status, bezeichnung }) => {
+    const host = render(<StatusDot status={status} />);
+    expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(bezeichnung);
+    expect(host.querySelector("[title]")?.getAttribute("title")).toBe(bezeichnung);
   });
 
   it("ist bei Text daneben rein dekorativ", () => {

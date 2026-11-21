@@ -14,13 +14,17 @@ const piece = (fromMs: number, toMs: number, kind: PreviewPiece["kind"], clock0:
 });
 
 describe("Montage in der App", () => {
+  // Angenommen: eine Tafel (0–3 s) und eine Episode (3–63 s)
   const pieces = [piece(0, 3000, "card", 1_000_000), piece(3000, 63_000, "episode", 2_000_000)];
 
-  it("findet das Stück an einer Stelle", () => {
-    expect(pieceAt(pieces, 0)).toBe(0);
-    expect(pieceAt(pieces, 2999)).toBe(0);
-    expect(pieceAt(pieces, 3000)).toBe(1);
-    expect(pieceAt(pieces, 70_000)).toBe(1);
+  it.each`
+    stelleMs  | stueck | fall
+    ${0}      | ${0}   | ${"Anfang der Tafel"}
+    ${2999}   | ${0}   | ${"Ende der Tafel"}
+    ${3000}   | ${1}   | ${"Anfang der Episode"}
+    ${70_000} | ${1}   | ${"hinter dem Ende: letztes Stück"}
+  `("bei $stelleMs ms läuft Stück $stueck ($fall)", ({ stelleMs, stueck }) => {
+    expect(pieceAt(pieces, stelleMs)).toBe(stueck);
   });
 
   it("lässt die Uhr nur in Episoden sekundenweise mitlaufen", () => {
@@ -29,6 +33,7 @@ describe("Montage in der App", () => {
   });
 
   it("zeigt je Datei die Stelle im Original und trennt Ton ohne Bild ab", () => {
+    // Angenommen: eine Episode ab 10 s mit Kameravideo und Rekorderton
     const p: PreviewPiece = {
       ...piece(10_000, 70_000, "episode", 2_000_000),
       videos: [{ sourceId: "v", fromMs: 5_000, label: "V-01 Kamera", fileName: "C0001.MP4", kind: "video" }],
@@ -37,7 +42,9 @@ describe("Montage in der App", () => {
         { sourceId: "v", fromMs: 5_000, label: "V-01 Kamera", fileName: "C0001.MP4", kind: "video" },
       ],
     };
+    // Wenn: das Bild 7,4 s in die Episode gezeigt wird
     const f = previewFrame(p, 10_000 + 7_400);
+    // Dann: Video als Kachel, Rekorder als Ton ohne Bild, Uhr volle Sekunde
     expect(f.tiles).toEqual([{ label: "V-01 Kamera", fileName: "C0001.MP4", atMs: 12_000 }]);
     expect(f.sounds).toEqual([{ label: "A-01 Rekorder", fileName: "ZOOM0001.WAV", atMs: 72_000 }]);
     expect(f.clockMs).toBe(2_007_000);

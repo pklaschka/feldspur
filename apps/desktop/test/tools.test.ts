@@ -11,11 +11,11 @@ describe("resolveToolPaths", () => {
       ffprobe: join(res, "bin", "ffprobe.exe"),
     });
   });
-  it("fällt auf den PATH zurück", () => {
+  it("fällt ohne mitgelieferte Programme auf den PATH zurück", () => {
     expect(resolveToolPaths({}, res, "", () => false)).toEqual({ ffmpeg: "ffmpeg", ffprobe: "ffprobe" });
     expect(resolveToolPaths({}, null, "", () => true)).toEqual({ ffmpeg: "ffmpeg", ffprobe: "ffprobe" });
   });
-  it("Umgebungsvariablen gehen vor", () => {
+  it("eine Umgebungsvariable geht für ihr Programm vor", () => {
     const r = resolveToolPaths({ FELDSPUR_FFMPEG: "/x/ffmpeg" }, res, "", () => true);
     expect(r.ffmpeg).toBe("/x/ffmpeg");
     expect(r.ffprobe).toBe(join(res, "bin", "ffprobe"));
