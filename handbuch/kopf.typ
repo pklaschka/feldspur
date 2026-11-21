@@ -64,7 +64,11 @@
   radius: 2pt,
   inset: (x: 0.28em),
   outset: (y: 0.2em),
-  text(font: sans, size: 0.82em, weight: "medium", fill: tinte, name),
+  {
+    // ⌘ und ⇧ fehlen in Source Sans; die Ersatzschrift setzt sie sonst zu groß und zu fett.
+    show regex("[⌘⇧⌥]"): set text(size: 0.8em, weight: "regular")
+    text(font: sans, size: 0.82em, weight: "medium", fill: tinte, name)
+  },
 )
 #let tasten(..teile) = box(
   teile
