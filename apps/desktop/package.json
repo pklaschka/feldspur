@@ -9,7 +9,7 @@
     "build": "vp build && vp pack",
     "start": "electron .",
     "native": "node ../../scripts/fetch-electron-sqlite.mjs",
-    "e2e": "vp run build && vpx test/smoke.e2e.ts && vpx test/conflicts.e2e.ts && vpx test/export-import.e2e.ts && vpx test/timecode.e2e.ts"
+    "e2e": "vp run build && vpx test/smoke.e2e.ts && vpx test/conflicts.e2e.ts && vpx test/export-import.e2e.ts && vpx test/timecode.e2e.ts && vpx test/handbuch.e2e.ts"
   },
   "dependencies": {
     "@feldspur/core": "workspace:*",
