@@ -17,6 +17,7 @@ import { DeviceMenu, SourceMenu } from "./SourceMenu.tsx";
 import { Button, cx, FlagMark, Glyph, Pill, StatusDot, StatusLegend, StepHeader, Tip } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
 import { isEnter } from "./keys.js";
+import { isWideCard, splitByWidth } from "./collectLayout.ts";
 
 const api = window.feldspur;
 
@@ -63,6 +64,31 @@ export function Collect({
   const empty = view.rows.length === 0;
   const unassigned = view.rows.filter((r) => !r.deviceId);
   const dayHint = dominantDay(view.rows);
+  const deviceRows = (id: string) => view.rows.filter((r) => r.deviceId === id);
+  const { narrow, wide } = splitByWidth(view.allDevices, (d) => deviceRows(d.id).length);
+  const card = (d: DeviceRow) => (
+    <DeviceCard
+      key={d.id}
+      device={d}
+      view={view}
+      rows={deviceRows(d.id)}
+      selected={selected}
+      onSelect={onSelect}
+      onRename={(label) => onRename(d.id, label)}
+      onOpenDiary={onOpenDiary}
+      onTranscribe={onTranscribe}
+    />
+  );
+  const unassignedWide = isWideCard(unassigned.length);
+  const unassignedCard = unassigned.length > 0 && (
+    <section className="k-other overflow-hidden rounded-xl border border-line bg-panel shadow-xs">
+      <header className="flex items-center gap-2 px-3 pt-3 pb-2">
+        <Glyph kind="other" />
+        <span className="font-semibold">Ohne Gerät</span>
+      </header>
+      <SourceList view={view} rows={unassigned} selected={selected} onSelect={onSelect} wide={unassignedWide} />
+    </section>
+  );
 
   return (
     <div
@@ -181,29 +207,16 @@ export function Collect({
             <span className="flex-1" />
             <StatusLegend context={view.rows.some((r) => r.status === "context")} />
           </div>
-          <div className="columns-[300px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
-            {view.allDevices.map((d) => (
-              <DeviceCard
-                key={d.id}
-                device={d}
-                view={view}
-                rows={view.rows.filter((r) => r.deviceId === d.id)}
-                selected={selected}
-                onSelect={onSelect}
-                onRename={(label) => onRename(d.id, label)}
-                onOpenDiary={onOpenDiary}
-                onTranscribe={onTranscribe}
-              />
-            ))}
-            {unassigned.length > 0 && (
-              <section className="k-other overflow-hidden rounded-xl border border-line bg-panel shadow-xs">
-                <header className="flex items-center gap-2 px-3 pt-3 pb-2">
-                  <Glyph kind="other" />
-                  <span className="font-semibold">Ohne Gerät</span>
-                </header>
-                <SourceList view={view} rows={unassigned} selected={selected} onSelect={onSelect} />
-              </section>
+          {/* Kleine Geräte nebeneinander, die Spalten füllen die ganze Breite; große in voller Breite darunter. */}
+          <div className="grid gap-3.5">
+            {(narrow.length > 0 || (unassigned.length > 0 && !unassignedWide)) && (
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] items-start gap-3.5">
+                {narrow.map(card)}
+                {!unassignedWide && unassignedCard}
+              </div>
             )}
+            {wide.map(card)}
+            {unassignedWide && unassignedCard}
           </div>
         </>
       )}
@@ -350,6 +363,7 @@ function DeviceCard({
   const av = rows.filter((r) => r.kind === "audio" || r.kind === "video");
   const firstOpen = av.find((r) => !view.transcript.some((l) => l.sourceId === r.id)) ?? av[0];
   const kinds = [...new Set(rows.map((r) => r.kind))];
+  const wide = isWideCard(rows.length);
   return (
     <section
       className={`k-${device.kind} overflow-hidden rounded-xl border border-line bg-panel shadow-xs`}
@@ -391,7 +405,7 @@ function DeviceCard({
           </Button>
         )}
       </div>
-      <SourceList view={view} rows={rows} selected={selected} onSelect={onSelect} />
+      <SourceList view={view} rows={rows} selected={selected} onSelect={onSelect} wide={wide} />
     </section>
   );
 }
@@ -413,19 +427,31 @@ function SourceList({
   rows,
   selected,
   onSelect,
+  wide = false,
 }: {
   view: SessionView;
   rows: SourceRow[];
   selected: string | null;
   onSelect: (id: string) => void;
+  wide?: boolean;
 }) {
   const label = (id: string | null) => view.rows.find((r) => r.id === id)?.label ?? "?";
   return (
-    <ul className="border-t border-line pb-1">
+    <ul
+      className={cx(
+        "border-t border-line pb-1",
+        // Spalten von oben nach unten, also in der Reihenfolge der Liste; eine Linie trennt sie.
+        wide && "columns-[360px] gap-0 [column-rule:1px_solid_var(--color-line)]",
+      )}
+    >
       {ordered(rows).map(({ row: r, nested }) => (
         <li
           key={r.id}
-          className={cx("group flex items-center pr-1.5", selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2")}
+          className={cx(
+            "group flex items-center pr-1.5",
+            wide && "break-inside-avoid",
+            selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2",
+          )}
         >
           <button
             data-testid="source"
