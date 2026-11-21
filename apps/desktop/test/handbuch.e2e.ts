@@ -210,8 +210,12 @@ await kapitel("erste-schritte", async () => {
     const d = page.getByTestId("citation-dialog");
     await siehe("Feldspur zitieren", d.getByRole("heading", { name: "Feldspur zitieren" }), zitieren);
     await siehe("Zitat kopieren", d.getByRole("button", { name: "Zitat kopieren" }), zitieren);
-    // Der Rundgang läuft mit einer Vorabversion: Dort entfällt das Nachschlagen, der Dialog sagt warum.
-    await siehe("DOI für alle Versionen", d.getByText(/DOI für alle Versionen|keine eigene DOI/).first(), zitieren);
+    await siehe("DOI für alle Versionen", d.getByText(/DOI für alle Versionen/).first(), zitieren);
+    await siehe(
+      "DOI bei Zenodo nachschlagen",
+      d.getByRole("button", { name: "DOI bei Zenodo nachschlagen" }),
+      zitieren,
+    );
     await schliessen();
   });
 });

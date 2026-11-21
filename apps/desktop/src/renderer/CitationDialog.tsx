@@ -64,7 +64,6 @@ export function CitationDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       setCopied(null);
       copyRef.current?.focus();
     } else if (r.state === "cancelled") setLookup("idle");
-    else if (r.state === "prerelease") setLookup("idle");
     else setLookup(r.state);
   };
 
@@ -159,7 +158,7 @@ export function CitationDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                 </span>
                 <Button
                   ref={copyRef}
-                  variant={info.prerelease || lookup === "found" ? "primary" : "default"}
+                  variant={lookup === "found" ? "primary" : "default"}
                   onClick={() =>
                     void api.copyText(citationText(format, input)).then(
                       () => setCopied("ok"),
@@ -199,10 +198,7 @@ function Notice({ info, state, onLookup }: { info: CitationInfo; state: LookupSt
   let title: string;
   let body: ReactNode = null;
   let actions: ReactNode = null;
-  if (info.prerelease) {
-    title = "Vorabversionen haben keine eigene DOI.";
-    body = `${v} ist eine Vorabversion und wird nicht auf Zenodo archiviert. Für eine Veröffentlichung nimm besser eine fertige Version. Das Zitat oben nennt die Version und die DOI für alle Versionen.`;
-  } else if (state === "found" && info.versionDoi) {
+  if (state === "found" && info.versionDoi) {
     tone = "good";
     mark = "✓";
     title = `DOI von Version ${v} eingesetzt.`;
@@ -239,7 +235,7 @@ function Notice({ info, state, onLookup }: { info: CitationInfo; state: LookupSt
   } else {
     tone = "warn";
     mark = "!";
-    title = "Diese DOI gilt für alle Versionen von Feldspur.";
+    title = "Im Zitat steht die DOI für alle Versionen.";
     body = (
       <>
         Genauer ist die DOI von Version {v}. Feldspur kann sie bei Zenodo nachschlagen und ins Zitat einsetzen.

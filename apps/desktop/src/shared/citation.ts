@@ -24,11 +24,6 @@ export const doiUrl = (doi: string) => `https://doi.org/${doi}`;
 /** Versionsliste aller Feldspur-Versionen in der öffentlichen Zenodo-API (ohne Token). */
 export const ZENODO_VERSIONS_URL = `https://zenodo.org/api/records?q=conceptrecid:${ZENODO_CONCEPT_ID}&all_versions=true&size=100&sort=mostrecent`;
 
-/** Vorabversionen (0.3.0-rc.1) und Entwicklungsstände werden nicht auf Zenodo archiviert. */
-export function isPrerelease(version: string): boolean {
-  return version.includes("-");
-}
-
 /** Ein Stück Zitattext; `italic` für den Titel (APA), `doi` für die farbig hervorgehobene DOI. */
 export interface CitationPart {
   text: string;

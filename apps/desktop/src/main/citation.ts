@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { app, net } from "electron";
 import { log } from "@feldspur/media";
 import type { CitationInfo, CitationLookup } from "../shared/api.ts";
-import { isPrerelease, pickVersionDoi, ZENODO_VERSIONS_URL, type VersionDoi } from "../shared/citation.ts";
+import { pickVersionDoi, ZENODO_VERSIONS_URL, type VersionDoi } from "../shared/citation.ts";
 
 declare const __FELDSPUR_RELEASED__: string;
 
@@ -32,7 +32,6 @@ export function citationInfo(): CitationInfo {
   return {
     version,
     released: __FELDSPUR_RELEASED__,
-    prerelease: isPrerelease(version),
     versionDoi: known && typeof known.doi === "string" ? known : null,
   };
 }
@@ -42,7 +41,6 @@ let running: AbortController | null = null;
 /** Schlägt die DOI der laufenden Version bei Zenodo nach; nur nach Knopfdruck im Dialog. */
 export async function lookupCitationDoi(): Promise<CitationLookup> {
   const version = app.getVersion();
-  if (isPrerelease(version)) return { state: "prerelease" };
   running?.abort();
   const ctrl = new AbortController();
   running = ctrl;

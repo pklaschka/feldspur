@@ -30,8 +30,7 @@ Die vollständigen Angaben zum Programm stehen in
 repository" (APA und BibTeX) an. Jedes Release wird auf Zenodo archiviert und erhält dort eine **DOI**. Für das
 Programm ist sie die beste Angabe: die **DOI von Version** x (sie steht auf deren Zenodo-Seite), die **DOI für alle
 Versionen** [10.5281/zenodo.24289969](https://doi.org/10.5281/zenodo.24289969) (führt immer zur neuesten) nur, wenn
-es um Feldspur im Allgemeinen geht. Vorabversionen (etwa 0.3.0-rc.1) werden nicht archiviert und haben keine eigene
-DOI. Zenodo archiviert dabei den Quellcode, nicht das PDF dieses Texts. Den Text deshalb mit den Adressen oben und dem
+es um Feldspur im Allgemeinen geht. Auch Vorabversionen (etwa 0.3.0-rc.1) erhalten eine eigene DOI. Zenodo archiviert dabei den Quellcode, nicht das PDF dieses Texts. Den Text deshalb mit den Adressen oben und dem
 Stand zitieren.
 
 In der App steht die laufende Version unten in der Einsatzliste. **Zitieren…** daneben öffnet den Dialog **Feldspur

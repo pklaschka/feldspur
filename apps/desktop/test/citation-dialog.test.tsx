@@ -24,7 +24,6 @@ async function openDialog(info: Partial<CitationInfo>, lookup: CitationLookup = 
     citationInfo: vi.fn(async () => ({
       version: "0.5.0",
       released: "2026-12-03",
-      prerelease: false,
       versionDoi: null,
       ...info,
     })),
@@ -51,7 +50,7 @@ describe("Feldspur zitieren", () => {
     const api = await openDialog({});
     expect(api.lookupCitationDoi).not.toHaveBeenCalled();
     expect(zitat()).toContain("(Version 0.5.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.24289969");
-    expect(notice()).toContain("Diese DOI gilt für alle Versionen von Feldspur.");
+    expect(notice()).toContain("Im Zitat steht die DOI für alle Versionen.");
     expect(notice()).toContain("Aus deinem Projekt wird nichts übertragen.");
   });
 
@@ -87,12 +86,6 @@ describe("Feldspur zitieren", () => {
       expect(zitat()).toContain("10.5281/zenodo.24289969");
     },
   );
-
-  it("bietet bei Vorabversionen kein Nachschlagen an", async () => {
-    await openDialog({ version: "0.5.0-rc.1", prerelease: true });
-    expect(notice()).toContain("Vorabversionen haben keine eigene DOI.");
-    expect(button("DOI bei Zenodo nachschlagen")).toBeUndefined();
-  });
 
   it("kopiert das Zitat im gewählten Format", async () => {
     // Angenommen: der Dialog ist offen

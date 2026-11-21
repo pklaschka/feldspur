@@ -9,7 +9,8 @@ name: Release
 #   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt
 #
 # Nur die App wird versioniert; packages/* bekommen keine eigenen Tags, Releases oder Changelogs.
-# Eine veröffentlichte (nicht als Entwurf angelegte) Release archiviert Zenodo automatisch mit eigener DOI.
+# Eine veröffentlichte (nicht als Entwurf angelegte) Release archiviert Zenodo automatisch mit eigener DOI, auch
+# eine Vorabversion.
 on:
   workflow_dispatch:
     inputs:
@@ -20,9 +21,8 @@ on:
       sichtbarkeit:
         description: "Veröffentlichen oder als Entwurf anlegen? Entwürfe sieht nur, wer Schreibrechte hat; Zenodo archiviert sie nicht."
         type: choice
-        default: Vorabversionen als Entwurf
+        default: immer veröffentlichen
         options:
-          - Vorabversionen als Entwurf
           - immer veröffentlichen
           - immer als Entwurf
       probelauf:
@@ -197,7 +197,7 @@ jobs:
         run: |
           flags=()
           if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease --latest=false); fi
-          if [ "$SICHTBARKEIT" = "immer als Entwurf" ] || { [ "$SICHTBARKEIT" = "Vorabversionen als Entwurf" ] && [ "$PRERELEASE" = "true" ]; }; then
+          if [ "$SICHTBARKEIT" = "immer als Entwurf" ]; then
             flags+=(--draft)
             echo "::notice::v$V ist als Entwurf angelegt. Veröffentlichen unter Releases; erst dann archiviert Zenodo sie."
           fi

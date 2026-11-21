@@ -639,8 +639,6 @@ export interface CitationInfo {
   version: string;
   /** Erscheinungsdatum dieser Version, `YYYY-MM-DD` (aus CITATION.cff beim Bauen). */
   released: string;
-  /** Vorabversion oder Entwicklungsstand: hat keine eigene DOI. */
-  prerelease: boolean;
   /** Schon nachgeschlagene DOI dieser Version. */
   versionDoi: { doi: string; url: string; checkedAt: string } | null;
 }
@@ -649,7 +647,6 @@ export type CitationLookup =
   | { state: "found"; versionDoi: { doi: string; url: string; checkedAt: string } }
   | { state: "missing" }
   | { state: "offline" }
-  | { state: "prerelease" }
   | { state: "cancelled" };
 
 export interface FeldspurApi {

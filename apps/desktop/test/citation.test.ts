@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  ALL_VERSIONS_DOI,
-  citationText,
-  isCitationLink,
-  isPrerelease,
-  pickVersionDoi,
-} from "../src/shared/citation.ts";
+import { ALL_VERSIONS_DOI, citationText, isCitationLink, pickVersionDoi } from "../src/shared/citation.ts";
 
 const v050 = { version: "0.5.0", released: "2026-12-03", doi: ALL_VERSIONS_DOI };
 
@@ -42,15 +36,6 @@ describe("Zitat für Feldspur", () => {
 
   it("nennt als reine DOI die Adresse bei doi.org", () => {
     expect(citationText("doi", v050)).toBe(`https://doi.org/${ALL_VERSIONS_DOI}`);
-  });
-
-  it.each`
-    version         | vorab
-    ${"0.5.0"}      | ${false}
-    ${"0.3.0-rc.2"} | ${true}
-    ${"0.4.0-beta"} | ${true}
-  `("$version ist eine Vorabversion: $vorab", ({ version, vorab }) => {
-    expect(isPrerelease(version)).toBe(vorab);
   });
 });
 
