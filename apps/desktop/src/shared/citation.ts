@@ -21,11 +21,23 @@ export const FORMAT_LABEL: Record<CitationFormat, string> = { apa: "APA", bibtex
 
 export const doiUrl = (doi: string) => `https://doi.org/${doi}`;
 
+const bareVersion = (v: string) => v.trim().replace(/^v/i, "");
+
 /**
- * Versionsliste aller Feldspur-Versionen in der öffentlichen Zenodo-API (ohne Token). Ohne Anmeldung erlaubt Zenodo
- * höchstens 25 Einträge je Seite (größere Seiten lehnt es mit 400 ab); neueste zuerst, die laufende Version steht also vorn.
+ * Suche nach genau dieser Feldspur-Version in der öffentlichen Zenodo-API (ohne Token). Gesucht wird gezielt nach der
+ * Versionsnummer (mit und ohne „v“), damit es nicht darauf ankommt, wie viele Versionen es schon gibt: Ohne Anmeldung
+ * liefert Zenodo höchstens 25 Einträge je Seite (größere Seiten lehnt es mit 400 ab).
  */
-export const ZENODO_VERSIONS_URL = `https://zenodo.org/api/records?q=conceptrecid:${ZENODO_CONCEPT_ID}&all_versions=true&size=25&sort=newest`;
+export function zenodoVersionUrl(version: string): string {
+  const bare = bareVersion(version).replace(/[^\w.+-]/g, "");
+  const params = new URLSearchParams({
+    q: `conceptrecid:${ZENODO_CONCEPT_ID} AND (metadata.version:"${bare}" OR metadata.version:"v${bare}")`,
+    all_versions: "true",
+    size: "25",
+    sort: "newest",
+  });
+  return `https://zenodo.org/api/records?${params}`;
+}
 
 /** Ein Stück Zitattext; `italic` für den Titel (APA), `doi` für die farbig hervorgehobene DOI. */
 export interface CitationPart {
@@ -84,8 +96,6 @@ export interface VersionDoi {
   /** Seite der Version auf Zenodo. */
   url: string;
 }
-
-const bareVersion = (v: string) => v.trim().replace(/^v/i, "");
 
 /**
  * Sucht in der Antwort der Zenodo-API den Eintrag der laufenden Version. Zenodo übernimmt die Version vom GitHub-Tag
