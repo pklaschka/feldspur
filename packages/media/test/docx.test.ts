@@ -15,6 +15,7 @@ function fake(entries: SessionTranscriptEntry[], context: SessionTranscriptConte
       sources: [],
       extra: {},
       montageId: "M1",
+      montageVideoId: "M1",
       modeLabel: "Echtzeit",
       ...(context.length ? { contextCount: context.length } : {}),
     },

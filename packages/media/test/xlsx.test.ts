@@ -53,6 +53,7 @@ describe("Dokumentvariablen für MAXQDA", () => {
       sources: ["A-01", "V-01"],
       extra: { DOI: "10.1234/abc", Ort: "doppelt", " ": "leer" },
       montageId: "FS-ABCD-EFGH",
+      montageVideoId: "FS-ABCD-EFGH",
       modeLabel: "Echtzeit",
     },
     plan: {

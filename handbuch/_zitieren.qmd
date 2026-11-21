@@ -15,7 +15,7 @@ der oben auf der Seite bzw. auf dem Titelblatt des PDFs steht, z. B.:
 > zusammenführen. Begleittext und Handbuch_ (Stand: 20. November 2026). <https://purl.archive.org/feldspur>
 
 **Eine Stelle im eigenen Material**, das mit Feldspur aufbereitet wurde: aus der gesicherten Ausgabe
-(Einsatztranskript und Montagevideo), mit Montage-ID, Zeitmarke und dem Datum der Ausgabe. Wie das geht, steht im
+(Einsatztranskript und Montagevideo), mit der ganzen Montage-ID und der Zeitmarke. Wie das geht, steht im
 Handbuch unter „Aus der Ausgabe zitieren“.
 
 Autor\*in: Zuri Nimca Klaschka, ORCID [0009-0005-9995-5687](https://orcid.org/0009-0005-9995-5687).

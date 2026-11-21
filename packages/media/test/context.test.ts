@@ -172,10 +172,10 @@ describe("Kontext im Einsatztranskript (Issue #108)", () => {
     expect(new Set([a, b, c]).size).toBe(3);
   });
 
-  it("Montage-ID bleibt, wenn ein Eintrag ohne Lage Kontext wird", () => {
+  it("Montage bleibt dieselbe, wenn ein Eintrag ohne Lage Kontext wird", () => {
     const e = store.addDiaryEntry({ sessionId, regions: [{ sourceId: ids.seite }], notedAtMs: null });
-    const before = buildSessionTranscript(store, sessionId).header.montageId;
+    const before = buildSessionTranscript(store, sessionId).header.montageVideoId;
     store.updateDiaryEntry(e.id, { role: "context" });
-    expect(buildSessionTranscript(store, sessionId).header.montageId).toBe(before);
+    expect(buildSessionTranscript(store, sessionId).header.montageVideoId).toBe(before);
   });
 });

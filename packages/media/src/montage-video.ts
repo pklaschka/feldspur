@@ -35,7 +35,7 @@ const RATE = 48_000;
 export interface OverlayHeader {
   title: string;
   date: string;
-  /** Ordnet Video und Einsatztranskript einander zu, z. B. „FS-7KQ2-M9XD“. */
+  /** Ordnet Video und Einsatztranskript einander zu: die ersten beiden Blöcke der Montage-ID, z. B. „FS-7KQ2-M9XD“. */
   montageId: string;
   modeLabel: string;
 }
@@ -252,7 +252,7 @@ export function mixTrackTitle(audioMix: "all" | "main" = "all"): string {
 
 export function overlayHeader(transcript: SessionTranscript): OverlayHeader {
   const h = transcript.header;
-  return { title: h.title, date: h.date, montageId: h.montageId, modeLabel: h.modeLabel };
+  return { title: h.title, date: h.date, montageId: h.montageVideoId, modeLabel: h.modeLabel };
 }
 
 /** Einblendung an einer Stelle eines Stücks (ms ab Stückbeginn). */
