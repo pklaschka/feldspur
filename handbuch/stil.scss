@@ -403,4 +403,11 @@ kbd {
     opacity: 1;
     text-decoration-color: currentColor;
   }
+  // Durchgehende Linie statt ——— (literatur.lua).
+  .wie-oben {
+    display: inline-block;
+    width: 2.4em;
+    vertical-align: 0.3em;
+    border-top: 1px solid currentColor;
+  }
 }
