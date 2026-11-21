@@ -50,8 +50,8 @@ export function TranscriptImport({
             >
               {(
                 [
-                  ["append", "Zur Mitschrift hinzufügen …"],
-                  ["replace", "Mitschrift ersetzen …"],
+                  ["append", "Zur Mitschrift hinzufügen…"],
+                  ["replace", "Mitschrift ersetzen…"],
                 ] as const
               ).map(([mode, label]) => (
                 <DropdownMenu.Item

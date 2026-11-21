@@ -168,7 +168,7 @@ export function ExportStep({
       <StepHeader
         className="max-w-[1240px]"
         title="Ausgeben"
-        summary="Ein Ordner pro Einsatz: Montagevideo, Einsatztranskript für MAXQDA und Begleitprotokoll."
+        summary="Ein Ordner pro Einsatz: Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; dazu auf Wunsch Montagevideo, Viewer und Schnittliste."
         help={
           <>
             <p className="mb-1.5">
@@ -272,7 +272,7 @@ export function ExportStep({
                 disabled={empty}
                 onClick={() => setWatching(true)}
               >
-                Montage ansehen
+                Montage ansehen…
               </Button>
             </p>
             <MontageView
@@ -295,7 +295,7 @@ export function ExportStep({
                 checked={video}
                 onChange={(v) => set({ video: v })}
                 label="Montagevideo mit ausgeben"
-                hint="Dauert einige Minuten. Aus: nur Einsatztranskript und Protokoll."
+                hint="Dauert einige Minuten. Aus: nur Einsatztranskript, Dokumentvariablen und Begleitprotokoll."
               />
               <Option
                 checked={mixAudio}
@@ -394,7 +394,7 @@ export function ExportStep({
  * Letzte Ausgabe: wann, wohin, welche Dateien, und ob sie noch zum Einsatz passt. Passt sie nicht, steht dabei,
  * was sich geändert hat, damit niemand eine veraltete Fassung in MAXQDA weiterverwendet.
  */
-/** „Erneut ausgeben…“ geht in den bisherigen Ordner; der zweite Knopf fragt nach einem anderen. */
+/** „Erneut ausgeben“ geht in den bisherigen Ordner; der zweite Knopf fragt nach einem anderen. */
 function RerunButtons({
   disabled,
   dir,
@@ -409,7 +409,7 @@ function RerunButtons({
   return (
     <>
       <Button size="sm" disabled={disabled} onClick={onRerun} title={`Ausgeben nach: ${parentDir(dir)}`}>
-        Erneut ausgeben…
+        Erneut ausgeben
       </Button>
       <Button size="sm" disabled={disabled} onClick={onRerunElsewhere}>
         In anderen Ordner ausgeben…

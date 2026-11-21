@@ -211,7 +211,7 @@ function SourceDetails({
           <Player row={row} />
           <div className="mt-1.5 flex justify-end gap-1.5">
             <Button size="sm" onClick={() => sa.preview(row.id)}>
-              Groß ansehen
+              Groß ansehen…
             </Button>
             <TranscriptImport view={view} row={row} onImport={actions.importTranscript} />
             <Button size="sm" variant="primary" onClick={() => actions.transcribe(row.id)}>
@@ -247,7 +247,7 @@ function SourceDetails({
             />
           )}
           <span className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[0.78rem] text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-            Groß ansehen
+            Groß ansehen…
           </span>
         </button>
       )}

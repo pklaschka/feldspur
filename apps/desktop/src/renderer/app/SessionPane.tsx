@@ -82,7 +82,7 @@ export function SessionPane({
     });
   }, [sessionId, guard]);
 
-  if (!view || !step) return <main className="col-span-2 p-8 text-muted">Lade…</main>;
+  if (!view || !step) return <main className="col-span-2 p-8 text-muted">Wird geladen…</main>;
 
   const update = (p: Promise<SessionView | undefined>) => void p.then((v) => v && setView(v));
   const sourceActions: SourceActions = {
@@ -224,7 +224,7 @@ export function SessionPane({
                   <span className="font-serif text-[1.05rem] text-muted italic">{view.session.place}</span>
                 )}
                 <Button variant="link" size="sm" onClick={() => setEditing(true)}>
-                  Einsatzdaten bearbeiten
+                  Einsatzdaten bearbeiten…
                 </Button>
                 {/* Eigene Zeile in der Mitte statt an der Grundlinie: Symbole haben keine Grundlinie wie Text. */}
                 <span className="ml-auto flex items-center gap-0.5 self-center">
@@ -266,7 +266,7 @@ export function SessionPane({
                     size="sm"
                     className="h-7"
                     onClick={() => setSearching(true)}
-                    title="Mitschrift, Tagebuch, Quellen und Episoden durchsuchen (Strg/⌘+K)"
+                    title="Mitschrift, Notizen, Tagebuch, Quellen und Episoden durchsuchen, auch nach Uhrzeit"
                   >
                     Suchen <kbd className="ml-1 font-mono text-[0.78rem] text-muted">{isMac ? "⌘K" : "Strg+K"}</kbd>
                   </Button>

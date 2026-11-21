@@ -75,7 +75,7 @@ export function ChangeLog({ open, onOpenChange }: { open: boolean; onOpenChange:
             der Projektdatei und bleibt auch nach Rückgängig erhalten.
           </Dialog.Description>
           <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-line">
-            {steps === null && <p className="p-3 text-[0.9rem] text-muted">Wird geladen …</p>}
+            {steps === null && <p className="p-3 text-[0.9rem] text-muted">Wird geladen…</p>}
             {steps?.length === 0 && <p className="p-3 text-[0.9rem] text-muted">Noch keine Änderungen.</p>}
             {steps?.map((s) => {
               const isOpen = expanded.has(s.step);

@@ -18,7 +18,7 @@ Ausgabeordner.
 
 ![Veraltete Ausgabe nach einem Neustart, mit den Gründen](bilder/ausgeben-veraltet.png){#fig-ausgeben-veraltet}
 
-Ist die Ausgabe veraltet oder fehlen Dateien, rechnet **Erneut ausgeben…** nur das Geänderte neu und geht ohne Nachfrage in den Ordner der letzten Ausgabe (der
+Ist die Ausgabe veraltet oder fehlen Dateien, rechnet **Erneut ausgeben** nur das Geänderte neu und geht ohne Nachfrage in den Ordner der letzten Ausgabe (der
 Knopf nennt ihn als Hinweis). Für einen anderen Ordner gibt es **In anderen Ordner ausgeben…**; der Ordnerdialog
 beginnt dann beim bisherigen Ordner. Ist eine Datei der letzten Ausgabe noch in Word, Excel oder MAXQDA geöffnet, meldet
 Feldspur das gleich zu Beginn („… ist noch in einem anderen Programm geöffnet“) und nicht erst nach dem Video. Feldspur ist dabei vorsichtig: Lieber einmal zu oft „Veraltet“ als
@@ -83,7 +83,7 @@ Optionen:
 - **Viewer zum Ansehen im Browser** (Standard, nur mit Montagevideo): Neben dem Video entsteht eine HTML-Datei, in
   der du Video und Einsatztranskript zusammen im Browser ansiehst (@sec-viewer).
 
-Mit **Montage ansehen** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
+Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
 Ein Montagevideo in Echtzeit rechnet bei einem langen Feldtag eine Weile. Hast du dich bei den Optionen vertan, hältst
 du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gilt dann nicht als fertig, auch eine
@@ -186,7 +186,7 @@ Tagebuch. Die Zeile, die gerade läuft, ist getönt, ihre Uhrzeit steht in Terra
   Video; **Esc** beendet es. Alle Tasten zeigt das Tastatur-Zeichen oben rechts oder die Taste **?**.
 
 Findet der Viewer das Video nicht, weil es fehlt oder anders heißt, steht dort ein Hinweis mit dem Knopf
-**Videodatei wählen …**. Das Einsatztranskript bleibt auch ohne Video lesbar.
+**Videodatei wählen…**. Das Einsatztranskript bleibt auch ohne Video lesbar.
 
 Zu hören ist zunächst die Mischung. Hat das Video eine Tonspur je Gerät (siehe die Optionen oben), kannst du auch
 einzelne Geräte hören. Der Knopf **Erweiterte Tonspurkontrolle** öffnet dafür einen kurzen Assistenten. Was du dort
@@ -194,7 +194,7 @@ tun musst, hängt vom Browser ab:
 
 - Safari spielt die Tonspuren selbst und braucht keine Freigabe.
 - Chrome, Edge und Firefox spielen von sich aus nur die erste Tonspur. Für die anderen musst du dem Browser die
-  Videodatei einmal freigeben: Zieh sie in den Assistenten oder wähle **Video freigeben …**. Chrome und Edge merken
+  Videodatei einmal freigeben: Zieh sie in den Assistenten oder wähle **Video freigeben…**. Chrome und Edge merken
   sich die Freigabe und fragen beim nächsten Öffnen nur kurz nach (**Erneut freigeben**). In Firefox wählst du das
   Video jedes Mal neu.
 
@@ -242,7 +242,7 @@ nicht aus der Originaldatei dahinter und auch nicht aus dem Projekt in Feldspur.
 
 Der Grund für das Zweite: Das Projekt ist ein Arbeitsstand und ändert sich mit jedem Handgriff. Die Ausgabe ist das,
 was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings erst, wenn du sie festhältst, denn
-**Erneut ausgeben…** überschreibt die Dateien im selben Ordner. So gehst du vor:
+**Erneut ausgeben** überschreibt die Dateien im selben Ordner. So gehst du vor:
 
 1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
    ist.

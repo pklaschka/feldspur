@@ -82,7 +82,7 @@ export function LevelPanel({ row, level, actions }: { row: SourceRow; level: Lev
                 void actions.measureLevel(row.id).finally(() => setMeasuring(false));
               }}
             >
-              {measuring ? "misst…" : "Jetzt messen"}
+              {measuring ? "Misst…" : "Jetzt messen"}
             </Button>{" "}
           </>
         )}

@@ -624,7 +624,7 @@ try {
       const w = window as unknown as { firstTop?: number };
       const mo = new MutationObserver(() => {
         const b = [...document.querySelectorAll("[data-testid=inspector] button")].find(
-          (e) => e.textContent === "Groß ansehen",
+          (e) => e.textContent === "Groß ansehen…",
         );
         if (b && document.querySelector("[data-testid=inspector] video")) {
           w.firstTop = b.getBoundingClientRect().top;
@@ -640,7 +640,7 @@ try {
     });
     const shift = await page.evaluate(() => {
       const b = [...document.querySelectorAll("[data-testid=inspector] button")].find(
-        (e) => e.textContent === "Groß ansehen",
+        (e) => e.textContent === "Groß ansehen…",
       )!;
       return b.getBoundingClientRect().top - (window as unknown as { firstTop: number }).firstTop;
     });
@@ -786,7 +786,7 @@ try {
       dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [file] })) as typeof dialog.showOpenDialog;
     }, vtt);
     await page.getByTestId("inspector").getByRole("button", { name: "Transkript importieren…" }).click();
-    await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen …" }).click();
+    await page.getByRole("menuitem", { name: "Zur Mitschrift hinzufügen…" }).click();
     await page.getByTestId("inspector").getByRole("status").getByText("2 Zeilen übernommen").waitFor();
     await page.getByTestId("transcript-summary").getByText("5 Zeilen").waitFor();
   });
@@ -950,7 +950,7 @@ try {
   });
 
   await ablauf("Einsatzdaten bearbeiten", async () => {
-    await page.getByRole("button", { name: "Einsatzdaten bearbeiten" }).click();
+    await page.getByRole("button", { name: "Einsatzdaten bearbeiten…" }).click();
     const details = page.getByTestId("session-details");
     await details.getByLabel("Ort", { exact: true }).fill("Südstadt");
     await details.getByRole("button", { name: "+ Feld" }).click();
@@ -1054,7 +1054,7 @@ try {
 
   await ablauf("Die Montage in der App ansehen", async () => {
     // Montage in der App ansehen: springt ins erste Episodenstück und spielt ab.
-    await page.getByRole("button", { name: "Montage ansehen" }).click();
+    await page.getByRole("button", { name: "Montage ansehen…" }).click();
     const montage = page.getByTestId("montage");
     const montageTime = montage.getByTestId("montage-time");
     await montageTime.waitFor();

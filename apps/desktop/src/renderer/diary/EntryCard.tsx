@@ -365,7 +365,7 @@ function Refs({
           <input
             autoFocus
             className="w-full"
-            placeholder="Kontext suchen …"
+            placeholder="Kontext suchen…"
             aria-label="Kontext suchen"
             value={q}
             onChange={(e) => setQ(e.target.value)}

@@ -83,7 +83,7 @@ export function Sync({
   }
 
   const run = async () => {
-    setProgress("Starte…");
+    setProgress("Startet…");
     setCancelled(false);
     const off = api.onProgress((p) =>
       setProgress(p.fileName ? `${p.done + 1} / ${p.total} · ${p.fileName}` : "Suche Übereinstimmungen…"),
@@ -205,7 +205,7 @@ export function Sync({
                 {view.proposals.length} Vorschläge, davon {sure.length} eindeutig. Unsichere bleiben zum Anhören stehen.
               </span>
               <Button variant="primary" size="sm" disabled={accepting} onClick={() => void acceptSure()}>
-                {accepting ? "Übernehme…" : `Alle eindeutigen übernehmen (${sure.length})`}
+                {accepting ? "Übernimmt…" : `Alle eindeutigen übernehmen (${sure.length})`}
               </Button>
             </div>
           )}
