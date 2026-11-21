@@ -75,6 +75,8 @@ erkennt Feldspur an der Prüfsumme und übernimmt sie nicht zweimal.
 Feldspur gruppiert die Quellen nach **Geräten**, weil jedes Gerät seine eigene Uhr hat. Es erkennt das Gerät am
 Kameramodell in den Metadaten oder an der Art, wie die Dateien benannt sind. Jede Quelle bekommt ein Kurzzeichen wie
 im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `T-01` für Tagebuchseiten.
+Hat ein Gerät viele Dateien, zeigt seine Karte zuerst nur die ersten acht; **Alle … Dateien zeigen** klappt
+sie auf.
 
 Über die Menüs ⋯ an jeder Quelle und an jedem Gerät kannst du nachhelfen:
 

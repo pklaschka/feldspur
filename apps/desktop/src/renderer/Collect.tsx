@@ -1,3 +1,4 @@
+import { visibleCount } from "./collectLayout.ts";
 import { useEffect, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
@@ -181,7 +182,7 @@ export function Collect({
             <span className="flex-1" />
             <StatusLegend context={view.rows.some((r) => r.status === "context")} />
           </div>
-          <div className="columns-[300px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
+          <div className="columns-[340px] gap-3.5 *:mb-3.5 *:break-inside-avoid">
             {view.allDevices.map((d) => (
               <DeviceCard
                 key={d.id}
@@ -420,9 +421,17 @@ function SourceList({
   onSelect: (id: string) => void;
 }) {
   const label = (id: string | null) => view.rows.find((r) => r.id === id)?.label ?? "?";
+  const [expanded, setExpanded] = useState(false);
+  const all = ordered(rows);
+  const shown = visibleCount(
+    all.length,
+    expanded,
+    all.findIndex((e) => e.row.id === selected),
+  );
+  const hidden = all.length - shown;
   return (
     <ul className="border-t border-line pb-1">
-      {ordered(rows).map(({ row: r, nested }) => (
+      {all.slice(0, shown).map(({ row: r, nested }) => (
         <li
           key={r.id}
           className={cx("group flex items-center pr-1.5", selected === r.id ? "bg-accent-soft" : "hover:bg-panel-2")}
@@ -465,6 +474,13 @@ function SourceList({
           <SourceMenu row={r} view={view} />
         </li>
       ))}
+      {(hidden > 0 || expanded) && (
+        <li className="border-t border-line px-3 pt-1.5 pb-0.5">
+          <Button variant="link" className="text-[0.85rem]" onClick={() => setExpanded(hidden > 0)}>
+            {hidden > 0 ? `Alle ${all.length} Dateien zeigen` : "Weniger zeigen"}
+          </Button>
+        </li>
+      )}
     </ul>
   );
 }
