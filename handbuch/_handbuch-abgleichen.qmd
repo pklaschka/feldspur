@@ -68,6 +68,11 @@ Doppelpunkte musst du nirgends tippen. Bei Uhrzeiten setzt Feldspur sie beim Tip
 in der Aufnahme** füllen die Ziffern von rechts: "320" wird 3:20, "10320" wird 1:03:20, "45" sind 45 Sekunden.
 Dasselbe gilt für die Stellen beim Setzen eines Ankers.
 
+**Über Mitternacht:** Eine Uhrzeit trägt kein Datum. Feldspur legt sie auf den Tag, der zu den Aufnahmen passt: Läuft
+ein Einsatz vom 14. bis kurz nach Mitternacht, landet "00:02" am 15. Bei einer Quelle zählt die Stelle in der
+Aufnahme, bei Randnotizen und Tagebucheinträgen die Spanne aller Aufnahmen. Liegt der Einsatz ganz an einem Tag,
+bleibt es beim Einsatzdatum.
+
 ![Eine Uhrzeit von Hand eintragen](bilder/von-hand.png){#fig-von-hand}
 
 ### Nachvollziehbarkeit

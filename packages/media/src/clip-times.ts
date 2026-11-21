@@ -19,8 +19,16 @@ const QUARTER_HOUR = 15 * 60_000;
 const DAY = 86_400_000;
 /** So weit darf creation_time vom Ende laut Dateiname abweichen: Handys schreiben das Datum erst nach dem Speichern. */
 const END_TOLERANCE_MS = 10_000;
-/** Kürzere Clips lassen keine Unterscheidung zu: Beginn und Ende liegen zu dicht beieinander. */
+/**
+ * Kürzere Clips lassen die großzügige Probe nicht zu: Beginn und Ende liegen zu dicht beieinander. Für sie gilt die
+ * enge Probe ({@link SHORT_START_TOLERANCE_MS}), wenn Dateiname und Stempel beide UTC tragen (Issue #151).
+ */
 const MIN_DECIDING_MS = 2 * END_TOLERANCE_MS;
+/**
+ * Enge Probe für kurze Clips: Ein Gerät, das den Beginn schreibt, trifft den Namen bis auf die Sekundenrundung. Ein
+ * Gerät, das das Ende schreibt, liegt am Ende oder bis zu {@link END_TOLERANCE_MS} danach, nie deutlich davor.
+ */
+const SHORT_START_TOLERANCE_MS = 1_500;
 /** Überlappung, die als echt gilt (Sekundenrundung zweier Stempel nicht mitgezählt). */
 const OVERLAP_MS = 2_000;
 /** creation_time als Ende: sekundengenau, dazu bis zu ein paar Sekunden, bis die Datei abgeschlossen war. */
@@ -45,9 +53,18 @@ export function creationTimeMeans(c: Pick<ImportCandidate, "evidence" | "duratio
   const ct = c.evidence.find(isCreationTime);
   const name = c.evidence.find((e) => e.kind === "filename");
   const dur = c.durationMs;
-  if (!ct || !name || !dur || dur < MIN_DECIDING_MS || name.uncertaintyMs > 1_000) return null;
+  if (!ct || !name || !dur || name.uncertaintyMs > 1_000) return null;
   const bothUtc = ct.utcMs != null && name.utcMs != null;
   const d = bothUtc ? ct.utcMs! - name.utcMs! : ct.localMs - name.localMs;
+  if (dur < MIN_DECIDING_MS) {
+    // Kurz: nur ohne Zeitzone dazwischen, dann mit engen, einseitigen Fenstern (Pixel schreibt bis zu 3 s nach dem Ende).
+    if (!bothUtc) return null;
+    const startFit = Math.abs(d) <= SHORT_START_TOLERANCE_MS;
+    const endFit = d - dur >= -SHORT_START_TOLERANCE_MS && d - dur <= END_TOLERANCE_MS;
+    if (endFit && !startFit) return "end";
+    if (startFit && !endFit) return "start";
+    return null;
+  }
   const startFit = gridResidual(d, !bothUtc) <= END_TOLERANCE_MS;
   const endFit = gridResidual(d - dur, !bothUtc) <= END_TOLERANCE_MS;
   if (endFit && !startFit) return "end";
@@ -188,12 +205,14 @@ export function timecodeGroups(clips: { clockMs: number; tcMs: number }[]): numb
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const formatOffset = (ms: number) => {
+/** Abstand Uhr − Timecode auf den Tag bezogen (−12 h bis +12 h): Die Uhr ist ein Zeitpunkt, der Timecode Zeit seit Mitternacht. */
+export const formatOffset = (offsetMs: number) => {
+  const ms = ((((offsetMs + DAY / 2) % DAY) + DAY) % DAY) - DAY / 2;
   const sign = ms < 0 ? "−" : "+";
-  const s = Math.round(Math.abs(ms) / 100) / 10;
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return `${sign}${h}:${pad(m)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
+  const tenths = Math.round(Math.abs(ms) / 100);
+  const h = Math.floor(tenths / 36_000);
+  const m = Math.floor((tenths % 36_000) / 600);
+  return `${sign}${h}:${pad(m)}:${((tenths % 600) / 10).toFixed(1).padStart(4, "0")}`;
 };
 
 /** Belege aus dem Kamera-Timecode für alle Clips eines Geräts, deren Timecode frei mitläuft. */

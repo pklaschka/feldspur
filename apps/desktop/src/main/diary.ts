@@ -5,7 +5,7 @@
 import { contextKey, type DiaryEntry, type Id, type ProjectStore } from "@feldspur/core";
 import type { DiaryPatch, Region } from "../shared/api.ts";
 import { dropRefsTo } from "./context.ts";
-import { parseClockOnDate } from "./edits.ts";
+import { parseClockNear, sessionSpan } from "./edits.ts";
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
@@ -102,7 +102,9 @@ export function patchEntry(s: ProjectStore, entryId: Id, patch: DiaryPatch): Id 
   const session = s.getSession(e.sessionId);
   const next: Partial<DiaryEntry> = {};
   if (patch.notedAt !== undefined) {
-    next.notedAtMs = patch.notedAt.trim() ? parseClockOnDate(session.date, patch.notedAt) : null;
+    next.notedAtMs = patch.notedAt.trim()
+      ? parseClockNear(session.date, patch.notedAt, sessionSpan(s, session.id))
+      : null;
   }
   if (patch.lookbackMin !== undefined) {
     if (patch.lookbackMin !== null && (patch.lookbackMin < 0 || patch.lookbackMin > 24 * 60)) {

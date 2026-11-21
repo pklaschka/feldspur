@@ -9,6 +9,7 @@ import {
   deviceWritesEnd,
   END_STAMP_UNCERTAINTY_MS,
   refineClipTimes,
+  formatOffset,
   timecodeFrames,
   timecodeGroups,
   timecodeOffset,
@@ -57,8 +58,8 @@ describe("creation_time: Beginn oder Ende?", () => {
     const [a, b, short] = pixel();
     expect(creationTimeMeans(a!)).toBe("end");
     expect(creationTimeMeans(b!)).toBe("end");
-    // Zu kurz, um es am einzelnen Clip zu entscheiden.
-    expect(creationTimeMeans(short!)).toBeNull();
+    // Kurz, aber Name und Stempel tragen UTC: Die enge Probe entscheidet (Issue #151).
+    expect(creationTimeMeans(short!)).toBe("end");
   });
 
   it("liest alle Clips des Geräts als Ende, auch die kurzen", () => {
@@ -313,5 +314,90 @@ describe("Zeitbelege neu lesen", () => {
     }));
     expect(applyReread(store, session.id, again)).toBe(0);
     store.close();
+  });
+});
+
+describe("RC-Funde v0.3.0", () => {
+  const conflictsOf = (store: ProjectStore, sessionId: string) =>
+    [...resolveTimeline(store.loadResolveInput(sessionId)).placements.values()].flatMap((p) => p.conflicts);
+
+  it("kurzer Pixel-Clip allein: Stempel als Ende, kein Widerspruch (Issue #151)", () => {
+    const c = cand("PXL_20260914_083000789.mp4", probe(15_000, { creation_time: "2026-09-14T08:30:16.000000Z" }));
+    expect(creationTimeMeans(c)).toBe("end");
+    // Ein kurzer Clip eines Geräts, das den Beginn schreibt, bleibt beim Beginn.
+    const start = cand("PXL_20260914_083000789.mp4", probe(15_000, { creation_time: "2026-09-14T08:30:01.000000Z" }));
+    expect(creationTimeMeans(start)).toBe("start");
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
+    const res = applyImport(store, session.id, [c]);
+    const p = resolveTimeline(store.loadResolveInput(session.id)).placements.get(res.sources[0]!.id)!;
+    expect(formatLocal(p.startMs)).toBe("2026-09-14T10:30:00.789");
+    expect(conflictsOf(store, session.id)).toEqual([]);
+    store.close();
+  });
+
+  it("nach und nach eingesammelt: Aufnahmeende wie beim Einsammeln auf einmal (Issue #150)", () => {
+    const parts = [
+      cand("Interview_Teil1.mp4", probe(120_000, { creation_time: "2026-09-14T08:42:00.000000Z" }), "renamed"),
+      cand("Interview_Teil2.mp4", probe(90_000, { creation_time: "2026-09-14T08:43:35.000000Z" }), "renamed"),
+    ];
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
+    const first = applyImport(store, session.id, [parts[0]!]);
+    expect(first.refreshed).toBe(0);
+    const second = applyImport(store, session.id, [parts[1]!]);
+    // Teil 1 wird nachgezogen: Mit Teil 2 zusammen überlappen sich die Clips nur, wenn der Stempel der Beginn wäre.
+    expect(second.refreshed).toBe(1);
+    const r = resolveTimeline(store.loadResolveInput(session.id));
+    const [a, b] = [first.sources[0]!, second.sources[0]!].map((s) => r.placements.get(s.id)!);
+    expect(formatLocal(a!.startMs)).toBe("2026-09-14T10:40:00");
+    expect(formatLocal(b!.startMs)).toBe("2026-09-14T10:42:05");
+    expect(a!.basis.detail).toMatch(/Aufnahmeende/);
+    // Dieselbe Datei noch einmal: Dublette, sie zählt nicht als dritter Clip.
+    const again = applyImport(store, session.id, [parts[1]!]);
+    expect(again.duplicates).toHaveLength(1);
+    expect(again.refreshed).toBe(0);
+    store.close();
+  });
+
+  it("nach und nach eingesammelt: Kamera-Timecode für alle Clips (Issue #150)", () => {
+    const tcProbe = (created: string, tc: string) =>
+      probe(60_000, { creation_time: created, timecode: tc }, { frameRate: { num: 50, den: 1 } });
+    const clips = [
+      cand("P001C001.MOV", tcProbe("2026-09-14T09:18:27.000000Z", "10:34:39:28"), "cam"),
+      cand("P001C002.MOV", tcProbe("2026-09-14T09:25:03.000000Z", "10:41:16:03"), "cam"),
+      cand("P001C003.MOV", tcProbe("2026-09-14T09:40:12.000000Z", "10:56:24:35"), "cam"),
+    ];
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "UTC" });
+    for (const c of clips) applyImport(store, session.id, [JSON.parse(JSON.stringify(c)) as ImportCandidate]);
+    const tc = store.listEvidence(session.id).filter((e) => e.detail.startsWith("Kamera-Timecode"));
+    expect(tc).toHaveLength(3);
+    for (const e of tc) expect(e.detail).toMatch(/aus 3 Clips/);
+    // Rohwert: Abstand auf den Tag bezogen, nicht Millisekunden seit 1970 (Issue #154).
+    for (const e of tc) expect(e.raw).toMatch(/uhr−timecode=−1:16:1\d\.\d$/);
+    store.close();
+  });
+
+  it("älterer Stand eines Geräts bleibt unberührt, bis „Zeitbelege neu lesen“", () => {
+    const old = cand("Interview_Teil1.mp4", probe(120_000, { creation_time: "2026-09-14T08:42:00.000000Z" }), "r");
+    const store = ProjectStore.open(":memory:");
+    const session = store.addSession({ title: "Test", date: "2026-09-14", timeZone: "Europe/Berlin" });
+    // Belege, wie sie eine ältere Fassung gespeichert haben könnte (anderer Wortlaut).
+    applyImport(store, session.id, [
+      { ...old, evidence: old.evidence.map((e) => ({ ...e, detail: "Metadaten alt" })) },
+    ]);
+    const next = cand("Interview_Teil2.mp4", probe(90_000, { creation_time: "2026-09-14T08:43:35.000000Z" }), "r");
+    expect(applyImport(store, session.id, [next]).refreshed).toBe(0);
+    expect(store.listEvidence(session.id).some((e) => e.detail === "Metadaten alt")).toBe(true);
+    store.close();
+  });
+
+  it("formatiert den Abstand Uhr − Timecode auf den Tag bezogen (Issue #154)", () => {
+    const day = 86_400_000;
+    expect(formatOffset(-972_160)).toBe("−0:16:12.2");
+    expect(formatOffset(Date.UTC(2026, 8, 14) - 972_160)).toBe("−0:16:12.2");
+    expect(formatOffset(Date.UTC(2026, 8, 14) + 3_600_000)).toBe("+1:00:00.0");
+    expect(formatOffset(day - 59_960)).toBe("−0:01:00.0");
   });
 });

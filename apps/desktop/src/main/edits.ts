@@ -43,6 +43,54 @@ export function parseClockOnDate(date: string, text: string, opts: { seconds?: b
   return localMs(y, mo, d, h, mi, se);
 }
 
+const DAY_MS = 86_400_000;
+/** So weit über den Rand der Aufnahmen hinaus kommt noch der Nachbartag in Frage (Issue #152). */
+const NEAR_DAY_MARGIN_MS = 3 * 3_600_000;
+const dayOf = (ms: number) => Math.floor(ms / DAY_MS);
+
+/**
+ * Uhrzeit ohne Datum dem passenden Tag zuordnen: Läuft ein Einsatz über Mitternacht, meint „00:02“ meist den
+ * Folgetag. Gesucht wird unter Vortag, Einsatztag und Folgetag der Tag, an dem die Zeit am nächsten bei `near` liegt
+ * (einer Stelle oder Spanne der Aufnahmen). In Frage kommen nur Tage, die `near` (mit drei Stunden Rand) berührt;
+ * bei Gleichstand und ohne `near` bleibt es beim Einsatztag.
+ */
+export function parseClockNear(
+  date: string,
+  text: string,
+  near: { fromMs: number; toMs: number } | null,
+  opts: { seconds?: boolean } = {},
+): number {
+  const base = parseClockOnDate(date, text, opts);
+  if (!near) return base;
+  const lo = dayOf(near.fromMs - NEAR_DAY_MARGIN_MS);
+  const hi = dayOf(near.toMs + NEAR_DAY_MARGIN_MS);
+  const dist = (t: number) => (t < near.fromMs ? near.fromMs - t : t > near.toMs ? t - near.toMs : 0);
+  let best = base;
+  for (const t of [base - DAY_MS, base + DAY_MS]) {
+    if (dayOf(t) < lo || dayOf(t) > hi) continue;
+    if (dist(t) < dist(best)) best = t;
+  }
+  return best;
+}
+
+/**
+ * Spanne der Aufnahmen eines Einsatzes (Audio, Video, Fotos) nach der aktuellen Lage; Tagebuchseiten zählen nicht,
+ * weil ihre Lage an den von Hand eingetragenen Uhrzeiten hängt. `null`, solange nichts liegt.
+ */
+export function sessionSpan(s: ProjectStore, sessionId: Id): { fromMs: number; toMs: number } | null {
+  const input = s.loadResolveInput(sessionId);
+  const kinds = new Map(input.sources.map((x) => [x.id, x.kind]));
+  let fromMs = Infinity;
+  let toMs = -Infinity;
+  for (const p of resolveTimeline(input).placements.values()) {
+    const kind = kinds.get(p.sourceId);
+    if (kind !== "audio" && kind !== "video" && kind !== "photo") continue;
+    fromMs = Math.min(fromMs, p.startMs);
+    toMs = Math.max(toMs, p.endMs);
+  }
+  return fromMs <= toMs ? { fromMs, toMs } : null;
+}
+
 /** Stelle in einer Aufnahme: "3:20", "1:03:20", "320" (= 3:20), "45" (Sekunden), "12,5", leer = Anfang. */
 export function parseMediaPos(text: string): number {
   const t = text.trim().replace(",", ".");
@@ -90,7 +138,10 @@ export function addTimeEvidence(s: ProjectStore, input: TimeInput): Id {
   if (input.kind === "spoken" && src.kind !== "audio" && src.kind !== "video") {
     throw new Error("Angesagte Uhrzeiten gibt es nur in Audio und Video");
   }
-  const local = parseClockOnDate(session.date, input.clock);
+  // Bezug für den Tag: die Stelle in der Quelle nach ihrer aktuellen Lage, sonst die Aufnahmen des Einsatzes.
+  const placed = resolveTimeline(s.loadResolveInput(session.id)).placements.get(src.id);
+  const near = placed ? { fromMs: placed.startMs + at, toMs: placed.startMs + at } : sessionSpan(s, session.id);
+  const local = parseClockNear(session.date, input.clock, near);
   const where = at ? ` bei ${input.atMedia.trim()}` : "";
   const uncertaintyMs = PRECISION_MS[input.precision];
   if (input.syncDevice && input.kind === "manual") syncDeviceClock(s, src.id, at, local, uncertaintyMs);

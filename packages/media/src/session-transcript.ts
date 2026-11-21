@@ -157,8 +157,13 @@ export function buildSessionTranscript(
   const label = (id: Id) => src.get(id)?.label ?? "?";
 
   const entries: SessionTranscriptEntry[] = [];
-  const push = (e: Omit<SessionTranscriptEntry, "images"> & { images?: ImageRef[] }) =>
-    entries.push({ images: [], ...e });
+  // Uhrzeit je Zeile, nur zum Sortieren an derselben Stelle im Video (Zwischentafel nach Episoden, Issue #153).
+  const realMs = new Map<SessionTranscriptEntry, number>();
+  const push = (e: Omit<SessionTranscriptEntry, "images"> & { images?: ImageRef[] }, atMs?: number) => {
+    const entry = { images: [], ...e };
+    entries.push(entry);
+    if (atMs !== undefined) realMs.set(entry, atMs);
+  };
 
   // Tafeln und Episoden.
   for (const seg of plan.segments) {
@@ -213,25 +218,31 @@ export function buildSessionTranscript(
       if (at === null) continue;
       const what = s.kind === "video" ? "Video" : "Audio";
       const follows = s.follows ? `, setzt ${label(s.follows)} fort` : "";
-      push({
-        montageMs: at,
-        kind: "start",
-        clock: formatClock(p.startMs),
-        head: `${what} ${s.label} beginnt`,
-        body: `${s.fileName}${who(s) ? `, ${who(s)}` : ""}${follows}. Zeit: ${basis(s)}`,
-      });
+      push(
+        {
+          montageMs: at,
+          kind: "start",
+          clock: formatClock(p.startMs),
+          head: `${what} ${s.label} beginnt`,
+          body: `${s.fileName}${who(s) ? `, ${who(s)}` : ""}${follows}. Zeit: ${basis(s)}`,
+        },
+        p.startMs,
+      );
     } else if (s.kind === "photo") {
       const at = plan.toMontage(p.startMs, s.id);
       if (at === null) continue;
-      push({
-        montageMs: at,
-        kind: "photo",
-        clock: formatClock(p.startMs),
-        clockMs: p.startMs,
-        head: `Foto ${s.label}`,
-        body: `${s.fileName}${who(s) ? `, ${who(s)}` : ""}. Zeit: ${basis(s)}`,
-        images: [{ sourceId: s.id }],
-      });
+      push(
+        {
+          montageMs: at,
+          kind: "photo",
+          clock: formatClock(p.startMs),
+          clockMs: p.startMs,
+          head: `Foto ${s.label}`,
+          body: `${s.fileName}${who(s) ? `, ${who(s)}` : ""}. Zeit: ${basis(s)}`,
+          images: [{ sourceId: s.id }],
+        },
+        p.startMs,
+      );
     }
   }
 
@@ -266,16 +277,19 @@ export function buildSessionTranscript(
     const refKeys = [...new Set(e.contextRefs)].filter((k) => pieceByKey.has(k));
     const refs = refKeys.map((k) => pieceByKey.get(k)!.name);
     const refText = refs.length ? ` → Kontext: ${refs.join("; ")}` : "";
-    push({
-      montageMs: at,
-      kind: "diary",
-      clock: `${hm(dp.notedAtMs)} (notiert, bezieht sich auf ca. ${hm(dp.fromMs)}–${hm(dp.toMs)})`,
-      clockMs: dp.notedAtMs,
-      head: `Tagebuch ${first && e.regions[0] ? diaryPageLabel(first, e.regions[0]) : (page?.label ?? "?")}${page && who(page) ? ` (${who(page)})` : ""}`,
-      body: (text ? `${modeLabel}: ${text}` : modeLabel) + refText,
-      images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),
-      ...(refKeys.length ? { contextRefs: refKeys } : {}),
-    });
+    push(
+      {
+        montageMs: at,
+        kind: "diary",
+        clock: `${hm(dp.notedAtMs)} (notiert, bezieht sich auf ca. ${hm(dp.fromMs)}–${hm(dp.toMs)})`,
+        clockMs: dp.notedAtMs,
+        head: `Tagebuch ${first && e.regions[0] ? diaryPageLabel(first, e.regions[0]) : (page?.label ?? "?")}${page && who(page) ? ` (${who(page)})` : ""}`,
+        body: (text ? `${modeLabel}: ${text}` : modeLabel) + refText,
+        images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),
+        ...(refKeys.length ? { contextRefs: refKeys } : {}),
+      },
+      dp.notedAtMs,
+    );
   }
 
   // Bestätigte Klatscher als Sync-Signal.
@@ -286,13 +300,16 @@ export function buildSessionTranscript(
     const t = p.startMs + a.a.atMediaMs;
     const at = plan.toMontage(t);
     if (at === null) continue;
-    push({
-      montageMs: at,
-      kind: "sync",
-      clock: formatClock(t),
-      head: "Sync-Signal",
-      body: `Klatschen in ${label(a.a.sourceId)} und ${label(a.b.sourceId)}, Anker für den Abgleich`,
-    });
+    push(
+      {
+        montageMs: at,
+        kind: "sync",
+        clock: formatClock(t),
+        head: "Sync-Signal",
+        body: `Klatschen in ${label(a.a.sourceId)} und ${label(a.b.sourceId)}, Anker für den Abgleich`,
+      },
+      t,
+    );
   }
 
   // Mitschrift.
@@ -305,18 +322,30 @@ export function buildSessionTranscript(
     const at = plan.toMontage(t);
     if (at === null) continue;
     const speaker = l.speaker ? `${l.speaker}: ` : "";
-    push({
-      montageMs: at,
-      kind: "line",
-      clock: formatClock(t),
-      head: transcribed.size > 1 ? label(l.sourceId) : "",
-      body: `${speaker}${l.text}`,
-      ...(l.speaker ? { speaker: l.speaker } : {}),
-    });
+    push(
+      {
+        montageMs: at,
+        kind: "line",
+        clock: formatClock(t),
+        head: transcribed.size > 1 ? label(l.sourceId) : "",
+        body: `${speaker}${l.text}`,
+        ...(l.speaker ? { speaker: l.speaker } : {}),
+      },
+      t,
+    );
   }
 
   push({ montageMs: plan.durationMs, kind: "end", clock: "", head: "Ende", body: "Ende der Montage" });
-  entries.sort((a, b) => a.montageMs - b.montageMs || ORDER[a.kind] - ORDER[b.kind]);
+  // An derselben Stelle: Tafel und Episodenkopf zuerst, dann nach Uhrzeit, bei gleicher Uhrzeit nach Art.
+  const lead = (e: SessionTranscriptEntry) =>
+    e.kind === "card" || e.kind === "episode" ? 0 : e.kind === "end" ? 2 : 1;
+  entries.sort(
+    (a, b) =>
+      a.montageMs - b.montageMs ||
+      lead(a) - lead(b) ||
+      (realMs.get(a) ?? 0) - (realMs.get(b) ?? 0) ||
+      ORDER[a.kind] - ORDER[b.kind],
+  );
 
   // Quellen, die Kontext tragen: Kontext-Quellen selbst und Tagebuchseiten mit Kontext-Einträgen.
   const contextSources = new Set<Id>();
