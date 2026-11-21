@@ -141,6 +141,7 @@ jobs:
         with:
           name: release-text
           path: ${{ runner.temp }}/text/
+          retention-days: 7
 
   pakete:
     needs: vorbereiten
