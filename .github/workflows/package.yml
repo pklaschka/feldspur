@@ -1,7 +1,9 @@
 name: Installationspaket
 
 # Baut die Installer mit mitgelieferter LGPL-Fassung von FFmpeg.
-# Läuft von Hand, wenn sich die Paketierung ändert, und als Teil des Release-Workflows (release.yml).
+# Läuft von Hand und als Teil des Release-Workflows (release.yml) für alle Plattformen. In Pull Requests, die die
+# Paketierung ändern, nur für Linux (mit Rauchtest am fertigen Paket); alle Plattformen mit dem Label
+# „alle-plattformen“ (z. B. bei Änderungen an scripts/build-ffmpeg-macos.sh).
 on:
   workflow_dispatch:
   workflow_call:
@@ -15,6 +17,7 @@ on:
         type: string
         default: ""
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - "scripts/fetch-ffmpeg.mjs"
       - "scripts/build-ffmpeg-macos.sh"
@@ -34,20 +37,20 @@ env:
 permissions:
   contents: read
 
+# Ein neuer Push bricht den alten Lauf desselben Pull Requests ab (wie in ci.yml).
+concurrency:
+  group: >-
+    ${{ github.event_name == 'pull_request' && format('paket-pr-{0}-{1}', github.event.pull_request.number, github.event.action == 'labeled' && github.event.label.name != 'alle-plattformen' && github.event.label.name || 'lauf') || format('paket-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   package:
+    if: github.event.action != 'labeled' || github.event.label.name == 'alle-plattformen'
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux-x64
-          - os: windows-2022
-            name: win32-x64
-          - os: macos-latest
-            name: darwin-arm64
-          - os: macos-15-intel
-            name: darwin-x64
+        include: >-
+          ${{ fromJSON((github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'alle-plattformen')) && '[{"os": "ubuntu-latest", "name": "linux-x64"}, {"os": "windows-2022", "name": "win32-x64"}, {"os": "macos-latest", "name": "darwin-arm64"}, {"os": "macos-15-intel", "name": "darwin-x64"}]' || '[{"os": "ubuntu-latest", "name": "linux-x64"}]') }}
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
     steps:
@@ -105,5 +108,5 @@ jobs:
             apps/desktop/release/dist/*.AppImage
             apps/desktop/release/dist/*.tar.gz
           if-no-files-found: error
-          # Pakete liegen nach einem Release ohnehin als Release-Dateien vor; Testbauten reichen eine Woche.
-          retention-days: 7
+          # In einer Release nur bis zum Anhängen im selben Lauf nötig (danach Release-Dateien); Testbauten drei Tage.
+          retention-days: ${{ inputs.version != '' && 1 || 3 }}

@@ -2,6 +2,7 @@ name: Release
 
 # Neue Version der Feldspur-App veröffentlichen. Start von Hand: Actions → Release → „Run workflow“.
 #
+#   0. plattformen   Prüfungen und Tests unter Linux, Windows und macOS (ci.yml)
 #   1. vorbereiten   prüfen, testen, Changelog aus den Pull Requests erzeugen, Versionen setzen,
 #                    Commit „Release vX“ auf main und Tag vX pushen
 #   2. pakete        Installer für Windows, macOS (Apple-Chip, Intel) und Linux (package.yml)
@@ -38,7 +39,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Pull Requests prüft die CI nur unter Linux; vor jeder Release einmal alle Plattformen.
+  plattformen:
+    uses: ./.github/workflows/ci.yml
+    with:
+      alle_plattformen: true
+
   vorbereiten:
+    needs: plattformen
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -141,7 +149,8 @@ jobs:
         with:
           name: release-text
           path: ${{ runner.temp }}/text/
-          retention-days: 7
+          # Nur im selben Lauf gebraucht.
+          retention-days: 1
 
   pakete:
     needs: vorbereiten
