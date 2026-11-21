@@ -308,6 +308,14 @@ mit Installern, `SHA256SUMS.txt` und dem PDF-Handbuch an. Das Handbuch rendert [
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an, dazu eine Druckfassung mit 3 mm Beschnitt rundum
 (`Feldspur-Handbuch-<version>-Druck.pdf`, 216 × 303 mm, Endformat A4; lokal: `vp run handbook:druck`).
 
+**Unveränderliche Releases:** Im Repository ist "Release immutability" eingeschaltet (Settings → General →
+Releases). Eine veröffentlichte Release lässt sich danach nicht mehr ändern: Tag und Dateien bleiben, wie sie sind,
+und GitHub stellt dazu eine prüfbare Bestätigung aus (`gh release verify v<version>`). Der Workflow legt die Release
+deshalb zuerst als Entwurf an, lädt alle Dateien hoch, vergleicht GitHubs Prüfsummen mit `SHA256SUMS.txt` und
+veröffentlicht erst dann. Fehlt etwas, bleibt der Entwurf liegen; ein neuer Lauf ersetzt ihn. Ein Fehler in einer
+veröffentlichten Release lässt sich nur mit einer neuen Version beheben (Vorabversion oder Hotfix). Titel und
+Release-Text bleiben bearbeitbar.
+
 **Einmalig einrichten:** Der Workflow pusht den Commit „Release vX“ mit einem Deploy-Schlüssel auf `main`, weil die
 Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.
 
