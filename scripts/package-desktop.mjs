@@ -17,6 +17,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { macDocumentTypes, PROJECT_ICON_FILE } from "./mac-document-type.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const desktop = join(root, "apps", "desktop");
@@ -84,6 +85,7 @@ cpSync(join(root, "LICENSE"), join(res, "licenses", "Feldspur-LICENSE.txt"));
 cpSync(join(root, "LIZENZ"), join(res, "licenses", "Feldspur-LIZENZ.txt"));
 const icon = join(root, "packaging", "icon.png");
 cpSync(icon, join(res, "icon.png"));
+if (platform === "darwin") cpSync(join(root, "packaging", PROJECT_ICON_FILE), join(res, PROJECT_ICON_FILE));
 
 const association = { ext: "feldspur", name: "Feldspur-Projekt", description: "Feldspur-Projekt", role: "Editor" };
 
@@ -118,7 +120,9 @@ const files = await build({
       category: "public.app-category.education",
       // Noch keine Signatur: macOS fragt beim ersten Start nach („Trotzdem öffnen“).
       identity: null,
-      fileAssociations: [{ ...association, icon: join(root, "packaging", "datei-icon.icns") }],
+      // Dokumenttyp mit eigenem Typ (UTI) statt fileAssociations, sonst zeigt Finder kein Symbol
+      // (Issue #165, siehe scripts/mac-document-type.mjs). Das Symbol kommt über extraResources mit.
+      extendInfo: macDocumentTypes(),
     },
     win: { fileAssociations: [{ ...association, icon: join(root, "packaging", "datei-icon.ico") }] },
     nsis: { oneClick: false, perMachine: false, allowToChangeInstallationDirectory: true },

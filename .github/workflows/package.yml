@@ -19,6 +19,7 @@ on:
       - "scripts/fetch-ffmpeg.mjs"
       - "scripts/build-ffmpeg-macos.sh"
       - "scripts/package-desktop.mjs"
+      - "scripts/mac-document-type.mjs"
       - "packaging/**"
       - "LICENSE"
       - "LIZENZ"
