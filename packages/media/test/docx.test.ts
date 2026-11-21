@@ -14,7 +14,8 @@ function fake(entries: SessionTranscriptEntry[], context: SessionTranscriptConte
       reference: null,
       sources: [],
       extra: {},
-      montageId: "M1",
+      montageId: "FS-ABCD-EFGH-JKLM",
+      montageVideoId: "FS-ABCD-EFGH",
       modeLabel: "Echtzeit",
       ...(context.length ? { contextCount: context.length } : {}),
     },
@@ -97,6 +98,8 @@ describe("Einsatztranskript-.docx: Kontext (Issue #108)", () => {
     expect(t.indexOf("Kontext · Karte 2: Standplan")).toBeLessThan(firstStamp);
     expect(t.indexOf("Chronologie")).toBeLessThan(firstStamp);
     expect(t).toContain("Kontext: 1 Stück ohne Zeitmarke, vor der Chronologie.");
+    // Im Kopf steht die ganze Montage-ID mit allen drei Blöcken.
+    expect(t).toContain("(Montage-ID FS-ABCD-EFGH-JKLM, ");
     // Der Kontextabschnitt trägt kein „#“.
     expect(t.slice(t.indexOf("Diese Stücke"), firstStamp)).not.toContain("#");
     expect(t.match(/#\d\d:\d\d:\d\d-\d#/g)).toHaveLength(1);

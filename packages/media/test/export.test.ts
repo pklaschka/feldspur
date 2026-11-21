@@ -231,6 +231,9 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const ep = p.pieces.find((x) => x.kind === "episode" && x.audios.length)!;
     expect(transcript.input.sources.some((s) => s.id === ep.audios[0]!.sourceId)).toBe(true);
     expect(p.header.montageId).toMatch(/^FS-[2-9A-Z]{4}-[2-9A-Z]{4}$/);
+    // Das Video trägt die ersten beiden Blöcke, das Einsatztranskript alle drei.
+    expect(transcript.header.montageId).toMatch(/^FS-[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4}$/);
+    expect(transcript.header.montageId.startsWith(`${p.header.montageId}-`)).toBe(true);
   });
 
   it("schreibt eine Schnittliste für DaVinci Resolve", async () => {
@@ -258,34 +261,48 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     // Keine Standbilder mehr: Fotos und Scans stehen im Einsatztranskript.
     expect(xml).not.toMatch(/\.jpg"/);
   });
-  // So steht es im Handbuch (Abschnitt „Montage-ID“): Die ID hängt am Zeitgefüge, nicht am Text.
-  it("Montage-ID: gleich bei Textänderungen, neu bei anderer Lage oder anderen Quellen", () => {
-    const id = () => buildSessionTranscript(store, sessionId).header.montageId;
+  // So steht es im Handbuch (Abschnitt „Montage-ID“): Blöcke 1 und 2 hängen am Zeitgefüge, Block 3 am Text.
+  it("Montage-ID: Text ändert nur den dritten Block, Lage und Quellen auch die ersten beiden", () => {
+    const header = (mode?: "episodes") => buildSessionTranscript(store, sessionId, { mode }).header;
     // Angenommen: die ID des Einsatzes, sie bleibt bei erneuter Berechnung gleich
-    const before = id();
-    expect(id()).toBe(before);
+    const before = header();
+    expect(header().montageId).toBe(before.montageId);
+    expect(before.montageId.slice(0, 12)).toBe(before.montageVideoId);
+    const text = (id: string) => id.slice(13);
 
-    // Wenn: Mitschrift, Tagebuchtext und Angaben zum Einsatz geändert werden, dann bleibt die ID
+    // Wenn: Mitschrift, Tagebuchtext und Angaben geändert werden, dann jeweils neuer Textblock, Montage bleibt
+    const seen = new Set([before.montageId]);
+    const changed = () => {
+      const h = header();
+      expect(h.montageVideoId).toBe(before.montageVideoId);
+      expect(seen.has(h.montageId)).toBe(false);
+      seen.add(h.montageId);
+    };
     const line = store.addTranscriptLine({ sourceId: src("ZOOM0001.m4a").id, atMs: 12_000, text: "Seit sieben." });
+    changed();
     const entry = store.listDiaryEntries(sessionId)[0]!;
     store.updateDiaryEntry(entry.id, { shortText: "Ankunft, die Stände bauen auf" });
+    changed();
     const session = store.getSession(sessionId);
-    store.updateSession(sessionId, { title: "Testmarkt (neu)", extra: { DOI: "10.0000/anders" } });
-    expect(id()).toBe(before);
+    store.updateSession(sessionId, { extra: { DOI: "10.0000/anders" } });
+    changed();
+    // Wenn: alles zurückgestellt ist, dann gilt wieder genau die alte ID
     store.deleteTranscriptLine(line.id);
     store.updateDiaryEntry(entry.id, { shortText: entry.shortText });
-    store.updateSession(sessionId, { title: session.title, extra: session.extra });
+    store.updateSession(sessionId, { extra: session.extra });
+    expect(header().montageId).toBe(before.montageId);
 
-    // Wenn: ein Foto eine Sekunde später liegt, dann ist die ID neu; zurückgestellt gilt wieder die alte
+    // Wenn: ein Foto eine Sekunde später liegt, dann ändern sich die ersten beiden Blöcke (und der Text mit)
     const photo = src("IMG_20260914_101630.jpg");
     const evs = store.listEvidence(sessionId).filter((e) => e.sourceId === photo.id);
     expect(evs.length).toBeGreaterThan(0);
     for (const e of evs) store.updateEvidenceTime(e.id, e.localMs + 1_000);
-    expect(id()).not.toBe(before);
+    expect(header().montageVideoId).not.toBe(before.montageVideoId);
+    expect(text(header().montageId)).not.toBe(text(before.montageId));
     for (const e of evs) store.updateEvidenceTime(e.id, e.localMs);
-    expect(id()).toBe(before);
+    expect(header().montageId).toBe(before.montageId);
 
-    // Wenn: nach Episoden statt in Echtzeit montiert wird, dann ist die ID ebenfalls neu
-    expect(buildSessionTranscript(store, sessionId, { mode: "episodes" }).header.montageId).not.toBe(before);
+    // Wenn: nach Episoden statt in Echtzeit montiert wird, dann ist die Montage ebenfalls neu
+    expect(header("episodes").montageVideoId).not.toBe(before.montageVideoId);
   });
 });
