@@ -16,13 +16,15 @@ werden nicht doppelt übernommen. Landen Dateien anderswo im Fenster, übernimmt
 ### Woher die Uhrzeiten kommen {#sec-zeitquellen}
 
 | Quelle | Was Feldspur liest | Genauigkeit |
-|---|---|---|
+|:----|:----------|:------|
 | Fotos | EXIF-Aufnahmezeit, mit Sekundenbruchteilen, falls vorhanden | Sekunde, mit Bruchteilen ± 0,05 s |
 | iPhone-Videos | Apple-Aufnahmedatum mit Zeitzone | Sekunde |
 | Profikameras mit Aufnahme-XML (z. B. Panasonic HC-X1500) | Aufnahmebeginn aus dem XML, mit Zeitzone der Kamera | Sekunde |
 | Kameras mit frei laufendem Timecode | Timecode, abgeglichen mit der Kamerauhr über alle Clips | Bruchteile einer Sekunde |
 | andere Videos und Audio | `creation_time`, BWF-Felder von Rekordern | Sekunde |
 | Dateinamen | z. B. `IMG_20260914_104050`, `2026-09-14 10.32.15`; Pixel-Namen wie `PXL_20260914_103215123` mit Millisekunden | Sekunde, Pixel ± 0,25 s |
+
+: Woher Feldspur die Uhrzeiten nimmt {#tbl-zeitquellen}
 
 **Beginn oder Ende?** MP4-Dateien sagen nicht, ob `creation_time` den Aufnahmebeginn meint oder den Moment, in dem die
 Datei gespeichert wurde. Viele Android-Handys, etwa Google Pixel, schreiben das **Ende**. Feldspur erkennt das beim
@@ -99,7 +101,7 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
 - **Zeitbelege neu lesen** (Menü am Gerät) liest Metadaten, Dateinamen und Kamera-Timecode aller Quellen des Geräts
   noch einmal aus den Originaldateien, etwa wenn eine neuere Feldspur-Fassung mehr Zeitquellen kennt
   (@sec-zeitquellen). Anker, angesagte Uhrzeiten, Handeingaben und deine Entscheidungen bleiben, ebenso die
-  Einstellungen des Geräts. Rückgängig machen geht wie immer mit Strg/⌘+Z.
+  Einstellungen des Geräts. Rückgängig machen geht wie immer mit [Strg/⌘+Z]{.kbd}.
 - **Bestätigungen entfernen** (Menü am Gerät) nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen an den Quellen
   des Geräts auf einmal zurück. Eine Bestätigung hält eine Lage fest; ohne sie folgen die Quellen wieder dem
   genauesten Zeitbeleg, zum Beispiel einem neu gelesenen Timecode.
@@ -118,12 +120,14 @@ Aufnahmen und nennt sie.
 Mit **Originale suchen…** öffnet sich eine Liste aller Quellen mit ihrem Zustand:
 
 | Zustand | Bedeutung |
-|---|---|
+|:-----|:----------|
 | unverändert | Datei da, Größe und Prüfsumme wie beim Einsammeln |
 | da, Prüfsumme nicht geprüft | Datei da und gleich groß; die Prüfsumme wurde in dieser Sitzung noch nicht gerechnet |
 | verändert | Größe oder Prüfsumme anders als beim Einsammeln, z. B. nachbearbeitet oder überschrieben |
 | fehlt | unter dem gespeicherten Pfad liegt keine Datei |
 | nicht prüfbar | da, aber nicht lesbar (Zugriffsrechte, Laufwerksfehler) |
+
+: Zustände der Originaldateien {#tbl-originale}
 
 - **Ordner durchsuchen…** sucht alle fehlenden und veränderten Originale in einem Ordner und seinen Unterordnern
   (versteckte Ordner ausgenommen, höchstens 50 000 Dateien). Kandidaten sind Dateien gleicher Größe, gleichnamige
@@ -149,10 +153,12 @@ Montagevideo kommen auch die Videos und Tonaufnahmen aus der rechten Spalte, wei
 Datei nicht zeigen, steht in der Detailleiste ein Hinweis.
 
 | Art | Geht direkt | Selbst umwandeln |
-|---|---|---|
+|:-----|:---------|:---------|
 | Video | MP4, MOV, M4V, MKV und WebM mit H.264, VP9 oder AV1 | MTS/M2TS, AVI; HEVC (H.265) je nach Rechner |
 | Audio | WAV, MP3, M4A/AAC, FLAC, OGG, Opus | WMA, AMR |
 | Fotos und Scans | JPEG, PNG, WebP, GIF, PDF | HEIC/HEIF, TIFF, DNG und andere RAW-Formate |
+
+: Dateiformate {#tbl-formate}
 
 Zum Umwandeln eignen sich z. B. HandBrake oder FFmpeg für Video und Audio (Ziel: MP4 mit H.264 und AAC, oder WAV)
 sowie die Fotos-App, Vorschau (macOS) oder darktable für Bilder (Ziel: JPEG). Achte darauf, dass das Werkzeug die

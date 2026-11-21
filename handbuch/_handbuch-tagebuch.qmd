@@ -20,7 +20,7 @@ deren Zeiten, und das Feld entfällt.
 Öffne die Seite mit **Abtippen…** (an der Quelle oder in der Detailleiste) und zieh einen Rahmen um einen Eintrag. Dann trägst du ein:
 
 - **Notiert um**: die Uhrzeit, zu der du den Eintrag geschrieben hast. Es reichen die Ziffern, der Doppelpunkt kommt
-  von selbst ("1030" wird 10:30, "930" wird 09:30). Mit ↑ und ↓ verschiebst du die Zeit um eine Minute, mit Umschalt
+  von selbst ("1030" wird 10:30, "930" wird 09:30). Mit [↑]{.kbd} und [↓]{.kbd} verschiebst du die Zeit um eine Minute, mit [Umschalt]{.kbd}
   um zehn. Eine unmögliche Zeit wie 25:00 färbt das Feld rot und wird nicht gespeichert.
 - **bezieht sich auf … Min. davor**: wie weit der Eintrag zurückreicht. Der Standard steht in den Einsatzdaten.
 - wie du ihn erfasst:
@@ -39,7 +39,7 @@ Sitzt ein Rahmen nicht ganz, korrigierst du ihn, statt einen neuen Eintrag anzul
 seine Nummer), dann bekommt er Griffe an Kanten und Ecken. Am Nummernschild oben links ziehst du ihn an eine andere
 Stelle, an den Griffen änderst du die Größe. Innerhalb eines Rahmens kannst du weiterhin einen neuen aufziehen, auch
 überlappend. Mit der Tastatur geht es auch: Ist der Rahmen gewählt, verschieben ihn die Pfeiltasten,
-mit **Alt** ändern sie die Größe, mit **Umschalt** in großen Schritten. Notierzeit und Text bleiben am Eintrag; nur die
+mit [Alt]{.kbd} ändern sie die Größe, mit [Umschalt]{.kbd} in großen Schritten. Notierzeit und Text bleiben am Eintrag; nur die
 Nummer kann sich ändern, weil Einträge von oben nach unten gezählt werden.
 
 ### Kontext: Stücke ohne Uhrzeit {#sec-kontext}
@@ -56,7 +56,7 @@ Auf drei Wegen wird etwas zu Kontext:
   Bei einer Quelle ohne Uhrzeit steht derselbe Knopf auch in der Detailleiste ("Gehört nicht in die Chronologie?").
   Hat das Foto eine Uhrzeit, verlässt es die Zeitachse; die Uhrzeit bleibt gemerkt.
 - **Teil einer Seite**: Zieh in der Abtipp-Ansicht einen Rahmen um die Karte und stell am Eintrag **Gehört zu** auf
-  **Kontext**. Im leeren Feld "Notiert um" geht das auch mit der Taste **K**. Statt der Zeitfelder trägst du dann
+  **Kontext**. Im leeren Feld "Notiert um" geht das auch mit der Taste [K]{.kbd}. Statt der Zeitfelder trägst du dann
   einen **Titel** ein (etwa "Karte 2: Standplan") und, wenn du magst, wann das Stück **entstanden** ist. Der Rahmen
   ist gestrichelt und trägt ein K.
 - **Text ohne Scan**: **+ Text** in der Kontext-Zeile über der Zeitachse legt ein Stück an, das du direkt tippst, zum
@@ -68,7 +68,7 @@ Ton und Video können kein Kontext sein, weil sie ins Montagevideo gehen.
 ![Kontext-Zeile über der Zeitachse und Kontext-Kasten in der Detailleiste](bilder/kontext.png){#fig-kontext}
 
 Die **Kontext-Zeile** über der Zeitachse zeigt alle Stücke in der Reihenfolge des Dokuments. Wähle ein Stück und
-verschieb es mit **Alt+←/→** oder mit ↑ und ↓ in der Detailleiste; **Nach Seite ordnen** stellt einmal die
+verschieb es mit [Alt+←/→]{.kbd} oder mit [↑]{.kbd} und [↓]{.kbd} in der Detailleiste; **Nach Seite ordnen** stellt einmal die
 Reihenfolge des Notizbuchs her (Tagebuch nach Seite, dann Fotos). Ohne Titel steht im Dokument die Fundstelle, etwa
 "Tagebuch T-01 · S. 3". **Zurück in die Chronologie** holt ein Stück wieder auf die Zeitachse; darunter steht, wo es
 dann liegt. Jeder Schritt lässt sich rückgängig machen.
@@ -81,11 +81,11 @@ der Zeitachse trägt der Eintrag →K, und das Kontextstück zeigt unter **Erwä
 
 ### Blättern und Zoomen
 
-Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst;
-dein Text wird dabei gespeichert, ebenso beim Schließen mit **Fertig** oder **Esc**.
+Mit [Bild ↑]{.kbd} und [Bild ↓]{.kbd} blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst;
+dein Text wird dabei gespeichert, ebenso beim Schließen mit **Fertig** oder [Esc]{.kbd}.
 Die Pfeile oben rechts tun dasselbe. Jede Seite steht zuerst ganz im Bild; kleine Scans werden dafür vergrößert. Zum
-Entziffern zoomst du mit **+** und **−** oben rechts, mit **Strg/⌘ + Mausrad** an der Stelle unter der Maus oder,
-wenn kein Textfeld den Fokus hat, mit den Tasten + und −. Ein Klick auf die Prozentzahl (oder die Taste 0) zeigt
+Entziffern zoomst du mit **+** und **−** oben rechts, mit [Strg/⌘]{.kbd} + Mausrad an der Stelle unter der Maus oder,
+wenn kein Textfeld den Fokus hat, mit den Tasten [+]{.kbd} und [−]{.kbd}. Ein Klick auf die Prozentzahl (oder die Taste [0]{.kbd}) zeigt
 wieder die ganze Seite.
 
 ### Seitenzahlen und Doppelseiten
@@ -99,7 +99,7 @@ PDF-Scans zählen dabei Seite für Seite weiter.
 
 Passt die Zählung für einen Eintrag nicht, trägst du die Seite direkt am Eintrag unter **Seite** ein. Das geht auch
 in PDF-Scans. Klickst du in ein leeres Feld, steht schon ein Vorschlag darin: dieselbe Seite wie beim vorigen Eintrag
-oder die nächste. Enter übernimmt ihn. Ein leeres Feld gilt wieder als Zählung des Scans.
+oder die nächste. [Enter]{.kbd} übernimmt ihn. Ein leeres Feld gilt wieder als Zählung des Scans.
 
 Einsatztranskript, Montagevideo, Mitschrift und Suche führen jeden Eintrag an seiner **Notierzeit**. Der Bezugszeitraum steht
 als Hinweis dabei.

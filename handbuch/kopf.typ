@@ -37,8 +37,42 @@
 // Stelle, aber etwas schmaler als der Satzspiegel. So passen sie öfter noch auf die angefangene Seite, statt mit
 // ihrer ganzen Höhe auf die nächste zu springen und unten eine halbe Seite leer zu lassen.
 #show figure.where(kind: "quarto-float-fig"): set image(width: 85%)
-// Tabellen mit Beschriftung dürfen wie Tabellen ohne über den Seitenrand umbrechen; der Kopf wiederholt sich.
-#show figure.where(kind: "quarto-float-tbl"): set block(breakable: true)
+// Tabellen (Issue #176): Spaltenbreiten nach Inhalt (tabellen.lua), etwas kleinerer Text, kein Blocksatz (reißt in
+// schmalen Spalten Lücken), Kopf in der Auszeichnungsschrift, feine Linien zwischen den Zeilen statt Leerraum.
+#show table: set par(justify: false, leading: 0.55em)
+#show table: set text(size: 0.9em)
+#set table(
+  inset: (x: 5pt, y: 5pt),
+  align: left + top,
+  stroke: (_, y) => if y > 0 { (bottom: 0.4pt + linie) },
+)
+#set table.hline(stroke: 0.8pt + umbra)
+#show table.cell.where(y: 0): set text(font: sans, weight: "semibold", fill: umbra)
+// Tabelle und Beschriftung linksbündig wie der Text; schmale Tabellen stehen sonst mittig mit leerem Rand. Tabellen
+// dürfen über den Seitenrand umbrechen; der Kopf wiederholt sich.
+#show figure.where(kind: "quarto-float-tbl"): it => block(width: 100%, breakable: true, {
+  set align(left)
+  it.caption
+  v(0.4em)
+  it.body
+})
+// Tastenkürzel als Tastenkappen (tasten.lua): `tasten("Strg", "+", "O")`, „+“ und „/“ stehen zwischen den Tasten.
+// Bleiben als Ganzes in einer Zeile.
+#let taste(name) = box(
+  fill: papier,
+  stroke: (paint: tinte-2.transparentize(55%), thickness: 0.5pt),
+  radius: 2pt,
+  inset: (x: 0.28em),
+  outset: (y: 0.2em),
+  text(font: sans, size: 0.82em, weight: "medium", fill: tinte, name),
+)
+#let tasten(..teile) = box(
+  teile
+    .pos()
+    .enumerate()
+    .map(((i, t)) => if calc.odd(i) { h(0.1em) + text(font: sans, size: 0.82em, fill: tinte-2, t) + h(0.1em) } else { taste(t) })
+    .join(),
+)
 #show heading.where(level: 2): set block(above: 1.5em, below: 0.65em)
 // Begriff und Erklärung im Glossar nie getrennt: Begriff nie allein unten auf der Seite. Gleiche Darstellung
 // wie Quartos Vorgabe (definitions.typ), aber jeder Eintrag als ein Block, der nicht umbrochen wird.

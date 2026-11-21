@@ -16,7 +16,7 @@ Referenzuhr.
 Weißt du, wie weit ein Gerät abweicht, trägst du es direkt ein: "Kamera geht 2:47 vor" wird zu `+2:47` (oder kurz
 `+247`; nur Ziffern füllen von rechts Sekunden, Minuten, Stunden, `-30` sind 30 Sekunden). Auch große
 Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches Datum gestellt war. Ein leeres Feld löscht den Abgleich; kann Feldspur die Eingabe nicht
-lesen, färbt sich das Feld rot und die bisherige Abweichung bleibt, bis du sie korrigierst oder mit Esc zurückholst.
+lesen, färbt sich das Feld rot und die bisherige Abweichung bleibt, bis du sie korrigierst oder mit [Esc]{.kbd} zurückholst.
 
 ### Tonspuren abgleichen
 
@@ -66,7 +66,7 @@ Ansage markieren**) und bestätigst mit **Eintragen**:
   Geräteuhr, kannst du **Uhr von „Gerät“ danach richten** ankreuzen; dann rücken die übrigen Dateien des Geräts mit.
 
 Doppelpunkte musst du nirgends tippen. Bei Uhrzeiten setzt Feldspur sie beim Tippen selbst: "103045" wird 10:30:45,
-"1030" wird 10:30 (die Sekunden darfst du weglassen), mit ↑ und ↓ verschiebst du um eine Minute, mit Umschalt um zehn. Bei einer **Stelle
+"1030" wird 10:30 (die Sekunden darfst du weglassen), mit [↑]{.kbd} und [↓]{.kbd} verschiebst du um eine Minute, mit [Umschalt]{.kbd} um zehn. Bei einer **Stelle
 in der Aufnahme** füllen die Ziffern von rechts: "320" wird 3:20, "10320" wird 1:03:20, "45" sind 45 Sekunden.
 Dasselbe gilt für die Stellen beim Setzen eines Ankers.
 
