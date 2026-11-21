@@ -17,8 +17,9 @@ Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim St
 **Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter. Später wechselst du das Projekt links
 oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O); dort stehen die zuletzt geöffneten Projekte, **Anderes
 Projekt öffnen…** und **Neues Projekt…**. Nach der Installation öffnet auch ein Doppelklick auf
-eine Projektdatei Feldspur; die Dateien tragen dann ein eigenes Symbol. Unter Linux gilt das nur, wenn das AppImage
-ins System eingebunden ist (etwa mit AppImageLauncher).
+eine Projektdatei Feldspur; die Dateien tragen dann ein eigenes Symbol. Unter macOS erscheint es, sobald Feldspur im
+Ordner Programme liegt und einmal gestartet wurde. Unter Linux gilt das nur, wenn das AppImage ins System eingebunden
+ist (etwa mit AppImageLauncher).
 
 Ein Projekt enthält einen oder mehrere **Einsätze**. Ein Einsatz ist ein Feldtag an einem Ort und wird später zu
 genau einem Dokument in MAXQDA. Ein neues Projekt zeigt dafür gleich ein Formular: Gib Titel, Datum und Ort ein und wähle **Einsatz anlegen**. Weitere
