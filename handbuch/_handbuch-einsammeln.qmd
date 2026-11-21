@@ -1,7 +1,7 @@
 ## Einsammeln {#sec-einsammeln}
 
-Zieh alle Aufzeichnungen des Einsatzes in das Fenster: einzelne Dateien oder ganze Ordner. Feldspur liest dabei für
-jede Datei
+Zieh alle Aufzeichnungen des Einsatzes in das Fenster: einzelne Dateien oder ganze Ordner. Einzelne Dateien
+findest du auch über **Dateien wählen…**. Feldspur liest dabei für jede Datei
 
 - die **Art** (Video, Audio, Foto, Tagebuchscan als JPG oder PDF, Notiz als TXT oder MD),
 - die **Länge** bei Audio und Video,
@@ -76,10 +76,12 @@ Feldspur gruppiert die Quellen nach **Geräten**, weil jedes Gerät seine eigene
 Kameramodell in den Metadaten oder an der Art, wie die Dateien benannt sind. Jede Quelle bekommt ein Kurzzeichen wie
 im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `T-01` für Tagebuchseiten.
 
-Über das Menü an jeder Quelle kannst du nachhelfen:
+Über die Menüs ⋯ an jeder Quelle und an jedem Gerät kannst du nachhelfen:
 
-- **Umbenennen** eines Geräts, z. B. "Kamera Stativ" oder "Handy Testperson A".
-- **In anderes Gerät verschieben** oder Geräte **zusammenlegen**, wenn Feldspur zwei Geräte vermutet, wo nur eins war.
+- **Umbenennen**: Ein Klick auf den Namen eines Geräts macht ihn zum Textfeld, z. B. für "Kamera Stativ" oder
+  "Handy Testperson A".
+- **In anderes Gerät verschieben** (Menü der Quelle, auch in ein **Neues Gerät…**) oder **Zusammenlegen mit …**
+  (Menü des Geräts), wenn Feldspur zwei Geräte vermutet, wo nur eins war.
 - **Setzt Aufnahme fort …**: Viele Geräte teilen lange Aufnahmen in mehrere Dateien. Solche Folgeaufnahmen erkennt
   Feldspur meist selbst (gleiches Gerät, Beginn direkt am Ende der vorigen Datei, oder GoPro-Kapitel). Eine
   Folgeaufnahme ohne eigene Zeit beginnt am Ende der vorigen.
@@ -93,23 +95,23 @@ im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `
   mit. Ein dadurch leeres Gerät verschwindet. Eine Tagebuchseite liegt auf der Zeitachse nur nach ihren Randnotizen und
   Einträgen, nicht nach der Aufnahmezeit des Fotos (@sec-tagebuch). Eine Seite mit Einträgen lässt sich erst wieder
   als Foto behandeln, wenn die Einträge gelöscht sind.
-- **Zeitzone der Geräteuhr**, falls ein Gerät auf eine andere Zeitzone gestellt war als der Einsatz.
+- **Zeitzone der Geräteuhr** (Menü am Gerät), falls ein Gerät auf eine andere Zeitzone gestellt war als der Einsatz.
 - **Zeitbelege neu lesen** (Menü am Gerät) liest Metadaten, Dateinamen und Kamera-Timecode aller Quellen des Geräts
   noch einmal aus den Originaldateien, etwa wenn eine neuere Feldspur-Fassung mehr Zeitquellen kennt
   (@sec-zeitquellen). Anker, angesagte Uhrzeiten, Handeingaben und deine Entscheidungen bleiben, ebenso die
   Einstellungen des Geräts. Rückgängig machen geht wie immer mit Strg/⌘+Z.
-- **Bestätigungen entfernen** nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen an den Quellen
+- **Bestätigungen entfernen** (Menü am Gerät) nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen an den Quellen
   des Geräts auf einmal zurück. Eine Bestätigung hält eine Lage fest; ohne sie folgen die Quellen wieder dem
   genauesten Zeitbeleg, zum Beispiel einem neu gelesenen Timecode.
-- **Entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
+- **Aus Projekt entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
 
-Wenn alles eingesammelt ist, geht es mit **Weiter** zum Abgleichen.
+Wenn alles eingesammelt ist, geht es mit **Weiter: Uhren abgleichen →** zum Abgleichen.
 
 ### Originaldateien {#sec-originale}
 
 Feldspur kopiert nichts: Es merkt sich, wo jedes Original liegt, und liest es dort. Verschiebst du den Ordner mit den
 Aufnahmen, steckst ein Laufwerk um oder öffnest das Projekt auf einem anderen Rechner, findet Feldspur die Dateien
-unter dem alten Pfad nicht mehr. Dann steht über den Schritten **„2 Originaldateien fehlen“** und in der Detailleiste
+unter dem alten Pfad nicht mehr. Dann steht unter den Schritten **„2 Originaldateien fehlen“** und in der Detailleiste
 der Quelle ein Hinweis. Vorschau, Tonanalyse und Ausgabe brauchen die Originale; die Tonanalyse überspringt fehlende
 Aufnahmen und nennt sie.
 

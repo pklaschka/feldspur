@@ -13,9 +13,10 @@ Die Pakete sind noch nicht signiert. Ohne Lieferling warnen Windows und macOS de
 
 ### Projekt und Einsatz
 
-Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt…** oder
+Feldspur speichert alles in einer **Projektdatei** (Endung `.feldspur`). Beim Start wählst du **Neues Projekt** oder
 **Projekt öffnen…**; zuletzt geöffnete Projekte stehen in einer Liste darunter. Später wechselst du das Projekt links
-oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O). Nach der Installation öffnet auch ein Doppelklick auf
+oben über das Feld **Projekt** (oder Strg+O, auf dem Mac ⌘O); dort stehen die zuletzt geöffneten Projekte, **Anderes
+Projekt öffnen…** und **Neues Projekt…**. Nach der Installation öffnet auch ein Doppelklick auf
 eine Projektdatei Feldspur; die Dateien tragen dann ein eigenes Symbol. Unter Linux gilt das nur, wenn das AppImage
 ins System eingebunden ist (etwa mit AppImageLauncher).
 
@@ -50,9 +51,10 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 - **Ort**, z. B. "Marktplatz".
 - **Zeitzone** des Einsatzes. Manche Geräte schreiben ihre Zeitstempel in UTC; Feldspur rechnet sie damit in die
   Ortszeit um. Alle Uhrzeiten in Feldspur sind Ortszeit des Einsatzes.
-- **Bezugszeitraum fürs Tagebuch**: wie weit ein Tagebucheintrag vor die Notierzeit zurückreicht (Standard
+- **Bezugszeitraum Tagebuch**: wie weit ein Tagebucheintrag vor die Notierzeit zurückreicht (Standard
   15 Minuten), siehe @sec-tagebuch.
-- **Weitere Angaben**, frei wählbare Felder für den Quellennachweis, z. B. DOI oder Projektnummer.
+- **Weitere Angaben**, frei wählbare Felder für den Quellennachweis, z. B. DOI oder Projektnummer. Mit **+ Feld**
+  kommt eins dazu.
 
 ![Einsatzdaten mit weiteren Angaben für den Quellennachweis](bilder/einsatzdaten.png){#fig-einsatzdaten}
 
@@ -68,16 +70,17 @@ Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass
 4. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Montagevideo und Begleitprotokoll schreiben.
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
-Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Tagebuch, Quellen
-und Uhrzeiten. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle. Die Liste zeigt höchstens
+Zeitbelegen und Dateiangaben. Mit **Suchen** (Strg+K, auf dem Mac ⌘K) durchsuchst du Mitschrift, Notizen, Tagebuch,
+Quellen und Episoden, auch nach einer Uhrzeit. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle. Die Liste zeigt höchstens
 60 Treffer in Uhrzeit-Reihenfolge; gibt es mehr, steht darunter "Erste 60 von 143 Treffern". Grenze die Suche dann ein,
 etwa mit einer Uhrzeit wie 10:15 oder einem weiteren Wort. Mit ↑↓ wählst du einen Treffer, Enter springt hin; Screenreader
 lesen den gewählten Treffer vor.
 
 **Rückgängig** (Strg+Z, auf dem Mac ⌘Z) nimmt den letzten Schritt zurück, etwa eine entfernte Quelle, einen
 gelöschten Anker, einen übernommenen Vorschlag oder "Lage passt". **Wiederholen** geht mit Strg+Y oder
-Strg+Umschalt+Z (⇧⌘Z). Beide Knöpfe stehen auch oben neben **Suchen**. Feldspur fragt deshalb vor dem Löschen nicht
-mehr nach; stattdessen erscheint unten kurz ein Hinweis mit **Rückgängig**. Nach dem Rückgängigmachen springt
+Strg+Umschalt+Z (⇧⌘Z). Beide Knöpfe stehen auch oben neben **Suchen**. Feldspur fragt deshalb vor dem Löschen meist
+nicht nach; stattdessen erscheint unten kurz ein Hinweis mit **Rückgängig**. Nur bei Notizen und Mitschrift-Zeilen mit
+Text wird der Löschknopf erst zu **Wirklich löschen?**, und der zweite Klick löscht. Nach dem Rückgängigmachen springt
 **Zeigen** im Hinweis an die Stelle, die sich geändert hat, etwa die Mitschrift-Zeile oder den Tagebucheintrag. In
 Textfeldern macht Strg+Z zuerst den Text im Feld rückgängig; ist dort nichts mehr zurückzunehmen, geht es mit dem
 Projekt weiter. Der Verlauf gilt, solange das Projekt offen ist. Nach dem Einsammeln oder der Tonspur-Analyse
@@ -110,7 +113,8 @@ Im Projektmenü oben links öffnet **Sicherungen…** die Liste, die neueste obe
 eigene an, etwa vor einem größeren Umbau oder zum Ende eines Projektabschnitts. **Als Kopie öffnen…** macht aus einer
 Sicherung ein eigenständiges Projekt: Du wählst einen neuen Dateinamen, Feldspur kopiert die Sicherung dorthin und
 öffnet die Kopie. Die ursprüngliche Projektdatei und die Sicherung bleiben, wie sie sind. Im Änderungsprotokoll der
-Kopie steht „Aus Sicherung wiederhergestellt“.
+Kopie steht „Aus Sicherung wiederhergestellt“. **Andere Datei als Kopie öffnen…** tut dasselbe mit einer Sicherung,
+die woanders liegt, und **Ordner zeigen** öffnet den Sicherungsordner.
 
 Vor dem Öffnen prüft Feldspur jede Projektdatei: Ist sie vollständig, nicht beschädigt und ein Feldspur-Projekt? Wenn
 nicht, sagt eine Meldung, was nicht stimmt (z. B. „unvollständig: Vermutlich wurde eine Kopie abgebrochen“), und das

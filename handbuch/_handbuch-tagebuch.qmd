@@ -12,25 +12,27 @@ Hat Feldspur eine abfotografierte Seite beim Einsammeln für ein Foto gehalten, 
 ### Randnotiz der Seite
 
 Steht am Rand einer Seite eine Uhrzeit, trägst du sie in der Detailleiste als **Randnotiz** ein (nur Ziffern, "1012" wird 10:12). Daraus ergibt sich,
-auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge.
+auf welchen Zeitraum sich die Seite bezieht, auch ohne einzelne Einträge. Hat die Seite mehrere Einträge, zählen
+deren Zeiten, und das Feld entfällt.
 
 ### Einträge
 
-Öffne die Seite mit **Tagebuch abtippen** und zieh einen Rahmen um einen Eintrag. Dann trägst du ein:
+Öffne die Seite mit **Abtippen…** (an der Quelle oder in der Detailleiste) und zieh einen Rahmen um einen Eintrag. Dann trägst du ein:
 
 - **Notiert um**: die Uhrzeit, zu der du den Eintrag geschrieben hast. Es reichen die Ziffern, der Doppelpunkt kommt
   von selbst ("1030" wird 10:30, "930" wird 09:30). Mit ↑ und ↓ verschiebst du die Zeit um eine Minute, mit Umschalt
   um zehn. Eine unmögliche Zeit wie 25:00 färbt das Feld rot und wird nicht gespeichert.
 - **bezieht sich auf … Min. davor**: wie weit der Eintrag zurückreicht. Der Standard steht in den Einsatzdaten.
 - wie du ihn erfasst:
-  - **Volltext**: wortgetreu abgetippt,
+  - **Nur Scan**: nicht abtippen, der Scan steht für sich,
   - **Kurzform**: Stichworte, worum es geht,
-  - **Nur Scan**: nicht abtippen, der Scan steht für sich.
+  - **Volltext**: wortgetreu abgetippt.
 
   Ein neuer Eintrag beginnt in der Form, in der du den letzten Eintrag des Einsatzes abgetippt hast (Kurzform oder
   Volltext); der erste beginnt mit Kurzform.
 
-Ein Eintrag kann auf einer anderen Seite weitergehen; dann ziehst du dort einen weiteren Rahmen für denselben Eintrag.
+Ein Eintrag kann auf einer anderen Seite weitergehen; dann wählst du am Eintrag **auf anderer Seite fortsetzen** und
+ziehst dort einen weiteren Rahmen für denselben Eintrag.
 Eine Seite kann umgekehrt mehrere Einträge mit verschiedenen Zeiten enthalten.
 
 Sitzt ein Rahmen nicht ganz, korrigierst du ihn, statt einen neuen Eintrag anzulegen: Klick in den Rahmen (oder auf
@@ -80,7 +82,7 @@ der Zeitachse trägt der Eintrag →K, und das Kontextstück zeigt unter **Erwä
 ### Blättern und Zoomen
 
 Mit **Bild ↑** und **Bild ↓** blätterst du zur vorigen oder nächsten Seite, auch während du in einem Textfeld tippst;
-dein Text wird dabei gespeichert, ebenso beim Schließen mit **Esc**.
+dein Text wird dabei gespeichert, ebenso beim Schließen mit **Fertig** oder **Esc**.
 Die Pfeile oben rechts tun dasselbe. Jede Seite steht zuerst ganz im Bild; kleine Scans werden dafür vergrößert. Zum
 Entziffern zoomst du mit **+** und **−** oben rechts, mit **Strg/⌘ + Mausrad** an der Stelle unter der Maus oder,
 wenn kein Textfeld den Fokus hat, mit den Tasten + und −. Ein Klick auf die Prozentzahl (oder die Taste 0) zeigt
@@ -92,7 +94,7 @@ Oft passt die Reihenfolge der Scans nicht zur Seitenzählung im Notizbuch, zum B
 zusammen fotografiert hast. Unter **Seitenzählung** in der Detailleiste eines Scans trägst du deshalb die
 Seitenzahl ein und schaltest **Doppelseite** ein, wenn ein Bild zwei Seiten zeigt. Ein Rahmen links gehört dann zur
 linken Seite, ein Rahmen rechts zur rechten. In der Abtipp-Ansicht deutet eine gestrichelte Linie den Falz an. Einträge
-heißen danach etwa "T-01 · S. 7". **Weiterzählen** setzt die Zählung über die folgenden Scans desselben Geräts fort;
+heißen danach etwa "T-01 · S. 7". Der Knopf darunter (etwa **T-02 weiterzählen** oder **Folgende 3 Scans weiterzählen**) setzt die Zählung über die folgenden Scans desselben Geräts fort;
 PDF-Scans zählen dabei Seite für Seite weiter.
 
 Passt die Zählung für einen Eintrag nicht, trägst du die Seite direkt am Eintrag unter **Seite** ein. Das geht auch
