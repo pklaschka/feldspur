@@ -104,3 +104,5 @@ jobs:
             apps/desktop/release/dist/*.AppImage
             apps/desktop/release/dist/*.tar.gz
           if-no-files-found: error
+          # Pakete liegen nach einem Release ohnehin als Release-Dateien vor; Testbauten reichen eine Woche.
+          retention-days: 7
