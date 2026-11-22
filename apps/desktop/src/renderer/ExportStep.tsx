@@ -807,9 +807,17 @@ function Option({
   hint: string;
 }) {
   return (
-    <label className="grid grid-cols-[auto_1fr] items-center gap-x-2.5 text-[0.95rem]">
+    <label
+      className={cx(
+        "grid grid-cols-[auto_1fr] items-center gap-x-2.5 text-[0.95rem]",
+        disabled && "cursor-not-allowed text-muted",
+      )}
+    >
       <Toggle checked={checked} onChange={onChange} label={label} disabled={disabled} />
-      {label}
+      <span>
+        {label}
+        {disabled && <span className="ml-1.5 text-[0.8rem]">(gesperrt)</span>}
+      </span>
       <span className="col-start-2 text-[0.85rem] text-muted">{hint}</span>
     </label>
   );
