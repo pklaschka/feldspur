@@ -90,10 +90,10 @@ const days = () =>
   ].map((li) => li.textContent ?? "");
 
 describe("Übersicht des Projekts", () => {
-  it("nennt das Projekt, die Feldtage in zeitlicher Folge und fasst sie in den Kennwerten zusammen", async () => {
+  it("nennt das Projekt, die Einsätze in zeitlicher Folge und fasst sie in den Kennwerten zusammen", async () => {
     await openOverview([einsatz(2), einsatz(1)]);
     expect(text("overview")).toContain("Rundgang");
-    expect(text("overview")).toContain("2 Feldtage · 14.09.2026 bis 15.09.2026");
+    expect(text("overview")).toContain("2 Einsätze · 14.09.2026 bis 15.09.2026");
     expect(days().map((d) => d.slice(0, 11))).toEqual(["Testmarkt 1", "Testmarkt 2"]);
     expect(text("overview-tables")).toContain("Eingang: Aufzeichnungen aus 2 Einsätzen (14.09.2026 bis 15.09.2026)");
     expect(text("overview-tables")).toContain("FS-AAA1-BBB1-CCC1");
@@ -101,7 +101,7 @@ describe("Übersicht des Projekts", () => {
     expect(text("overview-tables")).toContain("Feldspur, Version 0.4.0");
   });
 
-  it("zeigt je Feldtag gezählte Tatsachen und den Stand der Ausgabe", async () => {
+  it("zeigt je Einsatz gezählte Tatsachen und den Stand der Ausgabe", async () => {
     await openOverview([einsatz(1), einsatz(2, { unsynced: 2, exported: "stale" })]);
     expect(days()[0]).toContain("14.09.2026 · Marktplatz");
     expect(days()[0]).toContain("3 Quellen");
@@ -133,15 +133,15 @@ describe("Übersicht des Projekts", () => {
     expect(onOpen).toHaveBeenCalledWith("s2");
   });
 
-  it("lässt einen abgewählten Feldtag aus Tabellen und Zwischenablage weg", async () => {
-    // Angenommen: zwei Feldtage, beide gewählt
+  it("lässt einen abgewählten Einsatz aus Tabellen und Zwischenablage weg", async () => {
+    // Angenommen: zwei Einsätze, beide gewählt
     const { api } = await openOverview([einsatz(1), einsatz(2, { exported: "stale" })]);
-    expect(text("overview")).toContain("2 Feldtage");
+    expect(text("overview")).toContain("2 Einsätze");
     // Wenn: der zweite abgewählt und kopiert wird
     await act(async () => checkbox("15.09.2026 Testmarkt 2")!.click());
     await act(async () => button("Tabellen kopieren")!.click());
     // Dann: steht nur der erste in Tabelle und Zwischenablage (als HTML und als Text)
-    expect(text("overview")).toContain("1 von 2 Feldtagen gewählt");
+    expect(text("overview")).toContain("1 von 2 Einsätzen gewählt");
     expect(text("overview-tables")).not.toContain("FS-AAA2");
     const [html, plain] = api.copyTable.mock.calls[0]!;
     expect(html).toContain("<table");
@@ -172,7 +172,7 @@ describe("Übersicht des Projekts", () => {
     expect(document.querySelector("[data-testid=overview-all-current]")).toBeNull();
   });
 
-  it("führt von einem Feldtag ohne Quellen zum Einsammeln", async () => {
+  it("führt von einem Einsatz ohne Quellen zum Einsammeln", async () => {
     const leer = einsatz(1, {
       sources: 0,
       marks: [],
@@ -210,10 +210,10 @@ describe("Übersicht des Projekts", () => {
     expect(document.body.textContent).toContain("Als Markdown kopiert");
   });
 
-  it("bittet um eine Auswahl, wenn kein Feldtag gewählt ist", async () => {
+  it("bittet um eine Auswahl, wenn kein Einsatz gewählt ist", async () => {
     await openOverview([einsatz(1)]);
     await act(async () => checkbox("14.09.2026 Testmarkt 1")!.click());
-    expect(text("overview")).toContain("Kein Feldtag gewählt.");
+    expect(text("overview")).toContain("Kein Einsatz gewählt.");
     expect(button("Tabellen kopieren")!.disabled).toBe(true);
   });
 
@@ -229,7 +229,7 @@ describe("Übersicht des Projekts", () => {
     expect(api.openCitationLink).toHaveBeenCalledWith("https://purl.archive.org/feldspur#sec-methodenteil");
   });
 
-  it("legt die Feldtage im Feldkalender auf eine gemeinsame Uhrzeit-Achse", async () => {
+  it("legt die Einsätze im Feldkalender auf eine gemeinsame Uhrzeit-Achse", async () => {
     // Angenommen: zwei Tage mit Marken von 10:00 bis 11:00
     await openOverview([einsatz(1), einsatz(2)]);
     // Dann: reicht die Achse mindestens zwei Stunden bis 11 Uhr, und jede Zeile hat ihre Marken
@@ -264,7 +264,7 @@ describe("Übersicht des Projekts", () => {
     expect(api.showInFolder).toHaveBeenCalledWith("/tmp/Rundgang_Feldkalender.svg");
   });
 
-  it("gruppiert die Feldtage auf Wunsch nach Ort, Tage ohne Ort zuletzt", async () => {
+  it("gruppiert die Einsätze auf Wunsch nach Ort, Einsätze ohne Ort zuletzt", async () => {
     // Angenommen: drei Tage an zwei Orten und einer ohne Ort
     await openOverview([
       einsatz(1, { place: "Zoo" }),
@@ -280,12 +280,12 @@ describe("Übersicht des Projekts", () => {
       li.matches("[data-testid=overview-place]") ? `# ${li.textContent}` : li.textContent!.slice(0, 11),
     );
     expect(order).toEqual([
-      "# Zoo2 Feldtage",
+      "# Zoo2 Einsätze",
       "Testmarkt 1",
       "Testmarkt 4",
-      "# Marktplatz1 Feldtag",
+      "# Marktplatz1 Einsatz",
       "Testmarkt 3",
-      "# Ohne Ort1 Feldtag",
+      "# Ohne Ort1 Einsatz",
       "Testmarkt 2",
     ]);
   });

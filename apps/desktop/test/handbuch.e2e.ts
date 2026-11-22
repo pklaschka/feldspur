@@ -603,7 +603,7 @@ await kapitel("ausgeben", async () => {
     await siehe("Übersicht");
     await knopf("Übersicht").click();
     const seite = page.getByTestId("overview");
-    // Dann: steht der Feldtag mit seinem Stand da, darunter Eingang und Ausgabe mit der Montage-ID zum Kopieren
+    // Dann: steht der Einsatz mit seinem Stand da, darunter Eingang und Ausgabe mit der Montage-ID zum Kopieren
     await siehe("Feldkalender", seite.getByRole("heading", { name: "Feldkalender" }));
     await siehe("Nach Ort gruppieren", page.getByRole("switch", { name: "Nach Ort gruppieren" }));
     await siehe("Als Grafik speichern…");
@@ -615,10 +615,10 @@ await kapitel("ausgeben", async () => {
     await siehe("Montage-ID", tabellen.getByText(/^FS(-[0-9A-Z]{4}){3}$/), { hinweis: "Tabelle Ausgabe" });
     await siehe("Tabellen kopieren");
     await siehe("Als Markdown kopieren");
-    // Wenn: in die Achse des Feldtags geklickt wird, dann ist der Einsatz in Durchsehen offen
+    // Wenn: in die Achse des Einsatzes geklickt wird, dann ist der Einsatz in Durchsehen offen
     await page.getByTestId("overview-strip").first().click();
     await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
-    // Wenn: über die Übersicht der Name des Feldtags gewählt wird, dann ist der Einsatz wieder offen
+    // Wenn: über die Übersicht der Name des Einsatzes gewählt wird, dann ist der Einsatz wieder offen
     await knopf("Übersicht").click();
     await page.getByTestId("overview-days").getByRole("button").first().click();
     await page.getByRole("tab", { name: /Ausgeben/ }).click();

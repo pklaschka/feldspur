@@ -364,13 +364,13 @@ Danach führt **Im Ordner zeigen** zur gespeicherten Datei.
 Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
 - **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
-  Uhr eines Geräts korrigiert, steht die Korrektur dabei. Über mehrere Feldtage steht je Art eine Zeile, und die
-  Spalte **Gerät** fällt weg: Geräte legst du je Einsatz an, und ob es an zwei Tagen dasselbe war, weiß Feldspur nicht.
+  Uhr eines Geräts korrigiert, steht die Korrektur dabei. Über mehrere Einsätze steht je Art eine Zeile, und die
+  Spalte **Gerät** fällt weg: Geräte legst du je Einsatz an, und ob es in zwei Einsätzen dasselbe war, weiß Feldspur nicht.
 - **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
   Montagevideo mit Länge und Art der Montage.
 
-Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Feldtage zusammen, vor denen ein Häkchen
-steht; einzelne wählst du im Feldkalender darüber ab. Abgewählte Tage fehlen auch in der gespeicherten Grafik. **Tabellen kopieren** legt sie so in die Zwischenablage, dass
+Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Einsätze zusammen, vor denen ein Häkchen
+steht; einzelne wählst du im Feldkalender darüber ab. Abgewählte Einsätze fehlen auch in der gespeicherten Grafik. **Tabellen kopieren** legt sie so in die Zwischenablage, dass
 Word, LibreOffice und Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt
 du danach in deinem Dokument an. Eine Datei entsteht dabei nicht.
 
@@ -378,13 +378,13 @@ Feldspur zählt und misst hier nur. In der Übersicht steht „412 Zeilen“, ab
 genug ist. Das bleibt bei dir. Farbig sind deshalb nur Zustände, die Feldspur ohnehin meldet, etwa eine veraltete
 Ausgabe oder eine Geräteuhr ohne Abgleich, nie eine Menge.
 
-Die Kennwerte beschreiben den Stand im Projekt. An jedem Feldtag steht, ob er so schon als Ausgabe vorliegt:
+Die Kennwerte beschreiben den Stand im Projekt. An jedem Einsatz steht, ob er so schon als Ausgabe vorliegt:
 **Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert) oder
 **nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** (bei einer veralteten Ausgabe **Erneut
-ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Ein Feldtag ohne Quellen führt mit **Einsammeln** in
+ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Ein Einsatz ohne Quellen führt mit **Einsammeln** in
 den ersten Schritt. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
 
-So kann das Ergebnis für zwei Feldtage aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
+So kann das Ergebnis für zwei Einsätze aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
 LIESMICH, kommt in der Eingangstabelle die Spalte **Gerät** mit den Namen der Geräte dazu.
 
 | Eingang | Anzahl | Dauer (h:mm:ss) | Zeitbeleg |

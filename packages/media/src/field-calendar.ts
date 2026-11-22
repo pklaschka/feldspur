@@ -131,7 +131,7 @@ export function fieldCalendarSvg(days: CalendarDay[]): string {
   const font = `font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"`;
   const out: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ${font} font-size="12">`,
-    `<title>Feldkalender: ${days.length} ${days.length === 1 ? "Feldtag" : "Feldtage"} auf einer Uhrzeit-Achse</title>`,
+    `<title>Feldkalender: ${days.length} ${days.length === 1 ? "Einsatz" : "Einsätze"} auf einer Uhrzeit-Achse</title>`,
     `<rect width="${W}" height="${H}" fill="#ffffff"/>`,
   ];
   for (const t of axis.ticks) {

@@ -36,14 +36,14 @@ const api = window.feldspur;
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** „4 Feldtage · 07.09.2026 bis 14.09.2026“. */
+/** „4 Einsätze · 07.09.2026 bis 14.09.2026“. */
 function spanText(sessions: OverviewSession[]): string {
   const dates = sessions.map((s) => s.date).sort();
   const first = dates[0];
   const last = dates.at(-1);
   if (!first || !last) return "Noch kein Einsatz";
   const days = first === last ? germanDate(first) : `${germanDate(first)} bis ${germanDate(last)}`;
-  return `${count(sessions.length, "Feldtag", "Feldtage")} · ${days}`;
+  return `${count(sessions.length, "Einsatz", "Einsätze")} · ${days}`;
 }
 
 export function Overview({
@@ -169,7 +169,7 @@ export function Overview({
           <Panel>
             <h2 className="mb-1 text-[1.05rem] font-semibold">Noch kein Einsatz</h2>
             <p className="max-w-[60ch] text-muted">
-              Hier liegen später alle Feldtage des Projekts untereinander auf einer Uhrzeit-Achse, darunter die
+              Hier liegen später alle Einsätze des Projekts untereinander auf einer Uhrzeit-Achse, darunter die
               Kennwerte für den Methodenteil. Lege links unter „Einsätze“ den ersten Einsatz an.
             </p>
           </Panel>
@@ -199,7 +199,7 @@ export function Overview({
                 <Button
                   disabled={chosen.length === 0}
                   onClick={saveCalendar}
-                  title="Die gewählten Feldtage als SVG-Grafik, etwa für den Methodenteil"
+                  title="Die gewählten Einsätze als SVG-Grafik, etwa für den Methodenteil"
                 >
                   Als Grafik speichern…
                 </Button>
@@ -240,7 +240,7 @@ export function Overview({
                     >
                       {g.place || "Ohne Ort"}
                       <span className="ml-2 font-normal text-muted">
-                        {count(g.sessions.length, "Feldtag", "Feldtage")}
+                        {count(g.sessions.length, "Einsatz", "Einsätze")}
                       </span>
                     </li>
                   ),
@@ -266,7 +266,7 @@ export function Overview({
                 ))}
                 <span className="flex-1" />
                 <span>
-                  Klick in eine Spur öffnet den Tag in „Durchsehen“ an dieser Uhrzeit. Tage mit Häkchen gehen in
+                  Klick in eine Spur öffnet den Einsatz in „Durchsehen“ an dieser Uhrzeit. Einsätze mit Häkchen gehen in
                   Kennwerte und Grafik ein.
                 </span>
               </div>
@@ -276,8 +276,8 @@ export function Overview({
                 <h2 className="text-[1.05rem] font-semibold">Kennwerte</h2>
                 <Pill>
                   {chosen.length === all.length
-                    ? count(all.length, "Feldtag", "Feldtage")
-                    : `${chosen.length} von ${count(all.length, "Feldtag", "Feldtagen")} gewählt`}
+                    ? count(all.length, "Einsatz", "Einsätze")
+                    : `${chosen.length} von ${count(all.length, "Einsatz", "Einsätzen")} gewählt`}
                 </Pill>
                 <span className="flex-1" />
                 {/* Immer da, damit Screenreader die Meldung ansagen; nur der Text wechselt. */}
@@ -305,7 +305,7 @@ export function Overview({
               </div>
               {chosen.length === 0 ? (
                 <p className="text-[0.9rem] text-muted">
-                  Kein Feldtag gewählt. Setze oben im Feldkalender ein Häkchen, dann stehen hier die Kennwerte.
+                  Kein Einsatz gewählt. Setze oben im Feldkalender ein Häkchen, dann stehen hier die Kennwerte.
                 </p>
               ) : (
                 <div className="@container select-text" data-testid="overview-tables">
