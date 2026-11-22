@@ -16,6 +16,7 @@ import {
   type ImageRef,
   montagePreview,
   type MontagePreview,
+  sessionLevels,
   type OverlayFrame,
   type OverlayRenderer,
   type OverlayHeader,
@@ -263,6 +264,18 @@ export async function runExport(
     }
     if (check.blocking.length || (check.warnings.length && !opts.acceptOriginals)) {
       return { originals: check, parent };
+    }
+    // Fehlende Sprachpegel zuerst messen: Sie gehören zum Stand der Ausgabe (Lautstärke im Video, Begleitprotokoll).
+    // Gemessen erst während der Ausgabe, stünde eine frische Ausgabe sofort als „Veraltet“ da.
+    try {
+      await sessionLevels(s, sessionId, {
+        measureMissing: opts.video,
+        signal: ctrl.signal,
+        onProgress: (done, total) => wc.send(IPC.exportProgress, { sessionId, step: "Lautstärke messen", done, total }),
+      });
+    } catch (e) {
+      if (ctrl.signal.aborted) return { cancelled: true };
+      throw e;
     }
     // Stand beim Start: Was sich während der Ausgabe ändert, kommt in die nächste (und macht diese veraltet).
     const settings = exportSettings(s, sessionId, opts);
