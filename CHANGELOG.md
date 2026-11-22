@@ -4,78 +4,9 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
-## 0.3.0-rc.4 – 2026-11-21 (Vorabversion)
+## 0.3.0 – 2026-11-22
 
-<!-- Release notes generated using configuration in .github/release.yml at c81801ae5338a310e3d7bde02f3a1419021e2daf -->
-
-### Behoben
-
-- Zenodo-Abfrage der Versions-DOI funktioniert wieder ([#182](https://github.com/pklaschka/feldspur/pull/182), @pklaschka)
-- Zenodo-DOI auch bei mehr als 25 Versionen finden ([#183](https://github.com/pklaschka/feldspur/pull/183), @pklaschka)
-
-### Dokumentation
-
-- Bildschirmfotos im Handbuch und README erneuert ([#179](https://github.com/pklaschka/feldspur/pull/179), @pklaschka)
-
-### Hinter den Kulissen
-
-- CI-Ressourcenverbrauch um rund 75 % senken ([#181](https://github.com/pklaschka/feldspur/pull/181), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0-rc.3...v0.3.0-rc.4
-
-## 0.3.0-rc.3 – 2026-11-21 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at 5b4aa320dd9f48a1599054d08cba03cd4f3858f0 -->
-
-### Neu
-
-- Arbeitsprotokoll auf der Konsole für Einsammeln, Prüfen und Ausgeben ([#171](https://github.com/pklaschka/feldspur/pull/171), @pklaschka)
-- Feldspur zitieren: fertiges Zitat mit DOI der Version ([#172](https://github.com/pklaschka/feldspur/pull/172), @pklaschka)
-
-### Verbessert
-
-- Montage-ID legt jetzt auch den Textstand fest und lässt sich im Vergleich lesen ([#164](https://github.com/pklaschka/feldspur/pull/164), @pklaschka)
-- Beschriftungen in der App vereinheitlicht ([#170](https://github.com/pklaschka/feldspur/pull/170), @pklaschka)
-
-### Behoben
-
-- Projektdateien zeigen unter macOS ihr eigenes Symbol ([#167](https://github.com/pklaschka/feldspur/pull/167), @pklaschka)
-- Einsammeln: lange Dateilisten scrollen in der Karte, alle Gerätekarten gleich breit ([#173](https://github.com/pklaschka/feldspur/pull/173), @pklaschka)
-
-### Dokumentation
-
-- Handbuch erklärt, wie die Montage-ID entsteht und woraus man zitiert ([#160](https://github.com/pklaschka/feldspur/pull/160), @pklaschka)
-- Handbuch-PDF: jedes Kapitel beginnt auf einer neuen Seite ([#175](https://github.com/pklaschka/feldspur/pull/175), @pklaschka)
-- Handbuch: kompakteres PDF, einheitliche Tabellen, Tastenkappen, Verzeichnisse ([#177](https://github.com/pklaschka/feldspur/pull/177), @pklaschka)
-
-### Hinter den Kulissen
-
-- Automatischer Rundgang prüft, ob Handbuch und App dieselben Bezeichnungen verwenden ([#159](https://github.com/pklaschka/feldspur/pull/159), @pklaschka)
-- Tests lesen sich wie das Handbuch: Tabellen, Angenommen/Wenn/Dann und benannte Abläufe ([#161](https://github.com/pklaschka/feldspur/pull/161), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0-rc.2...v0.3.0-rc.3
-
-## 0.3.0-rc.2 – 2026-11-21 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at 2e7c382123c7a0e8b2e8ec98a208df891f8b18d9 -->
-
-### Behoben
-
-- Nach und nach eingesammelte Clips, kurze Pixel-Videos und Uhrzeiten nach Mitternacht liegen richtig ([#155](https://github.com/pklaschka/feldspur/pull/155), @pklaschka)
-
-### Dokumentation
-
-- Handbuch nennt Knöpfe und Menüs so, wie sie in der App heißen ([#156](https://github.com/pklaschka/feldspur/pull/156), @pklaschka)
-
-### Hinter den Kulissen
-
-- Workflow-Artefakte kürzer aufbewahren ([#158](https://github.com/pklaschka/feldspur/pull/158), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0-rc.1...v0.3.0-rc.2
-
-## 0.3.0-rc.1 – 2026-11-20 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at a9dce054f2f223e42a43e94555e62e5e4ad5bc5d -->
+<!-- Release notes generated using configuration in .github/release.yml at 05b889cf9f032833f18b7e61b52f47b9777465df -->
 
 ### Neu
 
@@ -86,6 +17,8 @@ werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 - Kontext: Karten, Listen und Zusammenfassungen ohne Uhrzeit stehen vor der Chronologie ([#115](https://github.com/pklaschka/feldspur/pull/115), @pklaschka)
 - Montagevideo: zusätzlich eine Tonspur je Gerät ([#126](https://github.com/pklaschka/feldspur/pull/126), @pklaschka)
 - Viewer: Einsatztranskript synchron zum Montagevideo im Browser ([#127](https://github.com/pklaschka/feldspur/pull/127), @pklaschka)
+- Arbeitsprotokoll auf der Konsole für Einsammeln, Prüfen und Ausgeben ([#171](https://github.com/pklaschka/feldspur/pull/171), @pklaschka)
+- Feldspur zitieren: fertiges Zitat mit DOI der Version ([#172](https://github.com/pklaschka/feldspur/pull/172), @pklaschka)
 
 ### Verbessert
 
@@ -99,6 +32,8 @@ werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 - Alle Uhrzeit- und Stellenfelder ohne Doppelpunkt tippen ([#107](https://github.com/pklaschka/feldspur/pull/107), @pklaschka)
 - Das Zeitgerüst heißt jetzt Einsatztranskript ([#112](https://github.com/pklaschka/feldspur/pull/112), @pklaschka)
 - Tonspur-Analyse lässt sich abbrechen; Abbrechen wirkt auch bei Lautstärkemessung und Standbildern ([#139](https://github.com/pklaschka/feldspur/pull/139), @pklaschka)
+- Montage-ID legt jetzt auch den Textstand fest und lässt sich im Vergleich lesen ([#164](https://github.com/pklaschka/feldspur/pull/164), @pklaschka)
+- Beschriftungen in der App vereinheitlicht ([#170](https://github.com/pklaschka/feldspur/pull/170), @pklaschka)
 
 ### Behoben
 
@@ -118,20 +53,36 @@ werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 - Während der Ausgabe geht der Rechner nicht mehr in den Ruhezustand ([#143](https://github.com/pklaschka/feldspur/pull/143), @pklaschka)
 - Video-Zeiten genauer: Android-Videos überlappen nicht mehr, Kamera-Timecode, Zeitbelege neu lesen ([#146](https://github.com/pklaschka/feldspur/pull/146), @pklaschka)
 - Markierter Text bleibt sichtbar, auch in der laufenden Mitschreib-Zeile ([#148](https://github.com/pklaschka/feldspur/pull/148), @pklaschka)
+- Nach und nach eingesammelte Clips, kurze Pixel-Videos und Uhrzeiten nach Mitternacht liegen richtig ([#155](https://github.com/pklaschka/feldspur/pull/155), @pklaschka)
+- Projektdateien zeigen unter macOS ihr eigenes Symbol ([#167](https://github.com/pklaschka/feldspur/pull/167), @pklaschka)
+- Einsammeln: lange Dateilisten scrollen in der Karte, alle Gerätekarten gleich breit ([#173](https://github.com/pklaschka/feldspur/pull/173), @pklaschka)
+- Zenodo-Abfrage der Versions-DOI funktioniert wieder ([#182](https://github.com/pklaschka/feldspur/pull/182), @pklaschka)
+- Zenodo-DOI auch bei mehr als 25 Versionen finden ([#183](https://github.com/pklaschka/feldspur/pull/183), @pklaschka)
 
 ### Dokumentation
 
 - Tastenkürzel-Spickblatt zum Ausdrucken ([#82](https://github.com/pklaschka/feldspur/pull/82), @pklaschka)
 - Tastenkürzel-Spickblatt um die Kürzel in „Durchsehen“ ergänzt ([#99](https://github.com/pklaschka/feldspur/pull/99), @pklaschka)
 - Lieferling als empfohlenen Installationsweg nennen ([#111](https://github.com/pklaschka/feldspur/pull/111), @pklaschka)
+- Handbuch nennt Knöpfe und Menüs so, wie sie in der App heißen ([#156](https://github.com/pklaschka/feldspur/pull/156), @pklaschka)
+- Handbuch erklärt, wie die Montage-ID entsteht und woraus man zitiert ([#160](https://github.com/pklaschka/feldspur/pull/160), @pklaschka)
+- Handbuch-PDF: jedes Kapitel beginnt auf einer neuen Seite ([#175](https://github.com/pklaschka/feldspur/pull/175), @pklaschka)
+- Handbuch: kompakteres PDF, einheitliche Tabellen, Tastenkappen, Verzeichnisse ([#177](https://github.com/pklaschka/feldspur/pull/177), @pklaschka)
+- Bildschirmfotos im Handbuch und README erneuert ([#179](https://github.com/pklaschka/feldspur/pull/179), @pklaschka)
+- Doku-Seite: Vorschaukarte beim Teilen des Links (Social-Preview-Bild) ([#186](https://github.com/pklaschka/feldspur/pull/186), @pklaschka)
 
 ### Hinter den Kulissen
 
 - Release-Workflow: Hotfix-Branches, Changelog 0.2.1 ([#124](https://github.com/pklaschka/feldspur/pull/124), @pklaschka)
 - CI: Actions auf Node-24-Versionen heben ([#125](https://github.com/pklaschka/feldspur/pull/125), @pklaschka)
 - Ein gemeinsamer Weg für ffmpeg und ffprobe (Zeitlimits, einheitliche Fehlermeldungen) ([#138](https://github.com/pklaschka/feldspur/pull/138), @pklaschka)
+- Workflow-Artefakte kürzer aufbewahren ([#158](https://github.com/pklaschka/feldspur/pull/158), @pklaschka)
+- Automatischer Rundgang prüft, ob Handbuch und App dieselben Bezeichnungen verwenden ([#159](https://github.com/pklaschka/feldspur/pull/159), @pklaschka)
+- Tests lesen sich wie das Handbuch: Tabellen, Angenommen/Wenn/Dann und benannte Abläufe ([#161](https://github.com/pklaschka/feldspur/pull/161), @pklaschka)
+- CI-Ressourcenverbrauch um rund 75 % senken ([#181](https://github.com/pklaschka/feldspur/pull/181), @pklaschka)
+- Handbuch-Rundgang prüft auch „Aktuell“, die Montage-ID im Viewer und „ohne Zeit“ bei langen Listen ([#188](https://github.com/pklaschka/feldspur/pull/188), @pklaschka)
 
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.2.1...v0.3.0-rc.1
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.2.1...v0.3.0
 
 ## 0.2.1 – 2026-11-19
 
