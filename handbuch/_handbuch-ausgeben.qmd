@@ -373,21 +373,24 @@ Die Kennwerte beschreiben den Stand im Projekt. An jedem Feldtag steht, ob er so
 **nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** direkt in den Schritt Ausgeben dieses
 Einsatzes. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
 
-So kann das Ergebnis aussehen (die Werte sind erfunden):
+So kann das Ergebnis für zwei Feldtage aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
+LIESMICH, kommt in der Eingangstabelle die Spalte **Gerät** mit den Namen der Geräte dazu.
 
-| Eingang | Gerät | Anzahl | Dauer (h:mm:ss) | Zeitbeleg |
-|:---|:---|:---|:---|:-------|
-| Video | Kamera | 112 | 1:48:00 | Metadaten; Uhr um +0:42 korrigiert |
-| Audio | Rekorder | 6 | 3:10:00 | angesagte Uhrzeit (1), Folgeaufnahme (5) |
-| Fotos | Handy | 19 | – | Metadaten |
-| Tagebuch | – | 31 Einträge, 4 Dateien | – | notierte Uhrzeit |
+| Eingang | Anzahl | Dauer (h:mm:ss) | Zeitbeleg |
+|:---|:---|:---|:-------|
+| Video | 214 | 3:31:00 | Metadaten; Uhr korrigiert (+0:18 bis +0:42) |
+| Audio | 11 | 6:05:00 | angesagte Uhrzeit (2), Folgeaufnahme (9) |
+| Fotos | 37 | – | Metadaten |
+| Tagebuch | 58 Einträge, 7 Dateien | – | notierte Uhrzeit |
 
-: Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026) {#tbl-methodenteil-eingang}
+: Eingang: Aufzeichnungen aus 2 Einsätzen (14.09.2026 bis 15.09.2026) {#tbl-methodenteil-eingang}
 
 | Einsatz | Ausgabe | Datei | Umfang | Montage-ID |
 |:---|:---|:---|:---|:---|
 | 14.09.2026 Testmarkt | Einsatztranskript | .docx | 412 Zeilen | FS-7KQ2-M9XD-3F8A |
 | | Montagevideo | .mp4 | 3:10:00, Echtzeit | |
+| 15.09.2026 Testmarkt, zweiter Tag | Einsatztranskript | .docx | 388 Zeilen | FS-2VHN-C4TW-8RJE |
+| | Montagevideo | .mp4 | 2:55:00, Echtzeit | |
 
 : Ausgabe: Einsatztranskript und Montagevideo je Einsatz {#tbl-methodenteil-ausgabe}
 
