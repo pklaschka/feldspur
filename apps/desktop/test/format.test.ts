@@ -1,6 +1,7 @@
 import { digitsDurationMs, digitsDurationText } from "../src/shared/duration-digits.ts";
 import { describe, expect, it } from "vite-plus/test";
 import {
+  aboutSize,
   bytes,
   dbText,
   dominantDay,
@@ -250,5 +251,16 @@ describe("Fehlermeldungen aus dem Hauptprozess", () => {
     );
     expect(errorText(new Error("Direkt"))).toBe("Direkt");
     expect(errorText("Text")).toBe("Text");
+  });
+});
+
+describe("Geschätzte Größe des Montagevideos", () => {
+  it.each`
+    bytes              | text
+    ${2.1 * 1024 ** 3} | ${"ca. 2,1 GB"}
+    ${450 * 1024 ** 2} | ${"ca. 450 MB"}
+    ${1000}            | ${"ca. 1 MB"}
+  `("$bytes Bytes ergeben „$text“", ({ bytes, text }) => {
+    expect(aboutSize(bytes)).toBe(text);
   });
 });

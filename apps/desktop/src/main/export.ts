@@ -8,6 +8,8 @@ import {
   baseName,
   buildSessionTranscript,
   compareExport,
+  deviceTracksOf,
+  estimateMontageBytes,
   exportFingerprint,
   type ExportStatus,
   entryText,
@@ -162,6 +164,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
     durationMs: transcript.plan.durationMs,
     episodes: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "episode").length : 0,
     cards: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "card").length : 0,
+    videoBytes: estimateMontageBytes(transcript.plan.durationMs, deviceTracksOf(transcript).length),
     lines: transcript.entries.map(entryText),
     entries: transcript.entries.map((e) => ({
       kind: e.kind,

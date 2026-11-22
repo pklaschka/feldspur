@@ -71,7 +71,8 @@ Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlich
 Optionen:
 
 - **Montagevideo mit ausgeben** (Standard): Ohne Haken entstehen nur Einsatztranskript, Dokumentvariablen und
-  Begleitprotokoll.
+  Begleitprotokoll. Hinter dem Schalter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“. Feldspur rechnet
+  das aus Länge und Tonspuren; die fertige Datei kann je nach Bild kleiner ausfallen.
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
