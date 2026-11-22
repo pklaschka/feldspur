@@ -880,6 +880,26 @@ try {
       await toast.getByText(`Lage bestätigt: ${label}`).waitFor();
       await toast.getByRole("button", { name: "Rückgängig" }).click();
       await toast.getByText(`Rückgängig gemacht: Lage bestätigt: ${label}`).waitFor();
+      // Wenn: zwei weitere Male mit der Maus bestätigt wird (die Tastatur zählt nicht), dann erscheint einmal der
+      // Hinweis auf die Tasten
+      const hint = page.getByTestId("key-hint");
+      if (await hint.count()) throw new Error("Tastenhinweis schon nach einer Bestätigung mit der Maus");
+      for (let i = 0; i < 2; i++) {
+        await nextCheckBtn.click();
+        const which = await page.getByTestId("inspector-head").locator("b.font-mono").innerText();
+        await checkPanel.getByRole("button", { name: /Lage passt/ }).click();
+        await toast.getByText(`Lage bestätigt: ${which}`).waitFor();
+        await toast.getByRole("button", { name: "Rückgängig" }).click();
+        await toast.getByText(`Rückgängig gemacht: Lage bestätigt: ${which}`).waitFor();
+      }
+      await hint.getByText("Strg+Enter").waitFor();
+      // Dann: Nach „Verstanden“ kommt er nicht wieder, auch nicht nach dem Neuladen.
+      await hint.getByRole("button", { name: "Verstanden" }).click();
+      await hint.waitFor({ state: "detached" });
+      await page.reload();
+      await page.getByRole("tab", { name: /Durchsehen/ }).click();
+      await nextCheckBtn.waitFor();
+      if (await hint.count()) throw new Error("Tastenhinweis kommt nach „Verstanden“ wieder");
     } else {
       console.log("Prüfen: keine unsicheren Lagen");
     }

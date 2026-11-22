@@ -24,15 +24,19 @@ export function Summary({ view, onGo, compact }: { view: SessionView; onGo: (t: 
   const count = (s: SourceRow["status"]) => view.rows.filter((r) => r.status === s).length;
   const todo = todos(view);
   const total = view.rows.length;
-  const parts = (["ok", "check", "unplaced", "context"] as const).filter((st) => count(st) > 0);
   const nContext = view.context.length;
   return (
     <>
       <Eyebrow className="mt-0">Stand des Einsatzes</Eyebrow>
       {total > 0 && (
         <div className="flex h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
-          {parts.map((st) => (
-            <span key={st} className={STATUS_BAR[st]} style={{ width: `${(count(st) / total) * 100}%` }} />
+          {/* Alle Abschnitte bleiben stehen (auch mit Breite 0), damit jede Bestätigung sichtbar wandert (Issue #195). */}
+          {(["ok", "check", "unplaced", "context"] as const).map((st) => (
+            <span
+              key={st}
+              className={`${STATUS_BAR[st]} transition-[width] duration-400 ease-out motion-reduce:transition-none`}
+              style={{ width: `${(count(st) / total) * 100}%` }}
+            />
           ))}
         </div>
       )}

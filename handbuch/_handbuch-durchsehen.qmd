@@ -30,14 +30,19 @@ Ist die Lage einer Quelle unsicher, zeigt die Zeitachse oben einen Knopf wie **3
 der Reihe nach zu diesen Stellen, in der Reihenfolge der Liste **Zu prüfen** (siehe unten); mehrere Dateien mit
 demselben Widerspruch zählen als eine Stelle. Passt die Lage, bestätigst du das rechts in der Detailleiste mit
 **✓ Lage passt, als geprüft markieren**; dort steht dann **Von Hand geprüft: Die Lage passt.** Danach wählt Feldspur gleich die nächste zu
-prüfende Stelle und holt sie ins Bild. Ist keine mehr übrig, bleibt die Auswahl stehen und der Hinweis unten meldet
-**Alle Stellen geprüft**. Die Bestätigung ist ein eigener Zeitbeleg und lässt sich mit **Zurücknehmen** wieder löschen. Ist die Uhr des
+prüfende Stelle und holt sie ins Bild. Der Balken unter **Stand des Einsatzes** wird dabei sichtbar ein Stück grüner.
+Ist keine mehr übrig, bleibt die Auswahl stehen, der Hinweis unten meldet **Alle Stellen geprüft**, und statt des
+Knopfs steht dort **Alle Stellen geprüft · Weiter: Ausgeben →** (sobald auch keine Datei mehr ohne Zeit ist). Kommt
+später wieder etwas zum Prüfen dazu, steht der Knopf **… zu prüfen · Nächste →** wieder da. Die Bestätigung ist ein eigener Zeitbeleg und lässt sich mit **Zurücknehmen** wieder löschen. Ist die Uhr des
 ganzen Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt (**Uhr von … stimmt**).
 
 Tastenkürzel in Durchsehen (nicht, solange du in einem Textfeld schreibst oder ein Dialog offen ist):
 
 - [N]{.kbd}: nächste zu prüfende Stelle, [Umschalt+N]{.kbd}: vorige,
 - [Strg+Enter]{.kbd} (macOS: [⌘+Enter]{.kbd}): **Lage passt** für die gewählte Quelle.
+
+Wer drei Lagen mit der Maus bestätigt hat, bekommt einmal einen Hinweis auf diese Tasten. Nach **Verstanden** kommt er
+nicht wieder.
 
 ### Wenn Zeitbelege sich widersprechen {#sec-widersprueche}
 

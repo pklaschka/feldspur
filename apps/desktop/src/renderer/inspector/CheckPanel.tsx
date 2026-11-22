@@ -3,6 +3,7 @@ import { Button } from "../ui.tsx";
 import type { InspectorActions } from "./actions.ts";
 import { isMac } from "../keys.ts";
 import { canConfirm, checkReason } from "./status.ts";
+import { noteMouseConfirm } from "../review/keyHint.ts";
 
 /**
  * Lage mit Status „prüfen“: erklären, warum, und den Weg zu „geprüft“ anbieten.
@@ -57,7 +58,11 @@ export function CheckPanel({ row, view, actions }: { row: SourceRow; view: Sessi
         <Button
           size="sm"
           variant={hasRef ? "primary" : "default"}
-          onClick={() => actions.confirm(row.id, row.startMs!)}
+          onClick={(e) => {
+            // Ein echter Mausklick (Enter oder Leertaste auf dem Knopf zählen nicht): für den einmaligen Tastenhinweis.
+            if (e.detail > 0) noteMouseConfirm();
+            actions.confirm(row.id, row.startMs!);
+          }}
           title={`In Durchsehen geht es danach zur nächsten zu prüfenden Stelle (${isMac ? "⌘+Enter" : "Strg+Enter"})`}
           aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
         >
