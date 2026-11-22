@@ -218,6 +218,59 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:10");
   });
 
+  it("Anker schlägt eine von Hand eingetragene Abweichung derselben Kamera", () => {
+    // Angenommen: Die Kamera-Abweichung ist von Hand auf +2:45 geschätzt, das Klatschen misst +2:47
+    const input = testmarkt();
+    const cam = input.devices.find((d) => d.id === "camA")!;
+    Object.assign(cam, { clockOffsetMs: 165_000, clockOffsetUncertaintyMs: 1_000, offsetBasis: "manual" });
+    // Wenn: Feldspur die Zeitachse berechnet
+    const res = resolveTimeline(input);
+    // Dann: gilt der Anker für die ganze Kamera, ohne Widerspruch
+    expect(res.deviceClocks.get("camA")!.basis).toBe("anchor");
+    expect(res.deviceClocks.get("camA")!.offsetMs).toBe(167_000);
+    expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:10");
+    expect(res.anchorConflicts).toEqual([]);
+  });
+
+  it("Anker schlägt die Handeingabe auch, wenn der verankerte Clip über eine Ansage liegt", () => {
+    // Angenommen: Abweichung von Hand +2:45, im verankerten Clip eine sekundengenaue Ansage (wie am 08.09.)
+    const input = testmarkt();
+    const cam = input.devices.find((d) => d.id === "camA")!;
+    Object.assign(cam, { clockOffsetMs: 165_000, clockOffsetUncertaintyMs: 1_000, offsetBasis: "manual" });
+    input.evidence.push({
+      id: "ansage",
+      sourceId: "C0012.MP4",
+      kind: "spoken",
+      clock: "true",
+      atMediaMs: 10_000,
+      localMs: T(10, 16, 10),
+      utcMs: null,
+      uncertaintyMs: 1_000,
+      detail: "angesagt",
+      raw: "",
+      enabled: true,
+    });
+    // Wenn: Feldspur die Zeitachse berechnet
+    const res = resolveTimeline(input);
+    // Dann: richtet der Anker die Kamerauhr, und der zweite Clip folgt ihr
+    expect(res.deviceClocks.get("camA")!.basis).toBe("anchor");
+    expect(res.deviceClocks.get("camA")!.offsetMs).toBe(167_000);
+    expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:10");
+  });
+
+  it("ohne Anker gilt wieder die Handeingabe", () => {
+    // Angenommen: Abweichung von Hand +2:45, das Klatschen ist abgeschaltet
+    const input = testmarkt();
+    const cam = input.devices.find((d) => d.id === "camA")!;
+    Object.assign(cam, { clockOffsetMs: 165_000, clockOffsetUncertaintyMs: 1_000, offsetBasis: "manual" });
+    input.anchors[0]!.enabled = false;
+    // Wenn: Feldspur die Zeitachse berechnet
+    const res = resolveTimeline(input);
+    // Dann: zählt die eingetragene Abweichung
+    expect(res.deviceClocks.get("camA")!.basis).toBe("manual");
+    expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:12");
+  });
+
   it("abgeschalteter Beleg zählt nicht", () => {
     // Angenommen: der einzige Beleg eines Fotos ist abgeschaltet
     const input = testmarkt();
