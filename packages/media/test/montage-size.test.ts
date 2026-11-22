@@ -26,8 +26,8 @@ describe("Größe des Montagevideos schätzen", () => {
 
   it("zählt Strecken ohne Video und ohne Ton kaum mit", () => {
     // Angenommen: eine Stunde nur Tafel und Uhrzeit (Echtzeit-Lücke)
-    // Dann: 100 kbit/s, 45 MB statt 1,4 GB
-    expect(schaetze([stueck(60)]).video).toBe(45_000_000);
+    // Dann: 600 kbit/s, 270 MB statt 1,4 GB
+    expect(schaetze([stueck(60)]).video).toBe(270_000_000);
   });
 
   it("legt je Gerät nur die Zeit drauf, in der es Ton hat, und erst ab zwei Geräten", () => {

@@ -120,8 +120,11 @@ const VIDEO_KBPS = 3000;
 const MIX_KBPS = 160;
 const DEVICE_TRACK_KBPS = 128;
 
-/** Bild ohne laufendes Video (Tafel, Uhrzeit auf leerem Grund): fast nichts ändert sich, kbit/s. */
-const STILL_KBPS = 100;
+/**
+ * Bild ohne laufendes Video (Tafel, Uhrzeit auf leerem Grund), kbit/s. Hardware-Encoder sparen dort weniger als
+ * libx264; der Wert liegt dazwischen, den Rest gleicht der gelernte Faktor in der App aus.
+ */
+const STILL_KBPS = 600;
 
 /**
  * Ungefähre Größe des Montagevideos in Bytes, Stück für Stück: volle Bildbitrate nur, wo ein Video läuft, sonst

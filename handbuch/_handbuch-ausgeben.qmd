@@ -72,8 +72,8 @@ Optionen:
 
 - **Montagevideo mit ausgeben** (Standard): Ohne Haken entstehen nur Einsatztranskript, Dokumentvariablen und
   Begleitprotokoll. Hinter dem Schalter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“. Feldspur rechnet
-  das aus den Strecken, in denen ein Video oder Ton läuft; Lücken kosten fast nichts. Die fertige Datei kann je nach
-  Bild und Rechner abweichen.
+  das aus den Strecken, in denen ein Video oder Ton läuft. Wie groß die Datei wirklich wird, hängt am Rechner und am
+  Bild; nach jeder Ausgabe vergleicht Feldspur deshalb Schätzung und echte Größe und schätzt danach genauer.
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
