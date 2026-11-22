@@ -292,26 +292,32 @@ liest, erkennt an der ID ebenso, ob die vorliegende Fassung die zitierte ist.
 ### Im Methodenteil beschreiben {#sec-methodenteil}
 
 Wer aus der Ausgabe zitiert, muss einmal erklären, was das für ein Artefakt ist und woraus es besteht. Das
-Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für den Methodenteil gibt es deshalb im Schritt
-**Ausgeben** unter **Für den Methodenteil** den Knopf **Tabelle für den Methodenteil…**. Er schreibt keine Datei,
-er zeigt zwei Tabellen zum Kopieren:
+Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für den Methodenteil gibt es deshalb die
+**Übersicht**. Du findest sie in der linken Leiste über den Einsätzen; sie gehört zum Projekt, nicht zu einem
+einzelnen Einsatz.
+
+Oben stehen die **Feldtage**, je Einsatz eine Zeile: Datum, Titel und Ort, die Zahl der Quellen und der Zeilen im
+Einsatztranskript, Uhren ohne Abgleich und der Stand der Ausgabe. Ein Klick auf den Titel öffnet den Einsatz.
+Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
 - **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
   Uhr eines Geräts korrigiert, steht die Korrektur dabei.
 - **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
   Montagevideo mit Länge und Art der Montage.
 
-Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Einsätze des Projekts zusammen; einzelne
-Einsätze wählst du oben ab. **Tabellen kopieren** legt sie so in die Zwischenablage, dass Word, LibreOffice und
-Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt du danach in deinem
-Dokument an.
+Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Feldtage zusammen, vor denen ein Häkchen
+steht; einzelne wählst du in der Liste darüber ab. **Tabellen kopieren** legt sie so in die Zwischenablage, dass
+Word, LibreOffice und Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt
+du danach in deinem Dokument an. Eine Datei entsteht dabei nicht.
 
-Feldspur zählt und misst hier nur. In der Tabelle steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
-genug ist. Das bleibt bei dir.
+Feldspur zählt und misst hier nur. In der Übersicht steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
+genug ist. Das bleibt bei dir. Farbig sind deshalb nur Zustände, die Feldspur ohnehin meldet, etwa eine veraltete
+Ausgabe oder eine Uhr ohne Abgleich, nie eine Menge.
 
-Die Tabelle beschreibt den Stand im Projekt, mit den gerade gewählten Einstellungen der Ausgabe. Liegt ein Einsatz so
-noch nicht als Ausgabe vor, sagt der Dialog das dazu. Gib ihn dann zuerst aus, sonst passen Montage-ID und Umfang
-nicht zu den Dateien, aus denen du zitierst.
+Die Kennwerte beschreiben den Stand im Projekt. An jedem Feldtag steht, ob er so schon als Ausgabe vorliegt:
+**Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert) oder
+**nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** direkt in den Schritt Ausgeben dieses
+Einsatzes. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
 
 So kann das Ergebnis aussehen (die Werte sind erfunden):
 

@@ -13,7 +13,6 @@ import {
   entryText,
   exportSession,
   methodsSummary,
-  type MethodsSessionSummary,
   ExportPrecheckError,
   type ImageRef,
   montagePreview,
@@ -29,6 +28,7 @@ import {
   EXPORT_CHECK_STEP,
   IPC,
   type ExportCard,
+  type OverviewSession,
   type ExportRunResult,
   type SessionTranscriptPreview,
 } from "../shared/api.ts";
@@ -215,19 +215,16 @@ export function exportStatus(
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
 }
 
-/** Zahlen aller Einsätze für die Tabelle zum Methodenteil (Issue #149), mit den gewählten Einstellungen. */
-export function methodsOverview(
-  s: ProjectStore,
-  opts: {
-    video: boolean;
-    resolve?: boolean;
-    mixAudio?: boolean;
-    realtime?: boolean;
-    deviceTracks?: boolean;
-    viewer?: boolean;
-  },
-): MethodsSessionSummary[] {
-  return s.listSessions().map((x) => methodsSummary(s, x.id, exportSettings(s, x.id, opts)));
+/**
+ * Übersicht des Projekts (Issue #203): je Einsatz die Kennwerte und sein Stand. Die Zahlen beschreiben den Stand im
+ * Projekt. Verglichen wird mit der letzten Ausgabe in ihren eigenen Einstellungen: „stale“ heißt, im Einsatz hat sich
+ * seitdem etwas geändert. Ein Einsatz ohne Ausgabe wird so beschrieben, wie er mit Montagevideo ausgegeben würde.
+ */
+export function projectOverview(s: ProjectStore): OverviewSession[] {
+  return s.listSessions().map((x) => {
+    const settings = s.getExportRecord(x.id)?.options ?? exportSettings(s, x.id, { video: true });
+    return { ...methodsSummary(s, x.id, settings), place: x.place ?? "" };
+  });
 }
 
 /**

@@ -577,18 +577,24 @@ await kapitel("ausgeben", async () => {
     await siehe("Aktuell", page.getByText("Aktuell.", { exact: true }));
   });
 
-  await ablauf("Die Tabelle für den Methodenteil öffnen", async () => {
-    // Wenn: der Dialog geöffnet wird, dann stehen Eingang und Ausgabe mit der Montage-ID zum Kopieren bereit
-    await siehe("Für den Methodenteil", page.getByTestId("export-methods"));
-    await siehe("Tabelle für den Methodenteil…");
-    await knopf("Tabelle für den Methodenteil…").click();
-    const tabellen = page.getByTestId("methods-tables");
+  await ablauf("Die Übersicht mit den Kennwerten für den Methodenteil öffnen", async () => {
+    // Wenn: die Übersicht in der linken Leiste gewählt wird
+    await siehe("Übersicht");
+    await knopf("Übersicht").click();
+    const seite = page.getByTestId("overview");
+    // Dann: steht der Feldtag mit seinem Stand da, darunter Eingang und Ausgabe mit der Montage-ID zum Kopieren
+    await siehe("Feldtage", seite.getByRole("heading", { name: "Feldtage" }));
+    await siehe("Ausgabe aktuell", page.getByTestId("overview-days").getByText("Ausgabe aktuell"));
+    await siehe("Kennwerte", seite.getByRole("heading", { name: "Kennwerte" }));
+    const tabellen = page.getByTestId("overview-tables");
     await siehe("Eingang", tabellen.getByText(/^Eingang: Aufzeichnungen aus/));
     await siehe("Ausgabe", tabellen.getByText(/^Ausgabe: Einsatztranskript und Montagevideo/));
     await siehe("Montage-ID", tabellen.getByText(/^FS(-[0-9A-Z]{4}){3}$/), { hinweis: "Tabelle Ausgabe" });
     await siehe("Tabellen kopieren");
     await siehe("Als Markdown kopieren");
-    await schliessen();
+    // Wenn: der Name des Feldtags gewählt wird, dann ist der Einsatz wieder offen
+    await page.getByTestId("overview-days").getByRole("button").first().click();
+    await page.getByRole("tab", { name: /Ausgeben/ }).click();
   });
 
   await ablauf("Den Viewer im Browser öffnen", async () => {

@@ -31,6 +31,7 @@ const api = window.feldspur;
 
 export function SessionPane({
   sessionId,
+  initialStep,
   guard,
   strayDrop,
   onProject,
@@ -38,6 +39,8 @@ export function SessionPane({
   onHistory,
 }: {
   sessionId: string;
+  /** Schritt, in dem der Einsatz beginnt (Sprung aus der Übersicht); ohne ihn entscheidet der Einsatz selbst. */
+  initialStep?: Step | null;
   guard: Guard;
   /** Zähler aus `useStrayDrop`: Dateien wurden neben „Einsammeln“ gezogen. */
   strayDrop: number;
@@ -51,7 +54,7 @@ export function SessionPane({
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [transcribeId, setTranscribeId] = useState<string | null>(null);
-  const [step, setStep] = useState<Step | null>(null);
+  const [step, setStep] = useState<Step | null>(initialStep ?? null);
   const [selected, setSelected] = useState<string | null>(null);
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
   const exporting = useExport();

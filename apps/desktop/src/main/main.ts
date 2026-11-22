@@ -89,7 +89,7 @@ import {
   exportingSession,
   exportCard,
   exportStatus,
-  methodsOverview,
+  projectOverview,
   montagePlan,
   previewExport,
   registerOverlayBridge,
@@ -609,8 +609,8 @@ function registerIpc(): void {
     if (!existsSync(path)) return false;
     return (await shell.openPath(path)) === "";
   });
-  ipcMain.handle(IPC.methodsOverview, (_e, opts: ExportRequest) => ({
-    sessions: methodsOverview(requireStore(), opts),
+  ipcMain.handle(IPC.projectOverview, () => ({
+    sessions: projectOverview(requireStore()),
     citation: citationInfo(),
   }));
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>

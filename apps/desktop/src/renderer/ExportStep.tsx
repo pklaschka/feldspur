@@ -13,7 +13,6 @@ import type {
 } from "../shared/api.ts";
 import { CHECK_STEP, cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
-import { MethodsDialog } from "./MethodsDialog.tsx";
 import { MontageView } from "./MontageView.tsx";
 import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
@@ -101,7 +100,6 @@ export function ExportStep({
     });
   const { video, resolve, mixAudio, deviceTracks, viewer, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
-  const [methods, setMethods] = useState(false);
   const withEpisodes = view.session.episodes;
   const realtime = !(withEpisodes && byEpisodes);
   const ex = useExport();
@@ -392,21 +390,6 @@ export function ExportStep({
                 <span className="text-[0.9rem] text-muted">Ein anderer Einsatz wird gerade ausgegeben.</span>
               )}
             </div>
-            <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-methods">
-              <b className="block font-semibold">Für den Methodenteil</b>
-              <p className="mb-1.5 text-[0.85rem] text-muted">
-                Eine Tabelle über alle Einsätze zum Kopieren: welche Aufzeichnungen hineingeflossen sind und was
-                Feldspur daraus ausgibt.
-              </p>
-              <Button size="sm" onClick={() => setMethods(true)}>
-                Tabelle für den Methodenteil…
-              </Button>
-              <MethodsDialog
-                open={methods}
-                onOpenChange={setMethods}
-                options={{ video, resolve, mixAudio, deviceTracks, viewer, realtime }}
-              />
-            </section>
           </Panel>
           <Panel className="min-w-0">
             <h3 className="mb-2 text-[1rem] font-semibold">Vorschau des Einsatztranskripts</h3>

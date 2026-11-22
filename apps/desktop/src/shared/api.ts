@@ -670,9 +670,14 @@ export interface ExportCard {
   montageId: string;
 }
 
-/** Zahlen für die „Tabelle für den Methodenteil“ (Issue #149): alle Einsätze des Projekts und die Angaben zur Software. */
-export interface MethodsOverview {
-  sessions: MethodsSessionSummary[];
+/** Ein Einsatz in der Übersicht (Issue #203): seine Kennwerte, dazu die Tatsachen, die auch an seinen Reitern stehen. */
+export interface OverviewSession extends MethodsSessionSummary {
+  place: string;
+}
+
+/** Übersicht des Projekts (Issue #203): alle Einsätze mit ihren Kennwerten und die Angaben zur Software. */
+export interface ProjectOverview {
+  sessions: OverviewSession[];
   citation: CitationInfo;
 }
 
@@ -840,10 +845,10 @@ export interface FeldspurApi {
    */
   openExportFile(sessionId: string, name: string): Promise<boolean>;
   /**
-   * Zahlen aller Einsätze für die Tabelle zum Methodenteil, mit den gewählten Ausgabe-Einstellungen: was
-   * hineingeflossen ist, was die Ausgabe ergibt und ob sie so schon vorliegt.
+   * Kennwerte aller Einsätze für die Übersicht: was hineingeflossen ist, was die Ausgabe ergibt und ob sie so schon
+   * vorliegt. Beschreibt den Stand im Projekt.
    */
-  methodsOverview(opts: ExportRequestOptions): Promise<MethodsOverview>;
+  projectOverview(): Promise<ProjectOverview>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
@@ -1007,7 +1012,7 @@ export const IPC = {
   exportStatus: "export:status",
   exportCard: "export:card",
   openExportFile: "export:open-file",
-  methodsOverview: "export:methods",
+  projectOverview: "project:overview",
   montagePreview: "export:montage",
   exportSession: "export:run",
   cancelExport: "export:cancel",

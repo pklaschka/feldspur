@@ -6,7 +6,7 @@
 import type { ExportSettings, Id, PlacementBasis, ProjectStore, Source, SourceKind } from "@feldspur/core";
 import { baseName } from "./export.ts";
 import { compareExport } from "./export-state.ts";
-import { buildSessionTranscript } from "./session-transcript.ts";
+import { buildSessionTranscript, type SessionTranscript } from "./session-transcript.ts";
 
 /** Worauf die Lage einer Datei beruht; „context“ = bewusst ohne Uhrzeit, „none“ = (noch) ohne Uhrzeit. */
 export type MethodsBasis = PlacementBasis["kind"] | "context" | "none";
@@ -33,6 +33,10 @@ export interface MethodsSessionSummary {
   title: string;
   date: string;
   material: MethodsMaterialRow[];
+  /** Eingesammelte Dateien (Seiten eines Tagebuchs zählen einzeln, Teile einer Seite nicht). */
+  sources: number;
+  /** Geräte, deren Uhr noch nicht abgeglichen ist (ohne das Referenzgerät). */
+  unsynced: number;
   /** Was die Ausgabe mit den gewählten Einstellungen jetzt ergäbe. */
   output: {
     /** Dateiname ohne Endung. */
@@ -60,13 +64,11 @@ export interface MethodsSessionSummary {
 
 const KIND_ORDER: SourceKind[] = ["video", "audio", "photo", "diary", "note", "gps", "other"];
 
-/** Zahlen eines Einsatzes für die Einstellungen `settings` (so, wie die Ausgabe sie verwenden würde). */
-export function methodsSummary(store: ProjectStore, sessionId: Id, settings: ExportSettings): MethodsSessionSummary {
-  const session = store.getSession(sessionId);
-  const transcript = buildSessionTranscript(store, sessionId, {
-    mode: session.episodes && !settings.realtime ? "episodes" : "realtime",
-    episodes: session.episodes,
-  });
+/** Zahlen aus einem fertigen Einsatztranskript: was hineingeflossen ist und was die Ausgabe damit ergibt. */
+export function methodsNumbers(
+  transcript: SessionTranscript,
+  video: boolean,
+): Pick<MethodsSessionSummary, "title" | "date" | "material" | "sources" | "unsynced" | "output"> {
   const { input, resolved } = transcript;
   const devices = new Map(input.devices.map((d) => [d.id, d.label]));
   const rows = new Map<string, MethodsMaterialRow>();
@@ -106,16 +108,14 @@ export function methodsSummary(store: ProjectStore, sessionId: Id, settings: Exp
     (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.device.localeCompare(b.device, "de"),
   );
   for (const r of material) r.correctionsMs.sort((a, b) => a - b);
-
-  const record = store.getExportRecord(sessionId);
-  const empty = transcript.plan.durationMs <= 0;
-  const exported =
-    !record || empty ? "none" : compareExport(store, record, settings).differences.length ? "stale" : "current";
   return {
-    sessionId,
-    title: session.title,
-    date: session.date,
+    title: transcript.input.session.title,
+    date: transcript.input.session.date,
     material,
+    sources: input.sources.filter((s) => !s.partOf).length,
+    unsynced: input.devices.filter(
+      (d) => !d.isReference && (resolved.deviceClocks.get(d.id)?.offsetMs ?? null) === null,
+    ).length,
     output: {
       base: baseName(transcript),
       lines: transcript.entries.length,
@@ -124,8 +124,25 @@ export function methodsSummary(store: ProjectStore, sessionId: Id, settings: Exp
       mode: transcript.header.modeLabel,
       montageId: transcript.header.montageId,
       montageVideoId: transcript.header.montageVideoId,
-      video: settings.video,
+      video,
     },
+  };
+}
+
+/** Zahlen eines Einsatzes für die Einstellungen `settings` (so, wie die Ausgabe sie verwenden würde). */
+export function methodsSummary(store: ProjectStore, sessionId: Id, settings: ExportSettings): MethodsSessionSummary {
+  const session = store.getSession(sessionId);
+  const transcript = buildSessionTranscript(store, sessionId, {
+    mode: session.episodes && !settings.realtime ? "episodes" : "realtime",
+    episodes: session.episodes,
+  });
+  const record = store.getExportRecord(sessionId);
+  const empty = transcript.plan.durationMs <= 0;
+  const exported =
+    !record || empty ? "none" : compareExport(store, record, settings).differences.length ? "stale" : "current";
+  return {
+    sessionId,
+    ...methodsNumbers(transcript, settings.video),
     exported,
     exportedAt: record && !empty ? record.exportedAt : null,
   };

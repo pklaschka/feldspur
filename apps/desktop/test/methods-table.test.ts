@@ -27,6 +27,8 @@ const einsatz = (n: number, patch: Partial<MethodsSessionSummary> = {}): Methods
   sessionId: `s${n}`,
   title: `Testmarkt ${n}`,
   date: `2026-09-1${3 + n}`,
+  sources: 19,
+  unsynced: 0,
   material: [
     row({ files: 10, durationMs: 3_600_000, basis: { metadata: 10 }, correctionsMs: [42_000] }),
     row({ kind: "audio", device: "Rekorder", files: 2, durationMs: 5_400_000, basis: { spoken: 1, follows: 1 } }),
