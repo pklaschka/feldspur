@@ -117,6 +117,8 @@ try {
     // Wenn: ohne Montagevideo ausgegeben wird, dann ist die Ausgabe fertig
     await page.reload();
     await page.getByRole("tab", { name: /Ausgeben/ }).click();
+    // Der Viewer hält das Video fest: erst ihn abwählen, dann lässt sich das Video abwählen.
+    await page.getByRole("switch", { name: /^Viewer zum Ansehen im Browser/ }).click();
     await page.getByRole("switch", { name: "Montagevideo mit ausgeben" }).click();
     await pickFolder(out);
     await page.getByRole("button", { name: /^(Trotzdem a|A)usgeben…$/ }).click();
