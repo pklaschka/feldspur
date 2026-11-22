@@ -752,6 +752,19 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     if (!changed) break;
   }
 
+  // Ein widersprüchlicher Anker heißt: Eine der beiden Aufnahmen liegt falsch (oft eine Folgeaufnahme an der falschen
+  // Stelle der Kette). Welche, weiß Feldspur nicht; beide kommen deshalb auf „prüfen“. Eine Bestätigung bleibt stehen.
+  for (const c of anchorConflicts) {
+    const anchor = input.anchors.find((a) => a.id === c.anchorId);
+    if (!anchor) continue;
+    for (const id of [anchor.a.sourceId, anchor.b.sourceId]) {
+      const p = placements.get(id);
+      if (!p || p.basis.kind === "checked") continue;
+      const note = `Anker widerspricht um ${formatDuration(Math.abs(c.differenceMs))}`;
+      placements.set(id, { ...p, status: "check", notes: p.notes.includes(note) ? p.notes : [...p.notes, note] });
+    }
+  }
+
   placeDiaryPages(input, diary, placements);
   // Weitere Bilder einer Seite liegen genau dort, wo die Hauptquelle liegt.
   for (const src of input.sources) {

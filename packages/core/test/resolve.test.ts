@@ -349,6 +349,13 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     const res = resolveTimeline(input);
     // Dann: wird er mit dem Unterschied gemeldet
     expect(res.anchorConflicts).toEqual([{ anchorId: "bad", differenceMs: 10_000 }]);
+    // und: beide verankerten Aufnahmen sind nicht mehr „sicher“
+    for (const id of ["ZOOM0004.m4a", "C0013.MP4"]) {
+      expect(res.placements.get(id)!.status).toBe("check");
+      expect(res.placements.get(id)!.notes).toContain("Anker widerspricht um 0:10");
+    }
+    // und: Aufnahmen ohne diesen Anker bleiben, wie sie waren
+    expect(res.placements.get("C0012.MP4")!.status).toBe("ok");
   });
 
   it("Unsicherheiten addieren sich quadratisch", () => {
