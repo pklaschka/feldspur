@@ -33,6 +33,7 @@ import {
   type SessionTranscriptPreview,
 } from "../shared/api.ts";
 import { checkOriginals } from "./originals.ts";
+import { sessionChangeLogCsv } from "./changelog.ts";
 
 const CHUNK = 60;
 let running: string | null = null;
@@ -184,6 +185,9 @@ export function exportSettings(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    changeLog?: boolean;
+    manifest?: boolean;
   },
 ): ExportSettings {
   return {
@@ -195,6 +199,9 @@ export function exportSettings(
     deviceTracks: opts.video && opts.deviceTracks !== false,
     // Der Viewer gehört zum Video.
     viewer: opts.video && opts.viewer !== false,
+    readme: opts.readme !== false,
+    changeLog: opts.changeLog !== false,
+    manifest: opts.manifest !== false,
   };
 }
 
@@ -209,6 +216,9 @@ export function exportStatus(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    changeLog?: boolean;
+    manifest?: boolean;
   },
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
@@ -287,6 +297,11 @@ export async function runExport(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    changeLog?: boolean;
+    manifest?: boolean;
+    /** Zeile zur Software (Version, DOI) für die LIESMICH. */
+    software?: string;
     /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */
     acceptOriginals?: boolean;
   },
@@ -341,6 +356,17 @@ export async function runExport(
       audioMix: opts.mixAudio === false ? "main" : "all",
       deviceTracks: opts.deviceTracks !== false,
       viewer: opts.viewer !== false,
+      readme: settings.readme,
+      software: opts.software,
+      // Stand beim Start, wie der Fingerabdruck.
+      changeLog: settings.changeLog
+        ? sessionChangeLogCsv(
+            s.history,
+            sessionId,
+            s.listSources(sessionId).map((x) => x.id),
+          )
+        : undefined,
+      manifest: settings.manifest,
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),

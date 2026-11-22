@@ -97,6 +97,9 @@ const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
   deviceTracks: ["mit einer Tonspur je Gerät", "ohne Tonspuren je Gerät"],
   viewer: ["mit Viewer", "ohne Viewer"],
   realtime: ["in Echtzeit", "nach Episoden geschnitten"],
+  readme: ["mit LIESMICH", "ohne LIESMICH"],
+  changeLog: ["mit Änderungsprotokoll", "ohne Änderungsprotokoll"],
+  manifest: ["mit Prüfsummenliste", "ohne Prüfsummenliste"],
 };
 
 /** Die Einstellungen, die sich unterscheiden, als „damals …, jetzt …“. */

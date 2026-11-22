@@ -538,6 +538,18 @@ await kapitel("ausgeben", async () => {
     ])
       await siehe(s, page.getByRole("switch", { name: new RegExp(`^${esc(s)}`) }));
     await siehe("Viewer zum Ansehen im Browser", page.getByRole("switch", { name: /^Viewer zum Ansehen im Browser/ }));
+    await siehe(
+      "LIESMICH mit Tabelle für den Methodenteil",
+      page.getByRole("switch", { name: /^LIESMICH mit Tabelle für den Methodenteil/ }),
+    );
+    await siehe("Änderungsprotokoll", page.getByRole("switch", { name: /^Änderungsprotokoll/ }));
+    await siehe("Prüfsummenliste", page.getByRole("switch", { name: /^Prüfsummenliste/ }));
+    // Solange der Viewer gewählt ist, lässt sich das Montagevideo nicht abwählen.
+    await siehe(
+      "Montagevideo bleibt mit Viewer an",
+      page.getByRole("switch", { name: /^Montagevideo mit ausgeben/, disabled: true }),
+      { handbuch: "bleibt **Montagevideo mit ausgeben** deshalb an" },
+    );
     await siehe("Montage ansehen…");
     await siehe("Kontext", page.getByTestId("export-context"), { hinweis: "Karte Kontext links" });
     const offen = await page.getByText("Noch offen").count();
@@ -554,7 +566,16 @@ await kapitel("ausgeben", async () => {
     for (const s of ["Zeitraum", "Quellen", "Einsatztranskript", "Montage-ID"])
       await siehe(s, page.getByTestId("export-receipt-facts").getByText(s, { exact: true }));
     await siehe("Dateien anzeigen", page.getByTestId("export-files-toggle"));
+    await page.getByTestId("export-files-toggle").click();
     await siehe("Ausgabeordner", page.getByTestId("export-result"));
+    await siehe("LIESMICH", page.getByTestId("export-result").getByText("LIESMICH.html", { exact: true }), {
+      handbuch: "`LIESMICH.html`",
+    });
+    await siehe(
+      "manifest-sha256.txt",
+      page.getByTestId("export-result").getByText("manifest-sha256.txt", { exact: true }),
+      { handbuch: "`manifest-sha256.txt`" },
+    );
     return out;
   });
 

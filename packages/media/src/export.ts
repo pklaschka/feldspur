@@ -19,6 +19,8 @@ import {
 } from "./session-transcript.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 import { excelCsv } from "./csv.ts";
+import { exportReadmeHtml, MANIFEST_NAME, README_NAME } from "./readme.ts";
+import { sha256File } from "./hash.ts";
 import { log, logSince, logSize } from "./log.ts";
 import { sessionTranscriptHtml } from "./viewer/html.ts";
 import { xlsx, type Cell } from "./xlsx.ts";
@@ -44,6 +46,17 @@ export interface ExportOptions {
   deviceTracks?: boolean;
   /** Viewer (.html) neben dem Montagevideo: Einsatztranskript synchron zum Video im Browser (nur mit Video). */
   viewer?: boolean;
+  /** LIESMICH.html in den Ordner: was darin liegt, wie man zitiert, Tabelle für den Methodenteil (Issues #130, #149). */
+  readme?: boolean;
+  /** Zeile zur Software (Version, DOI) für die LIESMICH; die App liefert sie. */
+  software?: string;
+  /**
+   * Änderungsprotokoll dieses Einsatzes als fertige CSV (Issue #204); die App liefert es, weil Bereiche und Felder dort
+   * lesbar gemacht werden. Ohne Wert entfällt die Datei.
+   */
+  changeLog?: string;
+  /** Prüfsummenliste aller Dateien der Ausgabe als letzte Datei (Issue #204). */
+  manifest?: boolean;
   /**
    * Bilder, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG liefern. In der App zeichnet
    * die Oberfläche sie mit pdf.js; ohne diese Hilfe fehlen solche Ausschnitte.
@@ -274,7 +287,7 @@ export async function exportSession(
   const started = performance.now();
   log(
     "ausgabe",
-    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
+    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, LIESMICH ${opts.readme ? "ja" : "nein"}, Änderungsprotokoll ${opts.changeLog !== undefined ? "ja" : "nein"}, Prüfsummen ${opts.manifest ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
   );
   try {
     await mkdir(outDir, { recursive: true });
@@ -287,6 +300,9 @@ export async function exportSession(
         `${base}.docx`,
         `${base}_Variablen.xlsx`,
         `${base}_Begleitprotokoll.csv`,
+        ...(opts.changeLog !== undefined ? [`${base}_Aenderungsprotokoll.csv`] : []),
+        ...(opts.readme ? [README_NAME] : []),
+        ...(opts.manifest ? [MANIFEST_NAME] : []),
       ].map((name) => outPath(outDir, name)),
     );
   } catch (e) {
@@ -383,6 +399,30 @@ export async function exportSession(
       "Begleitprotokoll",
     );
     files.push(`${base}_Begleitprotokoll.csv`);
+    if (opts.changeLog !== undefined) {
+      await writeOut(outPath(outDir, `${base}_Aenderungsprotokoll.csv`), opts.changeLog, "Änderungsprotokoll");
+      files.push(`${base}_Aenderungsprotokoll.csv`);
+    }
+    if (opts.readme) {
+      // Nach allen Inhalten, damit die LIESMICH jede Datei der Ausgabe nennt, auch sich selbst und die Prüfsummenliste.
+      const html = exportReadmeHtml(transcript, {
+        files: [...files, README_NAME, ...(opts.manifest ? [MANIFEST_NAME] : [])],
+        video: opts.video !== false,
+        software: opts.software,
+      });
+      await writeOut(outPath(outDir, README_NAME), html, "LIESMICH");
+      files.push(README_NAME);
+    }
+    if (opts.manifest) {
+      // Ganz zuletzt: Prüfsummen aller anderen Dateien, im Format von sha256sum (prüfbar mit `sha256sum -c`).
+      const lines: string[] = [];
+      for (const [i, f] of files.entries()) {
+        opts.onProgress?.("Prüfsummen", i, files.length);
+        lines.push(`${await sha256File(outPath(outDir, f), { signal })}  ${f}`);
+      }
+      await writeOut(outPath(outDir, MANIFEST_NAME), lines.join("\n") + "\n", "Prüfsummenliste");
+      files.push(MANIFEST_NAME);
+    }
     opts.onProgress?.("Fertig", 1, 1);
     log("ausgabe", `fertig nach ${logSince(started)}: ${files.join(", ")}`);
     return { dir: outDir, files, durationMs: transcript.plan.durationMs };

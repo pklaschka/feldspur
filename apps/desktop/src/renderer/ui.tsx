@@ -524,17 +524,20 @@ export function Toggle({
   checked,
   onChange,
   label,
+  disabled,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <Switch.Root
       checked={checked}
       onCheckedChange={onChange}
+      disabled={disabled}
       aria-label={label}
-      className="relative h-[18px] w-8 flex-none cursor-pointer rounded-full bg-line-2 data-[state=checked]:bg-accent"
+      className="relative h-[18px] w-8 flex-none cursor-pointer rounded-full bg-line-2 disabled:cursor-not-allowed disabled:opacity-55 data-[state=checked]:bg-accent"
     >
       <Switch.Thumb className="block size-3.5 translate-x-0.5 rounded-full bg-panel shadow-xs transition-transform data-[state=checked]:translate-x-[16px]" />
     </Switch.Root>

@@ -2,7 +2,7 @@
  * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Einsatztranskript (.docx), Dokumentvariablen und
  * Begleitprotokoll.
  */
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ExportCard,
   ExportProgress,
@@ -27,6 +27,9 @@ const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || p;
 const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
+  [/^LIESMICH\.html$/, "LIESMICH: was im Ordner liegt, wie zitiert wird, Tabelle für den Methodenteil"],
+  [/^manifest-sha256\.txt$/, "Prüfsummenliste: SHA-256 jeder Datei im Ordner"],
+  [/_Aenderungsprotokoll\.csv$/, "Änderungsprotokoll dieses Einsatzes: jede Änderung mit vorher und nachher"],
   [/\.html$/, "Viewer: Einsatztranskript synchron zum Video, im Browser öffnen"],
   [/\.docx$/, "Einsatztranskript für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
   [/\.xlsx$/, "Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren)"],
@@ -41,6 +44,9 @@ interface Options {
   mixAudio: boolean;
   deviceTracks: boolean;
   viewer: boolean;
+  readme: boolean;
+  changeLog: boolean;
+  manifest: boolean;
   byEpisodes: boolean;
 }
 const DEFAULTS: Options = {
@@ -49,12 +55,17 @@ const DEFAULTS: Options = {
   mixAudio: true,
   deviceTracks: true,
   viewer: true,
+  readme: true,
+  changeLog: true,
+  manifest: true,
   byEpisodes: false,
 };
 const KEY = "feldspur.export-options";
 function loadOptions(): Options {
   try {
-    return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Options>) };
+    const o = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Options>) };
+    // Früher ließ sich der Viewer ohne Video wählen (und fiel dann still weg); jetzt hält er das Video fest.
+    return o.viewer && !o.video ? { ...o, viewer: false } : o;
   } catch {
     return DEFAULTS;
   }
@@ -98,7 +109,7 @@ export function ExportStep({
       }
       return next;
     });
-  const { video, resolve, mixAudio, deviceTracks, viewer, byEpisodes } = opts;
+  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
   const realtime = !(withEpisodes && byEpisodes);
@@ -110,20 +121,23 @@ export function ExportStep({
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
   const cancelled = busy ? null : (ex.cancelled[sessionId] ?? null);
-  const settings = { video, resolve, mixAudio, deviceTracks, viewer, realtime };
+  const settings = useMemo(
+    () => ({ video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, realtime }),
+    [video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, realtime],
+  );
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const [status, setStatus] = useState<ExportStatus | null>(null);
   useEffect(() => {
     if (busy) return;
     let live = true;
-    void api.exportStatus(sessionId, { video, resolve, mixAudio, deviceTracks, viewer, realtime }).then(
+    void api.exportStatus(sessionId, settings).then(
       (st) => live && setStatus(st),
       () => live && setStatus(null),
     );
     return () => {
       live = false;
     };
-  }, [view, sessionId, video, resolve, mixAudio, deviceTracks, viewer, realtime, busy, justDone]);
+  }, [view, sessionId, settings, busy, justDone]);
   const result = busy || status?.record.sessionId !== sessionId ? null : status;
 
   useEffect(() => {
@@ -168,14 +182,14 @@ export function ExportStep({
   useEffect(() => {
     if (!cardFor) return;
     let live = true;
-    void api.exportCard(sessionId, { video, resolve, mixAudio, deviceTracks, viewer, realtime }).then(
+    void api.exportCard(sessionId, settings).then(
       (c) => live && setCard({ key: cardFor, card: c }),
       () => {},
     );
     return () => {
       live = false;
     };
-  }, [view, cardFor, sessionId, video, resolve, mixAudio, deviceTracks, viewer, realtime]);
+  }, [view, cardFor, sessionId, settings]);
   const card = loadedCard && loadedCard.key === cardFor ? loadedCard.card : null;
 
   const empty = !preview || preview.durationMs <= 0;
@@ -187,7 +201,7 @@ export function ExportStep({
       <StepHeader
         className="max-w-[1240px]"
         title="Ausgeben"
-        summary="Ein Ordner pro Einsatz: Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; dazu auf Wunsch Montagevideo, Viewer und Schnittliste."
+        summary="Ein Ordner pro Einsatz: Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; dazu auf Wunsch Montagevideo, Viewer, LIESMICH, Änderungsprotokoll, Prüfsummenliste und Schnittliste."
         help={
           <>
             <p className="mb-1.5">
@@ -328,8 +342,13 @@ export function ExportStep({
               <Option
                 checked={video}
                 onChange={(v) => set({ video: v })}
+                disabled={viewer}
                 label="Montagevideo mit ausgeben"
-                hint="Dauert einige Minuten. Aus: nur Einsatztranskript, Dokumentvariablen und Begleitprotokoll."
+                hint={
+                  viewer
+                    ? "Bleibt an, solange der Viewer gewählt ist: Der Viewer spielt dieses Video ab."
+                    : "Dauert einige Minuten. Aus: nur Einsatztranskript, Dokumentvariablen und Begleitprotokoll."
+                }
               />
               <Option
                 checked={mixAudio}
@@ -345,9 +364,27 @@ export function ExportStep({
               />
               <Option
                 checked={viewer}
-                onChange={(v) => set({ viewer: v })}
+                onChange={(v) => set(v ? { viewer: true, video: true } : { viewer: false })}
                 label="Viewer zum Ansehen im Browser (.html)"
-                hint="Eine Datei neben dem Video: Einsatztranskript läuft mit, Klick auf eine Zeile springt. Mit Bildern, darum größer."
+                hint="Eine Datei neben dem Video: Einsatztranskript läuft mit, Klick auf eine Zeile springt. Mit Bildern, darum größer. Braucht das Montagevideo."
+              />
+              <Option
+                checked={readme}
+                onChange={(v) => set({ readme: v })}
+                label="LIESMICH mit Tabelle für den Methodenteil (.html)"
+                hint="Erklärt, was im Ordner liegt und wie daraus zitiert wird; nennt Eingang, Ausgabe und Montage-ID."
+              />
+              <Option
+                checked={changeLog}
+                onChange={(v) => set({ changeLog: v })}
+                label="Änderungsprotokoll (.csv)"
+                hint="Jede Änderung an diesem Einsatz mit Zeit und den Werten vorher und nachher."
+              />
+              <Option
+                checked={manifest}
+                onChange={(v) => set({ manifest: v })}
+                label="Prüfsummenliste (manifest-sha256.txt)"
+                hint="SHA-256 jeder Datei im Ordner. Damit lässt sich später zeigen, dass nichts verändert wurde."
               />
               <Option
                 checked={resolve}
@@ -758,17 +795,20 @@ function PreCheckResult({
 function Option({
   checked,
   onChange,
+  disabled,
   label,
   hint,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
+  /** Festgehalten, weil eine andere Wahl davon abhängt; der Grund steht dann im Hinweis. */
+  disabled?: boolean;
   label: string;
   hint: string;
 }) {
   return (
     <label className="grid grid-cols-[auto_1fr] items-center gap-x-2.5 text-[0.95rem]">
-      <Toggle checked={checked} onChange={onChange} label={label} />
+      <Toggle checked={checked} onChange={onChange} label={label} disabled={disabled} />
       {label}
       <span className="col-start-2 text-[0.85rem] text-muted">{hint}</span>
     </label>
