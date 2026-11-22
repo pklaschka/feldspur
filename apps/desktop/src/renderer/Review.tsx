@@ -33,7 +33,8 @@ import {
 import { prepareCanvas } from "./canvas.ts";
 import { usePlayback } from "./playback.tsx";
 import type { Reveal } from "./SearchDialog.tsx";
-import { Button, ContextMark, cx, Glyph, StepHeader, Toggle } from "./ui.tsx";
+import { Button, ContextMark, cx, FlagMark, Glyph, StepHeader, Toggle } from "./ui.tsx";
+import { dismissKeyHint, useKeyHint } from "./review/keyHint.ts";
 import { axisRange, fitPpm, MAX_PPM, revealPpm, scrollFor, wheelFactor, zoomAround } from "./review/viewport.ts";
 import { buildTracks, rowStart, trackHeightFor, trackSub } from "./review/tracks.ts";
 import { HoverCard, Legend, Tray, ZoomGlyph } from "./review/parts.tsx";
@@ -458,6 +459,7 @@ function Timeline({
 
   // Unsichere Lagen in der Reihenfolge der Prüfliste durchgehen (stärkste Widersprüche zuerst).
   const toCheck = useMemo(() => checkQueue(placed), [placed]);
+  const keyHint = useKeyHint();
   const show = (r: SourceRow) => {
     const px = xOf(scale, rowStart(r));
     if (px < 0 || px > width) centerOn(rowStart(r));
@@ -539,6 +541,18 @@ function Timeline({
             data-testid="next-check"
           >
             {asPlaces(toCheck, view.conflictGroups).length} zu prüfen · Nächste →
+          </Button>
+        )}
+        {/* Abschluss (Issue #195): erst, wenn auch nichts mehr ohne Lage ist, wie beim Hauptknopf oben. */}
+        {!toCheck.length && !unplaced.length && view.rows.length > 0 && (
+          <Button
+            size="sm"
+            className="rounded-full bg-good/12 text-good hover:brightness-95"
+            onClick={onNext}
+            data-testid="all-checked"
+          >
+            <FlagMark size={11} className="mr-1.5 inline align-[-1px]" />
+            Alle Stellen geprüft · Weiter: Ausgeben →
           </Button>
         )}
         <span className="flex-1" />
@@ -723,6 +737,21 @@ function Timeline({
           {isMac ? "⌘+Enter" : "Strg+Enter"}: Lage passt
         </span>
       </div>
+      {keyHint && toCheck.length > 0 && (
+        <p
+          className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-panel px-3 py-2 text-[0.92rem]"
+          role="note"
+          data-testid="key-hint"
+        >
+          <span className="flex-1">
+            Schneller geht es mit der Tastatur: <kbd className="kbd">{isMac ? "⌘+Enter" : "Strg+Enter"}</kbd> bestätigt
+            „Lage passt“ und geht zur nächsten Stelle. <kbd className="kbd">N</kbd> springt weiter, ohne zu bestätigen.
+          </span>
+          <Button size="sm" variant="ghost" onClick={dismissKeyHint}>
+            Verstanden
+          </Button>
+        </p>
+      )}
       <CheckList view={view} selected={selected} onSelect={selectFromList} onNext={nextCheck} />
       {/* Unter der Liste „Zu prüfen“: was noch fehlt, gehört zum Blick auf den Tag, nicht ans Seitenende. */}
       {unplaced.length > 0 && <Tray rows={unplaced} selected={selected} onSelect={onSelect} />}

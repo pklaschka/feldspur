@@ -252,3 +252,18 @@
     -1.25rem 0 0 var(--settle),
     1.25rem 0 0 var(--settle);
 }
+
+/* Taste im Fließtext, z. B. im einmaligen Tastenhinweis in Durchsehen (Issue #195). */
+.kbd {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  background: var(--panel-2);
+  font: inherit;
+  font-size: 0.88em;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
