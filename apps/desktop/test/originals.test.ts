@@ -56,8 +56,8 @@ describe("Originale neu verknüpfen", () => {
     // Dann: fehlen beide, die Ausgabe ist gesperrt und die Analyse kommt nicht an den Ton
     const view = buildSessionView(store, session.id);
     expect(view.rows.map((r) => r.file)).toEqual(["missing", "missing"]);
-    expect(exportBlocker(store, session.id, false)).toMatch(/Eine Originaldatei fehlt \(F-/);
-    expect(exportBlocker(store, session.id, true)).toMatch(/2 Originaldateien fehlen/);
+    expect(exportBlocker(store, session.id, false)).toMatch(/Feldspur findet eine Originaldatei nicht \(F-/);
+    expect(exportBlocker(store, session.id, true)).toMatch(/Feldspur findet 2 Originaldateien nicht/);
     expect(unreachableForAnalysis(store, session.id).has(audio.id)).toBe(true);
 
     // Wenn: im neuen Ordner gesucht wird, dann sind beide neu verknüpft

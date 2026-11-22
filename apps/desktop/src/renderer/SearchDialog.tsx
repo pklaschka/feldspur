@@ -17,6 +17,14 @@ const KIND_LABEL: Record<Hit["kind"], string> = {
   episode: "Episode",
 };
 
+/** Leere Suche: den Suchbegriff nennen (lange gekürzt), bei einer Uhrzeit sagen, dass dort nichts liegt (Issue #194). */
+export function nothingFound(query: string): string {
+  const q = query.trim();
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(q)) return `Um ${q} Uhr liegt in diesem Einsatz kein Eintrag.`;
+  const shown = q.length > 40 ? `${q.slice(0, 39).trimEnd()}…` : q;
+  return `Nichts gefunden für „${shown}“.`;
+}
+
 export function SearchDialog({
   view,
   open,
@@ -84,7 +92,7 @@ export function SearchDialog({
           <ul
             ref={list}
             id={listId}
-            className="overflow-y-auto border-t border-line px-1.5 py-1.5"
+            className={cx("overflow-y-auto border-t border-line px-1.5 py-1.5", !hits.length && "hidden")}
             role="listbox"
             aria-label="Treffer"
           >
@@ -134,19 +142,26 @@ export function SearchDialog({
             role="status"
             className={cx(
               "border-t border-line px-4 py-1.5 text-[0.82rem] text-muted",
+              hasQuery && total === 0 && "pt-3 text-[0.95rem] text-ink",
               (!hasQuery || (total > 0 && total <= hits.length)) && "sr-only",
             )}
           >
             {!hasQuery
               ? ""
               : total === 0
-                ? "Nichts gefunden."
+                ? nothingFound(query)
                 : total > hits.length
                   ? `Erste ${hits.length} von ${total} Treffern. Suche eingrenzen, z. B. mit einer Uhrzeit.`
                   : total === 1
                     ? "1 Treffer."
                     : `${total} Treffer.`}
           </p>
+          {hasQuery && total === 0 && (
+            <p className="px-4 pb-3 text-[0.82rem] text-muted" data-testid="search-scope">
+              Gesucht in Mitschrift, Notizen, Tagebuch, Quellen und Episoden dieses Einsatzes. Eine Uhrzeit wie 10:15
+              zeigt alle Einträge aus dieser Minute.
+            </p>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

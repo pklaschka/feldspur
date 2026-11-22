@@ -30,22 +30,38 @@ const FILE_STATE_CLASS: Record<FileState, string> = {
 export const needsRelink = (r: Pick<SourceRow, "file">) =>
   r.file === "missing" || r.file === "unreadable" || r.file === "changed";
 
-/** Satz über die Auffälligkeiten, z. B. „2 Originaldateien fehlen, 1 ist verändert.“; null, wenn alles da ist. */
+const counts = (rows: Pick<SourceRow, "file">[]) => ({
+  missing: rows.filter((r) => r.file === "missing" || r.file === "unreadable").length,
+  changed: rows.filter((r) => r.file === "changed").length,
+});
+const originals = (n: number) => (n === 1 ? "1 Originaldatei" : `${n} Originaldateien`);
+
+/**
+ * Satz über die Auffälligkeiten, z. B. „Feldspur findet 2 Originaldateien nicht, 1 ist verändert.“; null, wenn alles
+ * da ist. „Findet nicht“ statt „fehlt“: meist ist nur die Platte nicht angeschlossen (Issue #194).
+ */
 export function originalsSummary(rows: Pick<SourceRow, "file">[]): string | null {
-  const missing = rows.filter((r) => r.file === "missing" || r.file === "unreadable").length;
-  const changed = rows.filter((r) => r.file === "changed").length;
-  const parts: string[] = [];
-  if (missing) parts.push(missing === 1 ? "1 Originaldatei fehlt" : `${missing} Originaldateien fehlen`);
-  if (changed) {
-    parts.push(
-      missing
-        ? `${changed} ${changed === 1 ? "ist" : "sind"} verändert`
-        : changed === 1
-          ? "1 Originaldatei ist verändert"
-          : `${changed} Originaldateien sind verändert`,
-    );
-  }
-  return parts.length ? `${parts.join(", ")}.` : null;
+  const { missing, changed } = counts(rows);
+  if (missing && changed)
+    return `Feldspur findet ${originals(missing)} nicht, ${changed} ${changed === 1 ? "ist" : "sind"} verändert.`;
+  if (missing) return `Feldspur findet ${originals(missing)} nicht.`;
+  if (changed) return `${originals(changed)} ${changed === 1 ? "ist" : "sind"} verändert.`;
+  return null;
+}
+
+/** Was das für das Projekt heißt und was zu tun ist; null, wenn alles da ist. */
+export function originalsDetail(rows: Pick<SourceRow, "file">[]): string | null {
+  const { missing, changed } = counts(rows);
+  const safe = "Im Projekt ist nichts verloren: Zeiten, Mitschrift, Notizen und Tagebuchtexte sind vollständig.";
+  if (missing && changed)
+    return `${safe} ${changed === 1 ? "Die veränderte Datei ist" : "Die veränderten Dateien sind"} nicht mehr die vom Einsammeln.`;
+  if (missing)
+    return `${safe} Oft ist nur die Festplatte nicht angeschlossen oder ein Ordner umbenannt. Für Vorschau, Tonanalyse und Ausgabe braucht Feldspur die Originale.`;
+  if (changed)
+    return changed === 1
+      ? "Sie ist nicht mehr die Datei, die du eingesammelt hast: Größe oder Prüfsumme sind anders. Zeiten und Mitschrift im Projekt bleiben, wie sie sind, beziehen sich aber auf die Datei vom Einsammeln. Eine unveränderte Kopie lässt sich neu verknüpfen."
+      : "Sie sind nicht mehr die Dateien, die du eingesammelt hast: Größe oder Prüfsumme sind anders. Zeiten und Mitschrift im Projekt bleiben, wie sie sind, beziehen sich aber auf die Dateien vom Einsammeln. Unveränderte Kopien lassen sich neu verknüpfen.";
+  return null;
 }
 
 /** Leiste über den Schritten, solange etwas fehlt oder verändert ist. */
@@ -54,14 +70,15 @@ export function OriginalsBanner({ view, onOpen }: { view: SessionView; onOpen: (
   if (!text) return null;
   return (
     <div
-      className="mx-6 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-warn-soft px-3 py-2 text-[0.9rem]"
+      className="mx-6 mt-3 flex items-start gap-3 rounded-lg bg-warn-soft px-3 py-2 text-[0.9rem]"
       role="status"
       data-testid="originals-banner"
     >
-      <span className="text-warn">
-        <b className="font-semibold">{text}</b> Vorschau, Tonanalyse und Ausgabe brauchen die Originale.
-      </span>
-      <Button size="sm" onClick={onOpen}>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-warn">{text}</p>
+        <p className="mt-0.5 max-w-[78ch] text-ink-2">{originalsDetail(view.rows)}</p>
+      </div>
+      <Button size="sm" onClick={onOpen} className="shrink-0">
         Originale suchen…
       </Button>
     </div>

@@ -720,8 +720,8 @@ function PreCheckResult({
         <>
           <b className="block font-semibold text-bad">
             {result.blocking.length === 1
-              ? "Eine Originaldatei fehlt, ohne sie geht die Ausgabe nicht"
-              : `${result.blocking.length} Originaldateien fehlen, ohne sie geht die Ausgabe nicht`}
+              ? "Feldspur findet eine Originaldatei nicht, ohne sie geht die Ausgabe nicht"
+              : `Feldspur findet ${result.blocking.length} Originaldateien nicht, ohne sie geht die Ausgabe nicht`}
           </b>
           <ul className="my-1 grid gap-0.5 text-[0.86rem]">{result.blocking.map(line)}</ul>
         </>

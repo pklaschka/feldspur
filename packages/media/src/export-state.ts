@@ -161,7 +161,9 @@ export function compareExport(
     differences.push({
       kind: "originals-missing",
       text:
-        missing.length === 1 ? "Eine Originaldatei fehlt jetzt." : `${missing.length} Originaldateien fehlen jetzt.`,
+        missing.length === 1
+          ? "Feldspur findet eine Originaldatei nicht mehr."
+          : `Feldspur findet ${missing.length} Originaldateien nicht mehr.`,
       labels: missing.map(label),
     });
   }

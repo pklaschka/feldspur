@@ -817,6 +817,11 @@ try {
     // Schnellsuche (Strg+K) findet die importierte Zeile und springt hin.
     await page.keyboard.press("Control+k");
     const searchBox = page.getByTestId("search").getByRole("combobox", { name: "Suchen" });
+    // Wenn: nichts passt, dann nennt die Suche den Begriff und sagt, wo sie gesucht hat
+    await searchBox.fill("Kirchturmglocke");
+    await page.getByTestId("search").getByText("Nichts gefunden für „Kirchturmglocke“.").waitFor();
+    await page.getByTestId("search-scope").waitFor();
+    await shot("-suche-leer");
     await searchBox.fill("noch frei");
     await page.getByTestId("search").getByRole("option").first().getByText("noch frei").waitFor();
     await shot("-suche");
@@ -1251,8 +1256,9 @@ try {
       await page.keyboard.press("Control+o");
       await page.getByRole("menuitem", { name: /^Test/ }).click();
       const banner = page.getByTestId("originals-banner");
-      await banner.getByText(/Originaldateien fehlen/).waitFor();
-      const bannerText = await banner.locator("b").innerText();
+      await banner.getByText(/Feldspur findet \d+ Originaldateien nicht/).waitFor();
+      const bannerText = await banner.locator("p").first().innerText();
+      await shot("-originale-leiste");
       await page.getByRole("tab", { name: /Ausgeben/ }).click();
       await page.getByRole("button", { name: /^(Trotzdem a|A)usgeben…$/ }).click();
       const pre = page.getByTestId("export-originals");

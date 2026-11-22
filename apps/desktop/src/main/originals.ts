@@ -60,7 +60,7 @@ export function exportBlocker(s: ProjectStore, sessionId: Id, video: boolean): s
   const { blocking } = exportVerdict(sources, [...states.values()], { video });
   if (!blocking.length) return null;
   const labels = blocking.map((c) => sources.find((x) => x.id === c.sourceId)?.label ?? "?");
-  return `${blocking.length === 1 ? "Eine Originaldatei fehlt" : `${blocking.length} Originaldateien fehlen`} (${labels.join(", ")}). Bitte zuerst neu verknüpfen.`;
+  return `Feldspur findet ${blocking.length === 1 ? "eine Originaldatei" : `${blocking.length} Originaldateien`} nicht (${labels.join(", ")}). Bitte zuerst neu verknüpfen.`;
 }
 
 /** Ids der Quellen, die die Tonanalyse überspringen muss, mit Grund. */
@@ -69,7 +69,7 @@ export function unreachableForAnalysis(s: ProjectStore, sessionId: Id): Map<Id, 
   for (const src of s.listSources(sessionId)) {
     if (src.kind !== "audio" && src.kind !== "video") continue;
     const c = quickCheck(src, hashCache);
-    if (c.state === "missing" || c.state === "unreadable") out.set(src.id, `Originaldatei fehlt: ${c.detail}`);
+    if (c.state === "missing" || c.state === "unreadable") out.set(src.id, `Originaldatei nicht gefunden: ${c.detail}`);
   }
   return out;
 }

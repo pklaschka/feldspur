@@ -74,7 +74,8 @@ Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau
 Zeitbelegen und Dateiangaben. Mit **Suchen** ([Strg+K]{.kbd}, auf dem Mac [⌘+K]{.kbd}) durchsuchst du Mitschrift, Notizen, Tagebuch,
 Quellen und Episoden, auch nach einer Uhrzeit. Ein Treffer in der Mitschrift öffnet das Mitschreiben direkt an dieser Stelle. Die Liste zeigt höchstens
 60 Treffer in Uhrzeit-Reihenfolge; gibt es mehr, steht darunter "Erste 60 von 143 Treffern". Grenze die Suche dann ein,
-etwa mit einer Uhrzeit wie 10:15 oder einem weiteren Wort. Mit [↑]{.kbd} [↓]{.kbd} wählst du einen Treffer, [Enter]{.kbd} springt hin; Screenreader
+etwa mit einer Uhrzeit wie 10:15 oder einem weiteren Wort. Findet die Suche nichts, nennt sie den Suchbegriff und
+sagt, wo sie gesucht hat. Mit [↑]{.kbd} [↓]{.kbd} wählst du einen Treffer, [Enter]{.kbd} springt hin; Screenreader
 lesen den gewählten Treffer vor.
 
 **Rückgängig** ([Strg+Z]{.kbd}, auf dem Mac [⌘+Z]{.kbd}) nimmt den letzten Schritt zurück, etwa eine entfernte Quelle, einen
