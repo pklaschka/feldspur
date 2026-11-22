@@ -7,7 +7,7 @@
   ],
   "title": "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen",
   "description": "Forschungswerkzeug für die Ethnografie. Feldspur legt alle Aufzeichnungen eines Feldeinsatzes (Tagebuchscans, Video, Audio, Fotos, Notizen) auf eine gemeinsame Uhrzeit-Achse und erzeugt daraus ein codierbares Quelldokument, zuerst für MAXQDA. Große Teile des Codes wurden mit generativer KI (Claude, Anthropic) unter der Leitung von Zuri Nimca Klaschka entwickelt.",
-  "version": "0.3.0",
+  "version": "0.4.0-rc.1",
   "access_right": "open",
   "license": "eupl-1.2",
   "upload_type": "software",

@@ -4,6 +4,37 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.4.0-rc.1 – 2026-11-22 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at 024f3a1f279daf3966434b3985e6185568187c7e -->
+
+### Neu
+
+- Übersicht mit Feldtagen und Kennwerten für den Methodenteil ([#219](https://github.com/pklaschka/feldspur/pull/219), @pklaschka)
+- Ausgabeordner erklärt sich selbst: LIESMICH, Änderungsprotokoll und Prüfsummenliste ([#220](https://github.com/pklaschka/feldspur/pull/220), @pklaschka)
+- Feldkalender in der Übersicht: alle Feldtage auf einer Uhrzeit-Achse ([#221](https://github.com/pklaschka/feldspur/pull/221), @pklaschka)
+
+### Verbessert
+
+- Nach dem Ausgeben: Beleg-Karte mit Montage-ID und „Im Viewer ansehen“ ([#201](https://github.com/pklaschka/feldspur/pull/201), @pklaschka)
+- Abgleichen: Die Uhr rückt beim Übernehmen sichtbar an ihren Platz, dazu „Beide anhören“ ([#210](https://github.com/pklaschka/feldspur/pull/210), @pklaschka)
+- Durchsehen: Balken mit Übergang, „Alle Stellen geprüft“ und ein einmaliger Tastenhinweis ([#211](https://github.com/pklaschka/feldspur/pull/211), @pklaschka)
+- Texte für schwierige Stellen: leere Suche und fehlende Originale ([#212](https://github.com/pklaschka/feldspur/pull/212), @pklaschka)
+
+### Behoben
+
+- Frische Ausgabe steht nicht mehr sofort als „Veraltet“ da ([#200](https://github.com/pklaschka/feldspur/pull/200), @pklaschka)
+- Anker geht einer von Hand eingetragenen Uhrabweichung vor ([#214](https://github.com/pklaschka/feldspur/pull/214), @pklaschka)
+- Widersprüchlicher Anker setzt beide Aufnahmen auf „prüfen“ ([#216](https://github.com/pklaschka/feldspur/pull/216), @pklaschka)
+
+### Hinter den Kulissen
+
+- CI: Labels verdecken den grünen Pflicht-Check nicht mehr ([#189](https://github.com/pklaschka/feldspur/pull/189), @pklaschka)
+- Releases erst als geprüften Entwurf anlegen, dann veröffentlichen ([#185](https://github.com/pklaschka/feldspur/pull/185), @pklaschka)
+- Herkunftsnachweise (Build Attestations) für alle Release-Dateien ([#218](https://github.com/pklaschka/feldspur/pull/218), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0...v0.4.0-rc.1
+
 ## 0.3.0 – 2026-11-22
 
 <!-- Release notes generated using configuration in .github/release.yml at 05b889cf9f032833f18b7e61b52f47b9777465df -->
