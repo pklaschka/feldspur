@@ -8,7 +8,6 @@ import {
   baseName,
   buildSessionTranscript,
   compareExport,
-  estimateMontageBytes,
   exportFingerprint,
   type ExportStatus,
   entryText,
@@ -35,6 +34,7 @@ import {
 } from "../shared/api.ts";
 import { checkOriginals } from "./originals.ts";
 import { sessionChangeLogCsv } from "./changelog.ts";
+import { learnMontageSize, montageSize } from "./montage-size.ts";
 
 const CHUNK = 60;
 let running: string | null = null;
@@ -163,7 +163,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
     durationMs: transcript.plan.durationMs,
     episodes: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "episode").length : 0,
     cards: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "card").length : 0,
-    videoBytes: estimateMontageBytes(transcript),
+    videoBytes: montageSize(transcript),
     lines: transcript.entries.map(entryText),
     entries: transcript.entries.map((e) => ({
       kind: e.kind,
@@ -389,6 +389,15 @@ export async function runExport(
       options: settings,
       fingerprint,
     });
+    const mp4 = r.files.find((f) => f.endsWith(".mp4"));
+    if (mp4)
+      learnMontageSize(
+        s,
+        sessionId,
+        modeOf(s, sessionId, opts.realtime),
+        join(r.dir, mp4),
+        opts.deviceTracks !== false,
+      );
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
   } finally {
     sleepAgain();
