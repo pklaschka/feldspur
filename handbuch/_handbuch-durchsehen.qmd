@@ -107,7 +107,7 @@ Begleitprotokoll vermerkt die Verstärkung.
 Mit dem Schalter **Episoden bilden** teilt Feldspur den Einsatz in **Episoden**: Zeiträume, in denen eine Aufnahme
 läuft und nicht nur Stille ist. Lücken unter 5 Minuten werden verbunden. Dazwischen liegen **Zwischenzeiten**, in
 denen nur Fotos und Tagebucheinträge entstanden sind. Episoden brauchen abgeglichene Tonspuren (@sec-abgleichen).
-Sie helfen, lange Einsätze mit vergessenem Diktiergerät kompakt auszugeben (@sec-ausgeben). Ohne Episoden bleibt
+Sie helfen, lange Feldtage mit vergessenem Diktiergerät kompakt auszugeben (@sec-ausgeben). Ohne Episoden bleibt
 alles in Echtzeit.
 
 Was Feldspur vorschlägt, kannst du direkt auf der Zeitachse anpassen:
