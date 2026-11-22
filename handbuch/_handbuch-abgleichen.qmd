@@ -33,7 +33,7 @@ eindeutigen übernehmen** auf einmal. Hat ein Gerät mehrere eindeutige Vorschl�
 **Rückgängig** nimmt die ganze Übernahme in einem Schritt zurück.
 
 Beim Übernehmen rückt der Punkt der Uhr sichtbar an seinen Platz, und die Zeile bleibt kurz grün hinterlegt (mit der
-Systemeinstellung „Bewegung reduzieren“ nur die Hinterlegung). Darunter steht der **Beleg**: der Anker, der die Uhr
+Systemeinstellung „Bewegung reduzieren“ nur die Hinterlegung). Darunter steht als Beleg der Anker, der die Uhr
 jetzt trägt. **Beide anhören** spielt beide Stellen gleichzeitig ab, die erste links, die zweite rechts, ohne den
 Feinabgleich zu öffnen. Liegen sie richtig, verschmelzen sie zu einem Klang. Dasselbe gilt für eine Abweichung, die du
 von Hand einträgst, und für einen Anker von Hand.

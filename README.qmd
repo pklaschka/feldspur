@@ -118,7 +118,12 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
   weil die LGPL-Fassung von FFmpeg keine Schrift setzt; "Montage ansehen" spielt dieselbe Montage ohne Rechnen aus den
   Originalen ab. Dazu **Dokumentvariablen** (.xlsx) für MAXQDA und ein **Begleitprotokoll** (.csv) mit Herkunft und
-  Zeitnachweis jeder Datei.
+  Zeitnachweis jeder Datei. Abwählbar kommen dazu: ein **Viewer** (.html), der Video und Einsatztranskript zusammen im
+  Browser zeigt, eine **LIESMICH** (.html) mit den Tabellen für den Methodenteil, das Änderungsprotokoll des Einsatzes
+  (.csv) und eine Prüfsummenliste (`manifest-sha256.txt`).
+- **Übersicht**: die Ebene über den Einsätzen. Der **Feldkalender** legt alle Einsätze des Projekts auf eine
+  gemeinsame Uhrzeit-Achse (auch als SVG), die **Kennwerte** fassen Eingang und Ausgabe der gewählten Einsätze als
+  Tabellen für den Methodenteil zusammen. Feldspur zählt und misst dort nur und wertet nicht.
 - **Tagebucheintrag** (`DiaryEntry`): Rahmen auf einer oder mehreren Scan-Seiten mit Notierzeit. Der
   **Bezugszeitraum** reicht vor die Notierzeit zurück (Standard 15 Min. pro Einsatz). Einsatztranskript, Montage, Mitschrift
   und Suche führen den Eintrag an der Notierzeit; der Bezugszeitraum steht als Hinweis dabei.
