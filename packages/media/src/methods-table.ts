@@ -70,20 +70,15 @@ export function germanDate(iso: string): string {
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** Zusammengefasste Zeile mit der Zahl der Geräte, die darin stecken (je Einsatz gezählt). */
-export type CombinedMaterialRow = MethodsMaterialRow & { devices: number };
-
 /**
  * Zeilen aus mehreren Einsätzen zusammenfassen: je Art und Gerät, mit `byKind` nur je Art. Geräte sind je Einsatz
- * angelegt und heißen von Tag zu Tag oft etwas anders; über mehrere Tage zählt die Tabelle sie deshalb nur.
+ * angelegt; ob zwei Tage dasselbe Gerät hatten, lässt sich nicht sagen, deshalb fällt das Gerät dann weg.
  */
-export function combineMaterial(sessions: MethodsNumbers[], opts: { byKind?: boolean } = {}): CombinedMaterialRow[] {
-  const rows = new Map<string, CombinedMaterialRow>();
-  const devices = new Map<string, Set<string>>();
-  for (const [i, s] of sessions.entries()) {
+export function combineMaterial(sessions: MethodsNumbers[], opts: { byKind?: boolean } = {}): MethodsMaterialRow[] {
+  const rows = new Map<string, MethodsMaterialRow>();
+  for (const s of sessions) {
     for (const r of s.material) {
       const key = opts.byKind ? r.kind : `${r.kind}\n${r.device}`;
-      if (r.device) devices.set(key, (devices.get(key) ?? new Set()).add(`${i}\n${r.device}`));
       const sum = rows.get(key);
       if (!sum) {
         rows.set(key, {
@@ -91,7 +86,6 @@ export function combineMaterial(sessions: MethodsNumbers[], opts: { byKind?: boo
           device: opts.byKind ? "" : r.device,
           basis: { ...r.basis },
           correctionsMs: [...r.correctionsMs],
-          devices: 0,
         });
         continue;
       }
@@ -102,7 +96,6 @@ export function combineMaterial(sessions: MethodsNumbers[], opts: { byKind?: boo
       for (const c of r.correctionsMs) if (!sum.correctionsMs.includes(c)) sum.correctionsMs.push(c);
     }
   }
-  for (const [key, row] of rows) row.devices = devices.get(key)?.size ?? 0;
   return [...rows.values()].sort(
     (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.device.localeCompare(b.device, "de"),
   );
@@ -140,14 +133,15 @@ function span(sessions: MethodsNumbers[]): string {
 
 /** Eingang: was hineingeflossen ist, je Art und Gerät über alle gewählten Einsätze. */
 export function materialTable(sessions: MethodsNumbers[]): MethodsTable {
-  // Über mehrere Einsätze je Art eine Zeile: Geräte sind je Einsatz angelegt, gleiche Geräte hießen sonst doppelt.
+  // Über mehrere Einsätze je Art eine Zeile ohne Spalte Gerät: Geräte sind je Einsatz angelegt, und ob es an zwei
+  // Tagen dasselbe war, weiß Feldspur nicht. Eine Zahl würde sie doppelt zählen.
   const several = sessions.length > 1;
   return {
     caption: `Eingang: Aufzeichnungen aus ${span(sessions)}`,
-    head: ["Eingang", several ? "Geräte" : "Gerät", "Anzahl", "Dauer (h:mm:ss)", "Zeitbeleg"],
+    head: ["Eingang", ...(several ? [] : ["Gerät"]), "Anzahl", "Dauer (h:mm:ss)", "Zeitbeleg"],
     rows: combineMaterial(sessions, { byKind: several }).map((r) => [
       KIND_TEXT[r.kind],
-      several ? (r.devices ? count(r.devices, "Gerät", "Geräte") : "–") : r.device || "–",
+      ...(several ? [] : [r.device || "–"]),
       countText(r),
       r.kind === "audio" || r.kind === "video" ? hms(r.durationMs) : "–",
       basisText(r),
