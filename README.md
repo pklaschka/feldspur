@@ -64,6 +64,12 @@ nach Updates und spielt sie mit einem Klick ein. Um die noch nicht signierten Pa
 Ohne Lieferling liegen die Installationsdateien für Windows, macOS und Linux bei jedem
 [Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch das Handbuch als PDF.
 
+Jede Datei einer Release trägt einen signierten Herkunftsnachweis von GitHub: Er belegt, dass sie aus diesem
+Repository stammt und dort automatisch gebaut wurde (ab Version 0.4.0). Lieferling prüft ihn selbst. Von Hand geht es mit der
+[GitHub CLI](https://cli.github.com):
+`gh attestation verify <datei> --repo pklaschka/feldspur --signer-workflow pklaschka/feldspur/.github/workflows/release.yml`.
+Der Nachweis zeigt, wo eine Datei gebaut wurde, nicht, dass ihr Code fehlerfrei oder harmlos ist.
+
 ## Entstehung mit generativer KI
 
 ### Wer was macht
@@ -315,6 +321,14 @@ deshalb zuerst als Entwurf an, lädt alle Dateien hoch, vergleicht GitHubs Prüf
 veröffentlicht erst dann. Fehlt etwas, bleibt der Entwurf liegen; ein neuer Lauf ersetzt ihn. Ein Fehler in einer
 veröffentlichten Release lässt sich nur mit einer neuen Version beheben (Vorabversion oder Hotfix). Titel und
 Release-Text bleiben bearbeitbar.
+
+**Herkunftsnachweise:** Für jede Datei der Release (Installer, Handbuch, `SHA256SUMS.txt`) erzeugt der Job
+„veröffentlichen“ mit [`actions/attest`](https://github.com/actions/attest) einen signierten Herkunftsnachweis (Build
+Attestation, SLSA-Provenienz über Sigstore), bevor der Entwurf entsteht, und prüft ihn gleich selbst. Signatur-Workflow
+ist immer `.github/workflows/release.yml`, auch wenn die Dateien in `package.yml` oder `handbook.yml` gebaut werden.
+Lieferling fragt diesen Nachweis für genau die heruntergeladene Datei ab. Von Hand:
+`gh attestation verify <datei> --repo pklaschka/feldspur --signer-workflow pklaschka/feldspur/.github/workflows/release.yml`.
+Releases vor 0.4.0 haben keine Herkunftsnachweise.
 
 **Einmalig einrichten:** Der Workflow pusht den Commit „Release vX“ mit einem Deploy-Schlüssel auf `main`, weil die
 Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.
