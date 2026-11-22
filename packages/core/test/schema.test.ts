@@ -1,8 +1,12 @@
 /**
  * Das Schema steht zweimal da: als SQL in den Migrationen (das legt die Datei tatsächlich an) und als Drizzle-
  * Beschreibung in schema.ts (für Abfragen und Typen). Dieser Test wendet alle Migrationen an und vergleicht das
- * Ergebnis mit Drizzle: Tabellen, Spalten, NOT NULL, Standardwerte, Primärschlüssel, Fremdschlüssel und Indizes
- * (Issue #191). So fällt jede künftige Abweichung sofort auf.
+ * Ergebnis mit Drizzle: Tabellen, Spalten mit Typ, NOT NULL, Standardwert und Primärschlüssel, Fremdschlüssel
+ * (Spalte, Ziel, ON DELETE) und Indizes (Name, UNIQUE, Spalten) (Issue #191).
+ *
+ * Nicht verglichen werden: AUTOINCREMENT, ON UPDATE, zusammengesetzte Fremdschlüssel (nur die erste Spalte),
+ * UNIQUE als Spalten- oder Tabellen-Constraint (heute gibt es nur CREATE UNIQUE INDEX), Teilindizes (WHERE) und die
+ * Reihenfolge in zusammengesetzten Primärschlüsseln. Wer so etwas einführt, ergänzt den Vergleich.
  */
 import Database from "better-sqlite3";
 import { is, SQL } from "drizzle-orm";
@@ -13,6 +17,18 @@ import * as schema from "../src/db/schema.ts";
 
 const db = new Database(":memory:");
 for (const m of MIGRATIONS) db.exec(m);
+
+/**
+ * Bewusste Abweichungen beim Standardwert, je Spalte mit Grund. Drizzle schreibt seinen Standard bei Inserts selbst;
+ * der Standard der Datei greift nur bei rohem SQL.
+ */
+const DEFAULT_EXCEPTIONS: Record<string, { drizzle: string; file: string; why: string }> = {
+  "devices.timestamps_are_utc": {
+    drizzle: "1",
+    file: "0",
+    why: "Drizzle-Inserts sollen wie Zod „true“ schreiben; „false“ ließe UTC-Zeitstempel als Ortszeit lesen",
+  },
+};
 
 const tables = (Object.values(schema) as unknown[]).filter((t): t is SQLiteTable => is(t, SQLiteTable));
 
@@ -61,20 +77,38 @@ describe("Schema der Projektdatei", () => {
     const cfg = getTableConfig(table);
     const info = db.pragma(`table_info(${name})`) as Info[];
 
-    it("hat dieselben Spalten mit NOT NULL, Standardwert und Primärschlüssel", () => {
+    it("hat dieselben Spalten mit Typ, NOT NULL, Standardwert und Primärschlüssel", () => {
       const file = info
-        .map((c) => ({ name: c.name, notNull: c.notnull === 1 || c.pk > 0, dflt: c.dflt_value, pk: c.pk > 0 }))
+        .map((c) => ({
+          name: c.name,
+          type: c.type.toLowerCase(),
+          notNull: c.notnull === 1 || c.pk > 0,
+          dflt: c.dflt_value,
+          pk: c.pk > 0,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name));
       const pkCols = new Set(cfg.primaryKeys.flatMap((p) => p.columns.map((c) => c.name)));
       const drizzle = cfg.columns
         .map((c) => ({
           name: c.name,
+          type: c.getSQLType().toLowerCase(),
           notNull: c.notNull || c.primary || pkCols.has(c.name),
-          dflt: drizzleDefault(c),
+          dflt: DEFAULT_EXCEPTIONS[`${name}.${c.name}`]?.file ?? drizzleDefault(c),
           pk: c.primary || pkCols.has(c.name),
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
       expect(drizzle).toEqual(file);
+    });
+
+    it.each(
+      Object.entries(DEFAULT_EXCEPTIONS)
+        .filter(([key]) => key.startsWith(`${name}.`))
+        .map(([key, e]) => [key.slice(name.length + 1), e] as const),
+    )("weicht bei %s bewusst ab", (column, e) => {
+      // Die Ausnahme gilt nur, solange beide Seiten genau so aussehen; ändert sich eine, muss sie neu begründet werden.
+      expect(drizzleDefault(cfg.columns.find((c) => c.name === column)!)).toBe(e.drizzle);
+      expect(info.find((c) => c.name === column)!.dflt_value).toBe(e.file);
+      expect(e.why).not.toBe("");
     });
 
     it("hat dieselben Fremdschlüssel", () => {

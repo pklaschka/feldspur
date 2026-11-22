@@ -59,9 +59,11 @@ export const devices = sqliteTable(
     offsetBasis: text("offset_basis", { enum: ["reference", "manual", "anchor", "unknown"] })
       .notNull()
       .default("unknown"),
-    // In der Datei steht 0 (Migration 1; Migration 5 hat alle bestehenden Geräte auf 1 gesetzt). Neue Geräte kommen
-    // über Zod, das „true“ einträgt; der SQL-Standard greift nur bei einem Insert an Zod vorbei (Issue #191).
-    timestampsAreUtc: bool("timestamps_are_utc").notNull().default(false),
+    // Bewusst anders als die Datei (dort 0 aus Migration 1; Migration 5 hat alle bestehenden Geräte auf 1 gesetzt).
+    // Drizzle schreibt diesen Wert bei jedem Insert ohne das Feld selbst; der SQL-Standard 0 greift nur bei rohem SQL.
+    // „true“ ist der sichere Wert wie in Zod: „false“ ließe UTC-Zeitstempel still als Ortszeit lesen. Der Schematest
+    // führt die Stelle als benannte Ausnahme (Issue #191).
+    timestampsAreUtc: bool("timestamps_are_utc").notNull().default(true),
     timeZone: text("time_zone"),
     filenamePattern: text("filename_pattern"),
   },
