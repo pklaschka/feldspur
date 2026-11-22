@@ -41,7 +41,8 @@ Episoden (@sec-durchsehen).
 Wo nichts davon hilft, setzt du einen **Anker**: "dieser Moment in Aufnahme A ist derselbe wie dieser Moment in
 Aufnahme B", etwa eine knallende Tür. Wähle nach **+ Neuer Anker** beide Aufnahmen und die Stelle darin, gib eine
 Genauigkeit und optional eine Notiz an. Aus dem Anker ergibt sich die Abweichung des Geräts, oder eine Quelle ohne
-eigene Uhrzeit erbt ihre Lage.
+eigene Uhrzeit erbt ihre Lage. Ein Anker geht einer von Hand eingetragenen Abweichung vor, denn er misst die Uhr genau
+nach; das Feld zeigt dann "über Anker". Löschst du den Anker, gilt wieder deine Eingabe.
 
 ![Einen Anker zwischen zwei Aufnahmen setzen](bilder/anker.png){#fig-anker}
 

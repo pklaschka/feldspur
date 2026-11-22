@@ -348,6 +348,11 @@ function ClockRow({
   );
 }
 
+/** Das Feld zeigt ganze Sekunden; eine gemessene Abweichung (Anker) hat Bruchteile, die beim Abgleich zählen. */
+const subSecond = (ms: number | null) => ms !== null && Math.abs(ms) < 60_000 && ms % 1000 !== 0;
+const preciseOffset = (ms: number) =>
+  `${ms < 0 ? "−" : "+"}${(Math.abs(ms) / 1000).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`;
+
 function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: number | null) => void }) {
   const show = (ms: number | null) => (ms === null ? "" : offsetText(ms));
   const [text, setText] = useDraft(show(device.offsetMs));
@@ -396,6 +401,7 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
       ) : (
         <span className={cx("text-[0.85rem]", device.offsetMs === null ? "text-warn" : "text-muted")}>
           {device.offsetMs === null ? "ohne Abgleich" : BASIS_TEXT[device.offsetBasis]}
+          {subSecond(device.offsetMs) && ` (${preciseOffset(device.offsetMs!)})`}
         </span>
       )}
     </span>

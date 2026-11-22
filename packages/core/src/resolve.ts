@@ -687,16 +687,6 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
           usedEv?.clock === "device" ||
           (!!followedId && otherCands.some((c) => c.ev.id === followedId && c.ev.clock === "device"));
         const viaSpokenClock = po !== undefined && clock?.basis === "spoken" && onDeviceClock;
-        if (po && !viaSpokenClock) {
-          const diff = po.startMs + other.atMediaMs - moment;
-          if (
-            Math.abs(diff) > combineUncertainty(unc, po.uncertaintyMs) + CONFLICT_TOLERANCE_MS &&
-            known === anchor.a
-          ) {
-            anchorConflicts.push({ anchorId: anchor.id, differenceMs: diff });
-          }
-          continue;
-        }
         const device = otherSrc.deviceId ? deviceById.get(otherSrc.deviceId) : undefined;
         const deviceEv = pickBest(
           candidatesFor(
@@ -706,7 +696,28 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             session.timeZone,
           ),
         );
-        if (clock && (clock.offsetMs === null || viaSpokenClock) && deviceEv) {
+        // Eine von Hand eingetragene Abweichung ist eine Schätzung in ganzen Sekunden. Ein Anker misst dieselbe Uhr
+        // an einer Stelle genau nach und geht deshalb vor, sofern die Aufnahme eine Zeit dieser Uhr trägt. Die
+        // Eingabe bleibt gespeichert und gilt wieder, sobald der Anker entfernt ist.
+        // Hängt die bekannte Seite selbst an einer geschätzten Uhr, gleicht der Anker nur ab (sonst schöben sich zwei
+        // geschätzte Uhren gegenseitig).
+        const knownSrc = sourceById.get(known.sourceId);
+        const knownClock = knownSrc?.deviceId ? clocks.get(knownSrc.deviceId) : undefined;
+        const knownEv = candidates.get(known.sourceId)?.find((c) => c.ev.id === pk.basis.evidenceId)?.ev;
+        const knownOnManual = knownClock?.basis === "manual" && knownEv?.clock !== "true";
+        const overManual = clock?.basis === "manual" && !!deviceEv && !knownOnManual;
+        const refines = viaSpokenClock || overManual;
+        if (po && !refines) {
+          const diff = po.startMs + other.atMediaMs - moment;
+          if (
+            Math.abs(diff) > combineUncertainty(unc, po.uncertaintyMs) + CONFLICT_TOLERANCE_MS &&
+            known === anchor.a
+          ) {
+            anchorConflicts.push({ anchorId: anchor.id, differenceMs: diff });
+          }
+          continue;
+        }
+        if (clock && (clock.offsetMs === null || refines) && deviceEv) {
           // Geräteuhr zeigte im Moment des Ankers:
           const deviceShows =
             effectiveLocal(deviceEv.ev, device, session.timeZone) - deviceEv.ev.atMediaMs + other.atMediaMs;
