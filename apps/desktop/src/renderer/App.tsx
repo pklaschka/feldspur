@@ -5,6 +5,7 @@ import { errorText, formatDay } from "./format.ts";
 import { renderOverlays } from "./overlay.ts";
 import { Backups } from "./Backups.tsx";
 import { ChangeLog } from "./ChangeLog.tsx";
+import { Overview } from "./Overview.tsx";
 import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
 import { renderImageRefJpeg } from "./stillRender.ts";
@@ -26,6 +27,10 @@ export function App() {
   const inspector = usePaneWidth("seitenleiste", [310, 360, 420][wide]!, 260, 720);
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  /** Die Übersicht des Projekts ist offen, die Ebene über den Einsätzen (Issue #203). */
+  const [overview, setOverview] = useState(false);
+  /** Schritt, in dem der nächste geöffnete Einsatz beginnt (Sprung aus der Übersicht); sonst entscheidet der Einsatz. */
+  const [openStep, setOpenStep] = useState<Step | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [projectMenu, setProjectMenu] = useState(false);
   const [changeLog, setChangeLog] = useState(false);
@@ -92,12 +97,21 @@ export function App() {
     if (!p) return;
     setDeleted(null);
     setProject(p);
+    setOverview(false);
+    setOpenStep(null);
     setSessionId(lastSession(p));
+  };
+  const openSession = (id: string, step: Step | null = null) => {
+    setOverview(false);
+    setOpenStep(step);
+    setSessionId(id);
   };
   /** Neuer Einsatz: gleich dorthin wechseln. */
   const adoptNew = (p: ProjectInfo | null | undefined) => {
     if (!p) return;
     setProject(p);
+    setOverview(false);
+    setOpenStep(null);
     setSessionId(p.sessions.find((s) => !project?.sessions.some((o) => o.id === s.id))?.id ?? lastSession(p));
   };
   const undoDelete = async () => {
@@ -118,7 +132,7 @@ export function App() {
     });
     if (!r) return;
     setProject(r.project);
-    if (gone && r.project.sessions.some((s) => s.id === gone.id)) setSessionId(gone.id);
+    if (gone && r.project.sessions.some((s) => s.id === gone.id)) openSession(gone.id);
   };
   // Den zuletzt gewählten Einsatz je Projekt merken, damit man beim nächsten Öffnen dort weitermacht.
   useEffect(() => {
@@ -196,18 +210,33 @@ export function App() {
                 <ChangeLog open={changeLog} onOpenChange={setChangeLog} />
                 <Backups open={backups} onOpenChange={setBackups} onOpened={adopt} guard={guard} />
               </div>
-              <h2 className="mx-2 mt-7 mb-1.5 text-[1rem] font-semibold text-rail-ink">Einsätze</h2>
+              <button
+                className={cx(
+                  "mt-5 w-full cursor-pointer rounded-lg px-2 py-1.5 text-left",
+                  overview ? "bg-rail-active font-semibold" : "hover:bg-rail-hover",
+                )}
+                aria-current={overview ? "page" : undefined}
+                onClick={() => setOverview(true)}
+              >
+                Übersicht
+              </button>
+              <h2 className="mx-2 mt-5 mb-1.5 text-[1rem] font-semibold text-rail-ink">Einsätze</h2>
               {project.sessions.map((s) => (
                 <button
                   key={s.id}
                   className={cx(
                     "flex w-full cursor-pointer gap-2 rounded-lg px-2 py-1.5 text-left",
-                    s.id === sessionId ? "bg-rail-active font-semibold" : "hover:bg-rail-hover",
+                    s.id === sessionId && !overview ? "bg-rail-active font-semibold" : "hover:bg-rail-hover",
                   )}
-                  onClick={() => setSessionId(s.id)}
+                  onClick={() => openSession(s.id)}
                   title={s.place || undefined}
                 >
-                  <span className={cx("pt-px font-mono text-[0.82rem]", s.id !== sessionId && "text-rail-muted")}>
+                  <span
+                    className={cx(
+                      "pt-px font-mono text-[0.82rem]",
+                      (s.id !== sessionId || overview) && "text-rail-muted",
+                    )}
+                  >
                     {formatDay(s.date)}
                   </span>
                   <span>{s.title}</span>
@@ -219,10 +248,13 @@ export function App() {
               />
               <AppFooter />
             </nav>
-            {sessionId ? (
+            {overview ? (
+              <Overview key={project.path} name={project.name} onOpen={openSession} />
+            ) : sessionId ? (
               <SessionPane
                 key={sessionId}
                 sessionId={sessionId}
+                initialStep={openStep}
                 guard={guard}
                 strayDrop={strayDrop}
                 onProject={(p) => {

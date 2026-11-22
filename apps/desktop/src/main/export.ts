@@ -12,6 +12,7 @@ import {
   type ExportStatus,
   entryText,
   exportSession,
+  methodsSummary,
   ExportPrecheckError,
   type ImageRef,
   montagePreview,
@@ -27,6 +28,7 @@ import {
   EXPORT_CHECK_STEP,
   IPC,
   type ExportCard,
+  type OverviewSession,
   type ExportRunResult,
   type SessionTranscriptPreview,
 } from "../shared/api.ts";
@@ -211,6 +213,18 @@ export function exportStatus(
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
+}
+
+/**
+ * Übersicht des Projekts (Issue #203): je Einsatz die Kennwerte und sein Stand. Die Zahlen beschreiben den Stand im
+ * Projekt. Verglichen wird mit der letzten Ausgabe in ihren eigenen Einstellungen: „stale“ heißt, im Einsatz hat sich
+ * seitdem etwas geändert. Ein Einsatz ohne Ausgabe wird so beschrieben, wie er mit Montagevideo ausgegeben würde.
+ */
+export function projectOverview(s: ProjectStore): OverviewSession[] {
+  return s.listSessions().map((x) => {
+    const settings = s.getExportRecord(x.id)?.options ?? exportSettings(s, x.id, { video: true });
+    return { ...methodsSummary(s, x.id, settings), place: x.place ?? "" };
+  });
 }
 
 /**
