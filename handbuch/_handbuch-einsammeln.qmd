@@ -117,9 +117,11 @@ Wenn alles eingesammelt ist, geht es mit **Weiter: Uhren abgleichen →** zum Ab
 
 Feldspur kopiert nichts: Es merkt sich, wo jedes Original liegt, und liest es dort. Verschiebst du den Ordner mit den
 Aufnahmen, steckst ein Laufwerk um oder öffnest das Projekt auf einem anderen Rechner, findet Feldspur die Dateien
-unter dem alten Pfad nicht mehr. Dann steht unter den Schritten **„2 Originaldateien fehlen“** und in der Detailleiste
-der Quelle ein Hinweis. Vorschau, Tonanalyse und Ausgabe brauchen die Originale; die Tonanalyse überspringt fehlende
-Aufnahmen und nennt sie.
+unter dem alten Pfad nicht mehr. Dann steht unter den Schritten **„Feldspur findet 2 Originaldateien nicht.“** und in
+der Detailleiste der Quelle ein Hinweis. Im Projekt ist dabei nichts verloren: Zeiten, Mitschrift, Notizen und
+Tagebuchtexte bleiben vollständig. Nur Vorschau, Tonanalyse und Ausgabe brauchen die Originale; die Tonanalyse
+überspringt fehlende Aufnahmen und nennt sie. Ist eine Datei **verändert**, sagt die Leiste das eigens: Sie ist nicht
+mehr die Datei vom Einsammeln, und nur eine unveränderte Kopie lässt sich neu verknüpfen.
 
 Mit **Originale suchen…** öffnet sich eine Liste aller Quellen mit ihrem Zustand:
 
