@@ -229,3 +229,9 @@
     --scroll-fade: 0px;
   }
 }
+
+/* Beleg-Karte nach einer frischen Ausgabe (Issue #192): der Versatzschatten aus dem Infografik-Leitfaden,
+   Zeichen für „Ergebnis“. In der App nur hier. */
+.receipt-raised {
+  box-shadow: 6px 6px 0 var(--good);
+}

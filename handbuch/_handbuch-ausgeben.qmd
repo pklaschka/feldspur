@@ -6,15 +6,20 @@ offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, u
 dorthin.
 
 Den Stand der letzten Ausgabe merkt sich Feldspur in der Projektdatei, auch über einen Neustart hinweg. Oben im Schritt
-steht dann, wann und wohin ausgegeben wurde, und ob die Ausgabe noch passt. **Im Ordner zeigen** öffnet den
-Ausgabeordner.
+steht dann, wann und wohin ausgegeben wurde, und ob die Ausgabe noch passt.
+
+Passt sie, fasst eine Karte den Einsatz in wenigen Zahlen zusammen: **Zeitraum** (erste und letzte Uhrzeit der
+Montage), **Quellen** (Dateien und Geräte), Zeilen im **Einsatztranskript** und die volle **Montage-ID**, mit der du
+später aus der Ausgabe zitierst. **Im Viewer ansehen** öffnet den mit ausgegebenen Viewer im Browser (nur, wenn er mit
+ausgegeben wurde), **Im Ordner zeigen** öffnet den Ausgabeordner. Die einzelnen Dateien stehen hinter **Dateien
+anzeigen**.
 
 - **Aktuell** (direkt nach der Ausgabe **Fertig**): Einsatz, Originale und Einstellungen sind genau wie bei der Ausgabe.
 - **Veraltet**: Seitdem hat sich etwas geändert. Darunter steht, was: der Einsatz selbst (Zeiten, Mitschrift, Tagebuch,
   Episoden, Angaben), neue oder entfernte Quellen, veränderte oder fehlende Originale (mit Kurzzeichen) oder andere
   Einstellungen als damals, z. B. jetzt mit Montagevideo. Machst du eine Änderung rückgängig, ist die Ausgabe wieder
   aktuell.
-- Fehlen Dateien im **Ausgabeordner**, sind sie durchgestrichen.
+- Fehlen Dateien im **Ausgabeordner**, ist die Dateiliste aufgeklappt und die fehlenden sind durchgestrichen.
 
 ![Veraltete Ausgabe nach einem Neustart, mit den Gründen](bilder/ausgeben-veraltet.png){#fig-ausgeben-veraltet}
 

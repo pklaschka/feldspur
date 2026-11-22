@@ -1120,7 +1120,13 @@ try {
     await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
     // Dann: Die frische Ausgabe gilt als aktuell, auch wenn dabei erst Sprachpegel gemessen wurden.
     await page.locator("[data-testid=export-result][data-state=current]").waitFor();
-    const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
+    // Die Beleg-Karte nennt die Zahlen und führt in den Viewer; die Dateiliste ist eingeklappt.
+    await page.getByTestId("export-receipt-facts").getByText(/^FS-/).waitFor();
+    await page.getByTestId("export-open-viewer").waitFor();
+    await page.getByTestId("export-result").evaluate((e) => e.scrollIntoView({ block: "center" }));
+    await shot("-ausgegeben");
+    await page.getByTestId("export-files-toggle").click();
+    const files = await page.getByTestId("export-files").locator("li").allInnerTexts();
     console.log(
       `Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`,
     );
@@ -1131,7 +1137,6 @@ try {
       !files.some((f) => f.includes(".html"))
     )
       throw new Error("Ausgabe unvollständig");
-    await shot("-ausgegeben");
     if (process.env.FELDSPUR_EXPORT_KEEP) cpSync(out, process.env.FELDSPUR_EXPORT_KEEP, { recursive: true });
   });
 

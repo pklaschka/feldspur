@@ -2,8 +2,9 @@
  * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Einsatztranskript (.docx), Dokumentvariablen und
  * Begleitprotokoll.
  */
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type {
+  ExportCard,
   ExportProgress,
   ExportStatus,
   OriginalsCheck,
@@ -17,7 +18,7 @@ import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
 import { FILE_STATE_TEXT } from "./Originals.tsx";
-import { Button, ContextMark, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
+import { Button, ContextMark, cx, FlagMark, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -69,6 +70,9 @@ function checkedText(p: ExportProgress): string {
   const n = (x: number) => (x / unit).toFixed(big ? 1 : 0).replace(".", ",");
   return `${n(p.done)} von ${n(p.total)} ${big ? "GB" : "MB"} geprüft`;
 }
+const files = (n: number) => `${n} ${n === 1 ? "Datei" : "Dateien"}`;
+/** „2026-09-14“ → „14.09.2026“. */
+const germanDate = (iso: string) => iso.split("-").reverse().join(".");
 const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
 export function ExportStep({
@@ -158,6 +162,21 @@ export function ExportStep({
     ex.start(sessionId, { ...found.opts, reuseDir: false, dir: found.parent, acceptOriginals: true }, paths);
   };
   const stale = !!result && result.differences.length > 0;
+  // Zahlen für die Beleg-Karte, nur für eine aktuelle Ausgabe (dann gleichen sie denen der Ausgabe).
+  const [loadedCard, setCard] = useState<{ key: string; card: ExportCard } | null>(null);
+  const cardFor = result && !stale ? `${sessionId}\n${result.record.exportedAt}` : null;
+  useEffect(() => {
+    if (!cardFor) return;
+    let live = true;
+    void api.exportCard(sessionId, { video, resolve, mixAudio, deviceTracks, viewer, realtime }).then(
+      (c) => live && setCard({ key: cardFor, card: c }),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [view, cardFor, sessionId, video, resolve, mixAudio, deviceTracks, viewer, realtime]);
+  const card = loadedCard && loadedCard.key === cardFor ? loadedCard.card : null;
 
   const empty = !preview || preview.durationMs <= 0;
   const pct = percent(progress, ex.job?.video);
@@ -190,60 +209,75 @@ export function ExportStep({
           </>
         }
       />
-      {(busy || result || error || cancelled) && (
-        <Panel className="mb-4 max-w-[1240px]">
-          {busy && (
-            <div data-testid="export-progress">
-              <div className="mb-1 flex items-center gap-3 text-[0.9rem]">
-                <span>{ex.job!.cancelling ? "Bricht ab…" : (progress?.step ?? "Vorbereiten")}</span>
-                <span className="flex-1" />
-                <span className="text-muted tabular-nums">
-                  {progress?.step === "Montagevideo" &&
-                    !ex.job!.cancelling &&
-                    `${remainingText(remainingMs(ex.job))} · `}
-                  {progress?.step === CHECK_STEP && !ex.job!.cancelling && `${checkedText(progress)} · `}
-                  {pct} %
-                </span>
-                <Button size="sm" disabled={ex.job!.cancelling} onClick={ex.cancel} data-testid="export-cancel">
-                  Abbrechen
-                </Button>
+      {result && !stale && !busy && !error && !cancelled ? (
+        // Die Beleg-Karte ist selbst die Karte: kein Rahmen um den Rahmen.
+        <div className="mb-5 max-w-[1240px] pr-1.5">
+          <ExportResult
+            status={result}
+            card={card}
+            fresh={!!justDone}
+            disabled={!!found}
+            onRerun={() => run(true)}
+            onRerunElsewhere={() => run()}
+          />
+        </div>
+      ) : (
+        (busy || result || error || cancelled) && (
+          <Panel className="mb-4 max-w-[1240px]">
+            {busy && (
+              <div data-testid="export-progress">
+                <div className="mb-1 flex items-center gap-3 text-[0.9rem]">
+                  <span>{ex.job!.cancelling ? "Bricht ab…" : (progress?.step ?? "Vorbereiten")}</span>
+                  <span className="flex-1" />
+                  <span className="text-muted tabular-nums">
+                    {progress?.step === "Montagevideo" &&
+                      !ex.job!.cancelling &&
+                      `${remainingText(remainingMs(ex.job))} · `}
+                    {progress?.step === CHECK_STEP && !ex.job!.cancelling && `${checkedText(progress)} · `}
+                    {pct} %
+                  </span>
+                  <Button size="sm" disabled={ex.job!.cancelling} onClick={ex.cancel} data-testid="export-cancel">
+                    Abbrechen
+                  </Button>
+                </div>
+                <div
+                  className="h-1.5 overflow-hidden rounded-full bg-sunken"
+                  role="progressbar"
+                  aria-label="Ausgabe"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pct}
+                  aria-valuetext={`${progress?.step ?? "Vorbereiten"}, ${pct} %`}
+                >
+                  <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="mt-2 text-[0.85rem] text-muted">
+                  {progress?.step === CHECK_STEP || !progress
+                    ? "Zuerst prüft Feldspur, ob die Originale noch dieselben sind wie beim Einsammeln (schon geprüfte merkt es sich). "
+                    : ""}
+                  Du kannst weiterarbeiten oder den Schritt wechseln, die Ausgabe läuft weiter. Änderungen ab jetzt
+                  kommen in die nächste Ausgabe.
+                </p>
               </div>
-              <div
-                className="h-1.5 overflow-hidden rounded-full bg-sunken"
-                role="progressbar"
-                aria-label="Ausgabe"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={pct}
-                aria-valuetext={`${progress?.step ?? "Vorbereiten"}, ${pct} %`}
-              >
-                <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="mt-2 text-[0.85rem] text-muted">
-                {progress?.step === CHECK_STEP || !progress
-                  ? "Zuerst prüft Feldspur, ob die Originale noch dieselben sind wie beim Einsammeln (schon geprüfte merkt es sich). "
-                  : ""}
-                Du kannst weiterarbeiten oder den Schritt wechseln, die Ausgabe läuft weiter. Änderungen ab jetzt kommen
-                in die nächste Ausgabe.
+            )}
+            {error && <Notice>Ausgabe fehlgeschlagen: {error}</Notice>}
+            {cancelled && (
+              <p className="text-[0.9rem]" role="status" data-testid="export-cancelled">
+                {cancelledText(cancelled)}
               </p>
-            </div>
-          )}
-          {error && <Notice>Ausgabe fehlgeschlagen: {error}</Notice>}
-          {cancelled && (
-            <p className="text-[0.9rem]" role="status" data-testid="export-cancelled">
-              {cancelledText(cancelled)}
-            </p>
-          )}
-          {result && (
-            <ExportResult
-              status={result}
-              fresh={!!justDone && !stale}
-              disabled={!!ex.job || !!found}
-              onRerun={() => run(true)}
-              onRerunElsewhere={() => run()}
-            />
-          )}
-        </Panel>
+            )}
+            {result && (
+              <ExportResult
+                status={result}
+                card={card}
+                fresh={!!justDone && !stale}
+                disabled={!!ex.job || !!found}
+                onRerun={() => run(true)}
+                onRerunElsewhere={() => run()}
+              />
+            )}
+          </Panel>
+        )
       )}
       {/* Nebeneinander, sobald die Mitte breit genug ist (Containerbreite, nicht Fenster): so bleibt die Vorschau lesbar. */}
       <div className="@container max-w-[1240px]">
@@ -420,12 +454,15 @@ function RerunButtons({
 
 function ExportResult({
   status,
+  card,
   fresh,
   disabled,
   onRerun,
   onRerunElsewhere,
 }: {
   status: ExportStatus;
+  /** Zahlen für die Beleg-Karte; null, solange sie lädt oder wenn die Ausgabe veraltet ist. */
+  card: ExportCard | null;
   fresh: boolean;
   disabled: boolean;
   onRerun: () => void;
@@ -435,82 +472,208 @@ function ExportResult({
   const stale = differences.length > 0;
   const gone = new Set(missingFiles);
   const present = record.files.find((f) => !gone.has(f));
+  // Der Viewer ist die .html, die nicht die LIESMICH ist; nur anbieten, wenn er noch im Ordner liegt.
+  const viewerFile = record.files.find((f) => f.endsWith(".html") && !/^LIESMICH\.html$/.test(f) && !gone.has(f));
+  const [listOpen, setListOpen] = useState(false);
+  const showFolder = () => void api.showInFolder(present ? inDir(record.dir, present) : record.dir);
+  const fileList = (
+    <ul className="mt-3 grid gap-1.5" id={`export-files-${record.sessionId}`} data-testid="export-files">
+      {record.files.map((f) => (
+        <li key={f} className="text-[0.9rem]">
+          <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
+          {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
+          <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  const missingNotice = missingFiles.length > 0 && (
+    <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-incomplete">
+      <b className="block text-[0.9rem] font-semibold text-warn">
+        {missingFiles.length === 1
+          ? "Eine Datei fehlt im Ausgabeordner"
+          : `${missingFiles.length} Dateien fehlen im Ausgabeordner`}
+      </b>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <RerunButtons disabled={disabled} dir={record.dir} onRerun={onRerun} onRerunElsewhere={onRerunElsewhere} />
+        <span className="text-[0.85rem] text-muted">Verschoben oder gelöscht? Das legt sie wieder an.</span>
+      </div>
+    </div>
+  );
+
+  if (!stale)
+    return (
+      <div data-testid="export-result" data-state="current">
+        <ExportReceipt
+          record={record}
+          card={card}
+          fresh={fresh}
+          viewerFile={viewerFile}
+          filesOpen={listOpen || missingFiles.length > 0}
+          onToggleFiles={() => setListOpen((o) => !o)}
+          onShowFolder={showFolder}
+        >
+          {missingNotice}
+          {(listOpen || missingFiles.length > 0) && fileList}
+          {!missingFiles.length && (
+            <p className="mt-3 border-t border-line pt-2.5 text-[0.85rem] text-muted">
+              Änderst du danach noch etwas, steht hier „Veraltet“, auch nach einem Neustart. Erneut ausgeben rechnet nur
+              Geändertes neu.
+            </p>
+          )}
+        </ExportReceipt>
+      </div>
+    );
+
   return (
-    <div data-testid="export-result" data-state={stale ? "stale" : "current"}>
+    <div data-testid="export-result" data-state="stale">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[1.1rem] leading-snug">
-            {stale ? (
-              <span className="text-warn">Veraltet.</span>
-            ) : (
-              <span className="text-good">{fresh ? "Fertig." : "Aktuell."}</span>
-            )}{" "}
-            {record.files.length} Dateien im Ordner „{fileName(record.dir)}“
+            <span className="text-warn">Veraltet.</span> {files(record.files.length)} im Ordner „{fileName(record.dir)}“
           </p>
           <p className="text-[0.85rem] text-muted">Ausgegeben am {when(record.exportedAt)}</p>
         </div>
-        <Button
-          size="sm"
-          className="shrink-0"
-          onClick={() => void api.showInFolder(present ? inDir(record.dir, present) : record.dir)}
-        >
+        <Button size="sm" className="shrink-0" onClick={showFolder}>
           Im Ordner zeigen
         </Button>
       </div>
-      {stale ? (
-        <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-stale">
-          <b className="block text-[0.9rem] font-semibold text-warn">Passt nicht mehr zum Einsatz</b>
-          <ul className="mt-1 grid list-disc gap-0.5 pl-5 text-[0.88rem]" data-testid="export-differences">
-            {differences.map((d) => (
-              <li key={d.kind}>
-                {d.text}
-                {d.labels?.length ? (
-                  <span className="ml-1.5 font-mono text-[0.82rem] text-muted">{d.labels.join(", ")}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <RerunButtons disabled={disabled} dir={record.dir} onRerun={onRerun} onRerunElsewhere={onRerunElsewhere} />
-            <span className="text-[0.85rem] text-muted">Nur Geändertes wird neu gerechnet.</span>
-          </div>
+      <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-stale">
+        <b className="block text-[0.9rem] font-semibold text-warn">Passt nicht mehr zum Einsatz</b>
+        <ul className="mt-1 grid list-disc gap-0.5 pl-5 text-[0.88rem]" data-testid="export-differences">
+          {differences.map((d) => (
+            <li key={d.kind}>
+              {d.text}
+              {d.labels?.length ? (
+                <span className="ml-1.5 font-mono text-[0.82rem] text-muted">{d.labels.join(", ")}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <RerunButtons disabled={disabled} dir={record.dir} onRerun={onRerun} onRerunElsewhere={onRerunElsewhere} />
+          <span className="text-[0.85rem] text-muted">Nur Geändertes wird neu gerechnet.</span>
         </div>
-      ) : (
-        missingFiles.length > 0 && (
-          <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-incomplete">
-            <b className="block text-[0.9rem] font-semibold text-warn">
-              {missingFiles.length === 1
-                ? "Eine Datei fehlt im Ausgabeordner"
-                : `${missingFiles.length} Dateien fehlen im Ausgabeordner`}
-            </b>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <RerunButtons
-                disabled={disabled}
-                dir={record.dir}
-                onRerun={onRerun}
-                onRerunElsewhere={onRerunElsewhere}
-              />
-              <span className="text-[0.85rem] text-muted">Verschoben oder gelöscht? Das legt sie wieder an.</span>
-            </div>
-          </div>
-        )
-      )}
-      <ul className="mt-3 grid gap-1.5">
-        {record.files.map((f) => (
-          <li key={f} className="text-[0.9rem]">
-            <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
-            {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
-            <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
-          </li>
-        ))}
-      </ul>
-      {!stale && !missingFiles.length && (
-        <p className="mt-2 text-[0.85rem] text-muted">
-          Änderst du danach noch etwas, steht hier „Veraltet“, auch nach einem Neustart. Erneut ausgeben rechnet nur
-          Geändertes neu.
-        </p>
-      )}
+      </div>
+      {fileList}
     </div>
+  );
+}
+
+/**
+ * Beleg-Karte einer aktuellen Ausgabe (Issue #192): der Einsatz in wenigen gezählten Tatsachen, die volle
+ * Montage-ID und der Weg in den Viewer. Direkt nach der Ausgabe trägt sie den Versatzschatten aus dem
+ * Infografik-Leitfaden (Zeichen für „Ergebnis“, in der App nur hier); beim Wiederkommen ist sie flach. Kein Ton,
+ * keine Bewegung.
+ */
+function ExportReceipt({
+  record,
+  card,
+  fresh,
+  viewerFile,
+  filesOpen,
+  onToggleFiles,
+  onShowFolder,
+  children,
+}: {
+  record: ExportStatus["record"];
+  card: ExportCard | null;
+  fresh: boolean;
+  viewerFile: string | undefined;
+  filesOpen: boolean;
+  onToggleFiles: () => void;
+  onShowFolder: () => void;
+  /** Hinweise und Dateiliste, unten in der Karte. */
+  children?: ReactNode;
+}) {
+  const n = record.files.length;
+  const facts: [string, string, string?][] = card
+    ? [
+        ...(card.from && card.to
+          ? [
+              ["Zeitraum", card.from === card.to ? `${card.from} Uhr` : `${card.from} bis ${card.to} Uhr`] as [
+                string,
+                string,
+              ],
+            ]
+          : []),
+        [
+          "Quellen",
+          `${card.sources} ${card.sources === 1 ? "Datei" : "Dateien"}` +
+            (card.devices ? ` von ${card.devices} ${card.devices === 1 ? "Gerät" : "Geräten"}` : ""),
+        ],
+        ["Einsatztranskript", `${card.lines} ${card.lines === 1 ? "Zeile" : "Zeilen"}`],
+        ["Montage-ID", card.montageId, "font-mono tracking-wide"],
+      ]
+    : [];
+  return (
+    <section
+      aria-label="Ergebnis der Ausgabe"
+      data-testid="export-receipt"
+      data-fresh={fresh || undefined}
+      className={cx(
+        "relative rounded-lg border bg-panel px-5 py-4",
+        fresh ? "receipt-raised border-ink/70" : "border-line-2",
+      )}
+    >
+      <FlagMark size={20} className="absolute top-4 right-5 text-accent" />
+      <p className="pr-8 font-serif text-[1.3rem] leading-snug">
+        <span className="text-good">{fresh ? "Fertig." : "Aktuell."}</span>{" "}
+        {!card ? (
+          <>
+            {files(n)} im Ordner „{fileName(record.dir)}“
+          </>
+        ) : fresh ? (
+          <>„{card.title}“ ist ausgegeben.</>
+        ) : (
+          <>Die Ausgabe von „{card.title}“ passt zum jetzigen Stand.</>
+        )}
+      </p>
+      <p className="text-[0.88rem] text-muted">
+        {card && (
+          <>
+            {germanDate(card.date)}
+            {card.place && `, ${card.place}`} ·{" "}
+          </>
+        )}
+        ausgegeben am {when(record.exportedAt)}
+      </p>
+      {card && (
+        <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2" data-testid="export-receipt-facts">
+          {facts.map(([label, value, cls]) => (
+            <div key={label}>
+              <dt className="text-[0.82rem] text-muted">{label}</dt>
+              <dd className={cx("text-[0.95rem] font-semibold tabular-nums", cls)}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2">
+        {viewerFile && (
+          <Button
+            variant="primary"
+            onClick={() => void api.openExportFile(record.sessionId, viewerFile)}
+            title={viewerFile}
+            data-testid="export-open-viewer"
+          >
+            Im Viewer ansehen
+          </Button>
+        )}
+        <Button onClick={onShowFolder}>Im Ordner zeigen</Button>
+        <span className="flex-1" />
+        <Button
+          variant="link"
+          className="text-[0.9rem]"
+          aria-expanded={filesOpen}
+          aria-controls={`export-files-${record.sessionId}`}
+          onClick={onToggleFiles}
+          data-testid="export-files-toggle"
+        >
+          {filesOpen ? `${files(n)} ausblenden` : `${files(n)} anzeigen`}
+        </Button>
+      </div>
+      {children}
+    </section>
   );
 }
 

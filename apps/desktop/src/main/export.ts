@@ -22,7 +22,14 @@ import {
   type OverlayHeader,
   timestamp,
 } from "@feldspur/media";
-import { EXPORT_CHECK_STEP, IPC, type ExportRunResult, type SessionTranscriptPreview } from "../shared/api.ts";
+import { formatClock } from "@feldspur/core/time";
+import {
+  EXPORT_CHECK_STEP,
+  IPC,
+  type ExportCard,
+  type ExportRunResult,
+  type SessionTranscriptPreview,
+} from "../shared/api.ts";
 import { checkOriginals } from "./originals.ts";
 
 const CHUNK = 60;
@@ -204,6 +211,34 @@ export function exportStatus(
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
+}
+
+/**
+ * Zahlen für die Beleg-Karte nach der Ausgabe (Issue #192), mit denselben Einstellungen wie die Ausgabe: Zeitspanne
+ * der Montage, Quellen und Geräte, Zeilen des Einsatztranskripts und die Montage-ID.
+ */
+export function exportCard(s: ProjectStore, sessionId: string, opts: Parameters<typeof exportSettings>[2]): ExportCard {
+  const settings = exportSettings(s, sessionId, opts);
+  const session = s.getSession(sessionId);
+  const transcript = buildSessionTranscript(s, sessionId, {
+    mode: session.episodes && !settings.realtime ? "episodes" : "realtime",
+    episodes: session.episodes,
+  });
+  const { input } = transcript;
+  const segments = transcript.plan.segments;
+  const hm = (ms: number) => formatClock(ms).slice(0, 5);
+  return {
+    title: session.title,
+    date: session.date,
+    place: session.place,
+    from: segments.length ? hm(segments[0]!.fromMs) : null,
+    to: segments.length ? hm(segments.at(-1)!.toMs) : null,
+    sources: input.sources.length,
+    // Tagebuchseiten hängen nicht an einem Gerät, auch wenn ein Scanner eingetragen ist.
+    devices: new Set(input.sources.filter((x) => x.kind !== "diary" && x.deviceId).map((x) => x.deviceId)).size,
+    lines: transcript.entries.length,
+    montageId: transcript.header.montageId,
+  };
 }
 
 /**

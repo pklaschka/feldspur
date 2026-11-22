@@ -87,6 +87,7 @@ import {
   cancelExport,
   exportRunning,
   exportingSession,
+  exportCard,
   exportStatus,
   montagePlan,
   previewExport,
@@ -593,6 +594,17 @@ function registerIpc(): void {
   ipcMain.handle(IPC.exportStatus, (_e, sessionId: string, opts: ExportRequest) =>
     exportStatus(requireStore(), sessionId, opts),
   );
+  ipcMain.handle(IPC.exportCard, (_e, sessionId: string, opts: ExportRequest) =>
+    exportCard(requireStore(), sessionId, opts),
+  );
+  ipcMain.handle(IPC.openExportFile, async (_e, sessionId: string, name: string) => {
+    // Nur Dateien, die zu dieser Ausgabe gehören: Der Name kommt aus dem Ausgabe-Vermerk, nie ein freier Pfad.
+    const record = requireStore().getExportRecord(sessionId);
+    if (!record?.files.includes(String(name))) return false;
+    const path = join(record.dir, String(name));
+    if (!existsSync(path)) return false;
+    return (await shell.openPath(path)) === "";
+  });
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
     montagePlan(requireStore(), sessionId, realtime),
   );
