@@ -17,6 +17,7 @@ const SETTINGS: ExportSettings = {
   realtime: true,
   deviceTracks: true,
   viewer: true,
+  readme: true,
 };
 
 describe.skipIf(!hasFfmpeg())("Zahlen für die Tabelle zum Methodenteil", () => {

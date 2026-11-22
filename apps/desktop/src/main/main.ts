@@ -114,7 +114,8 @@ import { checkOriginals, relinkDuplicates, relinkFile, searchOriginals, unreacha
 import { forgetProject, recentProjects, rememberProject } from "./recent.ts";
 import { AUTO_BACKUP_CHECK_MS, AutoBackup } from "./backup.ts";
 import { cancelCitationLookup, citationInfo, lookupCitationDoi } from "./citation.ts";
-import { isCitationLink } from "../shared/citation.ts";
+import { softwareLine } from "../shared/methods-table.ts";
+import { ALL_VERSIONS_DOI, isCitationLink } from "../shared/citation.ts";
 
 let store: ProjectStore | null = null;
 /** Laufendes Einsammeln je Einsatz, zum Abbrechen. */
@@ -207,6 +208,7 @@ type ExportRequest = {
   realtime?: boolean;
   deviceTracks?: boolean;
   viewer?: boolean;
+  readme?: boolean;
   dir?: string;
   reuseDir?: boolean;
   acceptOriginals?: boolean;
@@ -621,7 +623,14 @@ function registerIpc(): void {
       if (r.canceled || !r.filePaths[0]) return null;
       parent = r.filePaths[0];
     }
-    return runExport(s, e.sender, sessionId, parent, opts);
+    // Zeile zur Software für die LIESMICH: Version und DOI wie in „Feldspur zitieren“, ohne Abfrage im Netz.
+    const c = citationInfo();
+    const software = softwareLine({
+      version: c.version,
+      released: c.released,
+      doi: c.versionDoi?.doi ?? ALL_VERSIONS_DOI,
+    });
+    return runExport(s, e.sender, sessionId, parent, { ...opts, software });
   });
   ipcMain.handle(IPC.cancelExport, (_e, sessionId: string) => cancelExport(sessionId));
   ipcMain.handle(IPC.checkOriginals, (e, sessionId: string, video: boolean) =>

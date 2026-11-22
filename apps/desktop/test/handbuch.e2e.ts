@@ -536,6 +536,10 @@ await kapitel("ausgeben", async () => {
     ])
       await siehe(s, page.getByRole("switch", { name: new RegExp(`^${esc(s)}`) }));
     await siehe("Viewer zum Ansehen im Browser", page.getByRole("switch", { name: /^Viewer zum Ansehen im Browser/ }));
+    await siehe(
+      "LIESMICH mit Tabelle für den Methodenteil",
+      page.getByRole("switch", { name: /^LIESMICH mit Tabelle für den Methodenteil/ }),
+    );
     await siehe("Montage ansehen…");
     await siehe("Kontext", page.getByTestId("export-context"), { hinweis: "Karte Kontext links" });
     const offen = await page.getByText("Noch offen").count();
@@ -549,6 +553,9 @@ await kapitel("ausgeben", async () => {
     await siehe("Fertig", page.getByText("Fertig.", { exact: true }));
     await siehe("Im Ordner zeigen");
     await siehe("Ausgabeordner", page.getByTestId("export-result"));
+    await siehe("LIESMICH", page.getByTestId("export-result").getByText("LIESMICH.html", { exact: true }), {
+      handbuch: "`LIESMICH.html`",
+    });
     return out;
   });
 

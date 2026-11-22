@@ -10,6 +10,7 @@ import { ALL_VERSIONS_DOI } from "../shared/citation.ts";
 import {
   germanDate,
   materialTable,
+  METHODS_HANDBOOK_URL,
   methodsHtml,
   methodsMarkdown,
   methodsPlain,
@@ -21,9 +22,6 @@ import {
 import { Button, CloseButton, cx } from "./ui.tsx";
 
 const api = window.feldspur;
-
-/** Abschnitt im Handbuch mit dem Mustertext, der erklärt, was Montagevideo und Einsatztranskript sind. */
-export const METHODS_HANDBOOK_URL = "https://purl.archive.org/feldspur#sec-methodenteil";
 
 export function MethodsDialog({
   open,
@@ -39,7 +37,7 @@ export function MethodsDialog({
   const [failed, setFailed] = useState<string | null>(null);
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
   const [copied, setCopied] = useState<"table" | "markdown" | "failed" | null>(null);
-  const { video, resolve, mixAudio, deviceTracks, viewer, realtime } = options;
+  const { video, resolve, mixAudio, deviceTracks, viewer, readme, realtime } = options;
 
   const [wasOpen, setWasOpen] = useState(false);
   if (wasOpen !== open) {
@@ -52,14 +50,14 @@ export function MethodsDialog({
   useEffect(() => {
     if (!open) return;
     let live = true;
-    void api.methodsOverview({ video, resolve, mixAudio, deviceTracks, viewer, realtime }).then(
+    void api.methodsOverview({ video, resolve, mixAudio, deviceTracks, viewer, readme, realtime }).then(
       (d) => live && setData(d),
       (e: unknown) => live && setFailed(e instanceof Error ? e.message : String(e)),
     );
     return () => {
       live = false;
     };
-  }, [open, video, resolve, mixAudio, deviceTracks, viewer, realtime]);
+  }, [open, video, resolve, mixAudio, deviceTracks, viewer, readme, realtime]);
 
   const all = data ? [...data.sessions].sort((a, b) => a.date.localeCompare(b.date)) : [];
   const chosen = all.filter((s) => !skipped.has(s.sessionId));
@@ -107,7 +105,8 @@ export function MethodsDialog({
           </div>
           <Dialog.Description className="mb-4 max-w-[70ch] text-[0.9rem] text-muted">
             Welche Aufzeichnungen in deine Einsätze hineingeflossen sind und was Feldspur daraus ausgibt, zum Kopieren
-            in deinen Text. Feldspur zählt und misst hier nur. Den Nachweis je Datei führt weiter das Begleitprotokoll.
+            in deinen Text. Feldspur zählt und misst hier nur. Für jeden Einsatz einzeln stehen dieselben Angaben in der
+            LIESMICH seines Ausgabeordners.
           </Dialog.Description>
           {failed && (
             <p role="alert" className="text-[0.9rem] text-bad">

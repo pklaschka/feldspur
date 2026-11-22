@@ -505,6 +505,8 @@ export interface ExportRequestOptions {
   deviceTracks: boolean;
   /** Viewer (.html) neben dem Montagevideo. */
   viewer: boolean;
+  /** LIESMICH.html mit der Tabelle für den Methodenteil. */
+  readme: boolean;
   /** Ohne Ordnerdialog in den Ordner der letzten Ausgabe. */
   reuseDir?: boolean;
   /** Ohne Ordnerdialog in diesen Ordner (z. B. nach „Trotzdem ausgeben“). */

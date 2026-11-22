@@ -7,7 +7,15 @@ import type { FeldspurApi } from "../src/shared/api.ts";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const OPTIONS = { video: true, resolve: false, mixAudio: true, realtime: true, deviceTracks: true, viewer: true };
+const OPTIONS = {
+  video: true,
+  resolve: false,
+  mixAudio: true,
+  realtime: true,
+  deviceTracks: true,
+  viewer: true,
+  readme: true,
+};
 
 /** Erfundener Einsatz mit einem Video; `n` unterscheidet Tag, Titel und Montage-ID. */
 const einsatz = (n: number, exported: MethodsSessionSummary["exported"] = "current"): MethodsSessionSummary => ({

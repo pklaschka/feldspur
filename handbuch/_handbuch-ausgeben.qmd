@@ -1,7 +1,7 @@
 ## Ausgeben {#sec-ausgeben}
 
 Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Einsatz**: Einsatztranskript,
-Dokumentvariablen und Begleitprotokoll, dazu auf Wunsch Montagevideo, Viewer und Schnittliste. Ist vorher noch etwas
+Dokumentvariablen und Begleitprotokoll, dazu auf Wunsch Montagevideo, Viewer, LIESMICH und Schnittliste. Ist vorher noch etwas
 offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen Links
 dorthin.
 
@@ -238,6 +238,22 @@ Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. Gibt es Kontext, kom
 **Kontext entstanden** dazu, in den Dokumentvariablen die Zahl der **Kontextstücke**. So bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript
 beruht, und das Material lässt sich sauber archivieren.
 
+### LIESMICH (.html) {#sec-liesmich}
+
+Mit **LIESMICH mit Tabelle für den Methodenteil** legt Feldspur die Datei `LIESMICH.html` in den Ausgabeordner. Sie
+ist für Menschen gedacht, die den Ordner später öffnen, auch für dich selbst in ein paar Jahren, und lässt sich in
+jedem Browser lesen und drucken. Darin steht:
+
+- welcher Einsatz das ist, mit der ganzen Montage-ID,
+- was im Ordner liegt und wozu jede Datei dient,
+- wie Einsatztranskript, Zeitmarken und Montagevideo zusammengehören,
+- wie aus dieser Ausgabe zitiert wird (@sec-stelle-zitieren),
+- die Tabelle für den Methodenteil dieses Einsatzes (@sec-methodenteil), darunter Feldspur mit Version und DOI.
+
+Die Tabelle steht dort, weil sie die Montage-ID trägt: So bleibt sie bei genau der Fassung, die sie beschreibt.
+Einsatztranskript und Montagevideo sind auch ohne die LIESMICH vollständig und zitierfähig. Sie beschreibt die
+Ausgabe nur. Ohne das Häkchen fehlt die Datei, sonst ändert sich nichts.
+
 ### In MAXQDA
 
 Lies das Einsatztranskript in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
@@ -261,7 +277,7 @@ was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings e
 1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
    ist.
 2. Sichere den Ausgabeordner als Ganzes und unverändert (Einsatztranskript, Montagevideo, Viewer, Dokumentvariablen,
-   Begleitprotokoll). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
+   Begleitprotokoll, LIESMICH). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
    Adresse vergibt, etwa eine DOI.
 3. Zitiere aus genau dieser Fassung. Im Viewer legt **Stelle kopieren** die Angabe in die Zwischenablage:
    Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID.
@@ -287,26 +303,27 @@ liest, erkennt an der ID ebenso, ob die vorliegende Fassung die zitierte ist.
 ### Im Methodenteil beschreiben {#sec-methodenteil}
 
 Wer aus der Ausgabe zitiert, muss einmal erklären, was das für ein Artefakt ist und woraus es besteht. Das
-Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für den Methodenteil gibt es deshalb im Schritt
-**Ausgeben** unter **Für den Methodenteil** den Knopf **Tabelle für den Methodenteil…**. Er schreibt keine Datei,
-er zeigt zwei Tabellen zum Kopieren:
+Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für den Methodenteil gibt es deshalb zwei
+verdichtete Tabellen. Für jeden Einsatz stehen sie in der LIESMICH seines Ausgabeordners (@sec-liesmich). Für
+mehrere Einsätze zusammen zeigt sie im Schritt **Ausgeben** unter **Für den Methodenteil** der Knopf **Tabelle für
+den Methodenteil…**, zum Kopieren:
 
 - **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
   Uhr eines Geräts korrigiert, steht die Korrektur dabei.
 - **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
   Montagevideo mit Länge und Art der Montage.
 
-Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Einsätze des Projekts zusammen; einzelne
-Einsätze wählst du oben ab. **Tabellen kopieren** legt sie so in die Zwischenablage, dass Word, LibreOffice und
+Darunter steht Feldspur mit Version und DOI. Im Dialog fassen die Tabellen alle Einsätze des Projekts zusammen;
+einzelne Einsätze wählst du oben ab. **Tabellen kopieren** legt sie so in die Zwischenablage, dass Word, LibreOffice und
 Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt du danach in deinem
 Dokument an.
 
 Feldspur zählt und misst hier nur. In der Tabelle steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
 genug ist. Das bleibt bei dir.
 
-Die Tabelle beschreibt den Stand im Projekt, mit den gerade gewählten Einstellungen der Ausgabe. Liegt ein Einsatz so
-noch nicht als Ausgabe vor, sagt der Dialog das dazu. Gib ihn dann zuerst aus, sonst passen Montage-ID und Umfang
-nicht zu den Dateien, aus denen du zitierst.
+Die Tabelle in der LIESMICH gehört zu genau dieser Ausgabe. Der Dialog beschreibt dagegen den Stand im Projekt, mit
+den gerade gewählten Einstellungen der Ausgabe. Liegt ein Einsatz so noch nicht als Ausgabe vor, sagt der Dialog das
+dazu. Gib ihn dann zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
 
 So kann das Ergebnis aussehen (die Werte sind erfunden):
 

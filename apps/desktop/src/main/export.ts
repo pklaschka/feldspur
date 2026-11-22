@@ -176,6 +176,7 @@ export function exportSettings(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
   },
 ): ExportSettings {
   return {
@@ -187,6 +188,7 @@ export function exportSettings(
     deviceTracks: opts.video && opts.deviceTracks !== false,
     // Der Viewer gehört zum Video.
     viewer: opts.video && opts.viewer !== false,
+    readme: opts.readme !== false,
   };
 }
 
@@ -201,6 +203,7 @@ export function exportStatus(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
   },
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
@@ -217,6 +220,7 @@ export function methodsOverview(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
   },
 ): MethodsSessionSummary[] {
   return s.listSessions().map((x) => methodsSummary(s, x.id, exportSettings(s, x.id, opts)));
@@ -254,6 +258,9 @@ export async function runExport(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    /** Zeile zur Software (Version, DOI) für die LIESMICH. */
+    software?: string;
     /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */
     acceptOriginals?: boolean;
   },
@@ -296,6 +303,8 @@ export async function runExport(
       audioMix: opts.mixAudio === false ? "main" : "all",
       deviceTracks: opts.deviceTracks !== false,
       viewer: opts.viewer !== false,
+      readme: settings.readme,
+      software: opts.software,
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),

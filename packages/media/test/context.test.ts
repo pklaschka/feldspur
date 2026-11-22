@@ -14,6 +14,7 @@ const SETTINGS: ExportSettings = {
   realtime: true,
   deviceTracks: false,
   viewer: false,
+  readme: false,
 };
 const T = (h: number, m: number, s = 0) => Date.UTC(2026, 8, 14, h, m, s);
 

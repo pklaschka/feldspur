@@ -14,6 +14,7 @@ const SETTINGS: ExportSettings = {
   realtime: true,
   deviceTracks: true,
   viewer: true,
+  readme: true,
 };
 
 describe("Einstellungen im Vergleich", () => {

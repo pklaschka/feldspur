@@ -68,7 +68,7 @@ Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass
 1. **Einsammeln** (@sec-einsammeln): alle Dateien hineinziehen, Feldspur ordnet sie Geräten zu.
 2. **Abgleichen** (@sec-abgleichen): die Uhren der Geräte aufeinander abstimmen.
 3. **Durchsehen** (@sec-durchsehen): alles auf der Zeitachse prüfen, Tagebuch abtippen, mitschreiben.
-4. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll schreiben, dazu auf Wunsch Montagevideo und Viewer.
+4. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll schreiben, dazu auf Wunsch Montagevideo, Viewer und LIESMICH.
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
 Zeitbelegen und Dateiangaben. Mit **Suchen** ([Strg+K]{.kbd}, auf dem Mac [⌘+K]{.kbd}) durchsuchst du Mitschrift, Notizen, Tagebuch,

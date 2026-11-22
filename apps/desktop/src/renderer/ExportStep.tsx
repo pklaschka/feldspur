@@ -27,6 +27,7 @@ const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || p;
 const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
+  [/^LIESMICH\.html$/, "LIESMICH: was im Ordner liegt, wie zitiert wird, Tabelle für den Methodenteil"],
   [/\.html$/, "Viewer: Einsatztranskript synchron zum Video, im Browser öffnen"],
   [/\.docx$/, "Einsatztranskript für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],
   [/\.xlsx$/, "Dokumentvariablen für MAXQDA (Variablen › Dokumentvariablen importieren)"],
@@ -41,6 +42,7 @@ interface Options {
   mixAudio: boolean;
   deviceTracks: boolean;
   viewer: boolean;
+  readme: boolean;
   byEpisodes: boolean;
 }
 const DEFAULTS: Options = {
@@ -49,6 +51,7 @@ const DEFAULTS: Options = {
   mixAudio: true,
   deviceTracks: true,
   viewer: true,
+  readme: true,
   byEpisodes: false,
 };
 const KEY = "feldspur.export-options";
@@ -95,7 +98,7 @@ export function ExportStep({
       }
       return next;
     });
-  const { video, resolve, mixAudio, deviceTracks, viewer, byEpisodes } = opts;
+  const { video, resolve, mixAudio, deviceTracks, viewer, readme, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
   const [methods, setMethods] = useState(false);
   const withEpisodes = view.session.episodes;
@@ -108,20 +111,20 @@ export function ExportStep({
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
   const cancelled = busy ? null : (ex.cancelled[sessionId] ?? null);
-  const settings = { video, resolve, mixAudio, deviceTracks, viewer, realtime };
+  const settings = { video, resolve, mixAudio, deviceTracks, viewer, readme, realtime };
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const [status, setStatus] = useState<ExportStatus | null>(null);
   useEffect(() => {
     if (busy) return;
     let live = true;
-    void api.exportStatus(sessionId, { video, resolve, mixAudio, deviceTracks, viewer, realtime }).then(
+    void api.exportStatus(sessionId, { video, resolve, mixAudio, deviceTracks, viewer, readme, realtime }).then(
       (st) => live && setStatus(st),
       () => live && setStatus(null),
     );
     return () => {
       live = false;
     };
-  }, [view, sessionId, video, resolve, mixAudio, deviceTracks, viewer, realtime, busy, justDone]);
+  }, [view, sessionId, video, resolve, mixAudio, deviceTracks, viewer, readme, realtime, busy, justDone]);
   const result = busy || status?.record.sessionId !== sessionId ? null : status;
 
   useEffect(() => {
@@ -170,7 +173,7 @@ export function ExportStep({
       <StepHeader
         className="max-w-[1240px]"
         title="Ausgeben"
-        summary="Ein Ordner pro Einsatz: Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; dazu auf Wunsch Montagevideo, Viewer und Schnittliste."
+        summary="Ein Ordner pro Einsatz: Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; dazu auf Wunsch Montagevideo, Viewer, LIESMICH und Schnittliste."
         help={
           <>
             <p className="mb-1.5">
@@ -318,6 +321,12 @@ export function ExportStep({
                 hint="Eine Datei neben dem Video: Einsatztranskript läuft mit, Klick auf eine Zeile springt. Mit Bildern, darum größer."
               />
               <Option
+                checked={readme}
+                onChange={(v) => set({ readme: v })}
+                label="LIESMICH mit Tabelle für den Methodenteil (.html)"
+                hint="Erklärt, was im Ordner liegt und wie daraus zitiert wird; nennt Eingang, Ausgabe und Montage-ID."
+              />
+              <Option
                 checked={resolve}
                 onChange={(v) => set({ resolve: v })}
                 label="Schnittliste für DaVinci Resolve"
@@ -370,7 +379,7 @@ export function ExportStep({
               <MethodsDialog
                 open={methods}
                 onOpenChange={setMethods}
-                options={{ video, resolve, mixAudio, deviceTracks, viewer, realtime }}
+                options={{ video, resolve, mixAudio, deviceTracks, viewer, readme, realtime }}
               />
             </section>
           </Panel>
