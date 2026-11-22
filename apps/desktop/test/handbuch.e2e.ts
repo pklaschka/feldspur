@@ -571,6 +571,20 @@ await kapitel("ausgeben", async () => {
     await siehe("Aktuell", page.getByText("Aktuell.", { exact: true }));
   });
 
+  await ablauf("Die Tabelle für den Methodenteil öffnen", async () => {
+    // Wenn: der Dialog geöffnet wird, dann stehen Eingang und Ausgabe mit der Montage-ID zum Kopieren bereit
+    await siehe("Für den Methodenteil", page.getByTestId("export-methods"));
+    await siehe("Tabelle für den Methodenteil…");
+    await knopf("Tabelle für den Methodenteil…").click();
+    const tabellen = page.getByTestId("methods-tables");
+    await siehe("Eingang", tabellen.getByText(/^Eingang: Aufzeichnungen aus/));
+    await siehe("Ausgabe", tabellen.getByText(/^Ausgabe: Einsatztranskript und Montagevideo/));
+    await siehe("Montage-ID", tabellen.getByText(/^FS(-[0-9A-Z]{4}){3}$/), { hinweis: "Tabelle Ausgabe" });
+    await siehe("Tabellen kopieren");
+    await siehe("Als Markdown kopieren");
+    await schliessen();
+  });
+
   await ablauf("Den Viewer im Browser öffnen", async () => {
     // Wenn: die HTML-Datei im Chromium von Electron geöffnet wird
     const html = readdirSync(out, { recursive: true })

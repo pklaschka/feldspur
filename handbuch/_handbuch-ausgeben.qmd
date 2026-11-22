@@ -274,7 +274,8 @@ Eine Angabe kann dann so aussehen (die Werte sind erfunden):
 > #00:05:02-0# (10:07:02 Uhr).
 
 Im Methodenteil erklärst du einmal, was ein Montagevideo und ein Einsatztranskript sind und womit sie entstanden sind
-(Feldspur mit Version, @sec-zitieren). Nachvollziehbar bleibt der Weg zurück zum Original trotzdem: Das
+(Feldspur mit Version, @sec-zitieren). Dafür gibt es eine Tabelle zum Kopieren und einen Mustertext
+(@sec-methodenteil). Nachvollziehbar bleibt der Weg zurück zum Original trotzdem: Das
 Begleitprotokoll nennt für jede Datei Herkunft, Prüfsumme und den Zeitbeleg, auf dem ihre Lage beruht.
 
 Änderst du nach dem Zitieren noch etwas und gibst erneut aus, dann sichere die neue Ausgabe als eigene Fassung und
@@ -282,3 +283,60 @@ vergleiche die Montage-IDs (@tbl-montage-id-lesen). Ist nur der dritte Block and
 weiter, und du prüfst höchstens den Wortlaut der zitierten Stellen. Sind die ersten beiden Blöcke anders, können
 sich die Stellen verschoben haben. Dann prüfst du die zitierten Zeitmarken anhand der Uhrzeit nach. Wer deine Arbeit
 liest, erkennt an der ID ebenso, ob die vorliegende Fassung die zitierte ist.
+
+### Im Methodenteil beschreiben {#sec-methodenteil}
+
+Wer aus der Ausgabe zitiert, muss einmal erklären, was das für ein Artefakt ist und woraus es besteht. Das
+Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für den Methodenteil gibt es deshalb im Schritt
+**Ausgeben** unter **Für den Methodenteil** den Knopf **Tabelle für den Methodenteil…**. Er schreibt keine Datei,
+er zeigt zwei Tabellen zum Kopieren:
+
+- **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
+  Uhr eines Geräts korrigiert, steht die Korrektur dabei.
+- **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
+  Montagevideo mit Länge und Art der Montage.
+
+Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Einsätze des Projekts zusammen; einzelne
+Einsätze wählst du oben ab. **Tabellen kopieren** legt sie so in die Zwischenablage, dass Word, LibreOffice und
+Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt du danach in deinem
+Dokument an.
+
+Feldspur zählt und misst hier nur. In der Tabelle steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
+genug ist. Das bleibt bei dir.
+
+Die Tabelle beschreibt den Stand im Projekt, mit den gerade gewählten Einstellungen der Ausgabe. Liegt ein Einsatz so
+noch nicht als Ausgabe vor, sagt der Dialog das dazu. Gib ihn dann zuerst aus, sonst passen Montage-ID und Umfang
+nicht zu den Dateien, aus denen du zitierst.
+
+So kann das Ergebnis aussehen (die Werte sind erfunden):
+
+| Eingang | Gerät | Anzahl | Dauer (h:mm:ss) | Zeitbeleg |
+|:---|:---|:---|:---|:-------|
+| Video | Kamera | 112 | 1:48:00 | Metadaten; Uhr um +0:42 korrigiert |
+| Audio | Rekorder | 6 | 3:10:00 | angesagte Uhrzeit (1), Folgeaufnahme (5) |
+| Fotos | Handy | 19 | – | Metadaten |
+| Tagebuch | – | 31 Einträge, 4 Dateien | – | notierte Uhrzeit |
+
+: Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026) {#tbl-methodenteil-eingang}
+
+| Einsatz | Ausgabe | Datei | Umfang | Montage-ID |
+|:---|:---|:---|:---|:---|
+| 14.09.2026 Testmarkt | Einsatztranskript | .docx | 412 Zeilen | FS-7KQ2-M9XD-3F8A |
+| | Montagevideo | .mp4 | 3:10:00, Echtzeit | |
+
+: Ausgabe: Einsatztranskript und Montagevideo je Einsatz {#tbl-methodenteil-ausgabe}
+
+Was fehlt, ist die Erklärung in Worten. Den folgenden Mustertext kannst du als Blockzitat übernehmen (mit diesem
+Handbuch als Quelle, @sec-zitieren) oder in eigenen Worten nacherzählen:
+
+> Die Aufzeichnungen eines Feldeinsatzes (Video, Ton, Fotos, Feldtagebuch) werden in Feldspur anhand ihrer Uhrzeiten
+> auf eine gemeinsame Zeitachse gelegt. Die Uhren der Geräte werden dafür gegen eine Referenzuhr abgeglichen; worauf
+> die Lage jeder Datei beruht, hält ein Begleitprotokoll fest. Aus der Zeitachse entstehen zwei Ausgaben, die
+> zusammengehören. Das Einsatztranskript führt Mitschrift, Tagebucheinträge und Fotos in zeitlicher Folge, jede Zeile
+> mit Uhrzeit und Zeitmarke. Das Montagevideo zeigt die Aufnahmen aller Geräte in Echtzeit, gleichzeitige
+> nebeneinander; die Zeitmarken des Einsatztranskripts zeigen auf Stellen in diesem Video. Beide sind abgeleitete
+> Artefakte: In ihnen stecken Entscheidungen der Forschenden, etwa welche Uhr gilt und was wie verschriftlicht wurde.
+> Zitiert wird deshalb aus dieser Ausgabe. Die Montage-ID bezeichnet dabei die Fassung, samt Wortlaut.
+
+Schneidest du nach Episoden, passt der Satz zum Montagevideo nicht: Dann laufen nur die Episoden in voller Länge, und
+die Zeit dazwischen wird zu einer kurzen Tafel.

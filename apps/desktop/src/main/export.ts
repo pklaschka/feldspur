@@ -12,6 +12,8 @@ import {
   type ExportStatus,
   entryText,
   exportSession,
+  methodsSummary,
+  type MethodsSessionSummary,
   ExportPrecheckError,
   type ImageRef,
   montagePreview,
@@ -203,6 +205,21 @@ export function exportStatus(
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
+}
+
+/** Zahlen aller Einsätze für die Tabelle zum Methodenteil (Issue #149), mit den gewählten Einstellungen. */
+export function methodsOverview(
+  s: ProjectStore,
+  opts: {
+    video: boolean;
+    resolve?: boolean;
+    mixAudio?: boolean;
+    realtime?: boolean;
+    deviceTracks?: boolean;
+    viewer?: boolean;
+  },
+): MethodsSessionSummary[] {
+  return s.listSessions().map((x) => methodsSummary(s, x.id, exportSettings(s, x.id, opts)));
 }
 
 /**

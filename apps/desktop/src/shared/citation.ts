@@ -122,7 +122,7 @@ export function pickVersionDoi(response: unknown, version: string): VersionDoi |
   return null;
 }
 
-/** Nur diese Adressen darf der Dialog im Browser öffnen. */
+/** Nur diese Adressen dürfen die Dialoge im Browser öffnen: DOI, Zenodo und das Handbuch über seine feste Adresse. */
 export function isCitationLink(url: string): boolean {
-  return /^https:\/\/(doi\.org|zenodo\.org)\//.test(url);
+  return /^https:\/\/(doi\.org\/|zenodo\.org\/|purl\.archive\.org\/feldspur(?:[/#?]|$))/.test(url);
 }

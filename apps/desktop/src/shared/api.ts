@@ -20,6 +20,7 @@ import type {
   ExportStatus,
   FileCheck,
   FileState,
+  MethodsSessionSummary,
   MontagePreview,
   SessionTranscriptKind,
   ScanProgress,
@@ -649,6 +650,12 @@ export type CitationLookup =
   | { state: "offline" }
   | { state: "cancelled" };
 
+/** Zahlen für die „Tabelle für den Methodenteil“ (Issue #149): alle Einsätze des Projekts und die Angaben zur Software. */
+export interface MethodsOverview {
+  sessions: MethodsSessionSummary[];
+  citation: CitationInfo;
+}
+
 export interface FeldspurApi {
   newProject(): Promise<ProjectInfo | null>;
   openProject(): Promise<ProjectInfo | null>;
@@ -674,6 +681,8 @@ export interface FeldspurApi {
   cancelCitationLookup(): Promise<void>;
   /** Text in die Zwischenablage. */
   copyText(text: string): Promise<void>;
+  /** Tabelle in die Zwischenablage: als HTML (für Word und Co.) und als Text für alles andere. */
+  copyTable(html: string, text: string): Promise<void>;
   /** Eine Adresse bei doi.org oder zenodo.org im Browser öffnen. */
   openCitationLink(url: string): Promise<void>;
   currentProject(): Promise<ProjectInfo | null>;
@@ -803,6 +812,11 @@ export interface FeldspurApi {
   previewExport(sessionId: string, realtime?: boolean): Promise<SessionTranscriptPreview>;
   /** Letzte Ausgabe im Vergleich zum jetzigen Stand und den gewählten Einstellungen; null = noch nie ausgegeben. */
   exportStatus(sessionId: string, opts: ExportRequestOptions): Promise<ExportStatus | null>;
+  /**
+   * Zahlen aller Einsätze für die Tabelle zum Methodenteil, mit den gewählten Ausgabe-Einstellungen: was
+   * hineingeflossen ist, was die Ausgabe ergibt und ob sie so schon vorliegt.
+   */
+  methodsOverview(opts: ExportRequestOptions): Promise<MethodsOverview>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
@@ -889,6 +903,7 @@ export const IPC = {
   lookupCitationDoi: "citation:lookup",
   cancelCitationLookup: "citation:cancel",
   copyText: "clipboard:write",
+  copyTable: "clipboard:write-table",
   openCitationLink: "citation:open-link",
   currentProject: "project:current",
   createSession: "session:create",
@@ -963,6 +978,7 @@ export const IPC = {
   exportChangeLog: "history:export-change-log",
   previewExport: "export:preview",
   exportStatus: "export:status",
+  methodsOverview: "export:methods",
   montagePreview: "export:montage",
   exportSession: "export:run",
   cancelExport: "export:cancel",
