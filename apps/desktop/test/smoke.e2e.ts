@@ -1118,6 +1118,8 @@ try {
     await page.getByRole("tab", { name: /Ausgeben.*läuft/ }).waitFor();
     await page.getByRole("tab", { name: /Ausgeben/ }).click();
     await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
+    // Dann: Die frische Ausgabe gilt als aktuell, auch wenn dabei erst Sprachpegel gemessen wurden.
+    await page.locator("[data-testid=export-result][data-state=current]").waitFor();
     const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
     console.log(
       `Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`,
