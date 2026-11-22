@@ -114,6 +114,28 @@ async function ff(args: string[], signal?: AbortSignal): Promise<void> {
   await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { signal });
 }
 
+/** Feste Bitrate der Hardware-Encoder (kbit/s); libx264 mit CRF landet bei ruhigen Bildern meist darunter. */
+const VIDEO_KBPS = 3000;
+/** Tonspur 1 (Mischung oder Hauptquelle) und jede Spur je Gerät, kbit/s. */
+const MIX_KBPS = 160;
+const DEVICE_TRACK_KBPS = 128;
+
+/**
+ * Ungefähre Größe des Montagevideos in Bytes, aus Länge und Bitraten: `video` mit Tonspur 1, `deviceTracks` kommt
+ * dazu, wenn je Gerät eine Spur entsteht (erst ab zwei Geräten mit Ton). Eine Schätzung; je nach Encoder und Bild
+ * weicht die echte Datei ab.
+ */
+export function estimateMontageBytes(
+  durationMs: number,
+  soundDevices: number,
+): { video: number; deviceTracks: number } {
+  const bytes = (kbps: number) => Math.round(((kbps * 1000) / 8) * (durationMs / 1000));
+  return {
+    video: bytes(VIDEO_KBPS + MIX_KBPS),
+    deviceTracks: soundDevices >= 2 ? bytes(DEVICE_TRACK_KBPS * soundDevices) : 0,
+  };
+}
+
 let encoderCache: string[] | null = null;
 /** H.264, wenn möglich: libx264 (Entwicklung), VideoToolbox (macOS), Media Foundation (Windows), OpenH264; sonst MPEG-4. */
 export async function videoEncoder(): Promise<string[]> {
@@ -123,11 +145,11 @@ export async function videoEncoder(): Promise<string[]> {
   encoderCache = has("libx264")
     ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
     : has("h264_videotoolbox")
-      ? ["-c:v", "h264_videotoolbox", "-b:v", "3M"]
+      ? ["-c:v", "h264_videotoolbox", "-b:v", `${VIDEO_KBPS}k`]
       : has("h264_mf")
-        ? ["-c:v", "h264_mf", "-b:v", "3M"]
+        ? ["-c:v", "h264_mf", "-b:v", `${VIDEO_KBPS}k`]
         : has("libopenh264")
-          ? ["-c:v", "libopenh264", "-b:v", "3M"]
+          ? ["-c:v", "libopenh264", "-b:v", `${VIDEO_KBPS}k`]
           : ["-c:v", "mpeg4", "-q:v", "4"];
   return encoderCache;
 }
@@ -515,7 +537,7 @@ export async function renderMontage(
         return p.audios.filter((_, k) => ok[k]);
       }),
     );
-    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), "160k");
+    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), `${MIX_KBPS}k`);
     const perDevice: { track: DeviceTrack; file: string }[] = [];
     const withSound = devices.filter((d) => all.some((list) => list.some((a) => a.source.deviceId === d.deviceId)));
     if (withSound.length >= 2)
@@ -525,7 +547,7 @@ export async function renderMontage(
           file: await renderTrack(
             `g${k}`,
             all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
-            "128k",
+            `${DEVICE_TRACK_KBPS}k`,
           ),
         });
     return { mix, perDevice };
