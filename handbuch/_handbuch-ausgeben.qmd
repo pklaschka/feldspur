@@ -343,8 +343,8 @@ Einsatztranskript, Uhren ohne Abgleich und der Stand der Ausgabe. Ein Klick auf 
 Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
 - **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
-  Uhr eines Geräts korrigiert, steht die Korrektur dabei. Über mehrere Feldtage steht je Art eine Zeile mit der Zahl
-  der Geräte: Geräte legst du je Einsatz an, und dasselbe Gerät heißt von Tag zu Tag oft etwas anders.
+  Uhr eines Geräts korrigiert, steht die Korrektur dabei. Über mehrere Feldtage steht je Art eine Zeile, und die
+  Spalte **Gerät** fällt weg: Geräte legst du je Einsatz an, und ob es an zwei Tagen dasselbe war, weiß Feldspur nicht.
 - **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
   Montagevideo mit Länge und Art der Montage.
 
