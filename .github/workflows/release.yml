@@ -7,8 +7,9 @@ name: Release
 #                    Commit „Release vX“ auf main und Tag vX pushen
 #   2. pakete        Installer für Windows, macOS (Apple-Chip, Intel) und Linux (package.yml)
 #      handbuch      PDF-Handbuch, von Quarto gerendert (handbook.yml)
-#   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt: erst als Entwurf mit allen
-#                    Dateien, dann geprüft und veröffentlicht (die Release ist danach unveränderlich)
+#   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt: Herkunftsnachweise
+#                    (Build Attestations) für alle Dateien, erst als Entwurf mit allen Dateien, dann geprüft und
+#                    veröffentlicht (die Release ist danach unveränderlich)
 #
 # Nur die App wird versioniert; packages/* bekommen keine eigenen Tags, Releases oder Changelogs.
 # Eine veröffentlichte (nicht als Entwurf angelegte) Release archiviert Zenodo automatisch mit eigener DOI, auch
@@ -175,6 +176,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Herkunftsnachweise: OIDC-Token für die Sigstore-Signatur, Nachweis und Speichereintrag bei GitHub ablegen.
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -197,6 +202,22 @@ jobs:
         run: |
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
+      # Signierter Herkunftsnachweis (SLSA-Provenienz über Sigstore) für jede Datei der Release. Er entsteht hier in
+      # release.yml selbst und nicht in den aufgerufenen package.yml/handbook.yml, damit alle Dateien denselben
+      # Signatur-Workflow tragen: Lieferling und `gh attestation verify --signer-workflow` prüfen genau diesen.
+      # Vor dem Entwurf, damit an der veröffentlichten Release nichts mehr nachkommt.
+      - name: Herkunftsnachweise erzeugen
+        uses: actions/attest@v4
+        with:
+          subject-path: assets/*
+      - name: Herkunftsnachweise prüfen
+        working-directory: assets
+        run: |
+          for f in *; do
+            gh attestation verify "$f" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          done
       # Die Release ist unveränderlich (Settings → General → Releases → „Enable release immutability“): Sobald sie
       # veröffentlicht ist, lassen sich Tag und Dateien nicht mehr ändern, ersetzen oder nachreichen. Deshalb erst
       # als Entwurf anlegen, alle Dateien hochladen, gegen SHA256SUMS.txt prüfen und erst dann veröffentlichen.
@@ -262,3 +283,11 @@ jobs:
             exit 0
           fi
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=false --jq '"\(.html_url) (unveränderlich: \(.immutable // false))"'
+          # GitHubs eigene Bestätigung der unveränderlichen Release (Tag und Prüfsummen aller Dateien).
+          # Sie entsteht beim Veröffentlichen, deshalb notfalls kurz warten.
+          for i in 1 2 3; do
+            gh release verify "v$V" --repo "$GITHUB_REPOSITORY" && exit 0
+            sleep 10
+          done
+          echo "::error::gh release verify v$V schlägt fehl. Ist „Release immutability“ noch eingeschaltet?"
+          exit 1
