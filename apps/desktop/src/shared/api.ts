@@ -649,6 +649,26 @@ export type CitationLookup =
   | { state: "offline" }
   | { state: "cancelled" };
 
+/**
+ * Beleg-Karte nach einer Ausgabe (Issue #192): der Einsatz in wenigen gezählten Tatsachen, gezählt aus dem jetzigen
+ * Stand. Gilt für den jetzigen Stand, also nur, solange die Ausgabe aktuell ist.
+ */
+export interface ExportCard {
+  title: string;
+  /** Kalendertag, "2026-09-14". */
+  date: string;
+  place: string;
+  /** Erste und letzte Uhrzeit der Montage, "10:15"; null, wenn nichts auf der Zeitachse liegt. */
+  from: string | null;
+  to: string | null;
+  /** Dateien des Einsatzes und Geräte, von denen sie stammen (ohne Tagebuch). */
+  sources: number;
+  devices: number;
+  /** Zeilen des Einsatztranskripts (Chronologie). */
+  lines: number;
+  montageId: string;
+}
+
 export interface FeldspurApi {
   newProject(): Promise<ProjectInfo | null>;
   openProject(): Promise<ProjectInfo | null>;
@@ -803,6 +823,13 @@ export interface FeldspurApi {
   previewExport(sessionId: string, realtime?: boolean): Promise<SessionTranscriptPreview>;
   /** Letzte Ausgabe im Vergleich zum jetzigen Stand und den gewählten Einstellungen; null = noch nie ausgegeben. */
   exportStatus(sessionId: string, opts: ExportRequestOptions): Promise<ExportStatus | null>;
+  /** Zahlen für die Beleg-Karte nach der Ausgabe (Issue #192). */
+  exportCard(sessionId: string, opts: ExportRequestOptions): Promise<ExportCard>;
+  /**
+   * Eine Datei der letzten Ausgabe mit dem Standardprogramm öffnen (der Viewer im Browser). Nur Dateien, die zu
+   * dieser Ausgabe gehören; false, wenn es sie nicht (mehr) gibt.
+   */
+  openExportFile(sessionId: string, name: string): Promise<boolean>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
@@ -963,6 +990,8 @@ export const IPC = {
   exportChangeLog: "history:export-change-log",
   previewExport: "export:preview",
   exportStatus: "export:status",
+  exportCard: "export:card",
+  openExportFile: "export:open-file",
   montagePreview: "export:montage",
   exportSession: "export:run",
   cancelExport: "export:cancel",

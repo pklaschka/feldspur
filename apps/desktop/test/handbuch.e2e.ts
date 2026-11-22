@@ -308,6 +308,8 @@ await kapitel("abgleichen", async () => {
       .getByText(/Uhren stimmen jetzt überein/)
       .waitFor({ timeout: 10_000 })
       .catch(() => {});
+    await siehe("Beleg", page.getByTestId("anchor-proof"));
+    await siehe("Beide anhören", page.getByTestId("anchor-proof").getByRole("button", { name: /Beide anhören/ }));
     await siehe("+ Neuer Anker");
     const weiter = knopf("Weiter: Durchsehen →");
     await siehe("Weiter: Durchsehen →", weiter);
@@ -548,6 +550,10 @@ await kapitel("ausgeben", async () => {
     await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
     await siehe("Fertig", page.getByText("Fertig.", { exact: true }));
     await siehe("Im Ordner zeigen");
+    await siehe("Im Viewer ansehen");
+    for (const s of ["Zeitraum", "Quellen", "Einsatztranskript", "Montage-ID"])
+      await siehe(s, page.getByTestId("export-receipt-facts").getByText(s, { exact: true }));
+    await siehe("Dateien anzeigen", page.getByTestId("export-files-toggle"));
     await siehe("Ausgabeordner", page.getByTestId("export-result"));
     return out;
   });

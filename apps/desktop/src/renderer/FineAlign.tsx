@@ -531,7 +531,7 @@ function Overlay({
  * Lautstärke-Angleichung der Quellen. Liegen sie richtig, verschmelzen sie zu einem Klang;
  * liegen sie daneben, hört man ein Echo oder Doppelschläge.
  */
-function useDuet(a: SourceRow, b: SourceRow, listen: "both" | "a" | "b") {
+export function useDuet(a: SourceRow, b: SourceRow, listen: "both" | "a" | "b") {
   const aEl = useRef<HTMLAudioElement>(null);
   const bEl = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);

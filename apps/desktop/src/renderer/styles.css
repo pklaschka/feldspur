@@ -229,3 +229,26 @@
     --scroll-fade: 0px;
   }
 }
+
+/* Beleg-Karte nach einer frischen Ausgabe (Issue #192): der Versatzschatten aus dem Infografik-Leitfaden,
+   Zeichen für „Ergebnis“. In der App nur hier. */
+.receipt-raised {
+  box-shadow: 6px 6px 0 var(--good);
+}
+
+/* Abgleichen (Issue #193): Die Zeile einer gerade gerückten Uhr bleibt kurz salbeigrün hinterlegt. Die Zeile
+   besteht aus drei Zellen; der Schatten der mittleren füllt die Spaltenabstände (gap-x-5) daneben. */
+.settle-cell {
+  --settle: color-mix(in srgb, var(--good) 13%, transparent);
+  transition:
+    background-color 0.7s ease-out,
+    box-shadow 0.7s ease-out;
+}
+.settle-lit {
+  background-color: var(--settle);
+}
+.settle-lit.settle-bridge {
+  box-shadow:
+    -1.25rem 0 0 var(--settle),
+    1.25rem 0 0 var(--settle);
+}

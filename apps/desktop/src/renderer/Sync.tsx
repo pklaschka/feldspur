@@ -1,5 +1,5 @@
-import { useId, useState } from "react";
-import type { DeviceRow, Precision, ProposalRow, SessionView } from "../shared/api.ts";
+import { useId, useLayoutEffect, useRef, useState } from "react";
+import type { AnchorRow, DeviceRow, Precision, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
 import { offsetText, readOffsetInput } from "./format.ts";
 import { digitsDurationText } from "../shared/duration-digits.ts";
@@ -18,7 +18,7 @@ import {
   StepHeader,
   Tip,
 } from "./ui.tsx";
-import { FineAlign, guessB, type FineAlignStart } from "./FineAlign.tsx";
+import { FineAlign, guessB, useDuet, type FineAlignStart } from "./FineAlign.tsx";
 import { useDraft } from "./hooks.ts";
 import { isEnter } from "./keys.js";
 
@@ -38,6 +38,33 @@ export function scale(ms: number, span: number): number {
   const k = 300_000;
   return Math.asinh(ms / k) / Math.asinh(span / k);
 }
+
+/**
+ * Uhren, die durch eine Handlung hier gerade an ihren Platz gerückt sind (Issue #193): bisherige Abweichung (null =
+ * unbekannt) und der Anker, der sie belegt. `token` zählt jede Handlung, damit dieselbe Uhr erneut rücken kann.
+ * Rückgängig läuft nicht hierüber: Dann steht der Punkt einfach wieder am alten Platz.
+ */
+interface Settled {
+  token: number;
+  moves: Map<string, { fromMs: number | null; anchorId: string | null }>;
+}
+
+/** Welche Uhren sich zwischen zwei Ständen bewegt haben, und welcher neue Anker das jeweils belegt. */
+export function settledMoves(before: SessionView, after: SessionView): Settled["moves"] {
+  const known = new Set(before.anchors.map((a) => a.id));
+  const fresh = after.anchors.filter((a) => !known.has(a.id));
+  const deviceOf = new Map(after.rows.map((r) => [r.id, r.deviceId]));
+  const moves: Settled["moves"] = new Map();
+  for (const d of after.devices) {
+    const was = before.devices.find((x) => x.id === d.id);
+    if (!was || d.isReference || d.offsetMs === null || was.offsetMs === d.offsetMs) continue;
+    const anchor = fresh.find((a) => deviceOf.get(a.a.sourceId) === d.id || deviceOf.get(a.b.sourceId) === d.id);
+    moves.set(d.id, { fromMs: was.offsetMs, anchorId: anchor?.id ?? null });
+  }
+  return moves;
+}
+
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const BASIS_TEXT = {
   reference: "Referenz",
@@ -74,6 +101,13 @@ export function Sync({
   /** Sammelübernahme läuft. */
   const [accepting, setAccepting] = useState(false);
   const [fine, setFine] = useState<FineAlignStart | null>(null);
+  const [settled, setSettled] = useState<Settled | null>(null);
+  /** Neuer Stand nach einer Handlung hier: Gerückte Uhren zeigen es (Bewegung, Hinterlegung, Beleg). */
+  const settle = (next: SessionView) => {
+    const moves = settledMoves(view, next);
+    if (moves.size) setSettled((s) => ({ token: (s?.token ?? 0) + 1, moves }));
+    onView(next);
+  };
   const hasReference = view.devices.some((d) => d.isReference);
 
   if (!view.devices.length) {
@@ -117,7 +151,7 @@ export function Sync({
       ),
     );
     setAccepting(false);
-    if (v) onView(v);
+    if (v) settle(v);
   };
   const openClocks = view.devices.filter((d) => !d.isReference && d.offsetMs === null);
   const done = hasReference && !openClocks.length && !view.proposals.length;
@@ -226,7 +260,9 @@ export function Sync({
                 onReference={() => onReference(d.id)}
                 onOffset={(ms) => onOffset(d.id, ms)}
                 bulk={sure.length > 1}
-                onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && onView(v))}
+                settled={settled}
+                view={view}
+                onConfirm={(id) => void guard(() => api.confirmAnchor(id)).then((v) => v && settle(v))}
                 onReject={(id) => void guard(() => api.rejectAnchor(id)).then((v) => v && onView(v))}
                 onFine={(p) =>
                   setFine({
@@ -241,9 +277,9 @@ export function Sync({
             ))}
           </div>
         </Panel>
-        <ManualAnchors view={view} guard={guard} onView={onView} onSelect={onSelect} onFine={setFine} />
+        <ManualAnchors view={view} guard={guard} onView={settle} onSelect={onSelect} onFine={setFine} />
       </div>
-      <FineAlign view={view} start={fine} guard={guard} onView={onView} onClose={() => setFine(null)} />
+      <FineAlign view={view} start={fine} guard={guard} onView={settle} onClose={() => setFine(null)} />
     </div>
   );
 }
@@ -258,6 +294,8 @@ function syncSummary(view: SessionView): string {
 
 function ClockRow({
   device,
+  view,
+  settled,
   span,
   proposals,
   bulk,
@@ -268,6 +306,8 @@ function ClockRow({
   onFine,
 }: {
   device: DeviceRow;
+  view: SessionView;
+  settled: Settled | null;
   span: number;
   proposals: ProposalRow[];
   /** Sammelaktion sichtbar: dann ist sie der Hauptknopf, nicht jedes einzelne „Übernehmen“. */
@@ -280,9 +320,47 @@ function ClockRow({
 }) {
   const pos = (ms: number) => `${50 + scale(ms, span) * 50}%`;
   const dot = "absolute top-1/2 -mt-[7px] -ml-[7px] size-3.5 rounded-full";
+  // Abweichung von Hand: die bisherige merken, bis die neue da ist; dann rückt der Punkt wie beim Übernehmen.
+  const typedFrom = useRef<{ fromMs: number | null } | null>(null);
+  const move = settled?.moves.get(device.id) ?? null;
+  const [typed, setTyped] = useState<{ token: number; fromMs: number | null } | null>(null);
+  const [lastOffset, setLastOffset] = useState(device.offsetMs);
+  if (lastOffset !== device.offsetMs) {
+    setLastOffset(device.offsetMs);
+    if (typedFrom.current && device.offsetMs !== null)
+      setTyped({ token: (typed?.token ?? 0) + 1, fromMs: typedFrom.current.fromMs });
+    typedFrom.current = null;
+  }
+  const motion = move
+    ? { key: `a${settled!.token}`, fromMs: move.fromMs }
+    : typed
+      ? { key: `h${typed.token}`, fromMs: typed.fromMs }
+      : null;
+  const dotRef = useRef<HTMLSpanElement>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    if (!motion || device.offsetMs === null) return;
+    setFlash(motion.key);
+    // Die Uhr ist schon übernommen; die Bewegung zeigt es nur und hält nichts auf.
+    if (!reducedMotion())
+      dotRef.current?.animate(
+        [{ left: motion.fromMs === null ? "50%" : pos(motion.fromMs) }, { left: pos(device.offsetMs) }],
+        {
+          duration: 300,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      );
+    const t = setTimeout(() => setFlash(null), 2000);
+    return () => clearTimeout(t);
+    // Nur bei einer neuen Handlung, nicht bei jeder Darstellung.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motion?.key]);
+  const lit = !!flash && flash === motion?.key;
+  const cell = (extra: string) => cx(CELL, extra, "settle-cell", lit && "settle-lit");
+  const anchor = move?.anchorId ? view.anchors.find((a) => a.id === move.anchorId) : undefined;
   return (
-    <div className="contents" data-testid="clock" data-device={device.label}>
-      <div className={cx(CELL, "flex items-center gap-2.5")}>
+    <div className="contents" data-testid="clock" data-device={device.label} data-settled={lit || undefined}>
+      <div className={cell("flex items-center gap-2.5 rounded-l-lg pl-2")}>
         <Glyph kind={device.kind} />
         <div>
           <b className="font-semibold">{device.label}</b>
@@ -292,7 +370,7 @@ function ClockRow({
           </div>
         </div>
       </div>
-      <div className={cx(CELL, "relative")} aria-hidden>
+      <div className={cell("settle-bridge relative")} aria-hidden>
         <span className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-line" />
         <span className="absolute inset-y-0 left-1/2 w-px bg-line-2" />
         {proposals.map(
@@ -308,6 +386,7 @@ function ClockRow({
         {device.offsetMs !== null && (
           <Tip content={offsetText(device.offsetMs)}>
             <span
+              ref={dotRef}
               className={cx(dot, "shadow-[0_0_0_3px_var(--panel)]", device.isReference ? "bg-ink-2" : "bg-accent")}
               style={{ left: pos(device.offsetMs) }}
             />
@@ -319,7 +398,10 @@ function ClockRow({
           </span>
         )}
       </div>
-      <div className={cx(CELL, "flex flex-wrap items-center gap-x-2.5 gap-y-1")} data-testid="clock-value">
+      <div
+        className={cell("flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-r-lg pr-2")}
+        data-testid="clock-value"
+      >
         {device.isReference ? (
           <Pill tone="accent">
             <FlagMark size={10} className="mr-1 inline align-[-1px]" />
@@ -327,13 +409,21 @@ function ClockRow({
           </Pill>
         ) : (
           <>
-            <OffsetInput device={device} onOffset={onOffset} />
+            <OffsetInput
+              device={device}
+              onOffset={(ms) => {
+                // Nur eine echte Änderung lässt den Punkt rücken (Verlassen des Felds bestätigt sonst noch einmal).
+                typedFrom.current = ms === device.offsetMs ? null : { fromMs: device.offsetMs };
+                onOffset(ms);
+              }}
+            />
             <Button variant="link" className="basis-full text-left text-[0.85rem]" onClick={onReference}>
               als Referenz
             </Button>
           </>
         )}
       </div>
+      {anchor && <AnchorProof anchor={anchor} rows={view.rows} />}
       {proposals.map((p) => (
         <Proposal
           key={p.anchorId}
@@ -352,6 +442,53 @@ function ClockRow({
 const subSecond = (ms: number | null) => ms !== null && Math.abs(ms) < 60_000 && ms % 1000 !== 0;
 const preciseOffset = (ms: number) =>
   `${ms < 0 ? "−" : "+"}${(Math.abs(ms) / 1000).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`;
+
+/**
+ * Beleg unter einer gerade gerückten Uhr: welcher Anker sie trägt, und beide Stellen zum Anhören, ohne den
+ * Feinabgleich zu öffnen. Wie in der Ankerliste geschrieben; verschwindet, sobald es den Anker nicht mehr gibt.
+ */
+function AnchorProof({ anchor, rows }: { anchor: AnchorRow; rows: SourceRow[] }) {
+  const a = rows.find((r) => r.id === anchor.a.sourceId);
+  const b = rows.find((r) => r.id === anchor.b.sourceId);
+  return (
+    <div
+      className="col-span-full mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 pl-2 text-[0.88rem]"
+      data-testid="anchor-proof"
+    >
+      <Pill>
+        <span aria-hidden className="text-good">
+          ✓
+        </span>{" "}
+        {ANCHOR_KIND[anchor.kind]}
+      </Pill>
+      <span className="text-muted">
+        {anchor.description}
+        {anchor.note && ` · ${anchor.note}`}
+      </span>
+      <span className="flex-1" />
+      {a && b && <ListenBoth a={a} b={b} anchor={anchor} />}
+    </div>
+  );
+}
+
+/** Beide Stellen eines Ankers gleichzeitig, links und rechts: Liegen sie richtig, verschmelzen sie zu einem Klang. */
+function ListenBoth({ a, b, anchor }: { a: SourceRow; b: SourceRow; anchor: AnchorRow }) {
+  const player = useDuet(a, b, "both");
+  return (
+    <>
+      <Button
+        variant="link"
+        className="text-[0.88rem]"
+        onClick={() => player.toggle(anchor.a.atMs, anchor.b.atMs - anchor.a.atMs)}
+        title="Beide Aufnahmen ab 1,5 s vor der Stelle, die erste links, die zweite rechts"
+        data-testid="anchor-listen"
+      >
+        {player.playing ? "■ Anhalten" : "▶ Beide anhören"}
+      </Button>
+      {player.element}
+    </>
+  );
+}
 
 function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: number | null) => void }) {
   const show = (ms: number | null) => (ms === null ? "" : offsetText(ms));

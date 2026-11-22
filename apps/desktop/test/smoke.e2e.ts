@@ -140,6 +140,16 @@ try {
       .locator('[data-testid=clock][data-device="Kamera Stativ"] [data-testid=clock-value]')
       .getByText("über Anker")
       .waitFor();
+    // Dann: Die Zeile ist kurz hinterlegt, darunter steht der Beleg mit „Beide anhören“.
+    await page.locator('[data-testid=clock][data-device="Kamera Stativ"][data-settled]').first().waitFor();
+    const beleg = page.getByTestId("anchor-proof");
+    await beleg.getByText("A-01 bei 1:20 = V-01 bei 0:20", { exact: false }).waitFor();
+    await shot("-abgleich-uebernommen");
+    // Wenn: beide Stellen angehört werden, dann ohne den Feinabgleich zu öffnen
+    await beleg.getByRole("button", { name: "▶ Beide anhören" }).click();
+    await beleg.getByRole("button", { name: "■ Anhalten" }).waitFor();
+    await beleg.getByRole("button", { name: "▶ Beide anhören" }).waitFor({ timeout: 10_000 });
+    if (await page.getByRole("dialog").count()) throw new Error("Anhören hat einen Dialog geöffnet");
   });
 
   await ablauf("Einen Anker von Hand setzen und löschen", async () => {
@@ -161,6 +171,8 @@ try {
     await page.getByTestId("anchor-list").getByText("Glocke").waitFor();
     const fotoClock = page.locator('[data-testid=clock][data-device="Fotos IMG"] [data-testid=clock-value]');
     await fotoClock.getByText("über Anker").waitFor();
+    // Dann: Auch ein Anker von Hand rückt die Uhr und steht als Beleg unter ihr.
+    await page.getByTestId("anchor-proof").getByText("Glocke", { exact: false }).waitFor();
     await shot("-anker");
     await page
       .getByTestId("anchor-list")
@@ -1120,7 +1132,13 @@ try {
     await page.getByTestId("export-result").waitFor({ timeout: 300_000 });
     // Dann: Die frische Ausgabe gilt als aktuell, auch wenn dabei erst Sprachpegel gemessen wurden.
     await page.locator("[data-testid=export-result][data-state=current]").waitFor();
-    const files = await page.getByTestId("export-result").locator("li").allInnerTexts();
+    // Die Beleg-Karte nennt die Zahlen und führt in den Viewer; die Dateiliste ist eingeklappt.
+    await page.getByTestId("export-receipt-facts").getByText(/^FS-/).waitFor();
+    await page.getByTestId("export-open-viewer").waitFor();
+    await page.getByTestId("export-result").evaluate((e) => e.scrollIntoView({ block: "center" }));
+    await shot("-ausgegeben");
+    await page.getByTestId("export-files-toggle").click();
+    const files = await page.getByTestId("export-files").locator("li").allInnerTexts();
     console.log(
       `Ausgabe (${Math.round((Date.now() - t0) / 1000)} s): ${files.map((f) => f.split("\n")[0]).join(" | ")}`,
     );
@@ -1131,7 +1149,6 @@ try {
       !files.some((f) => f.includes(".html"))
     )
       throw new Error("Ausgabe unvollständig");
-    await shot("-ausgegeben");
     if (process.env.FELDSPUR_EXPORT_KEEP) cpSync(out, process.env.FELDSPUR_EXPORT_KEEP, { recursive: true });
   });
 

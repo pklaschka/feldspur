@@ -30,7 +30,15 @@ Daraus entstehen **Vorschläge** ("Uhr geht +2:47, gefunden in V-01"). Ein Vorsc
 **übernimmst**. Steht dabei "unsicher, bitte anhören", prüfe die Stelle vorher, am besten mit **Fein justieren…**
 (siehe unten). Was nicht passt, **verwirfst** du. Sind mehrere Vorschläge eindeutig, übernimmst du sie mit **Alle
 eindeutigen übernehmen** auf einmal. Hat ein Gerät mehrere eindeutige Vorschläge, zählt dabei der sicherste, und
-**Rückgängig** nimmt die ganze Übernahme in einem Schritt zurück. Stimmen alle Uhren, sagt Feldspur das ("Alle 5 Uhren stimmen jetzt überein"), und
+**Rückgängig** nimmt die ganze Übernahme in einem Schritt zurück.
+
+Beim Übernehmen rückt der Punkt der Uhr sichtbar an seinen Platz, und die Zeile bleibt kurz grün hinterlegt (mit der
+Systemeinstellung „Bewegung reduzieren“ nur die Hinterlegung). Darunter steht der **Beleg**: der Anker, der die Uhr
+jetzt trägt. **Beide anhören** spielt beide Stellen gleichzeitig ab, die erste links, die zweite rechts, ohne den
+Feinabgleich zu öffnen. Liegen sie richtig, verschmelzen sie zu einem Klang. Dasselbe gilt für eine Abweichung, die du
+von Hand einträgst, und für einen Anker von Hand.
+
+Stimmen alle Uhren, sagt Feldspur das ("Alle 5 Uhren stimmen jetzt überein"), und
 **Weiter: Durchsehen →** wird zum Hauptknopf.
 
 Dabei erkennt Feldspur auch längere **Stille** (ab 5 Minuten) und laute Stellen darin. Das braucht es später für die

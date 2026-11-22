@@ -125,6 +125,9 @@ try {
     await Promise.race([anyway.waitFor().then(() => anyway.click()), result.waitFor({ timeout: 120_000 })]);
     await result.waitFor({ timeout: 120_000 });
     await result.getByText("Fertig.").waitFor();
+    // Dann: Dateien außerhalb der Ausgabe lassen sich darüber nicht öffnen
+    const fremd = await page.evaluate((id) => window.feldspur.openExportFile(id, "../../etc/passwd"), sessionId);
+    if (fremd) throw new Error("openExportFile öffnet eine Datei außerhalb der Ausgabe");
   });
 
   await ablauf("Nach einem Neustart ist die Ausgabe aktuell", async () => {
