@@ -537,9 +537,10 @@ export function Toggle({
       onCheckedChange={onChange}
       disabled={disabled}
       aria-label={label}
-      className="relative h-[18px] w-8 flex-none cursor-pointer rounded-full bg-line-2 disabled:cursor-not-allowed disabled:opacity-55 data-[state=checked]:bg-accent"
+      // Gesperrt: grau statt Akzentfarbe, flach und ohne Schatten; die Stellung des Knopfs zeigt weiter an oder aus.
+      className="group relative h-[18px] w-8 flex-none cursor-pointer rounded-full bg-line-2 data-[state=checked]:bg-accent data-disabled:cursor-not-allowed data-disabled:border data-disabled:border-dashed data-disabled:border-muted data-disabled:bg-sunken data-disabled:data-[state=checked]:bg-sunken"
     >
-      <Switch.Thumb className="block size-3.5 translate-x-0.5 rounded-full bg-panel shadow-xs transition-transform data-[state=checked]:translate-x-[16px]" />
+      <Switch.Thumb className="block size-3.5 translate-x-0.5 rounded-full bg-panel shadow-xs transition-transform data-[state=checked]:translate-x-[16px] group-data-disabled:size-3 group-data-disabled:translate-x-px group-data-disabled:bg-muted group-data-disabled:shadow-none group-data-disabled:data-[state=checked]:translate-x-[17px]" />
     </Switch.Root>
   );
 }
