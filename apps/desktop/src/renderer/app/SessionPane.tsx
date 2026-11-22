@@ -299,7 +299,9 @@ export function SessionPane({
                       <span className="grid size-[22px] flex-none place-items-center rounded-full border border-line-2 bg-panel font-serif text-[0.85rem] text-muted group-data-[state=active]:border-accent group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-ink">
                         {s.n}
                       </span>
-                      {s.title}
+                      {/* Im schmalen Fenster zeigen die anderen Schritte nur ihre Nummer, damit alle vier erreichbar
+                          bleiben; der Name steht weiter für Screenreader und im Tooltip. */}
+                      <span className="@max-[34rem]:group-data-[state=inactive]:sr-only">{s.title}</span>
                       {s.badge && (
                         <>
                           {/* Außen nur sichtbar/unsichtbar (not-sr-only setzt das Padding auf 0), innen die Pille. */}

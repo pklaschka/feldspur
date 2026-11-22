@@ -26,7 +26,7 @@ genau einem Dokument in MAXQDA. Ein neues Projekt zeigt dafür gleich ein Formul
 Einsätze legst du in der linken Leiste mit **+ neuer Einsatz** an; der Ort ist dort optional und lässt sich später in
 den Einsatz-Details ändern.
 
-Über den Einsätzen steht in der Leiste die **Übersicht**. Sie zeigt alle Feldtage des Projekts im **Feldkalender**
+Über den Einsätzen steht in der Leiste die **Übersicht**. Sie zeigt alle Einsätze des Projekts im **Feldkalender**
 untereinander auf einer gemeinsamen Uhrzeit-Achse, dazu ihre Kennwerte und die Tabellen für den Methodenteil
 (@sec-methodenteil).
 

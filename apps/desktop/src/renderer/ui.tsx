@@ -56,11 +56,18 @@ export function Button({
   );
 }
 
-export function Pill({ tone = "plain", children }: { tone?: "plain" | "accent" | "warn"; children: ReactNode }) {
+export function Pill({
+  tone = "plain",
+  children,
+}: {
+  tone?: "plain" | "accent" | "warn" | "good";
+  children: ReactNode;
+}) {
   const t = {
     plain: "bg-sunken text-ink-2",
     accent: "bg-accent-soft font-medium text-accent",
     warn: "bg-warn-soft text-warn",
+    good: "bg-[color-mix(in_srgb,var(--good)_14%,transparent)] text-good",
   }[tone];
   return <span className={cx("inline-block rounded-full px-2 text-[0.8rem] whitespace-nowrap", t)}>{children}</span>;
 }

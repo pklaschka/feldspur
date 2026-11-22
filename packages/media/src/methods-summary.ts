@@ -116,9 +116,12 @@ export function methodsNumbers(
     date: transcript.input.session.date,
     material,
     sources: input.sources.filter((s) => !s.partOf).length,
-    unsynced: input.devices.filter(
-      (d) => !d.isReference && (resolved.deviceClocks.get(d.id)?.offsetMs ?? null) === null,
-    ).length,
+    // Wie im Schritt Abgleichen: Geräte ohne eigene Uhr (nur Tagebuch, Notizen) und reine Kontext-Geräte zählen nicht.
+    unsynced: input.devices.filter((d) => {
+      const own = input.sources.filter((x) => x.deviceId === d.id && !x.partOf);
+      const hasClock = own.some((x) => x.kind !== "diary" && x.kind !== "note" && x.role !== "context");
+      return hasClock && !d.isReference && (resolved.deviceClocks.get(d.id)?.offsetMs ?? null) === null;
+    }).length,
     output: {
       base: baseName(transcript),
       lines: transcript.entries.length,

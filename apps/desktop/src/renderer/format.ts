@@ -291,3 +291,9 @@ export function errorText(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   return msg.replace(/^Error invoking remote method '[^']+': /, "").replace(/^[A-Za-z]*Error: /, "");
 }
+
+/** „A-01, A-02, A-03, A-04 und 108 weitere“: lange Listen von Kurzzeichen bleiben eine Zeile. */
+export function someLabels(labels: string[], max = 4): string {
+  if (labels.length <= max + 1) return labels.join(", ");
+  return `${labels.slice(0, max).join(", ")} und ${labels.length - max} weitere`;
+}

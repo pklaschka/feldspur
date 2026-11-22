@@ -65,6 +65,14 @@ describe.skipIf(!hasFfmpeg())("Zahlen für die Tabelle zum Methodenteil", () => 
     rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
+  it("zählt als Uhr ohne Abgleich nur Geräte mit eigener Uhr, das Tagebuch nicht", () => {
+    // Angenommen: Rekorder (Referenz) und Kamera (Anker) sind abgeglichen, offen sind die Fotos und das Tagebuch
+    const ohneUhr = store.listSources(sessionId).filter((s) => s.kind === "diary");
+    expect(ohneUhr.length).toBeGreaterThan(0);
+    // Dann: zählt nur das Fotogerät, so wie am Reiter „Abgleichen“
+    expect(summary().unsynced).toBe(1);
+  });
+
   it("zählt jede Datei genau einmal, je Art und Gerät", () => {
     const files = summary().material.reduce((n, r) => n + r.files, 0);
     expect(files).toBe(store.listSources(sessionId).length);

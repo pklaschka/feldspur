@@ -246,7 +246,7 @@ export function App() {
                   >
                     {formatDay(s.date)}
                   </span>
-                  <span>{s.title}</span>
+                  <span className="min-w-0 wrap-break-word hyphens-auto">{s.title}</span>
                 </button>
               ))}
               <NewSessionForm
