@@ -5,7 +5,7 @@
  *
  * Feldspur zählt und misst hier nur. Farbe kennzeichnet Zustände (Ausgabe veraltet, Uhr ohne Abgleich), nie Mengen.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
 import type { OverviewSession, ProjectOverview } from "../shared/api.ts";
 import { ALL_VERSIONS_DOI } from "../shared/citation.ts";
 import {
@@ -19,8 +19,18 @@ import {
   softwareLine,
   type MethodsTable,
 } from "../shared/methods-table.ts";
+import {
+  CALENDAR_KINDS,
+  CALENDAR_LABEL,
+  calendarAxis,
+  dayStart,
+  hourLabel,
+  ofDay,
+  type CalendarDay,
+  type CalendarKind,
+} from "@feldspur/media/field-calendar";
 import type { Step } from "./App.tsx";
-import { Button, cx, ErrorBanner, Panel, Pill } from "./ui.tsx";
+import { Button, cx, ErrorBanner, Panel, Pill, Toggle } from "./ui.tsx";
 
 const api = window.feldspur;
 
@@ -42,13 +52,23 @@ export function Overview({
 }: {
   /** Name des Projekts. */
   name: string;
-  /** Einen Einsatz öffnen, auf Wunsch gleich in einem bestimmten Schritt. */
-  onOpen: (sessionId: string, step?: Step) => void;
+  /** Einen Einsatz öffnen, auf Wunsch gleich in einem bestimmten Schritt und (in Durchsehen) an einer Uhrzeit. */
+  onOpen: (sessionId: string, step?: Step, atMs?: number) => void;
 }) {
   const [data, setData] = useState<ProjectOverview | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
+  const [byPlace, setByPlace] = useState(loadByPlace);
+  const groupByPlace = (on: boolean) => {
+    setByPlace(on);
+    try {
+      localStorage.setItem(BY_PLACE_KEY, on ? "1" : "0");
+    } catch {
+      // ohne Speicher gilt die Wahl bis zum Neustart
+    }
+  };
   const [copied, setCopied] = useState<"table" | "markdown" | "failed" | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -62,8 +82,19 @@ export function Overview({
   }, []);
 
   const all = data ? [...data.sessions].sort((a, b) => a.date.localeCompare(b.date)) : [];
+  const groups = byPlace ? placeGroups(all) : [{ place: null, sessions: all }];
   const chosen = all.filter((s) => !skipped.has(s.sessionId));
   const tables = [materialTable(chosen), outputTable(chosen)];
+  const days = (list: OverviewSession[]): CalendarDay[] =>
+    list.map((s) => ({ date: s.date, title: s.title, place: s.place, marks: s.marks }));
+  // Achse über alle Tage, damit sie beim Ab- und Anwählen stehen bleibt.
+  const axis = calendarAxis(days(all));
+  const saveCalendar = () =>
+    // In der Reihenfolge wie angezeigt, also auf Wunsch nach Ort.
+    void api.saveFieldCalendar(days(groups.flatMap((g) => g.sessions).filter((x) => !skipped.has(x.sessionId)))).then(
+      (p) => p && setSaved(p),
+      () => {},
+    );
   const software = data
     ? softwareLine({
         version: data.citation.version,
@@ -73,6 +104,7 @@ export function Overview({
     : "";
   const toggle = (id: string) => {
     setCopied(null);
+    setSaved(null);
     setSkipped((prev) => {
       const next = new Set(prev);
       if (!next.delete(id)) next.add(id);
@@ -118,22 +150,77 @@ export function Overview({
         )}
         {data && all.length > 0 && (
           <>
-            <Panel>
-              <h2 className="text-[1.05rem] font-semibold">Feldtage</h2>
-              <p className="mb-2 max-w-[70ch] text-[0.85rem] text-muted">
-                Das Häkchen bestimmt, welche Feldtage in die Kennwerte unten eingehen.
-              </p>
+            <Panel className="@container">
+              <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h2 className="text-[1.05rem] font-semibold">Feldkalender</h2>
+                <span className="flex-1" />
+                <span role="status" className="text-[0.9rem] font-medium text-good">
+                  {saved && (
+                    <>
+                      <span aria-hidden>✓ </span>Gespeichert als {saved.split(/[\\/]/).pop()}
+                    </>
+                  )}
+                </span>
+                <label className="inline-flex items-center gap-2 text-[0.9rem]">
+                  <Toggle checked={byPlace} onChange={groupByPlace} label="Nach Ort gruppieren" />
+                  Nach Ort gruppieren
+                </label>
+                <Button disabled={chosen.length === 0} onClick={saveCalendar}>
+                  Feldkalender speichern…
+                </Button>
+              </div>
               <ul data-testid="overview-days">
-                {all.map((s) => (
-                  <DayRow
-                    key={s.sessionId}
-                    session={s}
-                    chosen={!skipped.has(s.sessionId)}
-                    onToggle={() => toggle(s.sessionId)}
-                    onOpen={onOpen}
-                  />
-                ))}
+                <li aria-hidden className={cx(ROW, "pb-1")}>
+                  <div className="relative col-start-2 h-4 @[1050px]:col-start-3">
+                    {axis.ticks.map((t) => (
+                      <span
+                        key={t}
+                        className="absolute -translate-x-1/2 text-[0.75rem] text-muted tabular-nums"
+                        style={{ left: `${pos(axis, t)}%` }}
+                      >
+                        {hourLabel(t)}:00
+                      </span>
+                    ))}
+                  </div>
+                </li>
+                {groups.map((g) => [
+                  g.place !== null && (
+                    <li
+                      key={`ort:${g.place}`}
+                      className="border-t border-line-2 pt-3 pb-0.5 text-[0.85rem] font-semibold text-ink-2"
+                      data-testid="overview-place"
+                    >
+                      {g.place || "Ohne Ort"}
+                      <span className="ml-2 font-normal text-muted">
+                        {count(g.sessions.length, "Feldtag", "Feldtage")}
+                      </span>
+                    </li>
+                  ),
+                  ...g.sessions.map((s) => (
+                    <DayRow
+                      key={s.sessionId}
+                      session={s}
+                      axis={axis}
+                      chosen={!skipped.has(s.sessionId)}
+                      onToggle={() => toggle(s.sessionId)}
+                      onOpen={onOpen}
+                    />
+                  )),
+                ])}
               </ul>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.85rem] text-muted">
+                {CALENDAR_KINDS.map((k) => (
+                  <span key={k} className="inline-flex items-center gap-1.5">
+                    <Mark kind={k} legend />
+                    {CALENDAR_LABEL[k]}
+                  </span>
+                ))}
+                <span className="flex-1" />
+                <span>
+                  Ein Klick in eine Zeile öffnet den Tag an dieser Uhrzeit. Das Häkchen bestimmt, welche Tage in die
+                  Kennwerte und die Grafik eingehen.
+                </span>
+              </div>
             </Panel>
             <Panel>
               <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -199,22 +286,87 @@ export function Overview({
   );
 }
 
+const BY_PLACE_KEY = "feldspur.overview-by-place";
+function loadByPlace(): boolean {
+  try {
+    return localStorage.getItem(BY_PLACE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Feldtage je Ort; die Orte in der Folge ihres ersten Tages, ohne Ort zuletzt. Innerhalb nach Datum. */
+function placeGroups(sessions: OverviewSession[]): { place: string; sessions: OverviewSession[] }[] {
+  const by = new Map<string, OverviewSession[]>();
+  for (const s of sessions) {
+    const key = s.place.trim();
+    by.set(key, [...(by.get(key) ?? []), s]);
+  }
+  return [...by.entries()]
+    .sort(([a], [b]) => Number(a === "") - Number(b === ""))
+    .map(([place, list]) => ({ place, sessions: list }));
+}
+
 const EXPORTED_TEXT = { current: "Ausgabe aktuell", stale: "Ausgabe veraltet", none: "nicht ausgegeben" } as const;
+
+/** Raster jeder Zeile des Feldkalenders: Häkchen, Tag, Spur, Fakten; schmal stehen Spur und Fakten unter dem Tag. */
+const ROW =
+  "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 @[1050px]:grid-cols-[auto_14rem_minmax(0,1fr)_23rem]";
+
+type Axis = ReturnType<typeof calendarAxis>;
+/** Lage auf der Achse in Prozent. */
+const pos = (axis: Axis, ms: number) => ((ms - axis.fromMs) / (axis.toMs - axis.fromMs)) * 100;
+
+/** Spuren von oben nach unten, in der Reihenfolge der Legende. */
+const LANE_TOP: Record<CalendarKind, number> = { audio: 6, video: 16, photo: 26, diary: 36 };
+const KIND_BG: Record<CalendarKind, string> = {
+  audio: "bg-k-audio",
+  video: "bg-k-video",
+  photo: "bg-k-photo",
+  diary: "bg-k-diary",
+};
+
+/** Zeichen einer Art: Balken für Ton und Video, Raute für Fotos, Strich für Tagebuch. */
+function Mark({ kind, legend, style }: { kind: CalendarKind; legend?: boolean; style?: CSSProperties }) {
+  const shape =
+    kind === "photo"
+      ? "size-[7px] rotate-45"
+      : kind === "diary"
+        ? "h-[9px] w-[2px]"
+        : legend
+          ? "h-[6px] w-4 rounded-full"
+          : "h-[6px] rounded-full";
+  return <span aria-hidden className={cx(legend ? "inline-block" : "absolute", shape, KIND_BG[kind])} style={style} />;
+}
 
 function DayRow({
   session: s,
+  axis,
   chosen,
   onToggle,
   onOpen,
 }: {
   session: OverviewSession;
+  axis: Axis;
   chosen: boolean;
   onToggle: () => void;
-  onOpen: (sessionId: string, step?: Step) => void;
+  onOpen: (sessionId: string, step?: Step, atMs?: number) => void;
 }) {
   const label = `${germanDate(s.date)} ${s.title}`;
+  /** Klick in die Spur: Uhrzeit an dieser Stelle; mit der Tastatur die erste Marke. */
+  const openAt = (e: MouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const first = s.marks.reduce((m, x) => Math.min(m, x.fromMs), Infinity);
+    const atMs =
+      e.detail === 0 || r.width === 0
+        ? Number.isFinite(first)
+          ? first
+          : undefined
+        : dayStart(s.date) + axis.fromMs + ((e.clientX - r.left) / r.width) * (axis.toMs - axis.fromMs);
+    onOpen(s.sessionId, "review", atMs);
+  };
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-line/70 py-2 first:border-t-0 min-[900px]:grid-cols-[auto_minmax(0,17rem)_minmax(0,1fr)]">
+    <li className={cx(ROW, "border-t border-line/70 py-2")}>
       <input
         type="checkbox"
         className="size-4 accent-(--accent)"
@@ -233,11 +385,49 @@ function DayRow({
           {s.place && ` · ${s.place}`}
         </span>
       </button>
-      <div
+      <button
         className={cx(
-          "col-start-2 flex flex-wrap items-center gap-1.5 min-[900px]:col-start-3",
-          !chosen && "opacity-60",
+          "relative col-start-2 h-[50px] w-full cursor-pointer overflow-hidden rounded-md border border-line bg-panel-2 focus-visible:outline-2 focus-visible:outline-accent @[1050px]:col-start-3",
+          !chosen && "opacity-45",
         )}
+        onClick={openAt}
+        aria-label={`${label}: in Durchsehen öffnen, an der angeklickten Uhrzeit`}
+        title="Klick öffnet den Tag an dieser Uhrzeit"
+        data-testid="overview-strip"
+      >
+        {axis.ticks.map((t) => (
+          <span
+            key={t}
+            aria-hidden
+            className="absolute inset-y-0 w-px bg-line/70"
+            style={{ left: `${pos(axis, t)}%` }}
+          />
+        ))}
+        {s.marks.map((m, i) => {
+          const from = pos(axis, ofDay(s.date, m.fromMs));
+          const to = pos(axis, ofDay(s.date, m.toMs));
+          const top = LANE_TOP[m.kind];
+          return m.kind === "audio" || m.kind === "video" ? (
+            <Mark key={i} kind={m.kind} style={{ left: `${from}%`, width: `max(3px, ${to - from}%)`, top }} />
+          ) : (
+            <Mark
+              key={i}
+              kind={m.kind}
+              style={{
+                left: `calc(${from}% - ${m.kind === "photo" ? 3.5 : 1}px)`,
+                top: top - (m.kind === "diary" ? 1 : 0),
+              }}
+            />
+          );
+        })}
+        {s.marks.length === 0 && (
+          <span className="absolute inset-0 grid place-items-center text-[0.8rem] text-muted">
+            <span className="rounded bg-panel-2 px-1.5">Noch nichts auf der Zeitachse</span>
+          </span>
+        )}
+      </button>
+      <div
+        className={cx("col-start-2 flex flex-wrap items-center gap-1.5 @[1050px]:col-start-4", !chosen && "opacity-60")}
       >
         <Pill>{count(s.sources, "Quelle", "Quellen")}</Pill>
         {s.sources > 0 && <Pill>{count(s.output.lines, "Zeile", "Zeilen")}</Pill>}

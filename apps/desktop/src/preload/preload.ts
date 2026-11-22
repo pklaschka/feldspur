@@ -108,6 +108,7 @@ const api: FeldspurApi = {
   exportCard: (id, opts) => ipcRenderer.invoke(IPC.exportCard, id, opts),
   openExportFile: (id, name) => ipcRenderer.invoke(IPC.openExportFile, id, name),
   projectOverview: () => ipcRenderer.invoke(IPC.projectOverview),
+  saveFieldCalendar: (days) => ipcRenderer.invoke(IPC.saveFieldCalendar, days),
   montagePreview: (id, realtime) => ipcRenderer.invoke(IPC.montagePreview, id, realtime),
   exportSession: (id, opts) => ipcRenderer.invoke(IPC.exportSession, id, opts),
   cancelExport: (id) => ipcRenderer.invoke(IPC.cancelExport, id),

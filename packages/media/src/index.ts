@@ -31,3 +31,4 @@ export * from "./log.ts";
 export * from "./methods-summary.ts";
 export * from "./methods-table.ts";
 export * from "./readme.ts";
+export * from "./field-calendar.ts";

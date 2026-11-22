@@ -6,6 +6,7 @@ import { renderOverlays } from "./overlay.ts";
 import { Backups } from "./Backups.tsx";
 import { ChangeLog } from "./ChangeLog.tsx";
 import { Overview } from "./Overview.tsx";
+import type { Reveal } from "./SearchDialog.tsx";
 import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
 import { renderImageRefJpeg } from "./stillRender.ts";
@@ -31,6 +32,7 @@ export function App() {
   const [overview, setOverview] = useState(false);
   /** Schritt, in dem der nächste geöffnete Einsatz beginnt (Sprung aus der Übersicht); sonst entscheidet der Einsatz. */
   const [openStep, setOpenStep] = useState<Step | null>(null);
+  const [openAt, setOpenAt] = useState<Reveal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [projectMenu, setProjectMenu] = useState(false);
   const [changeLog, setChangeLog] = useState(false);
@@ -99,11 +101,15 @@ export function App() {
     setProject(p);
     setOverview(false);
     setOpenStep(null);
+    setOpenAt(null);
     setSessionId(lastSession(p));
   };
-  const openSession = (id: string, step: Step | null = null) => {
+  /** Einsatz öffnen, auf Wunsch in einem Schritt und (in Durchsehen) an einer Uhrzeit. */
+  const openSession = (id: string, step: Step | null = null, atMs?: number) => {
     setOverview(false);
     setOpenStep(step);
+    // Eine halbe Stunde um die Uhrzeit ins Bild holen.
+    setOpenAt(atMs === undefined ? null : { fromMs: atMs - 15 * 60_000, toMs: atMs + 15 * 60_000 });
     setSessionId(id);
   };
   /** Neuer Einsatz: gleich dorthin wechseln. */
@@ -112,6 +118,7 @@ export function App() {
     setProject(p);
     setOverview(false);
     setOpenStep(null);
+    setOpenAt(null);
     setSessionId(p.sessions.find((s) => !project?.sessions.some((o) => o.id === s.id))?.id ?? lastSession(p));
   };
   const undoDelete = async () => {
@@ -255,6 +262,7 @@ export function App() {
                 key={sessionId}
                 sessionId={sessionId}
                 initialStep={openStep}
+                initialReveal={openAt}
                 guard={guard}
                 strayDrop={strayDrop}
                 onProject={(p) => {

@@ -47,6 +47,7 @@ const einsatz = (n: number, patch: Partial<MethodsSessionSummary> = {}): Methods
   },
   exported: "current",
   exportedAt: "2026-09-20T08:00:00.000Z",
+  marks: [],
   ...patch,
 });
 

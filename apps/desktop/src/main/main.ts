@@ -16,6 +16,8 @@ import {
   analyzeSession,
   applyImport,
   applyReread,
+  fieldCalendarSvg,
+  type CalendarDay,
   rereadChanges,
   rereadSource,
   type RereadSource,
@@ -617,6 +619,18 @@ function registerIpc(): void {
     sessions: projectOverview(requireStore()),
     citation: citationInfo(),
   }));
+  ipcMain.handle(IPC.saveFieldCalendar, async (_e, days: CalendarDay[]) => {
+    if (!Array.isArray(days) || !days.length) return null;
+    const info = projectInfo()!;
+    const r = await dialog.showSaveDialog(win!, {
+      title: "Feldkalender speichern",
+      defaultPath: join(dirname(info.path), `${basename(info.path, ".feldspur")}_Feldkalender.svg`),
+      filters: [{ name: "SVG-Grafik", extensions: ["svg"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    await writeFile(r.filePath, fieldCalendarSvg(days), "utf8");
+    return r.filePath;
+  });
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
     montagePlan(requireStore(), sessionId, realtime),
   );

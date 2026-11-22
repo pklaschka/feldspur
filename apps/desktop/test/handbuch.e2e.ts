@@ -604,7 +604,9 @@ await kapitel("ausgeben", async () => {
     await knopf("Übersicht").click();
     const seite = page.getByTestId("overview");
     // Dann: steht der Feldtag mit seinem Stand da, darunter Eingang und Ausgabe mit der Montage-ID zum Kopieren
-    await siehe("Feldtage", seite.getByRole("heading", { name: "Feldtage" }));
+    await siehe("Feldkalender", seite.getByRole("heading", { name: "Feldkalender" }));
+    await siehe("Nach Ort gruppieren", page.getByRole("switch", { name: "Nach Ort gruppieren" }));
+    await siehe("Feldkalender speichern…");
     await siehe("Ausgabe aktuell", page.getByTestId("overview-days").getByText("Ausgabe aktuell"));
     await siehe("Kennwerte", seite.getByRole("heading", { name: "Kennwerte" }));
     const tabellen = page.getByTestId("overview-tables");
@@ -613,7 +615,11 @@ await kapitel("ausgeben", async () => {
     await siehe("Montage-ID", tabellen.getByText(/^FS(-[0-9A-Z]{4}){3}$/), { hinweis: "Tabelle Ausgabe" });
     await siehe("Tabellen kopieren");
     await siehe("Als Markdown kopieren");
-    // Wenn: der Name des Feldtags gewählt wird, dann ist der Einsatz wieder offen
+    // Wenn: in die Achse des Feldtags geklickt wird, dann ist der Einsatz in Durchsehen offen
+    await page.getByTestId("overview-strip").first().click();
+    await page.getByRole("tab", { name: /Durchsehen/, selected: true }).waitFor();
+    // Wenn: über die Übersicht der Name des Feldtags gewählt wird, dann ist der Einsatz wieder offen
+    await knopf("Übersicht").click();
     await page.getByTestId("overview-days").getByRole("button").first().click();
     await page.getByRole("tab", { name: /Ausgeben/ }).click();
   });

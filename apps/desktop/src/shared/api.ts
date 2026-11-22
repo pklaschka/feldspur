@@ -17,6 +17,7 @@ import type {
   SourceKind,
 } from "@feldspur/core";
 import type {
+  CalendarDay,
   ExportStatus,
   FileCheck,
   FileState,
@@ -855,6 +856,8 @@ export interface FeldspurApi {
    * vorliegt. Beschreibt den Stand im Projekt.
    */
   projectOverview(): Promise<ProjectOverview>;
+  /** Feldkalender der gewählten Tage als SVG-Grafik speichern (Dialog); Pfad oder null bei Abbruch. */
+  saveFieldCalendar(days: CalendarDay[]): Promise<string | null>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
@@ -1019,6 +1022,7 @@ export const IPC = {
   exportCard: "export:card",
   openExportFile: "export:open-file",
   projectOverview: "project:overview",
+  saveFieldCalendar: "project:save-field-calendar",
   montagePreview: "export:montage",
   exportSession: "export:run",
   cancelExport: "export:cancel",
