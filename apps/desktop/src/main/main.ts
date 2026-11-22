@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { app, BrowserWindow, clipboard, dialog, ipcMain, protocol, shell } from "electron";
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, protocol, shell } from "electron";
 import {
   backupDir,
   checkProjectFile,
@@ -89,6 +89,7 @@ import {
   exportingSession,
   exportCard,
   exportStatus,
+  methodsOverview,
   montagePlan,
   previewExport,
   registerOverlayBridge,
@@ -352,6 +353,9 @@ function registerIpc(): void {
   ipcMain.handle(IPC.lookupCitationDoi, () => lookupCitationDoi());
   ipcMain.handle(IPC.cancelCitationLookup, () => cancelCitationLookup());
   ipcMain.handle(IPC.copyText, (_e, text: string) => clipboard.writeText(String(text)));
+  ipcMain.handle(IPC.copyTable, (_e, html: string, text: string) =>
+    clipboard.write([new ClipboardItem({ "text/html": String(html), "text/plain": String(text) })]),
+  );
   ipcMain.handle(IPC.openCitationLink, async (_e, url: string) => {
     if (isCitationLink(String(url))) await shell.openExternal(String(url));
   });
@@ -605,6 +609,10 @@ function registerIpc(): void {
     if (!existsSync(path)) return false;
     return (await shell.openPath(path)) === "";
   });
+  ipcMain.handle(IPC.methodsOverview, (_e, opts: ExportRequest) => ({
+    sessions: methodsOverview(requireStore(), opts),
+    citation: citationInfo(),
+  }));
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
     montagePlan(requireStore(), sessionId, realtime),
   );

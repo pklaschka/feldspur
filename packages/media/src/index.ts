@@ -28,3 +28,4 @@ export * from "./context.ts";
 export { sessionTranscriptHtml, viewerData, VIEWER_CSP } from "./viewer/html.ts";
 export * from "./clip-times.ts";
 export * from "./log.ts";
+export * from "./methods-summary.ts";

@@ -72,12 +72,16 @@ describe("DOI der Version bei Zenodo", () => {
   });
 
   it.each`
-    adresse                                      | erlaubt
-    ${"https://doi.org/10.5281/zenodo.24289969"} | ${true}
-    ${"https://zenodo.org/records/24310418"}     | ${true}
-    ${"https://example.org/zenodo.org/"}         | ${false}
-    ${"http://zenodo.org/records/1"}             | ${false}
-    ${"file:///etc/passwd"}                      | ${false}
+    adresse                                                 | erlaubt
+    ${"https://doi.org/10.5281/zenodo.24289969"}            | ${true}
+    ${"https://zenodo.org/records/24310418"}                | ${true}
+    ${"https://purl.archive.org/feldspur#sec-methodenteil"} | ${true}
+    ${"https://purl.archive.org/feldspur/pdf"}              | ${true}
+    ${"https://purl.archive.org/feldspurig"}                | ${false}
+    ${"https://purl.archive.org/anderes"}                   | ${false}
+    ${"https://example.org/zenodo.org/"}                    | ${false}
+    ${"http://zenodo.org/records/1"}                        | ${false}
+    ${"file:///etc/passwd"}                                 | ${false}
   `("der Dialog öffnet $adresse im Browser: $erlaubt", ({ adresse, erlaubt }) => {
     expect(isCitationLink(adresse)).toBe(erlaubt);
   });
