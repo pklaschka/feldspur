@@ -3,7 +3,8 @@ name: Installationspaket
 # Baut die Installer mit mitgelieferter LGPL-Fassung von FFmpeg.
 # Läuft von Hand und als Teil des Release-Workflows (release.yml) für alle Plattformen. In Pull Requests, die die
 # Paketierung ändern, nur für Linux (mit Rauchtest am fertigen Paket); alle Plattformen mit dem Label
-# „alle-plattformen“ (z. B. bei Änderungen an scripts/build-ffmpeg-macos.sh).
+# „alle-plattformen“ (z. B. bei Änderungen an scripts/build-ffmpeg-macos.sh); das Setzen des Labels startet
+# alle-plattformen.yml, das diese Datei aufruft, wenn der Pull Request einen der Pfade unten ändert.
 on:
   workflow_dispatch:
   workflow_call:
@@ -17,7 +18,7 @@ on:
         type: string
         default: ""
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     paths:
       - "scripts/fetch-ffmpeg.mjs"
       - "scripts/build-ffmpeg-macos.sh"
@@ -37,15 +38,15 @@ env:
 permissions:
   contents: read
 
-# Ein neuer Push bricht den alten Lauf desselben Pull Requests ab (wie in ci.yml).
+# Ein neuer Push bricht den alten Lauf desselben Pull Requests ab (wie in ci.yml, dort steht auch, warum Labels hier
+# keinen Lauf auslösen).
 concurrency:
   group: >-
-    ${{ github.event_name == 'pull_request' && format('paket-pr-{0}-{1}', github.event.pull_request.number, github.event.action == 'labeled' && github.event.label.name != 'alle-plattformen' && github.event.label.name || 'lauf') || format('paket-{0}', github.run_id) }}
+    ${{ github.event_name == 'pull_request' && format('paket-pr-{0}-{1}', github.workflow, github.event.pull_request.number) || format('paket-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   package:
-    if: github.event.action != 'labeled' || github.event.label.name == 'alle-plattformen'
     strategy:
       fail-fast: false
       matrix:

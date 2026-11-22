@@ -6,7 +6,7 @@
 # Feldspur<br><sub><sub><em>Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen</em></sub></sub>
 
 **Zuri Nimca Klaschka** <a href="https://orcid.org/0009-0005-9995-5687"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID 0009-0005-9995-5687"></a><br>
-Stand: 21. November 2026
+Stand: 22. November 2026
 
 [![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://purl.archive.org/feldspur)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.24289969-5b5d53?labelColor=3a281d)](https://doi.org/10.5281/zenodo.24289969)
@@ -98,13 +98,13 @@ verändern, gehört zu jeder Angabe die Version oder der Stand.
 **Das Programm**, wenn Material mit Feldspur aufbereitet wurde – mit Version oder Commit:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
-> (Version 0.3.0-rc.3) \[Software\]. <https://purl.archive.org/feldspur/repo>
+> (Version 0.3.0) \[Software\]. <https://purl.archive.org/feldspur/repo>
 
 **Diesen Text**, wenn es um Begründung, Einordnung, die Entstehung mit KI oder das Handbuch geht – mit dem Stand,
 der oben auf der Seite bzw. auf dem Titelblatt des PDFs steht, z. B.:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse
-> zusammenführen. Begleittext und Handbuch_ (Stand: 21. November 2026). <https://purl.archive.org/feldspur>
+> zusammenführen. Begleittext und Handbuch_ (Stand: 22. November 2026). <https://purl.archive.org/feldspur>
 
 **Eine Stelle im eigenen Material**, das mit Feldspur aufbereitet wurde: aus der gesicherten Ausgabe
 (Einsatztranskript und Montagevideo), mit der ganzen Montage-ID und der Zeitmarke. Wie das geht, steht im
@@ -307,6 +307,14 @@ nach, committet „Release vX“ auf `main`, taggt, baut die Installer für alle
 mit Installern, `SHA256SUMS.txt` und dem PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an, dazu eine Druckfassung mit 3 mm Beschnitt rundum
 (`Feldspur-Handbuch-<version>-Druck.pdf`, 216 × 303 mm, Endformat A4; lokal: `vp run handbook:druck`).
+
+**Unveränderliche Releases:** Im Repository ist „Release immutability“ eingeschaltet (Settings → General →
+Releases). Eine veröffentlichte Release lässt sich danach nicht mehr ändern: Tag und Dateien bleiben, wie sie sind,
+und GitHub stellt dazu eine prüfbare Bestätigung aus (`gh release verify v<version>`). Der Workflow legt die Release
+deshalb zuerst als Entwurf an, lädt alle Dateien hoch, vergleicht GitHubs Prüfsummen mit `SHA256SUMS.txt` und
+veröffentlicht erst dann. Fehlt etwas, bleibt der Entwurf liegen; ein neuer Lauf ersetzt ihn. Ein Fehler in einer
+veröffentlichten Release lässt sich nur mit einer neuen Version beheben (Vorabversion oder Hotfix). Titel und
+Release-Text bleiben bearbeitbar.
 
 **Einmalig einrichten:** Der Workflow pusht den Commit „Release vX“ mit einem Deploy-Schlüssel auf `main`, weil die
 Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.

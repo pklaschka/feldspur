@@ -2,7 +2,7 @@
 # Titel, Autor*in, Zusammenfassung und Schlüsselwörter kommen aus dem Manuskript.
 metadata-files: [handbuch/_metadaten.yml]
 # Fester „Stand“, damit die CI-Prüfung (README passt zu README.qmd) nicht jeden Tag anschlägt. Der Release-Workflow setzt ihn.
-date: 2026-11-21
+date: 2026-11-22
 date-format: "D. MMMM YYYY"
 lang: de
 filters:
@@ -213,6 +213,14 @@ nach, committet "Release vX" auf `main`, taggt, baut die Installer für alle Pla
 mit Installern, `SHA256SUMS.txt` und dem PDF-Handbuch an. Das Handbuch rendert [`handbook.yml`](.github/workflows/handbook.yml) mit Quarto
 und hängt es als `Feldspur-Handbuch-<version>.pdf` an, dazu eine Druckfassung mit 3 mm Beschnitt rundum
 (`Feldspur-Handbuch-<version>-Druck.pdf`, 216 × 303 mm, Endformat A4; lokal: `vp run handbook:druck`).
+
+**Unveränderliche Releases:** Im Repository ist "Release immutability" eingeschaltet (Settings → General →
+Releases). Eine veröffentlichte Release lässt sich danach nicht mehr ändern: Tag und Dateien bleiben, wie sie sind,
+und GitHub stellt dazu eine prüfbare Bestätigung aus (`gh release verify v<version>`). Der Workflow legt die Release
+deshalb zuerst als Entwurf an, lädt alle Dateien hoch, vergleicht GitHubs Prüfsummen mit `SHA256SUMS.txt` und
+veröffentlicht erst dann. Fehlt etwas, bleibt der Entwurf liegen; ein neuer Lauf ersetzt ihn. Ein Fehler in einer
+veröffentlichten Release lässt sich nur mit einer neuen Version beheben (Vorabversion oder Hotfix). Titel und
+Release-Text bleiben bearbeitbar.
 
 **Einmalig einrichten:** Der Workflow pusht den Commit "Release vX" mit einem Deploy-Schlüssel auf `main`, weil die
 Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.
