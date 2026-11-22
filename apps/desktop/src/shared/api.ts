@@ -549,6 +549,8 @@ export interface SessionTranscriptPreview {
   durationMs: number;
   episodes: number;
   cards: number;
+  /** Geschätzte Größe des Montagevideos in Bytes; `deviceTracks` kommt mit „Tonspur je Gerät“ dazu. */
+  videoBytes: { video: number; deviceTracks: number };
   /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
   entries: SessionTranscriptPreviewEntry[];

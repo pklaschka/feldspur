@@ -146,6 +146,12 @@ export function bytes(n: number): string {
   return `${(n / 1024 ** 3).toFixed(2).replace(".", ",")} GB`;
 }
 
+/** Geschätzte Größe, grob gerundet: „ca. 2,1 GB“, „ca. 450 MB“, nie unter „ca. 1 MB“. */
+export function aboutSize(n: number): string {
+  if (n >= 1024 ** 3) return `ca. ${(n / 1024 ** 3).toFixed(1).replace(".", ",")} GB`;
+  return `ca. ${Math.max(1, Math.round(n / 1024 ** 2))} MB`;
+}
+
 export const STATUS_TEXT = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit", context: "Kontext" } as const;
 
 export const EVIDENCE_LABEL: Record<string, string> = {

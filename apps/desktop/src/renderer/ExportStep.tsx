@@ -13,6 +13,7 @@ import type {
 } from "../shared/api.ts";
 import { CHECK_STEP, cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
+import { aboutSize } from "./format.ts";
 import { MontageView } from "./MontageView.tsx";
 import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
@@ -344,6 +345,11 @@ export function ExportStep({
                 onChange={(v) => set({ video: v })}
                 disabled={viewer}
                 label="Montagevideo mit ausgeben"
+                size={
+                  preview && !empty
+                    ? aboutSize(preview.videoBytes.video + (deviceTracks ? preview.videoBytes.deviceTracks : 0))
+                    : undefined
+                }
                 hint={
                   viewer
                     ? "Bleibt an, solange der Viewer gewählt ist: Der Viewer spielt dieses Video ab."
@@ -797,6 +803,7 @@ function Option({
   onChange,
   disabled,
   label,
+  size,
   hint,
 }: {
   checked: boolean;
@@ -804,6 +811,8 @@ function Option({
   /** Festgehalten, weil eine andere Wahl davon abhängt; der Grund steht dann im Hinweis. */
   disabled?: boolean;
   label: string;
+  /** Geschätzte Größe hinter der Beschriftung, z. B. „ca. 2,1 GB“. */
+  size?: string;
   hint: string;
 }) {
   return (
@@ -816,6 +825,7 @@ function Option({
       <Toggle checked={checked} onChange={onChange} label={label} disabled={disabled} />
       <span>
         {label}
+        {size && <span className="ml-1.5 text-[0.85rem] text-muted tabular-nums">{size}</span>}
         {disabled && <span className="ml-1.5 text-[0.8rem]">(gesperrt)</span>}
       </span>
       <span className="col-start-2 text-[0.85rem] text-muted">{hint}</span>
