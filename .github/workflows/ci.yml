@@ -1,14 +1,15 @@
 name: CI
 
 # Sparsam mit Runnern: Pull Requests und main prüft nur Linux. Windows und macOS kommen dazu
-#   - mit dem Label „alle-plattformen“ am Pull Request,
+#   - mit dem Label „alle-plattformen“ am Pull Request (Setzen des Labels startet alle-plattformen.yml, das diese
+#     Datei aufruft; ist das Label gesetzt, prüft auch jeder weitere Push alle Plattformen),
 #   - von Hand (Actions → CI → Run workflow),
 #   - als Pflichtprüfung in jeder Release (release.yml), bevor Commit und Tag gepusht werden.
 on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       alle_plattformen:
@@ -25,16 +26,16 @@ on:
 permissions:
   contents: read
 
-# Ein neuer Push bricht den alten Lauf desselben Pull Requests ab. Andere Labels als „alle-plattformen“ bekommen
-# eine eigene Gruppe, damit z. B. das Changelog-Label keinen laufenden Lauf abbricht (der Lauf wird dann übersprungen).
+# Ein neuer Push bricht den alten Lauf desselben Pull Requests ab. Labels lösen hier bewusst keinen Lauf aus: Ein
+# übersprungener Lauf wäre der neueste dieses Workflows, und GitHub zeigt am Pull Request dann nur ihn, nicht mehr
+# den grünen Pflicht-Check (so geschehen an #188). github.workflow trennt die Gruppe vom Aufruf aus alle-plattformen.yml.
 concurrency:
   group: >-
-    ${{ github.event_name == 'pull_request' && format('ci-pr-{0}-{1}', github.event.pull_request.number, github.event.action == 'labeled' && github.event.label.name != 'alle-plattformen' && github.event.label.name || 'lauf') || format('ci-{0}', github.run_id) }}
+    ${{ github.event_name == 'pull_request' && format('ci-pr-{0}-{1}', github.workflow, github.event.pull_request.number) || format('ci-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
-    if: github.event.action != 'labeled' || github.event.label.name == 'alle-plattformen'
     strategy:
       fail-fast: false
       matrix:
