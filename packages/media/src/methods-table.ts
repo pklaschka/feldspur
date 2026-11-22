@@ -70,15 +70,29 @@ export function germanDate(iso: string): string {
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** Gleiche Art und gleiches Gerät aus mehreren Einsätzen zu einer Zeile zusammenfassen. */
-export function combineMaterial(sessions: MethodsNumbers[]): MethodsMaterialRow[] {
-  const rows = new Map<string, MethodsMaterialRow>();
-  for (const s of sessions) {
+/** Zusammengefasste Zeile mit der Zahl der Geräte, die darin stecken (je Einsatz gezählt). */
+export type CombinedMaterialRow = MethodsMaterialRow & { devices: number };
+
+/**
+ * Zeilen aus mehreren Einsätzen zusammenfassen: je Art und Gerät, mit `byKind` nur je Art. Geräte sind je Einsatz
+ * angelegt und heißen von Tag zu Tag oft etwas anders; über mehrere Tage zählt die Tabelle sie deshalb nur.
+ */
+export function combineMaterial(sessions: MethodsNumbers[], opts: { byKind?: boolean } = {}): CombinedMaterialRow[] {
+  const rows = new Map<string, CombinedMaterialRow>();
+  const devices = new Map<string, Set<string>>();
+  for (const [i, s] of sessions.entries()) {
     for (const r of s.material) {
-      const key = `${r.kind}\n${r.device}`;
+      const key = opts.byKind ? r.kind : `${r.kind}\n${r.device}`;
+      if (r.device) devices.set(key, (devices.get(key) ?? new Set()).add(`${i}\n${r.device}`));
       const sum = rows.get(key);
       if (!sum) {
-        rows.set(key, { ...r, basis: { ...r.basis }, correctionsMs: [...r.correctionsMs] });
+        rows.set(key, {
+          ...r,
+          device: opts.byKind ? "" : r.device,
+          basis: { ...r.basis },
+          correctionsMs: [...r.correctionsMs],
+          devices: 0,
+        });
         continue;
       }
       sum.files += r.files;
@@ -88,6 +102,7 @@ export function combineMaterial(sessions: MethodsNumbers[]): MethodsMaterialRow[
       for (const c of r.correctionsMs) if (!sum.correctionsMs.includes(c)) sum.correctionsMs.push(c);
     }
   }
+  for (const [key, row] of rows) row.devices = devices.get(key)?.size ?? 0;
   return [...rows.values()].sort(
     (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.device.localeCompare(b.device, "de"),
   );
@@ -125,12 +140,14 @@ function span(sessions: MethodsNumbers[]): string {
 
 /** Eingang: was hineingeflossen ist, je Art und Gerät über alle gewählten Einsätze. */
 export function materialTable(sessions: MethodsNumbers[]): MethodsTable {
+  // Über mehrere Einsätze je Art eine Zeile: Geräte sind je Einsatz angelegt, gleiche Geräte hießen sonst doppelt.
+  const several = sessions.length > 1;
   return {
     caption: `Eingang: Aufzeichnungen aus ${span(sessions)}`,
-    head: ["Eingang", "Gerät", "Anzahl", "Dauer (h:mm:ss)", "Zeitbeleg"],
-    rows: combineMaterial(sessions).map((r) => [
+    head: ["Eingang", several ? "Geräte" : "Gerät", "Anzahl", "Dauer (h:mm:ss)", "Zeitbeleg"],
+    rows: combineMaterial(sessions, { byKind: several }).map((r) => [
       KIND_TEXT[r.kind],
-      r.device || "–",
+      several ? (r.devices ? count(r.devices, "Gerät", "Geräte") : "–") : r.device || "–",
       countText(r),
       r.kind === "audio" || r.kind === "video" ? hms(r.durationMs) : "–",
       basisText(r),
@@ -187,14 +204,14 @@ export function methodsHtml(tables: MethodsTable[], software: string): string {
   const cell = "border:1px solid #888;padding:3px 6px;text-align:left;vertical-align:top";
   const blocks = tables.map(
     (t) =>
-      `<p><b>${esc(t.caption)}</b></p>` +
+      `<p><b>${esc(t.caption)}</b></p>\n` +
       `<table style="border-collapse:collapse">` +
       `<thead><tr>${t.head.map((h) => `<th style="${cell}">${esc(h)}</th>`).join("")}</tr></thead>` +
       `<tbody>${t.rows
         .map((r) => `<tr>${r.map((c) => `<td style="${cell}">${esc(c)}</td>`).join("")}</tr>`)
-        .join("")}</tbody></table>`,
+        .join("")}</tbody></table>\n`,
   );
-  return `${blocks.join("")}<p>${esc(software)}</p>`;
+  return `${blocks.join("")}<p>${esc(software)}</p>\n`;
 }
 
 /** Tabellen als Text mit Tabulatoren: der Ersatz, wenn das Ziel kein HTML annimmt (auch für Tabellenprogramme). */
