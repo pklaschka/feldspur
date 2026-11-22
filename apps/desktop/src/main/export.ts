@@ -33,6 +33,8 @@ import {
   type SessionTranscriptPreview,
 } from "../shared/api.ts";
 import { checkOriginals } from "./originals.ts";
+import { sessionChangeLogCsv } from "./changelog.ts";
+import { learnMontageSize, montageSize } from "./montage-size.ts";
 
 const CHUNK = 60;
 let running: string | null = null;
@@ -161,6 +163,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
     durationMs: transcript.plan.durationMs,
     episodes: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "episode").length : 0,
     cards: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "card").length : 0,
+    videoBytes: montageSize(transcript),
     lines: transcript.entries.map(entryText),
     entries: transcript.entries.map((e) => ({
       kind: e.kind,
@@ -184,6 +187,9 @@ export function exportSettings(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    changeLog?: boolean;
+    manifest?: boolean;
   },
 ): ExportSettings {
   return {
@@ -195,6 +201,9 @@ export function exportSettings(
     deviceTracks: opts.video && opts.deviceTracks !== false,
     // Der Viewer gehört zum Video.
     viewer: opts.video && opts.viewer !== false,
+    readme: opts.readme !== false,
+    changeLog: opts.changeLog !== false,
+    manifest: opts.manifest !== false,
   };
 }
 
@@ -209,6 +218,9 @@ export function exportStatus(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    changeLog?: boolean;
+    manifest?: boolean;
   },
 ): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
@@ -287,6 +299,11 @@ export async function runExport(
     realtime?: boolean;
     deviceTracks?: boolean;
     viewer?: boolean;
+    readme?: boolean;
+    changeLog?: boolean;
+    manifest?: boolean;
+    /** Zeile zur Software (Version, DOI) für die LIESMICH. */
+    software?: string;
     /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */
     acceptOriginals?: boolean;
   },
@@ -341,6 +358,17 @@ export async function runExport(
       audioMix: opts.mixAudio === false ? "main" : "all",
       deviceTracks: opts.deviceTracks !== false,
       viewer: opts.viewer !== false,
+      readme: settings.readme,
+      software: opts.software,
+      // Stand beim Start, wie der Fingerabdruck.
+      changeLog: settings.changeLog
+        ? sessionChangeLogCsv(
+            s.history,
+            sessionId,
+            s.listSources(sessionId).map((x) => x.id),
+          )
+        : undefined,
+      manifest: settings.manifest,
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
       onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
@@ -361,6 +389,15 @@ export async function runExport(
       options: settings,
       fingerprint,
     });
+    const mp4 = r.files.find((f) => f.endsWith(".mp4"));
+    if (mp4)
+      learnMontageSize(
+        s,
+        sessionId,
+        modeOf(s, sessionId, opts.realtime),
+        join(r.dir, mp4),
+        opts.deviceTracks !== false,
+      );
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
   } finally {
     sleepAgain();

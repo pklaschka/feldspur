@@ -352,6 +352,12 @@ export const ExportSettings = z.object({
   deviceTracks: z.boolean().default(false),
   /** Viewer (.html) neben dem Montagevideo (Issue #122). Ältere Ausgaben kannten ihn nicht: aus. */
   viewer: z.boolean().default(false),
+  /** LIESMICH.html mit der Tabelle für den Methodenteil (Issues #130, #149). Ältere Ausgaben kannten sie nicht: aus. */
+  readme: z.boolean().default(false),
+  /** Änderungsprotokoll des Einsatzes als CSV (Issue #204). Ältere Ausgaben kannten es nicht: aus. */
+  changeLog: z.boolean().default(false),
+  /** Prüfsummenliste manifest-sha256.txt (Issue #204). Ältere Ausgaben kannten sie nicht: aus. */
+  manifest: z.boolean().default(false),
 });
 export type ExportSettings = z.infer<typeof ExportSettings>;
 

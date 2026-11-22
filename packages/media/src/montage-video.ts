@@ -114,6 +114,45 @@ async function ff(args: string[], signal?: AbortSignal): Promise<void> {
   await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { signal });
 }
 
+/** Feste Bitrate der Hardware-Encoder (kbit/s); libx264 mit CRF landet bei ruhigen Bildern meist darunter. */
+const VIDEO_KBPS = 3000;
+/** Tonspur 1 (Mischung oder Hauptquelle) und jede Spur je Gerät, kbit/s. */
+const MIX_KBPS = 160;
+const DEVICE_TRACK_KBPS = 128;
+
+/**
+ * Bild ohne laufendes Video (Tafel, Uhrzeit auf leerem Grund), kbit/s. Hardware-Encoder sparen dort weniger als
+ * libx264; der Wert liegt dazwischen, den Rest gleicht der gelernte Faktor in der App aus.
+ */
+const STILL_KBPS = 600;
+
+/**
+ * Ungefähre Größe des Montagevideos in Bytes, Stück für Stück: volle Bildbitrate nur, wo ein Video läuft, sonst
+ * kaum etwas; Ton nur, wo eine Tonquelle läuft (Stille kostet in AAC fast nichts). `video` ist das Video mit
+ * Tonspur 1, `deviceTracks` kommt mit einer Spur je Gerät dazu (erst ab zwei Geräten mit Ton). Eine Schätzung; je
+ * nach Encoder und Bild weicht die echte Datei ab.
+ */
+export function estimateMontageBytes(
+  transcript: SessionTranscript,
+  pieces: Piece[] = planPieces(transcript),
+): { video: number; deviceTracks: number } {
+  const bytes = (kbps: number, frames: number) => ((kbps * 1000) / 8) * (frames / FPS);
+  let video = 0;
+  const perDevice = new Map<Id, number>();
+  for (const p of pieces) {
+    const frames = p.f1 - p.f0;
+    video += bytes(p.videos.length ? VIDEO_KBPS : STILL_KBPS, frames);
+    if (p.audios.length) video += bytes(MIX_KBPS, frames);
+    for (const id of new Set(p.audios.map((a) => a.source.deviceId).filter((d): d is Id => !!d)))
+      perDevice.set(id, (perDevice.get(id) ?? 0) + bytes(DEVICE_TRACK_KBPS, frames));
+  }
+  const tracks = [...perDevice.values()];
+  return {
+    video: Math.round(video),
+    deviceTracks: tracks.length >= 2 ? Math.round(tracks.reduce((a, b) => a + b, 0)) : 0,
+  };
+}
+
 let encoderCache: string[] | null = null;
 /** H.264, wenn möglich: libx264 (Entwicklung), VideoToolbox (macOS), Media Foundation (Windows), OpenH264; sonst MPEG-4. */
 export async function videoEncoder(): Promise<string[]> {
@@ -123,11 +162,11 @@ export async function videoEncoder(): Promise<string[]> {
   encoderCache = has("libx264")
     ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
     : has("h264_videotoolbox")
-      ? ["-c:v", "h264_videotoolbox", "-b:v", "3M"]
+      ? ["-c:v", "h264_videotoolbox", "-b:v", `${VIDEO_KBPS}k`]
       : has("h264_mf")
-        ? ["-c:v", "h264_mf", "-b:v", "3M"]
+        ? ["-c:v", "h264_mf", "-b:v", `${VIDEO_KBPS}k`]
         : has("libopenh264")
-          ? ["-c:v", "libopenh264", "-b:v", "3M"]
+          ? ["-c:v", "libopenh264", "-b:v", `${VIDEO_KBPS}k`]
           : ["-c:v", "mpeg4", "-q:v", "4"];
   return encoderCache;
 }
@@ -515,7 +554,7 @@ export async function renderMontage(
         return p.audios.filter((_, k) => ok[k]);
       }),
     );
-    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), "160k");
+    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), `${MIX_KBPS}k`);
     const perDevice: { track: DeviceTrack; file: string }[] = [];
     const withSound = devices.filter((d) => all.some((list) => list.some((a) => a.source.deviceId === d.deviceId)));
     if (withSound.length >= 2)
@@ -525,7 +564,7 @@ export async function renderMontage(
           file: await renderTrack(
             `g${k}`,
             all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
-            "128k",
+            `${DEVICE_TRACK_KBPS}k`,
           ),
         });
     return { mix, perDevice };

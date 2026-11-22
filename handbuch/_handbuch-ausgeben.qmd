@@ -1,7 +1,7 @@
 ## Ausgeben {#sec-ausgeben}
 
 Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Einsatz**: Einsatztranskript,
-Dokumentvariablen und Begleitprotokoll, dazu auf Wunsch Montagevideo, Viewer und Schnittliste. Ist vorher noch etwas
+Dokumentvariablen und Begleitprotokoll, dazu auf Wunsch Montagevideo, Viewer, LIESMICH, Änderungsprotokoll, Prüfsummenliste und Schnittliste. Ist vorher noch etwas
 offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen Links
 dorthin.
 
@@ -71,7 +71,9 @@ Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlich
 Optionen:
 
 - **Montagevideo mit ausgeben** (Standard): Ohne Haken entstehen nur Einsatztranskript, Dokumentvariablen und
-  Begleitprotokoll.
+  Begleitprotokoll. Hinter dem Schalter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“. Feldspur rechnet
+  das aus den Strecken, in denen ein Video oder Ton läuft. Wie groß die Datei wirklich wird, hängt am Rechner und am
+  Bild; nach jeder Ausgabe vergleicht Feldspur deshalb Schätzung und echte Größe und schätzt danach genauer.
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
@@ -85,8 +87,14 @@ Optionen:
   wenn eine Stimme im Rekorder untergeht und das Handy näher dran war. Bei nur einem Gerät mit Ton entfällt die Extraspur.
 - **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
   willst.
-- **Viewer zum Ansehen im Browser** (Standard, nur mit Montagevideo): Neben dem Video entsteht eine HTML-Datei, in
-  der du Video und Einsatztranskript zusammen im Browser ansiehst (@sec-viewer).
+- **Viewer zum Ansehen im Browser** (Standard): Neben dem Video entsteht eine HTML-Datei, in der du Video und
+  Einsatztranskript zusammen im Browser ansiehst (@sec-viewer). Der Viewer spielt das Montagevideo ab. Solange er
+  gewählt ist, bleibt **Montagevideo mit ausgeben** deshalb an und lässt sich nicht abwählen; der Grund steht an der
+  Zeile. Wählst du den Viewer ab, kannst du auch das Video weglassen.
+- **LIESMICH mit Tabelle für den Methodenteil** (Standard): erklärt den Ordner (@sec-liesmich).
+- **Änderungsprotokoll** (Standard): jede Änderung an diesem Einsatz als CSV (@sec-aenderungsprotokoll-ausgabe).
+- **Prüfsummenliste** (Standard): `manifest-sha256.txt` mit der Prüfsumme jeder Datei im Ordner
+  (@sec-pruefsummenliste).
 
 Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
@@ -243,6 +251,40 @@ Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. Gibt es Kontext, kom
 **Kontext entstanden** dazu, in den Dokumentvariablen die Zahl der **Kontextstücke**. So bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript
 beruht, und das Material lässt sich sauber archivieren.
 
+### LIESMICH (.html) {#sec-liesmich}
+
+Mit **LIESMICH mit Tabelle für den Methodenteil** legt Feldspur die Datei `LIESMICH.html` in den Ausgabeordner. Sie
+ist für Menschen gedacht, die den Ordner später öffnen, auch für dich selbst in ein paar Jahren, und lässt sich in
+jedem Browser lesen und drucken. Darin steht:
+
+- welcher Einsatz das ist, mit der ganzen Montage-ID,
+- was im Ordner liegt und wozu jede Datei dient,
+- wie Einsatztranskript, Zeitmarken und Montagevideo zusammengehören,
+- wie aus dieser Ausgabe zitiert wird (@sec-stelle-zitieren),
+- die Tabelle für den Methodenteil dieses Einsatzes (@sec-methodenteil), darunter Feldspur mit Version und DOI.
+
+Die Tabelle steht dort, weil sie die Montage-ID trägt: So bleibt sie bei genau der Fassung, die sie beschreibt.
+Einsatztranskript und Montagevideo sind auch ohne die LIESMICH vollständig und zitierfähig. Sie beschreibt die
+Ausgabe nur. Ohne das Häkchen fehlt die Datei, sonst ändert sich nichts.
+
+### Änderungsprotokoll (.csv) {#sec-aenderungsprotokoll-ausgabe}
+
+Mit **Änderungsprotokoll** legt Feldspur `…_Aenderungsprotokoll.csv` in den Ordner: jede Änderung an diesem Einsatz
+mit Zeit (UTC), Aktion und den Werten vorher und nachher, so wie im Projektmenü unter **Änderungsprotokoll…**
+(@sec-erste-schritte). Darin steht nur, was diesen Einsatz betrifft: der Einsatz selbst, seine Geräte und Quellen
+(auch gelöschte), Zeitbelege, Anker, Tagebuch, Mitschrift und Notizen. Andere Einsätze und Projektweites wie Personen
+bleiben draußen. Das Protokoll hält den Stand beim Start der Ausgabe fest.
+
+### Prüfsummenliste (manifest-sha256.txt) {#sec-pruefsummenliste}
+
+Mit **Prüfsummenliste** schreibt Feldspur zuletzt `manifest-sha256.txt`. Sie führt für jede andere Datei im Ordner
+die SHA-256-Prüfsumme, auch für Montagevideo und LIESMICH. Damit lässt sich später zeigen, dass der Ordner noch genau
+so ist, wie Feldspur ihn ausgegeben hat. Das Format ist das von `sha256sum`: Im Ordner prüft
+`sha256sum -c manifest-sha256.txt` jede Datei (unter macOS `shasum -a 256 -c manifest-sha256.txt`). Bei einem langen
+Montagevideo dauert das Rechnen der Prüfsummen am Ende der Ausgabe einen Moment.
+
+Die Prüfsummen der Originaldateien stehen weiter im Begleitprotokoll.
+
 ### In MAXQDA
 
 Lies das Einsatztranskript in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
@@ -266,7 +308,8 @@ was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings e
 1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
    ist.
 2. Sichere den Ausgabeordner als Ganzes und unverändert (Einsatztranskript, Montagevideo, Viewer, Dokumentvariablen,
-   Begleitprotokoll). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
+   Begleitprotokoll, LIESMICH, Änderungsprotokoll, Prüfsummenliste). Die Prüfsummenliste zeigt später, dass nichts
+   verändert wurde (@sec-pruefsummenliste). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
    Adresse vergibt, etwa eine DOI.
 3. Zitiere aus genau dieser Fassung. Im Viewer legt **Stelle kopieren** die Angabe in die Zwischenablage:
    Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID.
@@ -292,7 +335,8 @@ liest, erkennt an der ID ebenso, ob die vorliegende Fassung die zitierte ist.
 ### Im Methodenteil beschreiben {#sec-methodenteil}
 
 Wer aus der Ausgabe zitiert, muss einmal erklären, was das für ein Artefakt ist und woraus es besteht. Das
-Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für den Methodenteil gibt es deshalb die
+Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für einen einzelnen Einsatz stehen die verdichteten
+Tabellen in der LIESMICH seines Ausgabeordners (@sec-liesmich). Für mehrere Einsätze zusammen gibt es die
 **Übersicht**. Du findest sie in der linken Leiste über den Einsätzen; sie gehört zum Projekt, nicht zu einem
 einzelnen Einsatz.
 
@@ -320,21 +364,24 @@ Die Kennwerte beschreiben den Stand im Projekt. An jedem Feldtag steht, ob er so
 **nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** direkt in den Schritt Ausgeben dieses
 Einsatzes. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
 
-So kann das Ergebnis aussehen (die Werte sind erfunden):
+So kann das Ergebnis für zwei Feldtage aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
+LIESMICH, kommt in der Eingangstabelle die Spalte **Gerät** mit den Namen der Geräte dazu.
 
-| Eingang | Gerät | Anzahl | Dauer (h:mm:ss) | Zeitbeleg |
-|:---|:---|:---|:---|:-------|
-| Video | Kamera | 112 | 1:48:00 | Metadaten; Uhr um +0:42 korrigiert |
-| Audio | Rekorder | 6 | 3:10:00 | angesagte Uhrzeit (1), Folgeaufnahme (5) |
-| Fotos | Handy | 19 | – | Metadaten |
-| Tagebuch | – | 31 Einträge, 4 Dateien | – | notierte Uhrzeit |
+| Eingang | Anzahl | Dauer (h:mm:ss) | Zeitbeleg |
+|:---|:---|:---|:-------|
+| Video | 214 | 3:31:00 | Metadaten; Uhr korrigiert (+0:18 bis +0:42) |
+| Audio | 11 | 6:05:00 | angesagte Uhrzeit (2), Folgeaufnahme (9) |
+| Fotos | 37 | – | Metadaten |
+| Tagebuch | 58 Einträge, 7 Dateien | – | notierte Uhrzeit |
 
-: Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026) {#tbl-methodenteil-eingang}
+: Eingang: Aufzeichnungen aus 2 Einsätzen (14.09.2026 bis 15.09.2026) {#tbl-methodenteil-eingang}
 
 | Einsatz | Ausgabe | Datei | Umfang | Montage-ID |
 |:---|:---|:---|:---|:---|
 | 14.09.2026 Testmarkt | Einsatztranskript | .docx | 412 Zeilen | FS-7KQ2-M9XD-3F8A |
 | | Montagevideo | .mp4 | 3:10:00, Echtzeit | |
+| 15.09.2026 Testmarkt, zweiter Tag | Einsatztranskript | .docx | 388 Zeilen | FS-2VHN-C4TW-8RJE |
+| | Montagevideo | .mp4 | 2:55:00, Echtzeit | |
 
 : Ausgabe: Einsatztranskript und Montagevideo je Einsatz {#tbl-methodenteil-ausgabe}
 
