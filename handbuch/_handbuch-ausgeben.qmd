@@ -13,8 +13,8 @@ steht dann, wann und wohin ausgegeben wurde, und ob die Ausgabe noch passt.
 Passt sie, fasst eine Karte den Einsatz in wenigen Zahlen zusammen: **Zeitraum** (erste und letzte Uhrzeit der
 Montage), **Quellen** (Dateien und Geräte), Zeilen im **Einsatztranskript** und die volle **Montage-ID**, mit der du
 später aus der Ausgabe zitierst. **Im Viewer ansehen** öffnet den mit ausgegebenen Viewer im Browser (nur, wenn er mit
-ausgegeben wurde), **Im Ordner zeigen** öffnet den Ausgabeordner. Die einzelnen Dateien stehen hinter **Dateien
-anzeigen**.
+ausgegeben wurde), **Im Ordner zeigen** öffnet den Ausgabeordner. Die einzelnen Dateien klappt der Link mit ihrer
+Zahl auf, etwa **8 Dateien anzeigen**.
 
 - **Aktuell** (direkt nach der Ausgabe **Fertig**): Einsatz, Originale und Einstellungen sind genau wie bei der Ausgabe.
 - **Veraltet**: Seitdem hat sich etwas geändert. Darunter steht, was: der Einsatz selbst (Zeiten, Mitschrift, Tagebuch,
@@ -77,8 +77,8 @@ Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlich
 
 Optionen:
 
-- **Montagevideo mit ausgeben** (Standard): Ohne Haken entstehen nur Einsatztranskript, Dokumentvariablen und
-  Begleitprotokoll. Hinter dem Schalter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“. Feldspur rechnet
+- **Montagevideo mit ausgeben** (Standard): Ist der Schalter aus, entstehen nur Einsatztranskript, Dokumentvariablen
+  und Begleitprotokoll. Hinter dem Schalter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“. Feldspur rechnet
   das aus den Strecken, in denen ein Video oder Ton läuft. Wie groß die Datei wirklich wird, hängt am Rechner und am
   Bild; nach jeder Ausgabe vergleicht Feldspur deshalb Schätzung und echte Größe und schätzt danach genauer.
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
@@ -105,7 +105,7 @@ Optionen:
 
 Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
-Ein Montagevideo in Echtzeit rechnet bei einem langen Feldtag eine Weile. Hast du dich bei den Optionen vertan, hältst
+Ein Montagevideo in Echtzeit rechnet bei einem langen Einsatz eine Weile. Hast du dich bei den Optionen vertan, hältst
 du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gilt dann nicht als fertig, auch eine
 frühere Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben im Zwischenspeicher, der nächste Versuch
 geht deshalb schneller.
@@ -272,7 +272,7 @@ jedem Browser lesen und drucken. Darin steht:
 
 Die Tabelle steht dort, weil sie die Montage-ID trägt: So bleibt sie bei genau der Fassung, die sie beschreibt.
 Einsatztranskript und Montagevideo sind auch ohne die LIESMICH vollständig und zitierfähig. Sie beschreibt die
-Ausgabe nur. Ohne das Häkchen fehlt die Datei, sonst ändert sich nichts.
+Ausgabe nur. Ist der Schalter aus, fehlt die Datei, sonst ändert sich nichts.
 
 ### Änderungsprotokoll (.csv) {#sec-aenderungsprotokoll-ausgabe}
 
@@ -347,19 +347,22 @@ Tabellen in der LIESMICH seines Ausgabeordners (@sec-liesmich). Für mehrere Ein
 **Übersicht**. Du findest sie in der linken Leiste über den Einsätzen; sie gehört zum Projekt, nicht zu einem
 einzelnen Einsatz.
 
+![Die Übersicht: oben der Feldkalender, darunter die Kennwerte für den Methodenteil](bilder/uebersicht.png){#fig-uebersicht}
+
 Oben steht der **Feldkalender**, je Einsatz eine Zeile: Datum, Titel und Ort, die Zahl der Quellen und der Zeilen im
 Einsatztranskript, Geräteuhren ohne Abgleich und der Stand der Ausgabe. Gezähltes steht als Text da, Zustände als
-farbige Marken. Passen alle Ausgaben zum Stand, steht neben dem Projektnamen **Alle Ausgaben aktuell**. In der Mitte jeder Zeile liegt der Tag auf einer
-Uhrzeit-Achse, die für alle Tage gleich ist: Ton und Video als Balken, Fotos als Rauten, Tagebucheinträge als Striche
-zur Notierzeit. Untereinander sieht man so, was ein einzelner Tag verbirgt, etwa wiederkehrende Uhrzeiten, dichte und
-dünne Phasen oder Tage ohne Ton. Was das bedeutet, entscheidest du; Feldspur legt die Tage nur nebeneinander.
+farbige Marken. Passen alle Ausgaben zum Stand, steht neben dem Projektnamen **Alle Ausgaben aktuell**. In der Mitte
+jeder Zeile liegt der Einsatz auf einer Uhrzeit-Achse, die für alle Einsätze gleich ist: Ton und Video als Balken,
+Fotos als Rauten, Tagebucheinträge als Striche zur Notierzeit. Untereinander sieht man so, was ein einzelner Einsatz
+verbirgt, etwa wiederkehrende Uhrzeiten, dichte und dünne Phasen oder Einsätze ohne Ton. Was das bedeutet,
+entscheidest du; Feldspur legt die Einsätze nur nebeneinander.
 
 Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit.
-Fährst du mit der Maus über eine Spur, zeigt eine Linie durch alle Tage die Uhrzeit an dieser Stelle; so vergleichst
-du dieselbe Uhrzeit über die Tage. Mit **Nach Ort gruppieren** stehen Tage am selben Ort zusammen, sonst gilt die
-Folge nach Datum. **Als Grafik speichern…** schreibt die gewählten Tage als SVG-Grafik, etwa für den Methodenteil
-oder einen Vortrag; sie lässt sich in Word, LibreOffice, Inkscape oder Affinity einfügen und weiter bearbeiten.
-Danach führt **Im Ordner zeigen** zur gespeicherten Datei.
+Fährst du mit der Maus über eine Spur, zeigt eine Linie durch alle Einsätze die Uhrzeit an dieser Stelle; so
+vergleichst du dieselbe Uhrzeit über die Einsätze. Mit **Nach Ort gruppieren** stehen Einsätze am selben Ort
+zusammen, sonst gilt die Folge nach Datum. **Als Grafik speichern…** schreibt die gewählten Einsätze als SVG-Grafik,
+etwa für den Methodenteil oder einen Vortrag; sie lässt sich in Word, LibreOffice, Inkscape oder Affinity einfügen
+und weiter bearbeiten. Danach führt **Im Ordner zeigen** zur gespeicherten Datei.
 
 Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
@@ -367,12 +370,15 @@ Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
   Uhr eines Geräts korrigiert, steht die Korrektur dabei. Über mehrere Einsätze steht je Art eine Zeile, und die
   Spalte **Gerät** fällt weg: Geräte legst du je Einsatz an, und ob es in zwei Einsätzen dasselbe war, weiß Feldspur nicht.
 - **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
-  Montagevideo mit Länge und Art der Montage.
+  Montagevideo mit Länge und Art der Montage. Die Zeile zum Montagevideo fehlt, wenn du den Einsatz zuletzt ohne
+  Video ausgegeben hast.
 
 Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Einsätze zusammen, vor denen ein Häkchen
-steht; einzelne wählst du im Feldkalender darüber ab. Abgewählte Einsätze fehlen auch in der gespeicherten Grafik. **Tabellen kopieren** legt sie so in die Zwischenablage, dass
-Word, LibreOffice und Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt
-du danach in deinem Dokument an. Eine Datei entsteht dabei nicht.
+steht; einzelne wählst du im Feldkalender darüber ab. Abgewählte Einsätze fehlen auch in der gespeicherten Grafik.
+
+**Tabellen kopieren** legt die Tabellen so in die Zwischenablage, dass Word, LibreOffice und Pages echte Tabellen
+einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt du danach in deinem Dokument an. Eine Datei
+entsteht dabei nicht.
 
 Feldspur zählt und misst hier nur. In der Übersicht steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
 genug ist. Das bleibt bei dir. Farbig sind deshalb nur Zustände, die Feldspur ohnehin meldet, etwa eine veraltete
@@ -381,8 +387,9 @@ Ausgabe oder eine Geräteuhr ohne Abgleich, nie eine Menge.
 Die Kennwerte beschreiben den Stand im Projekt. An jedem Einsatz steht, ob er so schon als Ausgabe vorliegt:
 **Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert) oder
 **nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** (bei einer veralteten Ausgabe **Erneut
-ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Ein Einsatz ohne Quellen führt mit **Einsammeln** in
-den ersten Schritt. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
+ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Gib den Einsatz aus, bevor du die Kennwerte übernimmst,
+sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst. Bei einem Einsatz ohne Quellen steht
+dort stattdessen **Einsammeln**; das führt in seinen ersten Schritt.
 
 So kann das Ergebnis für zwei Einsätze aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
 LIESMICH, kommt in der Eingangstabelle die Spalte **Gerät** mit den Namen der Geräte dazu.

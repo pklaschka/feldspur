@@ -308,7 +308,7 @@ await kapitel("abgleichen", async () => {
       .getByText(/Uhren stimmen jetzt überein/)
       .waitFor({ timeout: 10_000 })
       .catch(() => {});
-    await siehe("Beleg", page.getByTestId("anchor-proof"));
+    await siehe("Beleg", page.getByTestId("anchor-proof"), { handbuch: "als Beleg der Anker" });
     await siehe("Beide anhören", page.getByTestId("anchor-proof").getByRole("button", { name: /Beide anhören/ }));
     await siehe("+ Neuer Anker");
     const weiter = knopf("Weiter: Durchsehen →");
@@ -565,7 +565,9 @@ await kapitel("ausgeben", async () => {
     await siehe("Im Viewer ansehen");
     for (const s of ["Zeitraum", "Quellen", "Einsatztranskript", "Montage-ID"])
       await siehe(s, page.getByTestId("export-receipt-facts").getByText(s, { exact: true }));
-    await siehe("Dateien anzeigen", page.getByTestId("export-files-toggle"));
+    await siehe("Dateien anzeigen", page.getByTestId("export-files-toggle").getByText(/^\d+ Dateien anzeigen$/), {
+      handbuch: "Dateien anzeigen**",
+    });
     await page.getByTestId("export-files-toggle").click();
     await siehe("Ausgabeordner", page.getByTestId("export-result"));
     await siehe("LIESMICH", page.getByTestId("export-result").getByText("LIESMICH.html", { exact: true }), {
