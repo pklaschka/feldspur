@@ -6,3 +6,9 @@ nach Updates und spielt sie mit einem Klick ein. Um die noch nicht signierten Pa
 
 Ohne Lieferling liegen die Installationsdateien für Windows, macOS und Linux bei jedem
 [Release auf GitHub](https://github.com/pklaschka/feldspur/releases); dort liegt auch das Handbuch als PDF.
+
+Jede Datei einer Release trägt einen signierten Herkunftsnachweis von GitHub: Er belegt, dass sie aus diesem
+Repository stammt und dort automatisch gebaut wurde (ab Version 0.4.0). Lieferling prüft ihn selbst. Von Hand geht es mit der
+[GitHub CLI](https://cli.github.com):
+`gh attestation verify <datei> --repo pklaschka/feldspur --signer-workflow pklaschka/feldspur/.github/workflows/release.yml`.
+Der Nachweis zeigt, wo eine Datei gebaut wurde, nicht, dass ihr Code fehlerfrei oder harmlos ist.
