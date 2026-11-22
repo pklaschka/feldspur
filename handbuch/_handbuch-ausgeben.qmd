@@ -340,8 +340,17 @@ Tabellen in der LIESMICH seines Ausgabeordners (@sec-liesmich). Für mehrere Ein
 **Übersicht**. Du findest sie in der linken Leiste über den Einsätzen; sie gehört zum Projekt, nicht zu einem
 einzelnen Einsatz.
 
-Oben stehen die **Feldtage**, je Einsatz eine Zeile: Datum, Titel und Ort, die Zahl der Quellen und der Zeilen im
-Einsatztranskript, Uhren ohne Abgleich und der Stand der Ausgabe. Ein Klick auf den Titel öffnet den Einsatz.
+Oben steht der **Feldkalender**, je Einsatz eine Zeile: Datum, Titel und Ort, die Zahl der Quellen und der Zeilen im
+Einsatztranskript, Uhren ohne Abgleich und der Stand der Ausgabe. In der Mitte jeder Zeile liegt der Tag auf einer
+Uhrzeit-Achse, die für alle Tage gleich ist: Ton und Video als Balken, Fotos als Rauten, Tagebucheinträge als Striche
+zur Notierzeit. Untereinander sieht man so, was ein einzelner Tag verbirgt, etwa wiederkehrende Uhrzeiten, dichte und
+dünne Phasen oder Tage ohne Ton. Was das bedeutet, entscheidest du; Feldspur legt die Tage nur nebeneinander.
+
+Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit. Mit
+**Nach Ort gruppieren** stehen Tage am selben Ort zusammen, sonst gilt die Folge nach Datum. **Feldkalender
+speichern…** schreibt die gewählten Tage als SVG-Grafik, etwa für den Methodenteil oder einen Vortrag; sie lässt sich
+in Word, LibreOffice, Inkscape oder Affinity einfügen und weiter bearbeiten.
+
 Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
 - **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
@@ -351,7 +360,7 @@ Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
   Montagevideo mit Länge und Art der Montage.
 
 Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Feldtage zusammen, vor denen ein Häkchen
-steht; einzelne wählst du in der Liste darüber ab. **Tabellen kopieren** legt sie so in die Zwischenablage, dass
+steht; einzelne wählst du im Feldkalender darüber ab. Abgewählte Tage fehlen auch in der gespeicherten Grafik. **Tabellen kopieren** legt sie so in die Zwischenablage, dass
 Word, LibreOffice und Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt
 du danach in deinem Dokument an. Eine Datei entsteht dabei nicht.
 

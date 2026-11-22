@@ -32,6 +32,7 @@ const api = window.feldspur;
 export function SessionPane({
   sessionId,
   initialStep,
+  initialReveal,
   guard,
   strayDrop,
   onProject,
@@ -41,6 +42,8 @@ export function SessionPane({
   sessionId: string;
   /** Schritt, in dem der Einsatz beginnt (Sprung aus der Übersicht); ohne ihn entscheidet der Einsatz selbst. */
   initialStep?: Step | null;
+  /** Sprungziel beim Öffnen (Feldkalender in der Übersicht). */
+  initialReveal?: Reveal | null;
   guard: Guard;
   /** Zähler aus `useStrayDrop`: Dateien wurden neben „Einsammeln“ gezogen. */
   strayDrop: number;
@@ -61,7 +64,9 @@ export function SessionPane({
   const [searching, setSearching] = useState(false);
   const [originals, setOriginals] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
-  const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(null);
+  const [reveal, setReveal] = useState<(Reveal & { n: number }) | null>(
+    initialReveal ? { ...initialReveal, n: 1 } : null,
+  );
   const history = useHistory(view, sessionId, guard, setView, onProject, onHistory);
   /** „Lage passt“ läuft: weitere Bestätigungen (zweites Strg+Enter, Doppelklick) bis zur Antwort verwerfen. */
   const confirming = useRef(false);

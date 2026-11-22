@@ -7,6 +7,7 @@ import type { ExportSettings, Id, PlacementBasis, ProjectStore, Source, SourceKi
 import { baseName } from "./export.ts";
 import { compareExport } from "./export-state.ts";
 import { buildSessionTranscript, type SessionTranscript } from "./session-transcript.ts";
+import { calendarMarks, type CalendarMark } from "./field-calendar.ts";
 
 /** Worauf die Lage einer Datei beruht; „context“ = bewusst ohne Uhrzeit, „none“ = (noch) ohne Uhrzeit. */
 export type MethodsBasis = PlacementBasis["kind"] | "context" | "none";
@@ -60,6 +61,8 @@ export interface MethodsSessionSummary {
    */
   exported: "current" | "stale" | "none";
   exportedAt: string | null;
+  /** Marken für den Feldkalender (Issue #205). */
+  marks: CalendarMark[];
 }
 
 const KIND_ORDER: SourceKind[] = ["video", "audio", "photo", "diary", "note", "gps", "other"];
@@ -145,5 +148,6 @@ export function methodsSummary(store: ProjectStore, sessionId: Id, settings: Exp
     ...methodsNumbers(transcript, settings.video),
     exported,
     exportedAt: record && !empty ? record.exportedAt : null,
+    marks: calendarMarks(transcript),
   };
 }

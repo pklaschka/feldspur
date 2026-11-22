@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./csv": "./src/csv.ts",
     "./layout": "./src/layout.ts",
-    "./methods-table": "./src/methods-table.ts"
+    "./methods-table": "./src/methods-table.ts",
+    "./field-calendar": "./src/field-calendar.ts"
   },
   "dependencies": {
     "docx": "9.15.0",
