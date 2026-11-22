@@ -1,10 +1,20 @@
 /**
  * SQLite-Schema einer .feldspur-Projektdatei (Drizzle).
- * Änderungen hier brauchen immer eine neue Migration in migrations.ts.
+ * Änderungen hier brauchen immer eine neue Migration in migrations.ts. Die Migrationen gelten in der Datei;
+ * test/schema.test.ts vergleicht beide Fassungen (Spalten, Standardwerte, Fremdschlüssel, Indizes).
  */
 import { sql } from "drizzle-orm";
 import type { Decision, ExportFingerprint, ExportSettings } from "../model.ts";
-import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+import {
+  blob,
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+  index,
+  type AnySQLiteColumn,
+} from "drizzle-orm/sqlite-core";
 
 const json = <T>(name: string) => text(name, { mode: "json" }).$type<T>();
 const bool = (name: string) => integer(name, { mode: "boolean" });
@@ -49,7 +59,9 @@ export const devices = sqliteTable(
     offsetBasis: text("offset_basis", { enum: ["reference", "manual", "anchor", "unknown"] })
       .notNull()
       .default("unknown"),
-    timestampsAreUtc: bool("timestamps_are_utc").notNull().default(true),
+    // In der Datei steht 0 (Migration 1; Migration 5 hat alle bestehenden Geräte auf 1 gesetzt). Neue Geräte kommen
+    // über Zod, das „true“ einträgt; der SQL-Standard greift nur bei einem Insert an Zod vorbei (Issue #191).
+    timestampsAreUtc: bool("timestamps_are_utc").notNull().default(false),
     timeZone: text("time_zone"),
     filenamePattern: text("filename_pattern"),
   },
@@ -76,8 +88,8 @@ export const sources = sqliteTable(
       .notNull()
       .default(sql`'{}'`),
     importedAt: text("imported_at").notNull(),
-    partOf: text("part_of"),
-    follows: text("follows"),
+    partOf: text("part_of").references((): AnySQLiteColumn => sources.id, { onDelete: "set null" }),
+    follows: text("follows").references((): AnySQLiteColumn => sources.id, { onDelete: "set null" }),
     levelMode: text("level_mode", { enum: ["auto", "manual", "off"] })
       .notNull()
       .default("auto"),
@@ -278,6 +290,10 @@ export const exportRecords = sqliteTable("export_records", {
     .notNull()
     .default(sql`'[]'`),
   durationMs: integer("duration_ms").notNull(),
-  options: json<ExportSettings>("options").notNull(),
-  fingerprint: json<ExportFingerprint>("fingerprint").notNull(),
+  options: json<ExportSettings>("options")
+    .notNull()
+    .default(sql`'{}'`),
+  fingerprint: json<ExportFingerprint>("fingerprint")
+    .notNull()
+    .default(sql`'{}'`),
 });
