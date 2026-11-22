@@ -68,6 +68,7 @@ async function openOverview(sessions: OverviewSession[]) {
     copyTable: vi.fn(async (_html: string, _text: string) => {}),
     openCitationLink: vi.fn(async (_url: string) => {}),
     saveFieldCalendar: vi.fn(async (_days: unknown[]) => "/tmp/Rundgang_Feldkalender.svg"),
+    showInFolder: vi.fn(async (_path: string) => {}),
   };
   (window as unknown as { feldspur: Partial<FeldspurApi> }).feldspur = api;
   vi.resetModules();
@@ -104,25 +105,25 @@ describe("Übersicht des Projekts", () => {
     await openOverview([einsatz(1), einsatz(2, { unsynced: 2, exported: "stale" })]);
     expect(days()[0]).toContain("14.09.2026 · Marktplatz");
     expect(days()[0]).toContain("3 Quellen");
-    expect(days()[0]).toContain("10 Zeilen");
+    expect(days()[0]).toContain("Einsatztranskript mit 10 Zeilen");
     expect(days()[0]).toContain("Ausgabe aktuell");
     expect(days()[0]).not.toContain("ohne Abgleich");
-    expect(days()[1]).toContain("2 Uhren ohne Abgleich");
+    expect(days()[1]).toContain("2 Geräteuhren ohne Abgleich");
     expect(days()[1]).toContain("Ausgabe veraltet");
   });
 
   it.each`
     stand        | wort                  | sprung
-    ${"current"} | ${"Ausgabe aktuell"}  | ${false}
-    ${"stale"}   | ${"Ausgabe veraltet"} | ${true}
-    ${"none"}    | ${"nicht ausgegeben"} | ${true}
-  `("Stand $stand: „$wort“, Sprung zum Ausgeben $sprung", async ({ stand, wort, sprung }) => {
+    ${"current"} | ${"Ausgabe aktuell"}  | ${null}
+    ${"stale"}   | ${"Ausgabe veraltet"} | ${"Erneut ausgeben"}
+    ${"none"}    | ${"nicht ausgegeben"} | ${"Ausgeben"}
+  `("Stand $stand: „$wort“, Sprung zum Ausgeben: $sprung", async ({ stand, wort, sprung }) => {
     const { onOpen } = await openOverview([einsatz(1, { exported: stand })]);
     expect(days()[0]).toContain(wort);
-    expect(!!button("Ausgeben")).toBe(sprung);
-    if (!sprung) return;
+    expect(!!button("Ausgeben") || !!button("Erneut ausgeben")).toBe(sprung !== null);
+    if (sprung === null) return;
     // Wenn: der Sprung gewählt wird, dann öffnet sich dieser Einsatz im Schritt Ausgeben
-    await act(async () => button("Ausgeben")!.click());
+    await act(async () => button(sprung)!.click());
     expect(onOpen).toHaveBeenCalledWith("s1", "export");
   });
 
@@ -147,9 +148,59 @@ describe("Übersicht des Projekts", () => {
     expect(html).toContain("FS-AAA1-BBB1-CCC1");
     expect(html).not.toContain("FS-AAA2");
     expect(plain).toContain("Einsatz\tAusgabe\tDatei\tUmfang\tMontage-ID");
-    expect(document.body.textContent).toContain("Als Tabelle kopiert");
+    expect(document.body.textContent).toContain(
+      "Kopiert. Einfügen ergibt in Word, LibreOffice und Pages echte Tabellen.",
+    );
     // Und: der abgewählte Tag bietet keinen Sprung zum Ausgeben mehr an
     expect(button("Ausgeben")).toBeUndefined();
+  });
+
+  it("nennt im Kopf, wenn alle Ausgaben zum Stand passen", async () => {
+    // Angenommen: zwei ausgegebene Tage und einer ohne Quellen (aus ihm lässt sich nichts ausgeben)
+    const leer = einsatz(3, {
+      sources: 0,
+      marks: [],
+      exported: "none",
+      output: { ...einsatz(3).output, durationMs: 0 },
+    });
+    await openOverview([einsatz(1), einsatz(2), leer]);
+    expect(text("overview-all-current")).toContain("Alle Ausgaben aktuell");
+  });
+
+  it("sagt nichts über alle Ausgaben, solange eine veraltet ist", async () => {
+    await openOverview([einsatz(1), einsatz(2, { exported: "stale" })]);
+    expect(document.querySelector("[data-testid=overview-all-current]")).toBeNull();
+  });
+
+  it("führt von einem Feldtag ohne Quellen zum Einsammeln", async () => {
+    const leer = einsatz(1, {
+      sources: 0,
+      marks: [],
+      exported: "none",
+      output: { ...einsatz(1).output, durationMs: 0 },
+    });
+    const { onOpen } = await openOverview([leer]);
+    expect(days()[0]).toContain("Noch nichts eingesammelt");
+    expect(days()[0]).not.toContain("nicht ausgegeben");
+    await act(async () => button("Einsammeln")!.click());
+    expect(onOpen).toHaveBeenCalledWith("s1", "collect");
+  });
+
+  it("zeigt die Uhrzeit unter dem Mauszeiger über allen Tagen und nimmt sie beim Verlassen zurück", async () => {
+    // Angenommen: Achse 09:00 bis 11:00, die Spur ist 200 px breit
+    await openOverview([einsatz(1), einsatz(2)]);
+    const strip = document.querySelector<HTMLButtonElement>("[data-testid=overview-strip]")!;
+    strip.getBoundingClientRect = () => ({ left: 100, width: 200 }) as DOMRect;
+    const list = document.querySelector<HTMLElement>("[data-testid=overview-days]")!;
+    // Wenn: die Maus bei drei Vierteln der Spur steht
+    await act(async () => strip.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 250 })));
+    // Dann: steht 10:30 an der Achse, und die Linie liegt in jeder Zeile an derselben Stelle
+    expect(text("overview-hover-clock")).toBe("10:30");
+    expect(list.style.getPropertyValue("--at")).toBe("75%");
+    expect(list.dataset.hover).toBe("");
+    // Wenn: die Maus die Spur verlässt, dann ist die Linie weg
+    await act(async () => strip.dispatchEvent(new MouseEvent("mouseout", { bubbles: true })));
+    expect(list.dataset.hover).toBeUndefined();
   });
 
   it("kopiert auf Wunsch als Markdown", async () => {
@@ -162,7 +213,7 @@ describe("Übersicht des Projekts", () => {
   it("bittet um eine Auswahl, wenn kein Feldtag gewählt ist", async () => {
     await openOverview([einsatz(1)]);
     await act(async () => checkbox("14.09.2026 Testmarkt 1")!.click());
-    expect(text("overview")).toContain("Wähle mindestens einen Feldtag.");
+    expect(text("overview")).toContain("Kein Feldtag gewählt.");
     expect(button("Tabellen kopieren")!.disabled).toBe(true);
   });
 
@@ -174,7 +225,7 @@ describe("Übersicht des Projekts", () => {
 
   it("verweist auf den Mustertext im Handbuch", async () => {
     const { api } = await openOverview([einsatz(1)]);
-    await act(async () => button("Mustertext im Handbuch")!.click());
+    await act(async () => button("„Im Methodenteil beschreiben“ im Handbuch")!.click());
     expect(api.openCitationLink).toHaveBeenCalledWith("https://purl.archive.org/feldspur#sec-methodenteil");
   });
 
@@ -202,12 +253,15 @@ describe("Übersicht des Projekts", () => {
     const { api } = await openOverview([einsatz(1), einsatz(2)]);
     await act(async () => checkbox("15.09.2026 Testmarkt 2")!.click());
     // Wenn: der Feldkalender gespeichert wird
-    await act(async () => button("Feldkalender speichern")!.click());
+    await act(async () => button("Als Grafik speichern")!.click());
     // Dann: gehen nur der erste Tag und seine Marken an die App, und der Dateiname wird bestätigt
     const [sent] = api.saveFieldCalendar.mock.calls[0]! as [{ title: string; marks: unknown[] }[]];
     expect(sent.map((d) => d.title)).toEqual(["Testmarkt 1"]);
     expect(sent[0]!.marks).toHaveLength(3);
     expect(document.body.textContent).toContain("Gespeichert als Rundgang_Feldkalender.svg");
+    // Wenn: „Im Ordner zeigen“ gewählt wird, dann zeigt die App die gespeicherte Datei
+    await act(async () => button("Im Ordner zeigen")!.click());
+    expect(api.showInFolder).toHaveBeenCalledWith("/tmp/Rundgang_Feldkalender.svg");
   });
 
   it("gruppiert die Feldtage auf Wunsch nach Ort, Tage ohne Ort zuletzt", async () => {

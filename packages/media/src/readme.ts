@@ -40,11 +40,17 @@ const FILE_ROLE: [RegExp, string][] = [
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function tableHtml(t: MethodsTable): string {
+/**
+ * Tabelle mit Überschrift. Die Überschrift steht über dem Rollbereich, damit sie auf schmalen Bildschirmen stehen
+ * bleibt; kurze Zellen (Zahlen, Endungen, Montage-ID) brechen nie um.
+ */
+function tableHtml(t: MethodsTable, id: string): string {
+  const cell = (c: string) => `<td${c.length <= 24 ? ' class="nw"' : ""}>${esc(c)}</td>`;
   return (
-    `<table><caption>${esc(t.caption)}</caption>` +
+    `<p class="cap" id="${id}">${esc(t.caption)}</p>` +
+    `<div class="scroll"><table aria-labelledby="${id}">` +
     `<thead><tr>${t.head.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead>` +
-    `<tbody>${t.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    `<tbody>${t.rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody></table></div>`
   );
 }
 
@@ -59,19 +65,28 @@ main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
 h1 { font: 600 1.7rem/1.2 Georgia, serif; margin: 0 0 .25rem; }
 h2 { font: 600 1.2rem/1.3 Georgia, serif; margin: 2.2rem 0 .5rem; }
 p { margin: .5rem 0; max-width: 70ch; }
-.sub, caption, .note { color: var(--muted); }
+.sub, .note { color: var(--muted); }
 code, .id { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
 .id { background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: .05em .35em; white-space: nowrap; }
 dl { margin: .5rem 0; }
 dt { font-weight: 600; overflow-wrap: anywhere; margin-top: .6rem; }
 dd { margin: 0; color: var(--muted); }
-.scroll { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; margin: 1rem 0 .5rem; font-size: .93rem; font-variant-numeric: tabular-nums; }
-caption { text-align: left; font-weight: 600; color: var(--ink); padding-bottom: .3rem; }
+.scroll { overflow-x: auto; margin-bottom: .75rem; }
+table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: .93rem; font-variant-numeric: tabular-nums; }
+.cap { font-weight: 600; font-size: .93rem; margin: 1.25rem 0 .3rem; }
+.nw { white-space: nowrap; }
 th, td { text-align: left; vertical-align: top; padding: .3rem .9rem .3rem 0; border-bottom: 1px solid var(--line); }
 th { font-weight: 500; color: var(--muted); font-size: .85rem; border-bottom-color: var(--muted); white-space: nowrap; }
 a { color: var(--accent); }
-@media print { body { background: #fff; color: #000; } main { padding: 0; } }
+th:last-child, td:last-child { padding-right: 0; }
+@media print {
+  body { background: #fff; color: #000; font-size: 11pt; }
+  main { padding: 0; max-width: none; }
+  h2 { break-after: avoid; }
+  dt, tr { break-inside: avoid; }
+  table { min-width: 0; }
+  a { color: inherit; }
+}
 `;
 
 /** Die LIESMICH als vollständige HTML-Datei. */
@@ -81,7 +96,8 @@ export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOpti
   const tables = [materialTable([numbers]), outputTable([numbers])];
   const title = `${h.title} · ${germanDate(h.date)}`;
   const files = opts.files.includes(README_NAME) ? opts.files : [...opts.files, README_NAME];
-  const role = (f: string) => (f === README_NAME ? "Diese Datei" : (FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""));
+  const role = (f: string) =>
+    f === README_NAME ? "LIESMICH: diese Datei" : (FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? "");
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -120,8 +136,8 @@ ${files.map((f) => `<dt>${esc(f)}</dt><dd>${esc(role(f))}</dd>`).join("\n")}
 
 <h2>Für den Methodenteil</h2>
 <p>Was in diesen Einsatz hineingeflossen ist und was daraus ausgegeben wurde. Die Angaben sind gezählt und gemessen; den Nachweis je Datei führt das Begleitprotokoll.</p>
-<div class="scroll">${tableHtml(tables[0]!)}</div>
-<div class="scroll">${tableHtml(tables[1]!)}</div>
+${tableHtml(tables[0]!, "eingang")}
+${tableHtml(tables[1]!, "ausgabe")}
 ${opts.software ? `<p>${esc(opts.software)}</p>` : ""}
 <p class="note">Einen Mustertext, der Montagevideo und Einsatztranskript in Worten erklärt, enthält das Handbuch im Abschnitt „Im Methodenteil beschreiben“: <a href="${METHODS_HANDBOOK_URL}">${METHODS_HANDBOOK_URL}</a></p>
 </main>

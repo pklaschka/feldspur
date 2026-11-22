@@ -1,7 +1,9 @@
 ## Ausgeben {#sec-ausgeben}
 
 Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Einsatz**: Einsatztranskript,
-Dokumentvariablen und Begleitprotokoll, dazu auf Wunsch Montagevideo, Viewer, LIESMICH, Änderungsprotokoll, Prüfsummenliste und Schnittliste. Ist vorher noch etwas
+Dokumentvariablen und Begleitprotokoll sind immer dabei. Was dazukommt, wählst du mit Schaltern in drei Gruppen:
+**Montagevideo** (Video, Ton und Viewer), **Nachweise im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste)
+und **Für den Schnitt** (Schnittliste). Ist vorher noch etwas
 offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen Links
 dorthin.
 
@@ -19,7 +21,12 @@ anzeigen**.
   Episoden, Angaben), neue oder entfernte Quellen, veränderte oder fehlende Originale (mit Kurzzeichen) oder andere
   Einstellungen als damals, z. B. jetzt mit Montagevideo. Machst du eine Änderung rückgängig, ist die Ausgabe wieder
   aktuell.
-- Fehlen Dateien im **Ausgabeordner**, ist die Dateiliste aufgeklappt und die fehlenden sind durchgestrichen.
+- Fehlen Dateien im **Ausgabeordner**, ist die Dateiliste aufgeklappt und die fehlenden sind durchgestrichen. Findet
+  Feldspur keine der Dateien mehr, steht dort stattdessen ein Satz: Vermutlich wurde der Ordner verschoben, umbenannt
+  oder gelöscht.
+
+Betrifft eine Änderung viele Originale, nennt Feldspur die ersten Kurzzeichen und zählt den Rest („A-01, A-02, A-03,
+A-04 und 108 weitere“); alle stehen im Tooltip.
 
 ![Veraltete Ausgabe nach einem Neustart, mit den Gründen](bilder/ausgeben-veraltet.png){#fig-ausgeben-veraltet}
 
@@ -341,15 +348,18 @@ Tabellen in der LIESMICH seines Ausgabeordners (@sec-liesmich). Für mehrere Ein
 einzelnen Einsatz.
 
 Oben steht der **Feldkalender**, je Einsatz eine Zeile: Datum, Titel und Ort, die Zahl der Quellen und der Zeilen im
-Einsatztranskript, Uhren ohne Abgleich und der Stand der Ausgabe. In der Mitte jeder Zeile liegt der Tag auf einer
+Einsatztranskript, Geräteuhren ohne Abgleich und der Stand der Ausgabe. Gezähltes steht als Text da, Zustände als
+farbige Marken. Passen alle Ausgaben zum Stand, steht neben dem Projektnamen **Alle Ausgaben aktuell**. In der Mitte jeder Zeile liegt der Tag auf einer
 Uhrzeit-Achse, die für alle Tage gleich ist: Ton und Video als Balken, Fotos als Rauten, Tagebucheinträge als Striche
 zur Notierzeit. Untereinander sieht man so, was ein einzelner Tag verbirgt, etwa wiederkehrende Uhrzeiten, dichte und
 dünne Phasen oder Tage ohne Ton. Was das bedeutet, entscheidest du; Feldspur legt die Tage nur nebeneinander.
 
-Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit. Mit
-**Nach Ort gruppieren** stehen Tage am selben Ort zusammen, sonst gilt die Folge nach Datum. **Feldkalender
-speichern…** schreibt die gewählten Tage als SVG-Grafik, etwa für den Methodenteil oder einen Vortrag; sie lässt sich
-in Word, LibreOffice, Inkscape oder Affinity einfügen und weiter bearbeiten.
+Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit.
+Fährst du mit der Maus über eine Spur, zeigt eine Linie durch alle Tage die Uhrzeit an dieser Stelle; so vergleichst
+du dieselbe Uhrzeit über die Tage. Mit **Nach Ort gruppieren** stehen Tage am selben Ort zusammen, sonst gilt die
+Folge nach Datum. **Als Grafik speichern…** schreibt die gewählten Tage als SVG-Grafik, etwa für den Methodenteil
+oder einen Vortrag; sie lässt sich in Word, LibreOffice, Inkscape oder Affinity einfügen und weiter bearbeiten.
+Danach führt **Im Ordner zeigen** zur gespeicherten Datei.
 
 Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
@@ -366,12 +376,13 @@ du danach in deinem Dokument an. Eine Datei entsteht dabei nicht.
 
 Feldspur zählt und misst hier nur. In der Übersicht steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
 genug ist. Das bleibt bei dir. Farbig sind deshalb nur Zustände, die Feldspur ohnehin meldet, etwa eine veraltete
-Ausgabe oder eine Uhr ohne Abgleich, nie eine Menge.
+Ausgabe oder eine Geräteuhr ohne Abgleich, nie eine Menge.
 
 Die Kennwerte beschreiben den Stand im Projekt. An jedem Feldtag steht, ob er so schon als Ausgabe vorliegt:
 **Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert) oder
-**nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** direkt in den Schritt Ausgeben dieses
-Einsatzes. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
+**nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** (bei einer veralteten Ausgabe **Erneut
+ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Ein Feldtag ohne Quellen führt mit **Einsammeln** in
+den ersten Schritt. Gib ihn zuerst aus, sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst.
 
 So kann das Ergebnis für zwei Feldtage aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
 LIESMICH, kommt in der Eingangstabelle die Spalte **Gerät** mit den Namen der Geräte dazu.

@@ -100,6 +100,9 @@ const KIND_FILL: Record<CalendarKind, string> = {
   diary: "#8e5524",
 };
 
+/** Text auf eine Zeichenzahl kürzen; SVG bricht nicht um und kennt keine Breite der Schrift. */
+const fit = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s);
+
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
@@ -108,9 +111,14 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
  */
 export function fieldCalendarSvg(days: CalendarDay[]): string {
   const axis = calendarAxis(days);
-  const W = 960;
-  const LEFT = 240;
-  const RIGHT = 16;
+  // Die linke Spalte wächst mit dem längsten Titel (grob 7 px je Zeichen), damit nichts in die Spuren ragt;
+  // erst sehr lange Titel werden gekürzt. Die Achse bleibt immer gleich breit.
+  const MAX_CHARS = 56;
+  const longest = Math.max(0, ...days.map((d) => Math.max(d.title.length, d.place.length + 13)));
+  const LEFT = Math.round(Math.min(Math.max(240, 32 + longest * 7), 32 + MAX_CHARS * 7));
+  const W = LEFT + 720;
+  // Rechts Platz für die halbe Beschriftung der letzten Stunde.
+  const RIGHT = 28;
   const TOP = 44;
   const LANE = 7;
   const ROW = CALENDAR_KINDS.length * LANE + 18;
@@ -135,10 +143,11 @@ export function fieldCalendarSvg(days: CalendarDay[]): string {
   days.forEach((d, i) => {
     const y = TOP + i * ROW;
     if (i > 0) out.push(`<line x1="16" y1="${y}" x2="${W - RIGHT}" y2="${y}" stroke="#e6e8df" stroke-width="1"/>`);
+    // Titel oben, Datum und Ort darunter (wie in der App); beides gekürzt, damit nichts in die Spuren ragt.
     out.push(
-      `<text x="16" y="${y + 15}" fill="#26241f" font-weight="600">${esc(germanDate(d.date))} ${esc(d.title)}</text>`,
+      `<text x="16" y="${y + 15}" fill="#26241f" font-weight="600">${esc(fit(d.title, MAX_CHARS))}</text>`,
+      `<text x="16" y="${y + 30}" fill="#5b5d53">${esc(fit(d.place ? `${germanDate(d.date)} · ${d.place}` : germanDate(d.date), MAX_CHARS))}</text>`,
     );
-    if (d.place) out.push(`<text x="16" y="${y + 30}" fill="#5b5d53">${esc(d.place)}</text>`);
     for (const m of d.marks) {
       const lane = CALENDAR_KINDS.indexOf(m.kind);
       const ly = y + 9 + lane * LANE;

@@ -14,6 +14,7 @@ import {
   offsetText,
   parseOffset,
   readOffsetInput,
+  someLabels,
   stepClock,
 } from "../src/renderer/format.ts";
 
@@ -262,5 +263,18 @@ describe("Geschätzte Größe des Montagevideos", () => {
     ${1000}            | ${"ca. 1 MB"}
   `("$bytes Bytes ergeben „$text“", ({ bytes, text }) => {
     expect(aboutSize(bytes)).toBe(text);
+  });
+});
+
+describe("Lange Listen von Kurzzeichen", () => {
+  const kurz = (n: number) => Array.from({ length: n }, (_, i) => `A-${String(i + 1).padStart(2, "0")}`);
+  it.each`
+    anzahl | text
+    ${1}   | ${"A-01"}
+    ${5}   | ${"A-01, A-02, A-03, A-04, A-05"}
+    ${6}   | ${"A-01, A-02, A-03, A-04 und 2 weitere"}
+    ${112} | ${"A-01, A-02, A-03, A-04 und 108 weitere"}
+  `("$anzahl Kurzzeichen ergeben „$text“", ({ anzahl, text }) => {
+    expect(someLabels(kurz(anzahl))).toBe(text);
   });
 });

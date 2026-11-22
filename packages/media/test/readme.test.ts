@@ -45,16 +45,16 @@ describe.skipIf(!hasFfmpeg())("LIESMICH im Ausgabeordner", () => {
     const text = html();
     expect(text).toContain("<dt>Feldtag.docx</dt><dd>Einsatztranskript:");
     expect(text).toContain("<dt>Feldtag_Begleitprotokoll.csv</dt><dd>Begleitprotokoll:");
-    expect(text).toContain("<dt>LIESMICH.html</dt><dd>Diese Datei</dd>");
+    expect(text).toContain("<dt>LIESMICH.html</dt><dd>LIESMICH: diese Datei</dd>");
   });
 
   it("enthält die Tabellen für den Methodenteil mit Eingang und Ausgabe dieses Einsatzes", () => {
     const text = html();
-    expect(text).toContain("<caption>Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026)</caption>");
-    expect(text).toContain("<td>Fotos</td>");
-    expect(text).toContain("<td>Dateiname</td>");
-    expect(text).toContain("<caption>Ausgabe: Einsatztranskript und Montagevideo je Einsatz</caption>");
-    expect(text).toContain(`<td>${transcript().header.montageId}</td>`);
+    expect(text).toContain('<p class="cap" id="eingang">Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026)</p>');
+    expect(text).toContain('<td class="nw">Fotos</td>');
+    expect(text).toContain('<td class="nw">Dateiname</td>');
+    expect(text).toContain('<p class="cap" id="ausgabe">Ausgabe: Einsatztranskript und Montagevideo je Einsatz</p>');
+    expect(text).toContain(`<td class="nw">${transcript().header.montageId}</td>`);
     expect(text).toContain("https://purl.archive.org/feldspur#sec-methodenteil");
   });
 
@@ -64,7 +64,7 @@ describe.skipIf(!hasFfmpeg())("LIESMICH im Ausgabeordner", () => {
     ${false} | ${"weggelassen"} | ${"Diese Ausgabe enthält kein Montagevideo"}
   `("mit Montagevideo $video ist dessen Zeile in der Tabelle $zeile", ({ video, satz }) => {
     const text = html(video);
-    expect(text.includes("<td>Montagevideo</td>")).toBe(video);
+    expect(text.includes('<td class="nw">Montagevideo</td>')).toBe(video);
     expect(text).toContain(satz);
   });
 

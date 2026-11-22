@@ -13,7 +13,7 @@ import type {
 } from "../shared/api.ts";
 import { CHECK_STEP, cancelledText, percent, remainingMs, remainingText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
-import { aboutSize } from "./format.ts";
+import { aboutSize, someLabels } from "./format.ts";
 import { MontageView } from "./MontageView.tsx";
 import { SessionTranscriptLine } from "./SessionTranscriptLine.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
@@ -202,7 +202,7 @@ export function ExportStep({
       <StepHeader
         className="max-w-[1240px]"
         title="Ausgeben"
-        summary="Ein Ordner pro Einsatz: Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; dazu auf Wunsch Montagevideo, Viewer, LIESMICH, Änderungsprotokoll, Prüfsummenliste und Schnittliste."
+        summary="Ein Ordner pro Einsatz. Immer dabei sind Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll; was dazukommt, wählst du unten."
         help={
           <>
             <p className="mb-1.5">
@@ -331,15 +331,7 @@ export function ExportStep({
               onOpenChange={setWatching}
               levels={new Map(view.rows.map((r) => [r.id, r.level]))}
             />
-            <div className="mt-4 grid gap-3">
-              {withEpisodes && (
-                <Option
-                  checked={byEpisodes}
-                  onChange={(v) => set({ byEpisodes: v })}
-                  label="Nach Episoden schneiden"
-                  hint="Kürzer, aber Videozeit ≠ Uhrzeit. Aus: der ganze Einsatz in Echtzeit."
-                />
-              )}
+            <OptionGroup title="Montagevideo">
               <Option
                 checked={video}
                 onChange={(v) => set({ video: v })}
@@ -352,10 +344,23 @@ export function ExportStep({
                 }
                 hint={
                   viewer
-                    ? "Bleibt an, solange der Viewer gewählt ist: Der Viewer spielt dieses Video ab."
+                    ? "Bleibt an, weil der Viewer dieses Video abspielt. Zum Ausschalten zuerst den Viewer abwählen."
                     : "Dauert einige Minuten. Aus: nur Einsatztranskript, Dokumentvariablen und Begleitprotokoll."
                 }
               />
+              {withEpisodes && (
+                <Option
+                  checked={byEpisodes}
+                  onChange={(v) => set({ byEpisodes: v })}
+                  label="Nach Episoden schneiden"
+                  hint="Kürzer, aber Videozeit ≠ Uhrzeit. Aus: der ganze Einsatz in Echtzeit."
+                />
+              )}
+              {!withEpisodes && (
+                <p className="pl-[2.625rem] text-[0.85rem] text-muted">
+                  Nach Episoden schneiden geht, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
+                </p>
+              )}
               <Option
                 checked={mixAudio}
                 onChange={(v) => set({ mixAudio: v })}
@@ -372,8 +377,10 @@ export function ExportStep({
                 checked={viewer}
                 onChange={(v) => set(v ? { viewer: true, video: true } : { viewer: false })}
                 label="Viewer zum Ansehen im Browser (.html)"
-                hint="Eine Datei neben dem Video: Einsatztranskript läuft mit, Klick auf eine Zeile springt. Mit Bildern, darum größer. Braucht das Montagevideo."
+                hint="Eine Datei neben dem Video: Das Einsatztranskript läuft mit, ein Klick auf eine Zeile springt dorthin. Enthält die Bilder und schaltet das Montagevideo mit ein."
               />
+            </OptionGroup>
+            <OptionGroup title="Nachweise im Ordner">
               <Option
                 checked={readme}
                 onChange={(v) => set({ readme: v })}
@@ -392,18 +399,15 @@ export function ExportStep({
                 label="Prüfsummenliste (manifest-sha256.txt)"
                 hint="SHA-256 jeder Datei im Ordner. Damit lässt sich später zeigen, dass nichts verändert wurde."
               />
+            </OptionGroup>
+            <OptionGroup title="Für den Schnitt">
               <Option
                 checked={resolve}
                 onChange={(v) => set({ resolve: v })}
                 label="Schnittliste für DaVinci Resolve"
                 hint="Dieselbe Montage als FCPXML, ohne Einblendungen."
               />
-            </div>
-            {!withEpisodes && (
-              <p className="mt-3 text-[0.85rem] text-muted">
-                Nach Episoden schneiden geht, wenn unter „Durchsehen“ Episoden eingeschaltet sind.
-              </p>
-            )}
+            </OptionGroup>
             {view.context.length > 0 && <ContextCard view={view} onView={onView} />}
             {open.length > 0 && !empty && (
               <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-open">
@@ -519,7 +523,19 @@ function ExportResult({
   const viewerFile = record.files.find((f) => f.endsWith(".html") && !/^LIESMICH\.html$/.test(f) && !gone.has(f));
   const [listOpen, setListOpen] = useState(false);
   const showFolder = () => void api.showInFolder(present ? inDir(record.dir, present) : record.dir);
-  const fileList = (
+  // Liegt keine der Dateien mehr dort, ist meist der ganze Ordner verschoben: ein Satz statt lauter Streichungen.
+  const allGone = record.files.length > 0 && missingFiles.length === record.files.length;
+  const fileList = allGone ? (
+    <p className="mt-3 text-[0.9rem]" id={`export-files-${record.sessionId}`} data-testid="export-files">
+      <span className="font-medium text-bad">
+        Feldspur findet {record.files.length === 1 ? "die Datei" : `keine der ${files(record.files.length)}`} mehr im
+        Ordner.
+      </span>{" "}
+      <span className="text-muted">
+        Vermutlich wurde der Ordner „{fileName(record.dir)}“ verschoben, umbenannt oder gelöscht.
+      </span>
+    </p>
+  ) : (
     <ul className="mt-3 grid gap-1.5" id={`export-files-${record.sessionId}`} data-testid="export-files">
       {record.files.map((f) => (
         <li key={f} className="text-[0.9rem]">
@@ -573,13 +589,16 @@ function ExportResult({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[1.1rem] leading-snug">
-            <span className="text-warn">Veraltet.</span> {files(record.files.length)} im Ordner „{fileName(record.dir)}“
+            <span className="text-warn">Veraltet.</span> {allGone ? "Die Ausgabe lag" : files(record.files.length)} im
+            Ordner „{fileName(record.dir)}“
           </p>
           <p className="text-[0.85rem] text-muted">Ausgegeben am {when(record.exportedAt)}</p>
         </div>
-        <Button size="sm" className="shrink-0" onClick={showFolder}>
-          Im Ordner zeigen
-        </Button>
+        {!allGone && (
+          <Button size="sm" className="shrink-0" onClick={showFolder}>
+            Im Ordner zeigen
+          </Button>
+        )}
       </div>
       <div className="mt-3 rounded-lg bg-warn/8 px-3 py-2.5" role="status" data-testid="export-stale">
         <b className="block text-[0.9rem] font-semibold text-warn">Passt nicht mehr zum Einsatz</b>
@@ -588,7 +607,9 @@ function ExportResult({
             <li key={d.kind}>
               {d.text}
               {d.labels?.length ? (
-                <span className="ml-1.5 font-mono text-[0.82rem] text-muted">{d.labels.join(", ")}</span>
+                <span className="ml-1.5 font-mono text-[0.82rem] text-muted" title={d.labels.join(", ")}>
+                  {someLabels(d.labels)}
+                </span>
               ) : null}
             </li>
           ))}
@@ -598,7 +619,23 @@ function ExportResult({
           <span className="text-[0.85rem] text-muted">Nur Geändertes wird neu gerechnet.</span>
         </div>
       </div>
-      {fileList}
+      {missingFiles.length > 0 ? (
+        fileList
+      ) : (
+        <>
+          <Button
+            variant="link"
+            className="mt-3 text-[0.9rem]"
+            aria-expanded={listOpen}
+            aria-controls={`export-files-${record.sessionId}`}
+            onClick={() => setListOpen((o) => !o)}
+            data-testid="export-files-toggle"
+          >
+            {listOpen ? `${files(record.files.length)} ausblenden` : `${files(record.files.length)} anzeigen`}
+          </Button>
+          {listOpen && fileList}
+        </>
+      )}
     </div>
   );
 }
@@ -798,6 +835,16 @@ function PreCheckResult({
   );
 }
 
+/** Zusammengehörige Schalter unter einer kleinen Überschrift. */
+function OptionGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="mt-5">
+      <h3 className="mb-2 font-sans text-[0.82rem] font-semibold tracking-normal text-muted">{title}</h3>
+      <div className="grid gap-3">{children}</div>
+    </section>
+  );
+}
+
 function Option({
   checked,
   onChange,
@@ -819,14 +866,14 @@ function Option({
     <label
       className={cx(
         "grid grid-cols-[auto_1fr] items-center gap-x-2.5 text-[0.95rem]",
-        disabled && "cursor-not-allowed text-muted",
+        disabled && "cursor-not-allowed",
       )}
     >
       <Toggle checked={checked} onChange={onChange} label={label} disabled={disabled} />
       <span>
         {label}
         {size && <span className="ml-1.5 text-[0.85rem] text-muted tabular-nums">{size}</span>}
-        {disabled && <span className="ml-1.5 text-[0.8rem]">(gesperrt)</span>}
+        {disabled && <span className="ml-1.5 text-[0.8rem] text-muted">(gesperrt)</span>}
       </span>
       <span className="col-start-2 text-[0.85rem] text-muted">{hint}</span>
     </label>

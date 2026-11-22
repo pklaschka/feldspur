@@ -606,7 +606,7 @@ await kapitel("ausgeben", async () => {
     // Dann: steht der Feldtag mit seinem Stand da, darunter Eingang und Ausgabe mit der Montage-ID zum Kopieren
     await siehe("Feldkalender", seite.getByRole("heading", { name: "Feldkalender" }));
     await siehe("Nach Ort gruppieren", page.getByRole("switch", { name: "Nach Ort gruppieren" }));
-    await siehe("Feldkalender speichern…");
+    await siehe("Als Grafik speichern…");
     await siehe("Ausgabe aktuell", page.getByTestId("overview-days").getByText("Ausgabe aktuell"));
     await siehe("Kennwerte", seite.getByRole("heading", { name: "Kennwerte" }));
     const tabellen = page.getByTestId("overview-tables");
