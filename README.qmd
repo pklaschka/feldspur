@@ -222,6 +222,14 @@ veröffentlicht erst dann. Fehlt etwas, bleibt der Entwurf liegen; ein neuer Lau
 veröffentlichten Release lässt sich nur mit einer neuen Version beheben (Vorabversion oder Hotfix). Titel und
 Release-Text bleiben bearbeitbar.
 
+**Herkunftsnachweise:** Für jede Datei der Release (Installer, Handbuch, `SHA256SUMS.txt`) erzeugt der Job
+"veröffentlichen" mit [`actions/attest`](https://github.com/actions/attest) einen signierten Herkunftsnachweis (Build
+Attestation, SLSA-Provenienz über Sigstore), bevor der Entwurf entsteht, und prüft ihn gleich selbst. Signatur-Workflow
+ist immer `.github/workflows/release.yml`, auch wenn die Dateien in `package.yml` oder `handbook.yml` gebaut werden.
+Lieferling fragt diesen Nachweis für genau die heruntergeladene Datei ab. Von Hand:
+`gh attestation verify <datei> --repo pklaschka/feldspur --signer-workflow pklaschka/feldspur/.github/workflows/release.yml`.
+Releases vor 0.4.0 haben keine Herkunftsnachweise.
+
 **Einmalig einrichten:** Der Workflow pusht den Commit "Release vX" mit einem Deploy-Schlüssel auf `main`, weil die
 Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als Ausnahme eingetragen werden können.
 
