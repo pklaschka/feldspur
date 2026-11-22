@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { app, net } from "electron";
 import { log } from "@feldspur/media";
 import type { CitationInfo, CitationLookup } from "../shared/api.ts";
-import { pickVersionDoi, ZENODO_VERSIONS_URL, type VersionDoi } from "../shared/citation.ts";
+import { pickVersionDoi, zenodoVersionUrl, type VersionDoi } from "../shared/citation.ts";
 
 declare const __FELDSPUR_RELEASED__: string;
 
@@ -45,9 +45,10 @@ export async function lookupCitationDoi(): Promise<CitationLookup> {
   const ctrl = new AbortController();
   running = ctrl;
   const signal = AbortSignal.any([ctrl.signal, AbortSignal.timeout(LOOKUP_TIMEOUT_MS)]);
-  log("zitieren", `fragt Zenodo nach Version ${version}: ${ZENODO_VERSIONS_URL}`);
+  const url = zenodoVersionUrl(version);
+  log("zitieren", `fragt Zenodo nach Version ${version}: ${url}`);
   try {
-    const res = await net.fetch(ZENODO_VERSIONS_URL, { signal, headers: { Accept: "application/json" } });
+    const res = await net.fetch(url, { signal, headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`Zenodo antwortet mit ${res.status}`);
     const found = pickVersionDoi(await res.json(), version);
     if (!found) {

@@ -566,6 +566,15 @@ await kapitel("ausgeben", async () => {
     await siehe("In anderen Ordner ausgeben…");
   });
 
+  await ablauf("Zurückgenommen ist die Ausgabe wieder aktuell", async () => {
+    // Wenn: die Änderung zurückgenommen und Feldspur neu geladen wird, dann passt der Stand wieder zur Ausgabe
+    await page.getByRole("tab", { name: /Durchsehen/ }).click();
+    await page.getByRole("switch", { name: "Episoden bilden" }).click();
+    await page.reload();
+    await page.getByRole("tab", { name: /Ausgeben/ }).click();
+    await siehe("Aktuell", page.getByText("Aktuell.", { exact: true }));
+  });
+
   await ablauf("Den Viewer im Browser öffnen", async () => {
     // Wenn: die HTML-Datei im Chromium von Electron geöffnet wird
     const html = readdirSync(out, { recursive: true })
@@ -601,6 +610,9 @@ await kapitel("ausgeben", async () => {
           .or(viewer.getByText(b, { exact: true })),
       );
     }
+    await siehe("Montage-ID", viewer.locator("#facts dd").filter({ hasText: /^FS(-[0-9A-Z]{4}){3} · / }), {
+      hinweis: "Angaben unter dem Video, Zeile Montage",
+    });
     await viewer.getByRole("button", { name: "Erweiterte Tonspurkontrolle" }).click();
     await viewer.locator("#ton-next").click();
     await siehe("Video freigeben…", viewer.getByRole("button", { name: "Video freigeben…" }));
@@ -623,6 +635,22 @@ await kapitel("einsammeln", async () => {
     await siehe("Alle Prüfsummen prüfen", dlg.getByRole("button", { name: "Alle Prüfsummen prüfen" }));
     await schliessen();
     renameSync(`${quellen}-verschoben`, quellen);
+  });
+
+  await ablauf("Lange Dateilisten scrollen in der Karte", async () => {
+    // Angenommen: ein Gerät hat so viele Fotos ohne Zeitangabe, dass seine Liste in der Karte scrollt
+    // (verschiedene Farben, sonst gelten die Dateien als Doppel)
+    const viele = join(dir, "Viele Fotos");
+    mkdirSync(viele);
+    for (let i = 1; i <= 14; i++)
+      makePhoto(join(viele, `Markt-${String(i).padStart(2, "0")}.jpg`), `0x${(0x406080 + i * 0x0b0503).toString(16)}`);
+    await page.evaluate(async ([id, p]) => window.feldspur.importPaths(id!, [p!]), [sessionId, viele]);
+    await page.reload();
+    await page.getByRole("tab", { name: /Einsammeln/ }).click();
+    await src("Markt-01.jpg").waitFor({ timeout: 30_000 });
+    // Dann: die Fußzeile nennt, was noch ohne Zeit ist
+    const fuss = page.getByTestId("source-list-footer").filter({ hasText: "ohne Zeit" }).first();
+    await siehe("ohne Zeit", fuss.getByRole("button", { name: /ohne Zeit$/ }));
   });
 });
 
