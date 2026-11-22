@@ -120,19 +120,33 @@ const VIDEO_KBPS = 3000;
 const MIX_KBPS = 160;
 const DEVICE_TRACK_KBPS = 128;
 
+/** Bild ohne laufendes Video (Tafel, Uhrzeit auf leerem Grund): fast nichts ändert sich, kbit/s. */
+const STILL_KBPS = 100;
+
 /**
- * Ungefähre Größe des Montagevideos in Bytes, aus Länge und Bitraten: `video` mit Tonspur 1, `deviceTracks` kommt
- * dazu, wenn je Gerät eine Spur entsteht (erst ab zwei Geräten mit Ton). Eine Schätzung; je nach Encoder und Bild
- * weicht die echte Datei ab.
+ * Ungefähre Größe des Montagevideos in Bytes, Stück für Stück: volle Bildbitrate nur, wo ein Video läuft, sonst
+ * kaum etwas; Ton nur, wo eine Tonquelle läuft (Stille kostet in AAC fast nichts). `video` ist das Video mit
+ * Tonspur 1, `deviceTracks` kommt mit einer Spur je Gerät dazu (erst ab zwei Geräten mit Ton). Eine Schätzung; je
+ * nach Encoder und Bild weicht die echte Datei ab.
  */
 export function estimateMontageBytes(
-  durationMs: number,
-  soundDevices: number,
+  transcript: SessionTranscript,
+  pieces: Piece[] = planPieces(transcript),
 ): { video: number; deviceTracks: number } {
-  const bytes = (kbps: number) => Math.round(((kbps * 1000) / 8) * (durationMs / 1000));
+  const bytes = (kbps: number, frames: number) => ((kbps * 1000) / 8) * (frames / FPS);
+  let video = 0;
+  const perDevice = new Map<Id, number>();
+  for (const p of pieces) {
+    const frames = p.f1 - p.f0;
+    video += bytes(p.videos.length ? VIDEO_KBPS : STILL_KBPS, frames);
+    if (p.audios.length) video += bytes(MIX_KBPS, frames);
+    for (const id of new Set(p.audios.map((a) => a.source.deviceId).filter((d): d is Id => !!d)))
+      perDevice.set(id, (perDevice.get(id) ?? 0) + bytes(DEVICE_TRACK_KBPS, frames));
+  }
+  const tracks = [...perDevice.values()];
   return {
-    video: bytes(VIDEO_KBPS + MIX_KBPS),
-    deviceTracks: soundDevices >= 2 ? bytes(DEVICE_TRACK_KBPS * soundDevices) : 0,
+    video: Math.round(video),
+    deviceTracks: tracks.length >= 2 ? Math.round(tracks.reduce((a, b) => a + b, 0)) : 0,
   };
 }
 
