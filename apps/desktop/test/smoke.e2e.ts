@@ -140,6 +140,16 @@ try {
       .locator('[data-testid=clock][data-device="Kamera Stativ"] [data-testid=clock-value]')
       .getByText("über Anker")
       .waitFor();
+    // Dann: Die Zeile ist kurz hinterlegt, darunter steht der Beleg mit „Beide anhören“.
+    await page.locator('[data-testid=clock][data-device="Kamera Stativ"][data-settled]').first().waitFor();
+    const beleg = page.getByTestId("anchor-proof");
+    await beleg.getByText("A-01 bei 1:20 = V-01 bei 0:20", { exact: false }).waitFor();
+    await shot("-abgleich-uebernommen");
+    // Wenn: beide Stellen angehört werden, dann ohne den Feinabgleich zu öffnen
+    await beleg.getByRole("button", { name: "▶ Beide anhören" }).click();
+    await beleg.getByRole("button", { name: "■ Anhalten" }).waitFor();
+    await beleg.getByRole("button", { name: "▶ Beide anhören" }).waitFor({ timeout: 10_000 });
+    if (await page.getByRole("dialog").count()) throw new Error("Anhören hat einen Dialog geöffnet");
   });
 
   await ablauf("Einen Anker von Hand setzen und löschen", async () => {
@@ -161,6 +171,8 @@ try {
     await page.getByTestId("anchor-list").getByText("Glocke").waitFor();
     const fotoClock = page.locator('[data-testid=clock][data-device="Fotos IMG"] [data-testid=clock-value]');
     await fotoClock.getByText("über Anker").waitFor();
+    // Dann: Auch ein Anker von Hand rückt die Uhr und steht als Beleg unter ihr.
+    await page.getByTestId("anchor-proof").getByText("Glocke", { exact: false }).waitFor();
     await shot("-anker");
     await page
       .getByTestId("anchor-list")

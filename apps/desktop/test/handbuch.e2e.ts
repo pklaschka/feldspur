@@ -308,6 +308,8 @@ await kapitel("abgleichen", async () => {
       .getByText(/Uhren stimmen jetzt überein/)
       .waitFor({ timeout: 10_000 })
       .catch(() => {});
+    await siehe("Beleg", page.getByTestId("anchor-proof"));
+    await siehe("Beide anhören", page.getByTestId("anchor-proof").getByRole("button", { name: /Beide anhören/ }));
     await siehe("+ Neuer Anker");
     const weiter = knopf("Weiter: Durchsehen →");
     await siehe("Weiter: Durchsehen →", weiter);
