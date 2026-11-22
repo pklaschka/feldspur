@@ -2,7 +2,7 @@
  * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Einsatztranskript (.docx), Dokumentvariablen und
  * Begleitprotokoll.
  */
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type {
   ExportCard,
   ExportProgress,
@@ -209,61 +209,75 @@ export function ExportStep({
           </>
         }
       />
-      {(busy || result || error || cancelled) && (
-        <Panel className="mb-4 max-w-[1240px]">
-          {busy && (
-            <div data-testid="export-progress">
-              <div className="mb-1 flex items-center gap-3 text-[0.9rem]">
-                <span>{ex.job!.cancelling ? "Bricht ab…" : (progress?.step ?? "Vorbereiten")}</span>
-                <span className="flex-1" />
-                <span className="text-muted tabular-nums">
-                  {progress?.step === "Montagevideo" &&
-                    !ex.job!.cancelling &&
-                    `${remainingText(remainingMs(ex.job))} · `}
-                  {progress?.step === CHECK_STEP && !ex.job!.cancelling && `${checkedText(progress)} · `}
-                  {pct} %
-                </span>
-                <Button size="sm" disabled={ex.job!.cancelling} onClick={ex.cancel} data-testid="export-cancel">
-                  Abbrechen
-                </Button>
+      {result && !stale && !busy && !error && !cancelled ? (
+        // Die Beleg-Karte ist selbst die Karte: kein Rahmen um den Rahmen.
+        <div className="mb-5 max-w-[1240px] pr-1.5">
+          <ExportResult
+            status={result}
+            card={card}
+            fresh={!!justDone}
+            disabled={!!found}
+            onRerun={() => run(true)}
+            onRerunElsewhere={() => run()}
+          />
+        </div>
+      ) : (
+        (busy || result || error || cancelled) && (
+          <Panel className="mb-4 max-w-[1240px]">
+            {busy && (
+              <div data-testid="export-progress">
+                <div className="mb-1 flex items-center gap-3 text-[0.9rem]">
+                  <span>{ex.job!.cancelling ? "Bricht ab…" : (progress?.step ?? "Vorbereiten")}</span>
+                  <span className="flex-1" />
+                  <span className="text-muted tabular-nums">
+                    {progress?.step === "Montagevideo" &&
+                      !ex.job!.cancelling &&
+                      `${remainingText(remainingMs(ex.job))} · `}
+                    {progress?.step === CHECK_STEP && !ex.job!.cancelling && `${checkedText(progress)} · `}
+                    {pct} %
+                  </span>
+                  <Button size="sm" disabled={ex.job!.cancelling} onClick={ex.cancel} data-testid="export-cancel">
+                    Abbrechen
+                  </Button>
+                </div>
+                <div
+                  className="h-1.5 overflow-hidden rounded-full bg-sunken"
+                  role="progressbar"
+                  aria-label="Ausgabe"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pct}
+                  aria-valuetext={`${progress?.step ?? "Vorbereiten"}, ${pct} %`}
+                >
+                  <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="mt-2 text-[0.85rem] text-muted">
+                  {progress?.step === CHECK_STEP || !progress
+                    ? "Zuerst prüft Feldspur, ob die Originale noch dieselben sind wie beim Einsammeln (schon geprüfte merkt es sich). "
+                    : ""}
+                  Du kannst weiterarbeiten oder den Schritt wechseln, die Ausgabe läuft weiter. Änderungen ab jetzt
+                  kommen in die nächste Ausgabe.
+                </p>
               </div>
-              <div
-                className="h-1.5 overflow-hidden rounded-full bg-sunken"
-                role="progressbar"
-                aria-label="Ausgabe"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={pct}
-                aria-valuetext={`${progress?.step ?? "Vorbereiten"}, ${pct} %`}
-              >
-                <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="mt-2 text-[0.85rem] text-muted">
-                {progress?.step === CHECK_STEP || !progress
-                  ? "Zuerst prüft Feldspur, ob die Originale noch dieselben sind wie beim Einsammeln (schon geprüfte merkt es sich). "
-                  : ""}
-                Du kannst weiterarbeiten oder den Schritt wechseln, die Ausgabe läuft weiter. Änderungen ab jetzt kommen
-                in die nächste Ausgabe.
+            )}
+            {error && <Notice>Ausgabe fehlgeschlagen: {error}</Notice>}
+            {cancelled && (
+              <p className="text-[0.9rem]" role="status" data-testid="export-cancelled">
+                {cancelledText(cancelled)}
               </p>
-            </div>
-          )}
-          {error && <Notice>Ausgabe fehlgeschlagen: {error}</Notice>}
-          {cancelled && (
-            <p className="text-[0.9rem]" role="status" data-testid="export-cancelled">
-              {cancelledText(cancelled)}
-            </p>
-          )}
-          {result && (
-            <ExportResult
-              status={result}
-              card={card}
-              fresh={!!justDone && !stale}
-              disabled={!!ex.job || !!found}
-              onRerun={() => run(true)}
-              onRerunElsewhere={() => run()}
-            />
-          )}
-        </Panel>
+            )}
+            {result && (
+              <ExportResult
+                status={result}
+                card={card}
+                fresh={!!justDone && !stale}
+                disabled={!!ex.job || !!found}
+                onRerun={() => run(true)}
+                onRerunElsewhere={() => run()}
+              />
+            )}
+          </Panel>
+        )
       )}
       {/* Nebeneinander, sobald die Mitte breit genug ist (Containerbreite, nicht Fenster): so bleibt die Vorschau lesbar. */}
       <div className="@container max-w-[1240px]">
@@ -498,15 +512,16 @@ function ExportResult({
           filesOpen={listOpen || missingFiles.length > 0}
           onToggleFiles={() => setListOpen((o) => !o)}
           onShowFolder={showFolder}
-        />
-        {missingNotice}
-        {(listOpen || missingFiles.length > 0) && fileList}
-        {!missingFiles.length && (
-          <p className="mt-3 text-[0.85rem] text-muted">
-            Änderst du danach noch etwas, steht hier „Veraltet“, auch nach einem Neustart. Erneut ausgeben rechnet nur
-            Geändertes neu.
-          </p>
-        )}
+        >
+          {missingNotice}
+          {(listOpen || missingFiles.length > 0) && fileList}
+          {!missingFiles.length && (
+            <p className="mt-3 border-t border-line pt-2.5 text-[0.85rem] text-muted">
+              Änderst du danach noch etwas, steht hier „Veraltet“, auch nach einem Neustart. Erneut ausgeben rechnet nur
+              Geändertes neu.
+            </p>
+          )}
+        </ExportReceipt>
       </div>
     );
 
@@ -559,6 +574,7 @@ function ExportReceipt({
   filesOpen,
   onToggleFiles,
   onShowFolder,
+  children,
 }: {
   record: ExportStatus["record"];
   card: ExportCard | null;
@@ -567,6 +583,8 @@ function ExportReceipt({
   filesOpen: boolean;
   onToggleFiles: () => void;
   onShowFolder: () => void;
+  /** Hinweise und Dateiliste, unten in der Karte. */
+  children?: ReactNode;
 }) {
   const n = record.files.length;
   const facts: [string, string, string?][] = card
@@ -654,6 +672,7 @@ function ExportReceipt({
           {filesOpen ? `${files(n)} ausblenden` : `${files(n)} anzeigen`}
         </Button>
       </div>
+      {children}
     </section>
   );
 }

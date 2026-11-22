@@ -7,7 +7,8 @@ name: Release
 #                    Commit „Release vX“ auf main und Tag vX pushen
 #   2. pakete        Installer für Windows, macOS (Apple-Chip, Intel) und Linux (package.yml)
 #      handbuch      PDF-Handbuch, von Quarto gerendert (handbook.yml)
-#   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt
+#   3. veröffentlichen  GitHub-Release mit Installern, Handbuch und SHA256SUMS.txt: erst als Entwurf mit allen
+#                    Dateien, dann geprüft und veröffentlicht (die Release ist danach unveränderlich)
 #
 # Nur die App wird versioniert; packages/* bekommen keine eigenen Tags, Releases oder Changelogs.
 # Eine veröffentlichte (nicht als Entwurf angelegte) Release archiviert Zenodo automatisch mit eigener DOI, auch
@@ -182,12 +183,10 @@ jobs:
           pattern: feldspur-*
           merge-multiple: true
           path: assets
+      # Muss da sein: An eine veröffentlichte Release lässt sich nichts mehr anhängen.
       - uses: actions/download-artifact@v8
-        # Lässt die Release nicht scheitern, falls das Handbuch einmal fehlt.
-        continue-on-error: true
         with:
-          pattern: handbuch
-          merge-multiple: true
+          name: handbuch
           path: assets
       - uses: actions/download-artifact@v8
         with:
@@ -198,21 +197,68 @@ jobs:
         run: |
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
-      - name: Release anlegen
+      # Die Release ist unveränderlich (Settings → General → Releases → „Enable release immutability“): Sobald sie
+      # veröffentlicht ist, lassen sich Tag und Dateien nicht mehr ändern, ersetzen oder nachreichen. Deshalb erst
+      # als Entwurf anlegen, alle Dateien hochladen, gegen SHA256SUMS.txt prüfen und erst dann veröffentlichen.
+      - name: Release als Entwurf anlegen und Dateien hochladen
+        id: entwurf
         env:
           V: ${{ needs.vorbereiten.outputs.version }}
           PRERELEASE: ${{ needs.vorbereiten.outputs.prerelease }}
-          SICHTBARKEIT: ${{ inputs.sichtbarkeit }}
         run: |
+          # Ein Entwurf aus einem abgebrochenen Lauf („Re-run failed jobs“) ist noch veränderlich und wird ersetzt.
+          alt=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"v$V\") | \"\(.id) \(.draft)\"")
+          if [ -n "$alt" ]; then
+            read -r alt_id alt_draft <<< "$alt"
+            if [ "$alt_draft" != "true" ]; then
+              echo "::error::v$V ist schon veröffentlicht und lässt sich nicht mehr ändern. Für Korrekturen eine neue Version ausgeben."
+              exit 1
+            fi
+            echo "::warning::Entwurf v$V aus einem früheren Lauf wird ersetzt."
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$alt_id"
+          fi
           flags=()
           if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease --latest=false); fi
-          if [ "$SICHTBARKEIT" = "immer als Entwurf" ]; then
-            flags+=(--draft)
-            echo "::notice::v$V ist als Entwurf angelegt. Veröffentlichen unter Releases; erst dann archiviert Zenodo sie."
-          fi
-          gh release create "v$V" assets/* \
+          gh release create "v$V" \
             --repo "$GITHUB_REPOSITORY" \
+            --draft \
             --verify-tag \
             --title "Feldspur $V" \
             --notes-file text/release-body.md \
             "${flags[@]}"
+          gh release upload "v$V" assets/* --repo "$GITHUB_REPOSITORY"
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"v$V\" and .draft) | .id")
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Hochgeladene Dateien prüfen
+        working-directory: assets
+        env:
+          ID: ${{ steps.entwurf.outputs.id }}
+        run: |
+          # GitHub berechnet für jede hochgeladene Datei selbst eine SHA-256; sie muss zu SHA256SUMS.txt passen,
+          # und es dürfen keine Dateien fehlen oder hinzukommen.
+          gh api "repos/$GITHUB_REPOSITORY/releases/$ID" \
+            --jq '.assets[] | select(.name != "SHA256SUMS.txt") | "\(.digest | ltrimstr("sha256:"))  \(.name)"' \
+            | sort -k 2 > "$RUNNER_TEMP/hochgeladen.txt"
+          sort -k 2 SHA256SUMS.txt | grep -v '  SHA256SUMS.txt$' > "$RUNNER_TEMP/erwartet.txt"
+          if ! diff -u "$RUNNER_TEMP/erwartet.txt" "$RUNNER_TEMP/hochgeladen.txt"; then
+            echo "::error::Die Dateien im Entwurf passen nicht zu SHA256SUMS.txt (oben: - erwartet, + hochgeladen). Der Entwurf bleibt unveröffentlicht."
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/releases/$ID" --jq '.assets[].name' | grep -qx SHA256SUMS.txt \
+            || { echo "::error::SHA256SUMS.txt fehlt im Entwurf."; exit 1; }
+          echo "Alle $(wc -l < "$RUNNER_TEMP/erwartet.txt") Dateien und SHA256SUMS.txt sind vollständig hochgeladen."
+
+      - name: Release veröffentlichen
+        env:
+          V: ${{ needs.vorbereiten.outputs.version }}
+          ID: ${{ steps.entwurf.outputs.id }}
+          SICHTBARKEIT: ${{ inputs.sichtbarkeit }}
+        run: |
+          if [ "$SICHTBARKEIT" = "immer als Entwurf" ]; then
+            echo "::notice::v$V ist als Entwurf angelegt. Veröffentlichen unter Releases; erst dann archiviert Zenodo sie. Danach lässt sie sich nicht mehr ändern."
+            exit 0
+          fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=false --jq '"\(.html_url) (unveränderlich: \(.immutable // false))"'
