@@ -102,21 +102,34 @@ describe("Eingang über mehrere Einsätze", () => {
     ]);
   });
 
-  it("ergibt die Tabelle mit Anzahl, Dauer und Zeitbeleg", () => {
+  it("ergibt über mehrere Einsätze je Art eine Zeile und zählt die Geräte (je Einsatz angelegt)", () => {
     expect(materialTable([einsatz(1), einsatz(2)])).toEqual({
       caption: "Eingang: Aufzeichnungen aus 2 Einsätzen (14.09.2026 bis 15.09.2026)",
-      head: ["Eingang", "Gerät", "Anzahl", "Dauer (h:mm:ss)", "Zeitbeleg"],
+      head: ["Eingang", "Geräte", "Anzahl", "Dauer (h:mm:ss)", "Zeitbeleg"],
       rows: [
-        ["Video", "Kamera", "20", "2:00:00", "Metadaten; Uhr um +0:42 korrigiert"],
-        ["Audio", "Rekorder", "4", "3:00:00", "angesagte Uhrzeit (2), Folgeaufnahme (2)"],
-        ["Fotos", "Handy", "10", "–", "Metadaten (8), ohne Uhrzeit (2)"],
+        ["Video", "2 Geräte", "20", "2:00:00", "Metadaten; Uhr um +0:42 korrigiert"],
+        ["Audio", "2 Geräte", "4", "3:00:00", "angesagte Uhrzeit (2), Folgeaufnahme (2)"],
+        ["Fotos", "2 Geräte", "10", "–", "Metadaten (8), ohne Uhrzeit (2)"],
         ["Tagebuch", "–", "14 Einträge, 4 Dateien", "–", "notierte Uhrzeit"],
       ],
     });
   });
 
-  it("nennt bei einem einzelnen Einsatz nur dessen Tag", () => {
-    expect(materialTable([einsatz(1)]).caption).toBe("Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026)");
+  it("nennt bei einem einzelnen Einsatz nur dessen Tag und die Geräte mit Namen", () => {
+    const t = materialTable([einsatz(1)]);
+    expect(t.caption).toBe("Eingang: Aufzeichnungen aus einem Einsatz (14.09.2026)");
+    expect(t.head[1]).toBe("Gerät");
+    expect(t.rows.map((r) => r[1])).toEqual(["Kamera", "Rekorder", "Handy", "–"]);
+  });
+
+  it("fasst unterschiedlich benannte Geräte derselben Art über mehrere Tage zusammen", () => {
+    // Angenommen: dasselbe Handy heißt am zweiten Tag anders
+    const zweite = einsatz(2, {
+      material: [row({ device: "Google Pixel 9A Video", files: 3, basis: { filename: 3 } })],
+    });
+    const erste = einsatz(1, { material: [row({ device: "Google Pixel 9a", files: 2, basis: { filename: 2 } })] });
+    // Dann: eine Zeile Video mit 2 Geräten und 5 Dateien
+    expect(materialTable([erste, zweite]).rows).toEqual([["Video", "2 Geräte", "5", expect.any(String), "Dateiname"]]);
   });
 });
 
