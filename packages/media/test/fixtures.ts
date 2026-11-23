@@ -18,6 +18,19 @@ export function hasFfmpeg(): boolean {
 
 export const ff = (...args: string[]) => execFileSync("ffmpeg", ["-v", "error", "-y", ...args]);
 
+let h264Args: string[] | null = null;
+/**
+ * H.264-Encoder für erzeugte Videos: libx264, wo es ihn gibt (Entwicklung, macOS, Windows). Die LGPL-Fassung aus dem
+ * Installationspaket, mit der die CI unter Linux prüft, hat stattdessen OpenH264.
+ */
+export function h264(): string[] {
+  if (!h264Args) {
+    const encoders = execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" });
+    h264Args = / libx264 /.test(encoders) ? ["-c:v", "libx264", "-preset", "ultrafast"] : ["-c:v", "libopenh264"];
+  }
+  return h264Args;
+}
+
 export function makeVideo(path: string, opts: { seconds: number; creationTime?: string }) {
   ff(
     "-f",
@@ -28,10 +41,7 @@ export function makeVideo(path: string, opts: { seconds: number; creationTime?: 
     "lavfi",
     "-i",
     `sine=frequency=440:duration=${opts.seconds}`,
-    "-c:v",
-    "libx264",
-    "-preset",
-    "ultrafast",
+    ...h264(),
     "-c:a",
     "aac",
     "-shortest",
@@ -241,10 +251,7 @@ export function makeSyncVideo(
     "lavfi",
     "-i",
     `aevalsrc=exprs='${audioExpr(opts)}':s=8000:d=${opts.seconds}`,
-    "-c:v",
-    "libx264",
-    "-preset",
-    "ultrafast",
+    ...h264(),
     "-c:a",
     "aac",
     "-shortest",
