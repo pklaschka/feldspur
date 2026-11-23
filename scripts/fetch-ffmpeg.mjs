@@ -11,7 +11,17 @@
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,8 +39,24 @@ function verify() {
   if (problems.length) throw new Error(`ffmpeg in ${out} reicht nicht:\n- ${problems.join("\n- ")}`);
 }
 
+/**
+ * SHA-256 der Quellarchive von ffmpeg.org, aus denen der macOS-Build entsteht. Ein Release-Archiv ändert sich nie;
+ * passt die Prüfsumme nicht, stimmt etwas mit dem Download nicht. Neue Linie: Prüfsumme hier eintragen (steht in der
+ * BUILD.txt eines Builds und auf ffmpeg.org neben dem Archiv).
+ */
+const MACOS_SOURCE_SHA256 = {
+  8.1: "b072aed6871998cce9b36e7774033105ca29e33632be5b6347f3206898e0756a",
+};
+
 if (platform === "darwin") {
+  const expected = MACOS_SOURCE_SHA256[line];
+  if (!expected) throw new Error(`Für ffmpeg ${line} ist keine Prüfsumme des Quellarchivs hinterlegt`);
   execFileSync("bash", [join(root, "scripts", "build-ffmpeg-macos.sh"), line, out], { stdio: "inherit" });
+  const actual = /^SHA-256: ([0-9a-f]{64})$/m.exec(readFileSync(join(out, "BUILD.txt"), "utf8"))?.[1];
+  if (actual !== expected) {
+    rmSync(out, { recursive: true, force: true });
+    throw new Error(`Quellarchiv von ffmpeg ${line}: Prüfsumme ${actual ?? "fehlt"} statt ${expected}`);
+  }
   verify();
   process.exit(0);
 }
