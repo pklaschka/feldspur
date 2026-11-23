@@ -81,4 +81,4 @@ export function Summary({ view, onGo, compact }: { view: SessionView; onGo: (t: 
   );
 }
 
-export const STATUS_BAR = { ok: "bg-good/70", check: "bg-warn", unplaced: "bg-bad", context: "bg-ink-2/45" } as const;
+const STATUS_BAR = { ok: "bg-good/70", check: "bg-warn", unplaced: "bg-bad", context: "bg-ink-2/45" } as const;

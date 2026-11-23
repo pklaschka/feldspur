@@ -6,7 +6,7 @@ import type { ChangeEntry, ChangeStep, History } from "@feldspur/core";
 import { excelCsv } from "@feldspur/media/csv";
 import { decisionText, fieldChanges, OP_LABEL, stepLabel, TABLE_LABEL } from "../shared/changelog.ts";
 
-export function changeLogRows(steps: ChangeStep[]): unknown[][] {
+function changeLogRows(steps: ChangeStep[]): unknown[][] {
   const rows: unknown[][] = [];
   // Älteste zuerst: so liest man ein Protokoll.
   for (const s of steps.toReversed()) {
@@ -45,7 +45,7 @@ export function changeLogCsv(history: History): string {
  * alles an seinen Quellen (auch an inzwischen gelöschten). Projektweites wie Personen bleibt draußen, damit der
  * Ausgabeordner eines Einsatzes nichts über andere Einsätze verrät.
  */
-export function sessionSteps(steps: ChangeStep[], sessionId: string, sourceIds: Iterable<string> = []): ChangeStep[] {
+function sessionSteps(steps: ChangeStep[], sessionId: string, sourceIds: Iterable<string> = []): ChangeStep[] {
   const val = (c: ChangeEntry, k: string) => c.after?.[k] ?? c.before?.[k];
   const sources = new Set(sourceIds);
   for (const s of steps)

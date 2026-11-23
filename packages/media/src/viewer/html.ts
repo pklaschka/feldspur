@@ -23,7 +23,7 @@ import { viewerMain } from "./runtime.ts";
 import { VIEWER_CSS } from "./style.ts";
 
 /** Fassung der eingebetteten Daten (feldspur-daten). */
-export const VIEWER_DATA_VERSION = 1;
+const VIEWER_DATA_VERSION = 1;
 
 export interface ViewerOptions {
   /** Dateiname des Montagevideos im selben Ordner. */
@@ -65,7 +65,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ESC[c]!);
 const p2 = (n: number) => String(n).padStart(2, "0");
 
 /** Videozeit wie „1:02:03“. */
-export function videoTime(ms: number): string {
+function videoTime(ms: number): string {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 3600)}:${p2(Math.floor(s / 60) % 60)}:${p2(s % 60)}`;
 }
@@ -121,7 +121,7 @@ function waveBoost(env: Envelope): number {
 }
 
 /** Hüllkurve eines Ausschnitts für die Zeitleiste: je Wert der lauteste Pegel, 0 … 255. */
-export function waveOf(env: Envelope, fromMs: number, durMs: number, boostDb = 0): { w: string; ws: number } {
+function waveOf(env: Envelope, fromMs: number, durMs: number, boostDb = 0): { w: string; ws: number } {
   const stepMs = Math.max(WAVE_STEP_MS, durMs / WAVE_MAX);
   const n = Math.max(1, Math.ceil(durMs / stepMs));
   const out = Buffer.alloc(n);

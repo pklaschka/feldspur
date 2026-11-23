@@ -92,7 +92,7 @@ function useOriginalsProgress(sessionId: string): [OriginalsProgress | null, (p:
   return [p, setP];
 }
 
-export function progressText(p: OriginalsProgress | null): string {
+function progressText(p: OriginalsProgress | null): string {
   if (!p) return "Wird vorbereitet…";
   if (p.phase === "suchen") return `${p.done} Dateien durchsucht…`;
   if (!p.total) return `Prüfsumme: ${p.fileName}`;

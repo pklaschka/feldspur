@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "test": "vp test run",
-    "check": "vp check && tsc -p tsconfig.json && tsc -p apps/desktop/tsconfig.json",
+    "check": "vp check && tsc -p tsconfig.json && tsc -p apps/desktop/tsconfig.json && knip",
+    "knip": "knip",
     "fix": "vp check --fix",
     "probe": "vpx scripts/probe-folder.ts",
     "desktop": "vp run @feldspur/desktop#build && vp run @feldspur/desktop#start",
@@ -20,6 +21,7 @@
     "@feldspur/core": "workspace:*",
     "@feldspur/media": "workspace:*",
     "@types/node": "^22.20.5",
+    "knip": "^6.48.0",
     "typescript": "^5.9.3",
     "vite-plus": "catalog:"
   },

@@ -45,7 +45,9 @@ release. Add a tool name to select part of the graph. For example, run
   Sicherungen, jeder ffmpeg/ffprobe-Aufruf mit Befehlszeile) mit `log(bereich, text)` aus `packages/media/src/log.ts`
   vermerken. Erscheint auf stderr, in der nicht gepackten App von selbst; `FELDSPUR_LOG=1` schaltet es überall ein
   (auch in Tests und in der installierten App, aus dem Terminal gestartet), `FELDSPUR_LOG=0` ab.
-- Vor dem Commit: `vp run check` und `vp run test` (`check` enthält zusätzlich die Typprüfung der App).
+- Vor dem Commit: `vp run check` und `vp run test` (`check` enthält zusätzlich die Typprüfung der App und knip).
+- `export` nur für das, was ein anderes Modul oder ein Test braucht: knip (`knip.jsonc`) meldet ungenutzte Exporte,
+  Dateien und Abhängigkeiten als Fehler.
 
 ## Checklisten
 

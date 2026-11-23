@@ -15,7 +15,7 @@ export type ApplyView = (fn: () => Promise<SessionView>) => void;
 
 const AV = new Set(["audio", "video"]);
 
-export function noteRange(n: Pick<SourceNoteRow, "fromMs" | "toMs">): string {
+function noteRange(n: Pick<SourceNoteRow, "fromMs" | "toMs">): string {
   if (n.fromMs === null) return "ganze Datei";
   if (n.toMs === null) return `bei ${positionText(n.fromMs)}`;
   return `${positionText(n.fromMs)} – ${positionText(n.toMs)}`;

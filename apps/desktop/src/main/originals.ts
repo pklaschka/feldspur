@@ -19,9 +19,9 @@ import {
 import type { OriginalsCheck, OriginalsSearch } from "../shared/api.ts";
 
 /** Ein Zwischenspeicher für die ganze Sitzung: Er hängt an Pfad, Größe und Änderungszeit, nicht am Projekt. */
-export const hashCache = new HashCache();
+const hashCache = new HashCache();
 
-export const RELINK_LABEL = "Originaldatei neu verknüpft";
+const RELINK_LABEL = "Originaldatei neu verknüpft";
 
 /** Schneller Zustand aller Quellen eines Einsatzes (ohne Lesen der Dateien). */
 export function quickStates(sources: Source[]): Map<Id, FileCheck> {

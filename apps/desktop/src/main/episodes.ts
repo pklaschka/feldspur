@@ -6,7 +6,7 @@
 import { resolveTimeline, type Id, type ProjectStore } from "@feldspur/core";
 
 /** Halbe Länge einer Mini-Episode um eine laute Stelle. */
-export const MINI_EPISODE_HALF_MS = 15_000;
+const MINI_EPISODE_HALF_MS = 15_000;
 
 /** Aufnahmen mit Ton, die zwischen fromMs und toMs (Uhrzeit) laufen, mit ihrer Lage. */
 function runningAv(store: ProjectStore, sessionId: Id, fromMs: number, toMs: number) {

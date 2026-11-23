@@ -7,7 +7,7 @@ import type { Guard } from "../App.tsx";
 const api = window.feldspur;
 
 /** Schritte, nach denen ein Hinweis mit „Rückgängig“ erscheint: sie ersetzen die frühere Nachfrage. */
-export const NOTIFY = new Set([
+const NOTIFY = new Set([
   "Quelle entfernt",
   "Zeitbelege neu gelesen",
   "Bestätigungen entfernt",
@@ -36,7 +36,7 @@ export interface HistoryState {
 }
 
 /** Beschriftungen tragen oft einen Zusatz („Lage bestätigt: F-003“); gemeldet wird nach dem Teil vor dem Doppelpunkt. */
-export const notifies = (label: string) => NOTIFY.has(label.split(":")[0]!);
+const notifies = (label: string) => NOTIFY.has(label.split(":")[0]!);
 
 export interface Toast {
   text: string;

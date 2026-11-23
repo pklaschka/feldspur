@@ -33,7 +33,7 @@ const mmss = (ms: number) =>
  * Lage auf der Abweichungsleiste, −1 … 1. Bis zu einer Stunde linear; darüber gestaucht (asinh), damit
  * Sekunden-Abweichungen neben Stunden oder Tagen sichtbar bleiben.
  */
-export function scale(ms: number, span: number): number {
+function scale(ms: number, span: number): number {
   if (span <= 3_600_000) return ms / span;
   const k = 300_000;
   return Math.asinh(ms / k) / Math.asinh(span / k);

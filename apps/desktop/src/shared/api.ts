@@ -59,7 +59,7 @@ export interface ProjectInfo {
  * Zustand einer Quelle in der Oberfläche: wie die Zeitbestimmung (sicher, prüfen, ohne Zeit), dazu „context“ =
  * bewusst ohne Uhrzeit, steht vor der Chronologie (Issue #108). Kontext ist kein offener Punkt.
  */
-export type RowStatus = PlacementStatus | "context";
+type RowStatus = PlacementStatus | "context";
 
 export interface SourceRow {
   id: string;
@@ -129,7 +129,7 @@ export interface SourceRow {
   level: LevelRow | null;
 }
 
-export interface DecisionRow {
+interface DecisionRow {
   /** Id des Belegs „geprüft“ (zum Zurücknehmen). */
   evidenceId: string;
   /** null bei älteren Bestätigungen ohne gespeicherten Stand. */
@@ -213,7 +213,7 @@ export interface AnchorRow {
   b: AnchorEnd;
 }
 
-export interface AnchorEnd {
+interface AnchorEnd {
   sourceId: string;
   atMs: number;
 }
@@ -482,7 +482,7 @@ export interface ExportOutcome {
 }
 
 /** Ausgabe abgebrochen: Sie gilt nicht als ausgegeben, fertige Videoabschnitte bleiben im Zwischenspeicher. */
-export interface ExportCancelled {
+interface ExportCancelled {
   cancelled: true;
 }
 
@@ -490,7 +490,7 @@ export interface ExportCancelled {
  * Die Prüfung der Originale (erster Schritt der Ausgabe) hat etwas gefunden; noch ist nichts geschrieben. parent ist
  * der gewählte Ordner: „Trotzdem ausgeben“ geht mit dir = parent dorthin, ohne erneut zu fragen.
  */
-export interface ExportNeedsDecision {
+interface ExportNeedsDecision {
   originals: OriginalsCheck;
   parent: string;
 }
@@ -531,7 +531,7 @@ export type ExportChoices = Pick<ExportRequestOptions, "video"> &
 /** Anfrage aus der Oberfläche: die Auswahl samt Zielordner und Umgang mit der Prüfung. */
 export type ExportRequest = ExportChoices & Pick<ExportRequestOptions, "reuseDir" | "dir" | "acceptOriginals">;
 
-export type { ExportStatus, ExportDifference } from "@feldspur/media";
+export type { ExportStatus } from "@feldspur/media";
 
 /** Erster Schritt jeder Ausgabe, nach der Ordnerwahl: Originale mit Prüfsumme prüfen (done/total in Bytes). */
 export const EXPORT_CHECK_STEP = "Originale prüfen";
@@ -571,7 +571,7 @@ export interface SessionTranscriptPreview {
 }
 
 /** Einsammeln abgebrochen: Nichts wurde übernommen. */
-export interface ImportCancelled {
+interface ImportCancelled {
   cancelled: { read: number; total: number };
 }
 
@@ -582,7 +582,7 @@ export interface ImportProgress extends ScanProgress {
   sessionId: string;
 }
 
-export interface ImportOutcome {
+interface ImportOutcome {
   added: number;
   duplicates: number;
   /** Davon: schon vorhanden, Original fehlte, jetzt mit der neuen Datei verknüpft. */

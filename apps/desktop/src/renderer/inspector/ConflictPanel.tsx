@@ -69,12 +69,12 @@ function utcOffsetMs(timeZone: string, date: string): number {
   return m ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 3_600_000 + Number(m[3]) * 60_000) : 0;
 }
 
-export function compared(row: SourceRow): Compared[] {
+function compared(row: SourceRow): Compared[] {
   return row.evidence.filter((e): e is Compared => e.compare !== null);
 }
 
 /** Belegstrahl: ein Punkt je Beleg, Unsicherheit als Balken, Abstand als Klammer; große Lücken unterbrochen. */
-export function EvidenceStrip({ items }: { items: Compared[] }) {
+function EvidenceStrip({ items }: { items: Compared[] }) {
   // In Pixeln der Leiste zeichnen, nicht skalieren: Sonst wächst die Schrift mit einer breiten Detailleiste.
   const box = useRef<HTMLDivElement>(null);
   const measured = useElementWidth(box);
@@ -186,7 +186,7 @@ export function EvidenceStrip({ items }: { items: Compared[] }) {
 }
 
 /** Ein Beleg als Zeile: Art, Abzeichen, Beginn mit Genauigkeit, Wert wie gelesen, Umrechnung, ggf. Grund. */
-export function EvidenceFacts({ e, reason, decided }: { e: Compared; reason?: string; decided?: boolean }) {
+function EvidenceFacts({ e, reason, decided }: { e: Compared; reason?: string; decided?: boolean }) {
   const c = e.compare;
   const tone =
     !c.enabled || c.verdict === "agrees" || c.verdict === "rounding" || c.verdict === "unsynced"

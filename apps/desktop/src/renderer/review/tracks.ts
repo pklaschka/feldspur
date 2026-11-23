@@ -3,7 +3,7 @@ import type { DeviceRow, SourceRow } from "../../shared/api.ts";
 import type { Track } from "../timeline.ts";
 
 /** Reihenfolge der Spuren nach Art des Geräts (Referenzuhr steht immer oben). */
-export const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
+const KIND_ORDER = ["video", "audio", "photo", "diary", "note", "gps", "other"];
 
 /** Spuren: Referenzuhr zuerst, dann nach Art; Quellen ohne Gerät zuletzt in einer eigenen Spur. */
 export function buildTracks(devices: DeviceRow[], placed: SourceRow[]): Track[] {

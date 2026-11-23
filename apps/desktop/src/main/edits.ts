@@ -20,7 +20,7 @@ import { kindHolds, kindName, kindVerb } from "../shared/conflict-text.ts";
 import type { AnchorInput, DecideInput, LevelInput, PageNumberingInput, TimeInput } from "../shared/api.ts";
 
 /** ± je Genauigkeitsstufe. */
-export const PRECISION_MS = { exact: 1_000, approx: 60_000, rough: 15 * 60_000 } as const;
+const PRECISION_MS = { exact: 1_000, approx: 60_000, rough: 15 * 60_000 } as const;
 
 /**
  * Uhrzeit "10:15", "10:15:30" oder "10.15" in Stunde/Minute/Sekunde zerlegen und auf Bereiche prüfen

@@ -6,7 +6,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 /** Elemente mit diesem Attribut nehmen Dateien selbst an (z. B. „Einsammeln“). */
-export const DROP_ZONE_ATTR = "data-dropzone";
+const DROP_ZONE_ATTR = "data-dropzone";
 
 function isFileDrag(e: DragEvent): boolean {
   return !!e.dataTransfer && [...e.dataTransfer.types].includes("Files");

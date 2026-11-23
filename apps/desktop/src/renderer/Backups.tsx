@@ -13,7 +13,7 @@ const api = window.feldspur;
 
 const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
-export const KIND_LABEL: Record<BackupInfo["kind"], string> = {
+const KIND_LABEL: Record<BackupInfo["kind"], string> = {
   automatisch: "automatisch",
   "vor-Aktualisierung": "vor Aktualisierung auf neue Version",
   manuell: "von Hand",

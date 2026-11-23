@@ -4,7 +4,7 @@ import { Button, Eyebrow } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import { ClockInput } from "../ClockField.tsx";
 
-export function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
+function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
   const [text, setText] = useDraft(row.diaryNote ?? "", row.id);
   const commit = (v: string) => v !== (row.diaryNote ?? "") && onCommit(v);
   return (
