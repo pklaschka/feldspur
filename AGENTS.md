@@ -35,7 +35,8 @@ release. Add a tool name to select part of the graph. For example, run
 - Sprache: Oberfläche, Kommentare und Commit-Texte auf Deutsch; Bezeichner im Code auf Englisch.
 - Lage auf der Zeitachse nie speichern, immer aus Belegen berechnen (`packages/core/src/resolve.ts`).
 - Migrationen in `packages/core/src/db/migrations.ts` nur anhängen, nie ändern.
-- IPC-Aufrufe, die Daten ändern, mit `undoable(…, "Beschriftung", …)` anmelden (Rückgängig, `packages/core/src/db/history.ts`).
+- IPC-Aufrufe, die Daten ändern, mit `undoable(…, "Beschriftung", …)` anmelden (Rückgängig, `packages/core/src/db/history.ts`);
+  liefert die Änderung nur den Einsatz für die neue Ansicht, mit `undoableView`.
   Schreibt etwas außerhalb davon in die Projektdatei, leert das den Verlauf.
 - ffmpeg/ffprobe nur über `runTool` (`packages/media/src/process.ts`) starten und das `signal` immer durchreichen; eine
   Lint-Regel sperrt `node:child_process` in `src`. Keine eigenen Promise-Hüllen um Prozesse und kein Effect
@@ -67,7 +68,8 @@ release. Add a tool name to select part of the graph. For example, run
    nachtragen.
 
 **Neuer IPC-Aufruf:** Kanal in `IPC` und Methode in der Schnittstelle (`apps/desktop/src/shared/api.ts`), Brücke in
-`apps/desktop/src/preload/preload.ts`, Handler in `apps/desktop/src/main/main.ts` (ändert er Daten: `undoable`).
+`apps/desktop/src/preload/preload.ts`, Handler in der passenden Datei unter `apps/desktop/src/main/ipc/` (ändert er
+Daten: `undoable`). Offenes Projekt, Fenster und laufende Arbeiten nur über `apps/desktop/src/main/state.ts`.
 Nach jedem `await` im Handler mit `stillOpen(s)` prüfen, ob noch dasselbe Projekt offen ist.
 
 **Neue Ausgabe-Option:** nur in `ExportRequestOptions` (`apps/desktop/src/shared/api.ts`) ergänzen; `ExportChoices` und
