@@ -254,6 +254,11 @@ function keepAwake(wc: WebContents): () => void {
   };
 }
 
+/** Ordner der Montage-Zwischenspeicher, je Einsatz ein Unterordner. */
+export function montageCacheRoot(): string {
+  return join(app.getPath("userData"), "Montage-Zwischenspeicher");
+}
+
 /** Laufende Ausgabe abbrechen, welche es auch ist: beim Schließen der App. */
 export function abortExport(): void {
   controller?.abort();
@@ -345,7 +350,7 @@ export async function runExport(
         : undefined,
       manifest: settings.manifest,
       ...modeOf(s, sessionId, opts.realtime),
-      cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
+      cacheDir: join(montageCacheRoot(), sessionId),
       onProgress: (step, done, total) => safeSend(wc, IPC.exportProgress, { sessionId, step, done, total }),
       onWriting: () => {
         if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);

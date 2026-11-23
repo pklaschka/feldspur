@@ -38,6 +38,23 @@ export interface AnalyzeOptions extends IdleOptions {
   signal?: AbortSignal;
 }
 
+/** Hüllkurve, Leerlauf und Sprachpegel einer Quelle in der Projektdatei ablegen (Analyse und Lautstärke messen). */
+function saveAnalysis(store: ProjectStore, sourceId: Id, env: Envelope, idle: ReturnType<typeof detectIdle>) {
+  const analysis = {
+    sourceId,
+    envelope: packEnvelope(env),
+    envelopeRate: env.rate,
+    noiseFloorDb: idle.noiseFloorDb,
+    idle: idle.idle,
+    loudInIdle: idle.loudInIdle,
+    speechLevelDb: speechLevelDb(env.db),
+    version: ANALYSIS_VERSION,
+    analyzedAt: new Date().toISOString(),
+  };
+  store.saveAudioAnalysis(analysis);
+  return analysis;
+}
+
 export interface AnalyzeResult {
   analyzed: number;
   failed: { sourceId: Id; fileName: string; message: string }[];
@@ -72,18 +89,7 @@ export async function analyzeSession(
     }
     try {
       const env = await computeEnvelope(s.originalPath, { signal: opts.signal });
-      const idle = detectIdle(env, opts);
-      store.saveAudioAnalysis({
-        sourceId: s.id,
-        envelope: packEnvelope(env),
-        envelopeRate: env.rate,
-        noiseFloorDb: idle.noiseFloorDb,
-        idle: idle.idle,
-        loudInIdle: idle.loudInIdle,
-        speechLevelDb: speechLevelDb(env.db),
-        version: ANALYSIS_VERSION,
-        analyzedAt: new Date().toISOString(),
-      });
+      saveAnalysis(store, s.id, env, detectIdle(env, opts));
       envelopes.set(s.id, env);
       analyzed++;
     } catch (e) {
@@ -160,20 +166,7 @@ export async function measureSource(
 ): Promise<number | null> {
   const s = store.getSource(sourceId);
   const env = await computeEnvelope(s.originalPath, opts);
-  const idle = detectIdle(env);
-  const level = speechLevelDb(env.db);
-  store.saveAudioAnalysis({
-    sourceId: s.id,
-    envelope: packEnvelope(env),
-    envelopeRate: env.rate,
-    noiseFloorDb: idle.noiseFloorDb,
-    idle: idle.idle,
-    loudInIdle: idle.loudInIdle,
-    speechLevelDb: level,
-    version: ANALYSIS_VERSION,
-    analyzedAt: new Date().toISOString(),
-  });
-  return level;
+  return saveAnalysis(store, s.id, env, detectIdle(env)).speechLevelDb;
 }
 
 /**

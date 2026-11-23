@@ -28,13 +28,12 @@ import {
   type SourceKind,
 } from "../model.ts";
 import type { ResolveInput } from "../resolve.ts";
-import { nextBackupPath, rotateBackups, vacuumInto } from "./backup.ts";
+import { FILE_FORMAT, nextBackupPath, rotateBackups, SCHEMA_VERSION, vacuumInto } from "./backup.ts";
 import { History } from "./history.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import * as schema from "./schema.ts";
 
-export const FILE_FORMAT = "feldspur-project";
-export const SCHEMA_VERSION = MIGRATIONS.length;
+export { FILE_FORMAT, SCHEMA_VERSION };
 
 const LABEL_PREFIX: Record<SourceKind, { prefix: string; digits: number }> = {
   video: { prefix: "V", digits: 2 },

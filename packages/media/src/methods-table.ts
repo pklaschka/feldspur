@@ -6,6 +6,7 @@
  */
 import type { SourceKind } from "@feldspur/core";
 import type { MethodsBasis, MethodsMaterialRow, MethodsSessionSummary } from "./methods-summary.ts";
+import { htmlEscape } from "./xml.ts";
 
 /** Was die Tabellen von einem Einsatz brauchen (ohne den Stand der Ausgabe). */
 export type MethodsNumbers = Pick<MethodsSessionSummary, "title" | "date" | "material" | "output">;
@@ -191,7 +192,7 @@ export function methodsMarkdown(tables: MethodsTable[], software: string): strin
   return [...blocks, software].join("\n\n") + "\n";
 }
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = htmlEscape;
 
 /** Tabellen als HTML für die Zwischenablage: Word, LibreOffice und Pages fügen daraus echte Tabellen ein. */
 export function methodsHtml(tables: MethodsTable[], software: string): string {

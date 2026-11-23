@@ -108,7 +108,8 @@ Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Ori
 Ein Montagevideo in Echtzeit rechnet bei einem langen Einsatz eine Weile. Hast du dich bei den Optionen vertan, hältst
 du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gilt dann nicht als fertig, auch eine
 frühere Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben im Zwischenspeicher, der nächste Versuch
-geht deshalb schneller.
+geht deshalb schneller. Den Zwischenspeicher eines Einsatzes, der 30 Tage nicht ausgegeben wurde, räumt Feldspur beim
+Start weg; er belegt sonst etwa so viel Platz wie das Montagevideo.
 
 Solange die Ausgabe läuft, geht der Rechner nicht in den Ruhezustand. Der Bildschirm darf sich ausschalten, und du
 kannst das Fenster verdecken oder in den Hintergrund legen; die Ausgabe läuft weiter. Am Laptop lohnt trotzdem das

@@ -24,8 +24,9 @@ import { basename, dirname, join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { MIGRATIONS } from "./migrations.ts";
 
-const SCHEMA_VERSION = MIGRATIONS.length;
-const FILE_FORMAT = "feldspur-project";
+/** Stand des Schemas, den diese Version schreibt, und die Kennung einer Feldspur-Projektdatei in project_meta. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
+export const FILE_FORMAT = "feldspur-project";
 
 /** Anlass einer Sicherung; steht im Dateinamen. */
 export type BackupKind = "automatisch" | "vor-Aktualisierung" | "manuell";

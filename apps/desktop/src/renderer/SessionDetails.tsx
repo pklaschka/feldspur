@@ -7,14 +7,7 @@ import { AlertDialog, Dialog } from "radix-ui";
 import { useState, type FormEvent } from "react";
 import type { SessionPatch, SessionView } from "../shared/api.ts";
 import { Button, CloseButton, ErrorBanner } from "./ui.tsx";
-
-const ZONES: string[] = (() => {
-  try {
-    return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone");
-  } catch {
-    return [];
-  }
-})();
+import { TIME_ZONES } from "./timeZones.ts";
 
 const label = "grid gap-1 text-[0.9rem] font-medium";
 const hint = "text-[0.82rem] font-normal text-muted";
@@ -112,7 +105,7 @@ export function SessionDetails({
                 Zeitzone
                 <input value={timeZone} onChange={(e) => setTimeZone(e.target.value)} list="feldspur-zones" required />
                 <datalist id="feldspur-zones">
-                  {ZONES.map((z) => (
+                  {TIME_ZONES.map((z) => (
                     <option key={z} value={z} />
                   ))}
                 </datalist>

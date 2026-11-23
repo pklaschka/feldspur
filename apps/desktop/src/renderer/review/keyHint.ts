@@ -4,6 +4,7 @@
  * bis der Hinweis einmal da war; die Zahl bleibt über Neustarts erhalten.
  */
 import { useSyncExternalStore } from "react";
+import { readStoredObject, writeStored } from "../stored.ts";
 
 const KEY = "feldspur.hinweis.tasten-durchsehen";
 /** So viele Bestätigungen mit der Maus, dann kommt der Hinweis. */
@@ -15,22 +16,14 @@ let cached: State | null = null;
 
 function read(): State {
   if (cached) return cached;
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<State>;
-    cached = { mouse: Number(s.mouse) || 0, dismissed: s.dismissed === true };
-  } catch {
-    cached = { mouse: 0, dismissed: false };
-  }
+  const s = readStoredObject(KEY);
+  cached = { mouse: Number(s.mouse) || 0, dismissed: s.dismissed === true };
   return cached;
 }
 
 function write(next: State) {
   cached = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // Ohne Speicher gilt es nur bis zum Neustart.
-  }
+  writeStored(KEY, JSON.stringify(next));
   for (const l of listeners) l();
 }
 

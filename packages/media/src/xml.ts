@@ -12,3 +12,8 @@ export function xmlEscape(s: string): string {
       .replace(/[<>&"']/g, (c) => ENTITY[c]!)
   );
 }
+
+/** Text für HTML und SVG (LIESMICH, Methodenteil, Feldkalender): `&`, `<`, `>` und `"` maskieren. */
+export function htmlEscape(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}

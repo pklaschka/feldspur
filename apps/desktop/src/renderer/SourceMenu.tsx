@@ -7,6 +7,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
 import { Button, cx } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
+import { TIME_ZONES } from "./timeZones.ts";
 
 export interface SourceActions {
   remove(sourceId: string): void;
@@ -407,14 +408,6 @@ function Confirm({
   );
 }
 
-const ZONES: string[] = (() => {
-  try {
-    return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone");
-  } catch {
-    return [];
-  }
-})();
-
 /** Zeitzone der Geräteuhr eingeben (IANA, z. B. America/New_York). */
 function ZoneDialog({
   open,
@@ -458,7 +451,7 @@ function ZoneDialog({
               onChange={(e) => setZone(e.target.value)}
             />
             <datalist id="feldspur-device-zones">
-              {ZONES.map((z) => (
+              {TIME_ZONES.map((z) => (
                 <option key={z} value={z} />
               ))}
             </datalist>

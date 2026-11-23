@@ -9,6 +9,7 @@
 import { materialTable, outputTable, germanDate, METHODS_HANDBOOK_URL, type MethodsTable } from "./methods-table.ts";
 import { methodsNumbers } from "./methods-summary.ts";
 import type { SessionTranscript } from "./session-transcript.ts";
+import { htmlEscape } from "./xml.ts";
 
 export const README_NAME = "LIESMICH.html";
 /** Prüfsummenliste im Ordner (Issue #204). */
@@ -38,7 +39,7 @@ const FILE_ROLE: [RegExp, string][] = [
   [/\.docx$/, "Einsatztranskript: Mitschrift, Tagebuch und Fotos in zeitlicher Folge, mit Zeitmarken zum Video"],
 ];
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = htmlEscape;
 
 /**
  * Tabelle mit Überschrift. Die Überschrift steht über dem Rollbereich, damit sie auf schmalen Bildschirmen stehen
