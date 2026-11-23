@@ -224,16 +224,21 @@ export async function pickEncoder(
   const has = (n: string) => new RegExp(`^\\s*V\\S*\\s+${n}\\s`, "m").test(listing);
   const known = ENCODERS.filter(([codec]) => has(codec)).map(([codec, ...args]) => ["-c:v", codec, ...args]);
   for (const enc of known) if (await works(enc)) return enc;
-  // Nichts gelingt (etwa ein ffmpeg, das gar nicht läuft): Der Abschnitt meldet dann den eigentlichen Fehler.
-  return known.at(-1) ?? ["-c:v", "mpeg4", "-q:v", "4"];
+  // Nichts gelingt (etwa ein ffmpeg, das gar nicht läuft): bei H.264 mit Bitrate bleiben, die jeder der Encoder
+  // annimmt, statt auf MPEG-4 auszuweichen. Der Abschnitt meldet dann den eigentlichen Fehler.
+  return known.find((enc) => enc.includes("-b:v")) ?? known.at(-1) ?? ["-c:v", "mpeg4", "-q:v", "4"];
 }
 
 let encoderCache: Promise<string[]> | null = null;
 /** Encoder-Argumente für das Bild, einmal je Programmlauf bestimmt. */
 export function videoEncoder(): Promise<string[]> {
-  encoderCache ??= runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS }).then((listing) =>
-    pickEncoder(listing),
-  );
+  encoderCache ??= runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS })
+    .then((listing) => pickEncoder(listing))
+    .catch((e: unknown) => {
+      // Ließ sich ffmpeg nicht fragen, beim nächsten Mal neu versuchen statt den Fehler zu behalten.
+      encoderCache = null;
+      throw e;
+    });
   return encoderCache;
 }
 

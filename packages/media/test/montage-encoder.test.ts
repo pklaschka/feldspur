@@ -60,10 +60,10 @@ describe("Encoder für das Montagevideo wählen (Issue #252)", () => {
     expect(await pickEncoder(liste("mpeg4"), ohne())).toEqual(["-c:v", "mpeg4", "-q:v", "4"]);
   });
 
-  it("bleibt beim letzten bekannten Encoder, wenn kein Probebild gelingt", async () => {
-    // Angenommen: ein ffmpeg, das gar nichts rechnet
+  it("bleibt bei H.264 mit Bitrate, wenn kein Probebild gelingt", async () => {
+    // Angenommen: ein ffmpeg, das gerade gar nichts rechnet
     const enc = await pickEncoder(liste("h264_videotoolbox", "mpeg4"), () => Promise.resolve(false));
-    // Dann: scheitert erst der Abschnitt und meldet den eigentlichen Fehler
-    expect(enc).toEqual(["-c:v", "mpeg4", "-q:v", "4"]);
+    // Dann: kein Ausweichen auf MPEG-4; scheitert es weiter, meldet der Abschnitt den eigentlichen Fehler
+    expect(enc).toEqual(["-c:v", "h264_videotoolbox", "-b:v", "8000k"]);
   });
 });
