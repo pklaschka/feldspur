@@ -1,0 +1,38 @@
+name: Changelog-Label
+
+# Jeder Pull Request braucht genau ein Changelog-Label, denn daraus entsteht seine Rubrik im Changelog
+# (.github/release.yml). Ohne Label schlägt die Prüfung fehl, Setzen des Labels startet sie neu.
+#
+# Eigener Workflow wie alle-plattformen.yml: Läge die Prüfung in ci.yml, wäre nach jedem Label der neue Lauf dort der
+# neueste, und GitHub zeigte den grünen Pflicht-Check „check (ubuntu-latest)“ nicht mehr an (siehe #188). Diese
+# Prüfung ist bewusst keine Pflichtprüfung: Sie meldet nur, sie hält das Zusammenführen nicht auf.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions: {}
+
+concurrency:
+  group: changelog-label-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          rubriken='["✨ neu","📈 verbessert","🐛 behoben","📖 doku","🔧 intern","🙈 kein-changelog"]'
+          gesetzt=$(jq -n --argjson l "$LABELS" --argjson r "$rubriken" '[$l[] | select(. as $x | $r | index($x))]')
+          anzahl=$(jq length <<<"$gesetzt")
+          if [ "$anzahl" -eq 1 ]; then
+            echo "Changelog-Rubrik: $(jq -r '.[0]' <<<"$gesetzt")"
+          elif [ "$anzahl" -eq 0 ]; then
+            echo "::error::Changelog-Label fehlt. Bitte genau eines setzen: $(jq -r 'join(", ")' <<<"$rubriken")"
+            exit 1
+          else
+            echo "::error::Mehrere Changelog-Labels ($(jq -r 'join(", ")' <<<"$gesetzt")). Bitte nur eines lassen."
+            exit 1
+          fi

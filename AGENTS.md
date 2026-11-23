@@ -100,8 +100,20 @@ Tests werden im Review gelesen wie das Handbuch. Kein Gherkin, kein Cucumber und
   Ablauf.
 - Kommentare beschreiben, was passiert, nicht wie der Code es macht. Ändert sich der Test, ändern sich die
   Kommentare mit.
-- Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Ein Label
-  setzen: `neu`, `verbessert`, `behoben`, `doku`, `intern` oder `kein-changelog` (siehe `.github/release.yml`).
+- Pull Requests: Titel auf Deutsch und für Nutzer*innen verständlich, denn daraus entsteht das Changelog. Genau ein
+  Changelog-Label setzen (prüft `.github/workflows/changelog-label.yml`, Rubriken in `.github/release.yml`).
+- Labels (Namen mit Emoji, genau so schreiben). Art (Feature/Bug/Task), Priorität und Aufwand stehen in den
+  Issue-Feldern von GitHub, Duplikate über den Schließgrund, nicht in Labels.
+  - Changelog (an PRs, an Issues als Vorschau der Rubrik): `✨ neu`, `📈 verbessert`, `🐛 behoben`, `📖 doku`,
+    `🔧 intern`, `🙈 kein-changelog`.
+  - CI: `💻 alle-plattformen` prüft und baut den PR zusätzlich unter Windows und macOS (bei Pfaden, Paketierung,
+    FFmpeg).
+  - Bereich (Schritt der App): `📥 einsammeln`, `🔗 abgleichen`, `👀 durchsehen`, `📝 mitschreiben`, `📤 ausgeben`,
+    `🧭 übersicht`.
+  - Plattform (nur dort auftretend): `🪟 windows`, `🍎 macos`, `🐧 linux`.
+  - Sonst: `💡 idee` (braucht erst ein Konzept), `⏳ wartet` (hängt an etwas von außen, z. B. einem Test in MAXQDA),
+    `♿ barrierefreiheit`.
+  - Ein Label umbenennen heißt: `.github/release.yml`, `.github/dependabot.yml` und die Workflows nachziehen.
 - Versionen nie von Hand ändern: das macht der Release-Workflow (`.github/workflows/release.yml`, `scripts/release.ts`).
 - README.md wird aus `README.qmd` und Bausteinen in `handbuch/` erzeugt (`vp run readme`); nie direkt bearbeiten. Neue Funktionen auch im Handbuch (`handbuch/_handbuch-*.qmd`) nachtragen.
 

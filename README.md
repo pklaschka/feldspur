@@ -275,7 +275,7 @@ auf main über GitHub Pages (einmalig unter Settings → Pages die Quelle „Git
 
 Die Installer (Windows NSIS, macOS DMG, Linux AppImage) baut der Workflow „Installationspaket“ in GitHub Actions,
 von Hand und als Teil jeder Release für alle Plattformen. Pull Requests, die die Paketierung ändern, bauen nur das
-Linux-Paket; alle Plattformen mit dem Label `alle-plattformen`. Die Dateien liegen danach drei Tage als Artefakte am
+Linux-Paket; alle Plattformen mit dem Label `💻 alle-plattformen`. Die Dateien liegen danach drei Tage als Artefakte am
 Lauf. Das App-Symbol liegt als [`packaging/icon.svg`](packaging/icon.svg) (Quelle) und `packaging/icon.png` (1024 px,
 daraus erzeugt electron-builder `.icns` und `.ico`). Lokal für die eigene Plattform:
 
@@ -311,7 +311,7 @@ diesem Branch starten. Commit und Tag landen auf dem Hotfix-Branch, nicht auf `m
 Tag hält die Commits fest. Den Changelog-Abschnitt per kleinem PR nach `main` holen.
 
 Der Workflow prüft und testet zuerst unter Linux, Windows und macOS (die CI prüft Pull Requests und `main`
-sonst nur unter Linux, alle Plattformen mit dem Label `alle-plattformen` oder von Hand), schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
+sonst nur unter Linux, alle Plattformen mit dem Label `💻 alle-plattformen` oder von Hand), schreibt den Abschnitt in [`CHANGELOG.md`](CHANGELOG.md), setzt die Version in
 `package.json`, `apps/desktop/package.json`, `CITATION.cff` und `.zenodo.json`, zieht Version und Stand in den
 Zitierbeispielen (`handbuch/_zitieren.qmd`) und im README-Kopf (`date` in `README.qmd`, `README.md` gleich mit)
 nach, committet „Release vX“ auf `main`, taggt, baut die Installer für alle Plattformen und legt die GitHub-Release
@@ -346,8 +346,8 @@ Regel für `main` Statusprüfungen verlangt und nur Deploy-Schlüssel dort als A
 4.  Settings → Rules → Regel für `main` → Bypass list → Add bypass → **Deploy keys** → Always allow.
 
 Das Changelog entsteht aus den **Titeln der zusammengeführten Pull Requests**, deshalb sollten die Titel für
-Nutzer\*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `neu`, `verbessert`, `behoben`, `doku`, `intern`;
-`kein-changelog` lässt einen PR weg (siehe [`.github/release.yml`](.github/release.yml)). Direkt auf `main` gepushte
+Nutzer\*innen verständlich sein. Die Rubrik ergibt sich aus dem Label: `✨ neu`, `📈 verbessert`, `🐛 behoben`, `📖 doku`,
+`🔧 intern`; `🙈 kein-changelog` lässt einen PR weg (siehe [`.github/release.yml`](.github/release.yml)). Direkt auf `main` gepushte
 Commits erscheinen nicht. Beim Release fasst das Changelog die Abschnitte der zugehörigen Vorabversionen zusammen.
 
 ## Noch offen

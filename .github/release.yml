@@ -1,19 +1,21 @@
 # Rubriken für die automatischen Release-Notizen (und damit CHANGELOG.md).
 # Ein Pull Request landet in der ersten Rubrik, deren Label er trägt; ohne passendes Label unter „Weitere Änderungen“.
+# Die Label-Namen müssen genau so lauten wie im Repository (mit Emoji). Benennt man ein Label um, auch hier, in
+# changelog-label.yml und in dependabot.yml nachziehen; die Übersicht aller Labels steht in AGENTS.md.
 changelog:
   exclude:
     labels:
-      - kein-changelog
+      - "🙈 kein-changelog"
   categories:
     - title: Neu
-      labels: [neu, enhancement]
+      labels: ["✨ neu"]
     - title: Verbessert
-      labels: [verbessert]
+      labels: ["📈 verbessert"]
     - title: Behoben
-      labels: [behoben, bug]
+      labels: ["🐛 behoben"]
     - title: Dokumentation
-      labels: [doku, documentation]
+      labels: ["📖 doku"]
     - title: Hinter den Kulissen
-      labels: [intern, dependencies]
+      labels: ["🔧 intern"]
     - title: Weitere Änderungen
       labels: ["*"]

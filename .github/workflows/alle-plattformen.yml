@@ -1,10 +1,10 @@
 name: Alle Plattformen
 
-# Das Label „alle-plattformen“ an einem Pull Request prüft ihn zusätzlich unter Windows und macOS (ci.yml) und baut,
+# Das Label „💻 alle-plattformen“ an einem Pull Request prüft ihn zusätzlich unter Windows und macOS (ci.yml) und baut,
 # wenn er die Paketierung ändert, die Installer für alle Plattformen (package.yml).
 #
 # Eigener Workflow, damit Labels die CI nicht berühren: Jedes Label startet hier einen Lauf, andere Labels als
-# „alle-plattformen“ werden übersprungen. Läge das in ci.yml, wäre der übersprungene Lauf dort der neueste, und GitHub
+# „💻 alle-plattformen“ werden übersprungen. Läge das in ci.yml, wäre der übersprungene Lauf dort der neueste, und GitHub
 # zeigte am Pull Request den grünen Pflicht-Check „check (ubuntu-latest)“ nicht mehr an (so geschehen an #188).
 on:
   pull_request:
@@ -21,7 +21,7 @@ concurrency:
 jobs:
   # Welche Teile laufen sollen. Die Pfade entsprechen dem pull_request-Filter in package.yml.
   auswahl:
-    if: github.event.label.name == 'alle-plattformen'
+    if: github.event.label.name == '💻 alle-plattformen'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

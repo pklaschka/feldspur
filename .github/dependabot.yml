@@ -12,6 +12,6 @@ updates:
       actions:
         patterns: ["*"]
     labels:
-      - intern
+      - "🔧 intern"
     commit-message:
       prefix: "CI:"
