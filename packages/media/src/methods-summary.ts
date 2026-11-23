@@ -7,7 +7,7 @@ import type { ExportSettings, Id, PlacementBasis, ProjectStore, Source, SourceKi
 import { baseName } from "./export.ts";
 import { compareExport } from "./export-state.ts";
 import { buildSessionTranscript, type SessionTranscript } from "./session-transcript.ts";
-import { calendarMarks, type CalendarMark } from "./field-calendar.ts";
+import { calendarMarks, farFromDate, type CalendarMark } from "./field-calendar.ts";
 
 /** Worauf die Lage einer Datei beruht; „context“ = bewusst ohne Uhrzeit, „none“ = (noch) ohne Uhrzeit. */
 export type MethodsBasis = PlacementBasis["kind"] | "context" | "none";
@@ -54,12 +54,18 @@ export interface MethodsSessionSummary {
     montageVideoId: string;
     /** Wird das Montagevideo mit ausgegeben? */
     video: boolean;
+    /**
+     * Quellen, die weit weg vom Datum des Einsatzes liegen (#226). Dann ist auch die Länge des
+     * Montagevideos in Echtzeit kaum die gemeinte.
+     */
+    farFromDate: number;
   };
   /**
    * Stand der letzten Ausgabe: „current“ = liegt genau so vor, „stale“ = seitdem geändert (oder andere
-   * Einstellungen), „none“ = noch nie ausgegeben oder nichts auszugeben.
+   * Einstellungen), „missing“ = Dateien der Ausgabe fehlen im Ordner (#229), „none“ = noch nie ausgegeben oder
+   * nichts auszugeben.
    */
-  exported: "current" | "stale" | "none";
+  exported: "current" | "stale" | "missing" | "none";
   exportedAt: string | null;
   /** Marken für den Feldkalender (Issue #205). */
   marks: CalendarMark[];
@@ -131,6 +137,7 @@ export function methodsNumbers(
       montageId: transcript.header.montageId,
       montageVideoId: transcript.header.montageVideoId,
       video,
+      farFromDate: farFromDate(transcript),
     },
   };
 }
@@ -144,8 +151,15 @@ export function methodsSummary(store: ProjectStore, sessionId: Id, settings: Exp
   });
   const record = store.getExportRecord(sessionId);
   const empty = transcript.plan.durationMs <= 0;
-  const exported =
-    !record || empty ? "none" : compareExport(store, record, settings).differences.length ? "stale" : "current";
+  const status = record && !empty ? compareExport(store, record, settings) : undefined;
+  // Fehlende Dateien wiegen schwerer als ein geänderter Stand: Dann liegt gar keine Ausgabe vor, die man zitieren kann.
+  const exported = !status
+    ? "none"
+    : status.missingFiles.length
+      ? "missing"
+      : status.differences.length
+        ? "stale"
+        : "current";
   return {
     sessionId,
     ...methodsNumbers(transcript, settings.video),

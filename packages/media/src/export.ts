@@ -34,6 +34,12 @@ export interface ExportOptions {
   onProgress?: (step: string, done: number, total: number) => void;
   /** Die Vorabprüfung ist durch, gleich entsteht die erste Datei im Zielordner. */
   onWriting?: () => void;
+  /**
+   * Dateien der letzten Ausgabe dieses Einsatzes im selben Ordner (#227). Was davon diesmal nicht entsteht (etwa das
+   * Montagevideo oder die Prüfsummenliste, wenn sie abgewählt sind), wird vor dem Schreiben entfernt, damit der Ordner
+   * nicht zwei Fassungen mischt. Andere Dateien im Ordner bleiben unberührt.
+   */
+  previousFiles?: readonly string[];
   /** Zusätzlich eine Schnittliste für DaVinci Resolve (FCPXML) mit Standbildern daneben. */
   resolve?: boolean;
   /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
@@ -286,6 +292,18 @@ export async function exportSession(
         : "Nichts zu exportieren: keine Quelle hat eine Uhrzeit",
     );
   const base = baseName(transcript);
+  const planned = [
+    ...(opts.video !== false ? [`${base}.mp4`] : []),
+    ...(opts.video !== false && opts.viewer ? [`${base}.html`] : []),
+    ...(opts.resolve ? [`${base}_Resolve.fcpxml`] : []),
+    `${base}.docx`,
+    `${base}_Variablen.xlsx`,
+    `${base}_Begleitprotokoll.csv`,
+    ...(opts.changeLog !== undefined ? [`${base}_Aenderungsprotokoll.csv`] : []),
+    ...(opts.readme ? [README_NAME] : []),
+    ...(opts.manifest ? [MANIFEST_NAME] : []),
+  ];
+  const leftover = (opts.previousFiles ?? []).filter((f) => !planned.includes(f));
   const started = performance.now();
   log(
     "ausgabe",
@@ -294,19 +312,7 @@ export async function exportSession(
   try {
     await mkdir(outDir, { recursive: true });
     // Gesperrte oder schreibgeschützte Dateien (z. B. noch in Word offen) sofort melden, nicht erst nach dem Video.
-    await ensureWritable(
-      [
-        ...(opts.video !== false ? [`${base}.mp4`] : []),
-        ...(opts.video !== false && opts.viewer ? [`${base}.html`] : []),
-        ...(opts.resolve ? [`${base}_Resolve.fcpxml`] : []),
-        `${base}.docx`,
-        `${base}_Variablen.xlsx`,
-        `${base}_Begleitprotokoll.csv`,
-        ...(opts.changeLog !== undefined ? [`${base}_Aenderungsprotokoll.csv`] : []),
-        ...(opts.readme ? [README_NAME] : []),
-        ...(opts.manifest ? [MANIFEST_NAME] : []),
-      ].map((name) => outPath(outDir, name)),
-    );
+    await ensureWritable([...planned, ...leftover].map((name) => outPath(outDir, name)));
   } catch (e) {
     // Noch nichts geschrieben: eigene Klasse, damit die App den Stand einer früheren Ausgabe behält.
     const friendly = friendlyWriteError(e, outDir);
@@ -314,6 +320,10 @@ export async function exportSession(
     throw new ExportPrecheckError(friendly instanceof Error ? friendly.message : String(friendly), { cause: e });
   }
   opts.onWriting?.();
+  for (const f of leftover) {
+    await rm(outPath(outDir, f), { force: true });
+    log("ausgabe", `entfernt ${f} aus der letzten Ausgabe (diesmal nicht dabei)`);
+  }
   const work = await mkdtemp(join(tmpdir(), "feldspur-export-"));
   log("ausgabe", `Zielordner beschreibbar; Arbeitsordner ${work}`);
   try {

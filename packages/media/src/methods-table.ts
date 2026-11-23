@@ -167,7 +167,10 @@ export function outputTable(sessions: MethodsNumbers[]): MethodsTable {
       o.context ? `${lines}, ${count(o.context, "Kontextstück", "Kontextstücke")}` : lines,
       o.montageId,
     ]);
-    if (o.video) rows.push(["", "Montagevideo", ".mp4", `${hms(o.durationMs)}, ${o.mode}`, ""]);
+    // Liegt etwas weit weg vom Datum, überbrückt die Montage die Lücke; eine Länge mit fünfstelligen Stunden wäre
+    // keine ehrliche Angabe (#226).
+    const far = o.farFromDate ? `Länge unklar, ${count(o.farFromDate, "Quelle", "Quellen")} weit weg vom Datum` : "";
+    if (o.video) rows.push(["", "Montagevideo", ".mp4", `${far || hms(o.durationMs)}, ${o.mode}`, ""]);
   }
   return {
     caption: "Ausgabe: Einsatztranskript und Montagevideo je Einsatz",

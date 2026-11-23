@@ -25,6 +25,7 @@ const einsatz = (n: number, patch: Partial<OverviewSession> = {}): OverviewSessi
     mode: "Echtzeit",
     montageId: `FS-AAA${n}-BBB${n}-CCC${n}`,
     montageVideoId: `FS-AAA${n}-BBB${n}`,
+    farFromDate: 0,
     video: true,
   },
   exported: "current",
@@ -113,10 +114,11 @@ describe("Übersicht des Projekts", () => {
   });
 
   it.each`
-    stand        | wort                  | sprung
-    ${"current"} | ${"Ausgabe aktuell"}  | ${null}
-    ${"stale"}   | ${"Ausgabe veraltet"} | ${"Erneut ausgeben"}
-    ${"none"}    | ${"nicht ausgegeben"} | ${"Ausgeben"}
+    stand        | wort                         | sprung
+    ${"current"} | ${"Ausgabe aktuell"}         | ${null}
+    ${"stale"}   | ${"Ausgabe veraltet"}        | ${"Erneut ausgeben"}
+    ${"missing"} | ${"Ausgabe fehlt im Ordner"} | ${"Erneut ausgeben"}
+    ${"none"}    | ${"nicht ausgegeben"}        | ${"Ausgeben"}
   `("Stand $stand: „$wort“, Sprung zum Ausgeben: $sprung", async ({ stand, wort, sprung }) => {
     const { onOpen } = await openOverview([einsatz(1, { exported: stand })]);
     expect(days()[0]).toContain(wort);
@@ -125,6 +127,22 @@ describe("Übersicht des Projekts", () => {
     // Wenn: der Sprung gewählt wird, dann öffnet sich dieser Einsatz im Schritt Ausgeben
     await act(async () => button(sprung)!.click());
     expect(onOpen).toHaveBeenCalledWith("s1", "export");
+  });
+
+  it("nennt Quellen weit weg vom Datum und führt zum Abgleichen (#226)", async () => {
+    // Angenommen: im zweiten Einsatz liegen zwei Quellen weit weg vom Datum
+    const { onOpen } = await openOverview([
+      einsatz(1),
+      einsatz(2, { output: { ...einsatz(2).output, farFromDate: 2 } }),
+    ]);
+    // Dann: sagt die Zeile des Einsatzes das, die andere nicht
+    expect(days()[0]).not.toContain("weit weg");
+    expect(days()[1]).toContain("2 Quellen weit weg vom Datum");
+    // Und: in den Kennwerten steht statt einer Länge ein Hinweis
+    expect(text("overview-tables")).toContain("Länge unklar, 2 Quellen weit weg vom Datum, Echtzeit");
+    // Wenn: der Sprung gewählt wird, dann öffnet sich der Einsatz im Schritt Abgleichen
+    await act(async () => button("Abgleichen")!.click());
+    expect(onOpen).toHaveBeenCalledWith("s2", "sync");
   });
 
   it("öffnet einen Einsatz mit einem Klick auf seinen Namen", async () => {

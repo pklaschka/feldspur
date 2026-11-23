@@ -1,7 +1,7 @@
 /**
  * Ausgeben aus der App: Ordner wählen, Export anstoßen, Einblendungen von der Oberfläche zeichnen lassen.
  */
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { app, ipcMain, powerSaveBlocker, type WebContents } from "electron";
 import type { ExportSettings, ProjectStore } from "@feldspur/core";
 import {
@@ -154,6 +154,25 @@ function modeOf(s: ProjectStore, sessionId: string, realtime?: boolean) {
 
 export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
   return montagePreview(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime)));
+}
+
+/**
+ * Ordner der Ausgabe im gewählten Ordner `parent`: `<base>`, außer ein anderer Einsatz dieses Projekts hat schon dorthin
+ * ausgegeben (gleiches Datum und gleicher Titel, oder Titel, die sich nur in Zeichen unterscheiden, die nicht in
+ * Dateinamen dürfen). Dann `<base> (2)`, `<base> (3)` …: der erste Ordner, den kein anderer Einsatz belegt (#230). Groß-
+ * und Kleinschreibung zählen nicht, weil macOS und Windows sie im Dateinamen meist nicht unterscheiden.
+ */
+function exportDir(s: ProjectStore, sessionId: string, parent: string, base: string): string {
+  const key = (d: string) => resolve(d).toLowerCase();
+  const taken = new Set<string>();
+  for (const other of s.listSessions()) {
+    const dir = other.id === sessionId ? undefined : s.getExportRecord(other.id)?.dir;
+    if (dir) taken.add(key(dir));
+  }
+  for (let n = 1; ; n++) {
+    const dir = join(parent, n === 1 ? base : `${base} (${n})`);
+    if (!taken.has(key(dir))) return dir;
+  }
 }
 
 export function previewExport(s: ProjectStore, sessionId: string, realtime?: boolean): SessionTranscriptPreview {
@@ -325,7 +344,14 @@ export async function runExport(
     // Stand beim Start: Was sich während der Ausgabe ändert, kommt in die nächste (und macht diese veraltet).
     const settings = exportSettings(s, sessionId, opts);
     const fingerprint = exportFingerprint(s, sessionId, settings);
-    const dir = join(parent, baseName(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, opts.realtime))));
+    const dir = exportDir(
+      s,
+      sessionId,
+      parent,
+      baseName(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, opts.realtime))),
+    );
+    const previous = s.getExportRecord(sessionId);
+    const same = (a: string, b: string) => resolve(a).toLowerCase() === resolve(b).toLowerCase();
     // Sobald in denselben Ordner geschrieben wird, gilt der alte Stand nicht mehr: Schlägt die Ausgabe fehl, bricht
     // sie ab oder stürzt die App ab, lägen dort sonst halbe Dateien unter dem Vermerk „aktuell“. Scheitert schon die
     // Vorabprüfung, ist noch nichts geschrieben: Stand behalten.
@@ -352,6 +378,7 @@ export async function runExport(
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(montageCacheRoot(), sessionId),
       onProgress: (step, done, total) => safeSend(wc, IPC.exportProgress, { sessionId, step, done, total }),
+      previousFiles: previous && same(previous.dir, dir) ? previous.files : [],
       onWriting: () => {
         if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);
       },
