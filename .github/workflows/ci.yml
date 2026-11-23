@@ -1,7 +1,7 @@
 name: CI
 
 # Sparsam mit Runnern: Pull Requests und main prüft nur Linux. Windows und macOS kommen dazu
-#   - mit dem Label „alle-plattformen“ am Pull Request (Setzen des Labels startet alle-plattformen.yml, das diese
+#   - mit dem Label „💻 alle-plattformen“ am Pull Request (Setzen des Labels startet alle-plattformen.yml, das diese
 #     Datei aufruft; ist das Label gesetzt, prüft auch jeder weitere Push alle Plattformen),
 #   - von Hand (Actions → CI → Run workflow),
 #   - als Pflichtprüfung in jeder Release (release.yml), bevor Commit und Tag gepusht werden.
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         os: >-
-          ${{ fromJSON((inputs.alle_plattformen || contains(github.event.pull_request.labels.*.name, 'alle-plattformen')) && '["ubuntu-latest", "windows-2022", "macos-latest"]' || '["ubuntu-latest"]') }}
+          ${{ fromJSON((inputs.alle_plattformen || contains(github.event.pull_request.labels.*.name, '💻 alle-plattformen')) && '["ubuntu-latest", "windows-2022", "macos-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
