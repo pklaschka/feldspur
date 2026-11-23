@@ -125,7 +125,11 @@ async function ff(args: string[], signal?: AbortSignal): Promise<void> {
   await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { signal });
 }
 
-/** Feste Bitrate der Hardware-Encoder (kbit/s); libx264 mit CRF landet bei ruhigen Bildern meist darunter. */
+/**
+ * Bild mit laufendem Video, kbit/s, für die Größenschätzung: ein mittlerer Wert. Die Encoder rechnen auf Qualität,
+ * nicht auf eine Bitrate (siehe `ENCODERS`); ruhiges Bild liegt darunter, unruhiges darüber. Den Rest gleicht der
+ * gelernte Faktor in der App aus.
+ */
 const VIDEO_KBPS = 3000;
 /** Tonspur 1 (Mischung oder Hauptquelle) und jede Spur je Gerät, kbit/s. */
 const MIX_KBPS = 160;
@@ -164,21 +168,77 @@ export function estimateMontageBytes(
   };
 }
 
-let encoderCache: string[] | null = null;
-/** H.264, wenn möglich: libx264 (Entwicklung), VideoToolbox (macOS), Media Foundation (Windows), OpenH264; sonst MPEG-4. */
-export async function videoEncoder(): Promise<string[]> {
-  if (encoderCache) return encoderCache;
-  const stdout = await runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS });
-  const has = (n: string) => new RegExp(`^\\s*V\\S*\\s+${n}\\s`, "m").test(stdout);
-  encoderCache = has("libx264")
-    ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
-    : has("h264_videotoolbox")
-      ? ["-c:v", "h264_videotoolbox", "-b:v", `${VIDEO_KBPS}k`]
-      : has("h264_mf")
-        ? ["-c:v", "h264_mf", "-b:v", `${VIDEO_KBPS}k`]
-        : has("libopenh264")
-          ? ["-c:v", "libopenh264", "-b:v", `${VIDEO_KBPS}k`]
-          : ["-c:v", "mpeg4", "-q:v", "4"];
+/**
+ * Obergrenze der Bildbitrate (kbit/s), wo ein Encoder eine braucht. Sie greift nur bei sehr unruhigem Bild
+ * (bewegtes Wasser, Laub im Wind); mit 3000 kbit/s zerfiel solches Bild in Blöcke (Issue #252).
+ */
+const MAX_VIDEO_KBPS = 8000;
+
+/**
+ * H.264-Encoder in der Reihenfolge, in der Feldspur sie versucht; es gilt der erste, den dieses ffmpeg kennt und mit
+ * dem ein Probebild gelingt. Alle rechnen auf gleichbleibende Qualität: Ruhiges Bild wird klein, unruhiges bekommt,
+ * was es braucht. Eine feste Bitrate kann das nicht, sie ist nur der Rückfall, wo der Encoder nichts anderes kann.
+ *
+ * - libx264 (Entwicklung): CRF.
+ * - VideoToolbox (macOS): `-q:v` gibt es nur auf Apple Silicon mit dem Hardware-Encoder; auf Intel-Macs lehnt ffmpeg
+ *   es ab, dort gilt die Bitrate.
+ * - Media Foundation (Windows): Qualitätsmodus, wenn der Encoder des Rechners ihn kann, sonst die Bitrate.
+ * - OpenH264 (Linux): kennt keine feste Qualität; `-qmin` hält es bei ruhigem Bild davon ab, die Bitrate
+ *   auszuschöpfen, die Bitrate deckelt unruhiges Bild.
+ *
+ * Die Stufen sind an libx264 mit CRF 23 ausgerichtet (gemessen an ruhigem, mittlerem und sehr unruhigem Bild, siehe
+ * Issue #252): ähnliche Qualität bei ähnlicher Größe. Die Rechenzeit der Encoder ändert sich dadurch nicht.
+ */
+const ENCODERS: readonly (readonly [codec: string, ...args: string[]])[] = [
+  ["libx264", "-preset", "veryfast", "-crf", "23"],
+  ["h264_videotoolbox", "-q:v", "55"],
+  ["h264_videotoolbox", "-b:v", `${MAX_VIDEO_KBPS}k`],
+  ["h264_mf", "-rate_control", "quality", "-quality", "40"],
+  ["h264_mf", "-b:v", `${MAX_VIDEO_KBPS}k`],
+  ["libopenh264", "-b:v", `${MAX_VIDEO_KBPS}k`, "-qmin", "26"],
+  ["mpeg4", "-q:v", "4"],
+];
+
+/** Ein paar Bilder in Größe der Montage rechnen und verwerfen: Nimmt der Encoder diese Einstellungen an? */
+async function encoderWorks(enc: string[]): Promise<boolean> {
+  try {
+    const frames = ["-f", "lavfi", "-i", `color=s=${W}x${H}:r=${FPS}:d=0.2`, "-pix_fmt", "yuv420p"];
+    await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", ...frames, ...enc, "-f", "null", "-"], {
+      timeoutMs: PROBE_TIMEOUT_MS,
+    });
+    return true;
+  } catch (e) {
+    log("montage", `Encoder ${enc.slice(1).join(" ")} geht hier nicht: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
+  }
+}
+
+/**
+ * Der erste Eintrag aus `ENCODERS`, den dieses ffmpeg kennt (`listing` ist die Ausgabe von `ffmpeg -encoders`) und
+ * mit dem ein Probebild gelingt.
+ */
+export async function pickEncoder(
+  listing: string,
+  works: (enc: string[]) => Promise<boolean> = encoderWorks,
+): Promise<string[]> {
+  const has = (n: string) => new RegExp(`^\\s*V\\S*\\s+${n}\\s`, "m").test(listing);
+  const known = ENCODERS.filter(([codec]) => has(codec)).map(([codec, ...args]) => ["-c:v", codec, ...args]);
+  for (const enc of known) if (await works(enc)) return enc;
+  // Nichts gelingt (etwa ein ffmpeg, das gar nicht läuft): bei H.264 mit Bitrate bleiben, die jeder der Encoder
+  // annimmt, statt auf MPEG-4 auszuweichen. Der Abschnitt meldet dann den eigentlichen Fehler.
+  return known.find((enc) => enc.includes("-b:v")) ?? known.at(-1) ?? ["-c:v", "mpeg4", "-q:v", "4"];
+}
+
+let encoderCache: Promise<string[]> | null = null;
+/** Encoder-Argumente für das Bild, einmal je Programmlauf bestimmt. */
+export function videoEncoder(): Promise<string[]> {
+  encoderCache ??= runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS })
+    .then((listing) => pickEncoder(listing))
+    .catch((e: unknown) => {
+      // Ließ sich ffmpeg nicht fragen, beim nächsten Mal neu versuchen statt den Fehler zu behalten.
+      encoderCache = null;
+      throw e;
+    });
   return encoderCache;
 }
 
