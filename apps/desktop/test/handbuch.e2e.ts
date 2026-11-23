@@ -363,6 +363,10 @@ await kapitel("durchsehen", async () => {
   await ablauf("Die Zeitachse durchsehen", async () => {
     await page.getByRole("tab", { name: /Durchsehen/ }).click();
     await page.getByTestId("track").first().waitFor();
+    // Ohne gewählte Quelle zeigt die Detailleiste den Stand des Einsatzes mit dem Balken.
+    const schliessenKnopf = inspector().getByRole("button", { name: "Schließen" });
+    if (await schliessenKnopf.isVisible().catch(() => false)) await schliessenKnopf.first().click();
+    await siehe("Stand des Einsatzes", inspector().getByText("Stand des Einsatzes", { exact: true }));
     await siehe("Stille (≥ 5 Min.)", page.getByText("Stille (≥ 5 Min.)"));
     await siehe("laute Stelle in der Stille", page.getByText(/^laute Stelle in der Stille/));
     await siehe("Lage prüfen", page.getByText(/^Lage prüfen/));
@@ -542,6 +546,8 @@ await kapitel("ausgeben", async () => {
       "LIESMICH mit Tabelle für den Methodenteil",
       page.getByRole("switch", { name: /^LIESMICH mit Tabelle für den Methodenteil/ }),
     );
+    for (const g of ["Montagevideo", "Nachweise im Ordner", "Für den Schnitt"])
+      await siehe(g, page.getByRole("heading", { name: g, exact: true }), { hinweis: "Gruppe der Schalter" });
     await siehe("Änderungsprotokoll", page.getByRole("switch", { name: /^Änderungsprotokoll/ }));
     await siehe("Prüfsummenliste", page.getByRole("switch", { name: /^Prüfsummenliste/ }));
     // Solange der Viewer gewählt ist, lässt sich das Montagevideo nicht abwählen.
@@ -589,6 +595,10 @@ await kapitel("ausgeben", async () => {
     await siehe("Veraltet", page.getByText("Veraltet.", { exact: true }));
     await siehe("Erneut ausgeben");
     await siehe("In anderen Ordner ausgeben…");
+    // Dann: auch die Übersicht kennzeichnet den Einsatz als veraltet
+    await knopf("Übersicht").click();
+    await siehe("Ausgabe veraltet", page.getByTestId("overview-days").getByText("Ausgabe veraltet"));
+    await page.getByTestId("overview-days").getByRole("button").first().click();
   });
 
   await ablauf("Zurückgenommen ist die Ausgabe wieder aktuell", async () => {
@@ -610,6 +620,14 @@ await kapitel("ausgeben", async () => {
     await siehe("Nach Ort gruppieren", page.getByRole("switch", { name: "Nach Ort gruppieren" }));
     await siehe("Als Grafik speichern…");
     await siehe("Ausgabe aktuell", page.getByTestId("overview-days").getByText("Ausgabe aktuell"));
+    // Neben dem Projektnamen; mit nur einem Einsatz heißt es dort „Ausgabe aktuell“.
+    await siehe(
+      "Alle Ausgaben aktuell",
+      page.getByTestId("overview-all-current").getByText(/(Alle Ausgaben|Ausgabe) aktuell$/),
+      {
+        hinweis: "Kopf der Übersicht, bei einem Einsatz „Ausgabe aktuell“",
+      },
+    );
     await siehe("Kennwerte", seite.getByRole("heading", { name: "Kennwerte" }));
     const tabellen = page.getByTestId("overview-tables");
     await siehe("Eingang", tabellen.getByText(/^Eingang: Aufzeichnungen aus/));
@@ -678,6 +696,14 @@ await kapitel("einsammeln", async () => {
     const { renameSync } = await import("node:fs");
     renameSync(quellen, `${quellen}-verschoben`);
     await page.reload();
+    await siehe(
+      "Feldspur findet … Originaldateien nicht.",
+      page.getByText(/^Feldspur findet \d+ Originaldateien nicht\.$/),
+      {
+        handbuch: "Originaldateien nicht.“**",
+        hinweis: "Hinweis unter den Schritten",
+      },
+    );
     await siehe("Originale suchen…");
     await knopf("Originale suchen…").click();
     const dlg = page.getByTestId("originals-dialog");
