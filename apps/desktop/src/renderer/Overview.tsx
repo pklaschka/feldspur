@@ -31,6 +31,7 @@ import {
 } from "@feldspur/media/field-calendar";
 import type { Step } from "./App.tsx";
 import { Button, cx, ErrorBanner, Panel, Pill, Toggle } from "./ui.tsx";
+import { readStored, writeStored } from "./stored.ts";
 
 const api = window.feldspur;
 
@@ -61,11 +62,7 @@ export function Overview({
   const [byPlace, setByPlace] = useState(loadByPlace);
   const groupByPlace = (on: boolean) => {
     setByPlace(on);
-    try {
-      localStorage.setItem(BY_PLACE_KEY, on ? "1" : "0");
-    } catch {
-      // ohne Speicher gilt die Wahl bis zum Neustart
-    }
+    writeStored(BY_PLACE_KEY, on ? "1" : "0");
   };
   const [copied, setCopied] = useState<"table" | "markdown" | "failed" | null>(null);
   // Uhrzeit unter dem Mauszeiger: eine Linie durch alle Tage, damit sich dieselbe Uhrzeit über die Tage vergleichen
@@ -342,13 +339,7 @@ export function Overview({
 }
 
 const BY_PLACE_KEY = "feldspur.overview-by-place";
-function loadByPlace(): boolean {
-  try {
-    return localStorage.getItem(BY_PLACE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
+const loadByPlace = () => readStored(BY_PLACE_KEY) === "1";
 
 /** Feldtage je Ort; die Orte in der Folge ihres ersten Tages, ohne Ort zuletzt. Innerhalb nach Datum. */
 function placeGroups(sessions: OverviewSession[]): { place: string; sessions: OverviewSession[] }[] {

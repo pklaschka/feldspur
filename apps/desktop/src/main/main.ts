@@ -24,6 +24,7 @@ import {
   measureSource,
   refineAlignment,
   parseTranscript,
+  pruneMontageCache,
   readPeaks,
   ScanCache,
   scanPaths,
@@ -89,6 +90,7 @@ import {
 import {
   cancelExport,
   abortExport,
+  montageCacheRoot,
   exportRunning,
   exportingSession,
   exportCard,
@@ -1187,6 +1189,8 @@ void app.whenReady().then(() => {
   createWindow();
   if (failed) showOpenError(failed);
   setInterval(() => autoBackup.tick(), AUTO_BACKUP_CHECK_MS).unref();
+  // Zwischenspeicher lange nicht ausgegebener Einsätze wegräumen; ein Fehler dabei stört nichts.
+  void pruneMontageCache(montageCacheRoot()).catch(() => {});
 });
 
 // macOS: Projekt aus dem Dock („Zuletzt benutzt“) oder per Doppelklick im Finder öffnen.

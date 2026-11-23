@@ -18,7 +18,7 @@
  * das Gerät nicht läuft (Issue #122). Schnittprogramme, VLC und der Viewer können sie einzeln abspielen.
  */
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { basename, join } from "node:path";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
@@ -752,6 +752,9 @@ export async function renderMontage(
       log("montage", `räumt Zwischenspeicher auf: ${join(cacheDir, f)}`);
       await rm(join(cacheDir, f), { force: true });
     }
+    // Zuletzt benutzt: danach richtet sich, wann pruneMontageCache den Ordner wegräumt.
+    const now = new Date();
+    await utimes(cacheDir, now, now);
     return {
       audioTracks: [
         { title: tracks[0]!.title },
@@ -799,4 +802,30 @@ function chapterFile(transcript: SessionTranscript): string {
     );
   }
   return `${lines.join("\n")}\n`;
+}
+
+/** So lange bleibt der Zwischenspeicher eines Einsatzes nach seiner letzten Ausgabe liegen. */
+const MONTAGE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Zwischenspeicher von Einsätzen entfernen, die länger als `maxAgeMs` nicht ausgegeben wurden. Fertige Abschnitte
+ * beschleunigen nur die nächste Ausgabe; je Einsatz liegt sonst dauerhaft etwa ein Montagevideo auf der Platte.
+ * Nicht schon beim Löschen eines Einsatzes, denn das lässt sich rückgängig machen. Gibt die entfernten Ordner zurück.
+ */
+export async function pruneMontageCache(
+  root: string,
+  { maxAgeMs = MONTAGE_CACHE_MAX_AGE_MS, now = Date.now() }: { maxAgeMs?: number; now?: number } = {},
+): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+  const removed: string[] = [];
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    const dir = join(root, e.name);
+    const { mtimeMs } = await stat(dir);
+    if (now - mtimeMs < maxAgeMs) continue;
+    log("montage", `räumt alten Zwischenspeicher weg: ${dir}`);
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    removed.push(dir);
+  }
+  return removed;
 }

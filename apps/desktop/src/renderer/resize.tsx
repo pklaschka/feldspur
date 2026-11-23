@@ -4,6 +4,7 @@
  */
 import { useState, type KeyboardEvent, type PointerEvent } from "react";
 import { cx } from "./ui.tsx";
+import { readStored, writeStored } from "./stored.ts";
 
 export interface PaneWidth {
   width: number;
@@ -16,21 +17,13 @@ export interface PaneWidth {
 export function usePaneWidth(key: string, initial: number, min: number, max: number): PaneWidth {
   const clamp = (w: number) => Math.round(Math.max(min, Math.min(max, w)));
   const [width, setWidth] = useState(() => {
-    try {
-      const v = Number(localStorage.getItem(`feldspur.breite.${key}`));
-      return v ? clamp(v) : initial;
-    } catch {
-      return initial;
-    }
+    const v = Number(readStored(`feldspur.breite.${key}`));
+    return v ? clamp(v) : initial;
   });
   const set = (w: number) => {
     const v = clamp(w);
     setWidth(v);
-    try {
-      localStorage.setItem(`feldspur.breite.${key}`, String(v));
-    } catch {
-      // Ohne Speicher gilt die Breite nur bis zum Neustart.
-    }
+    writeStored(`feldspur.breite.${key}`, String(v));
   };
   return { width, set, reset: () => set(initial), min, max };
 }

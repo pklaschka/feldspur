@@ -16,6 +16,7 @@ import { SessionPane } from "./app/SessionPane.tsx";
 import { StrayDropHint, useStrayDrop } from "./app/strayDrop.tsx";
 import { DeletedToast, SESSION_DELETED } from "./app/history.tsx";
 import { AppFooter } from "./app/footer.tsx";
+import { readStored, writeStored } from "./stored.ts";
 
 const api = window.feldspur;
 
@@ -144,11 +145,7 @@ export function App() {
   // Den zuletzt gewählten Einsatz je Projekt merken, damit man beim nächsten Öffnen dort weitermacht.
   useEffect(() => {
     if (!project || !sessionId) return;
-    try {
-      localStorage.setItem(`feldspur.session:${project.path}`, sessionId);
-    } catch {
-      // ohne Speicher beginnt das Projekt beim ersten Einsatz
-    }
+    writeStored(`feldspur.session:${project.path}`, sessionId);
   }, [project, sessionId]);
 
   if (!project) {
@@ -316,11 +313,6 @@ export type Step = "collect" | "sync" | "review" | "export";
 
 /** Zuletzt gewählter Einsatz eines Projekts (sonst der erste). */
 function lastSession(p: ProjectInfo): string | null {
-  let stored: string | null = null;
-  try {
-    stored = localStorage.getItem(`feldspur.session:${p.path}`);
-  } catch {
-    // kein Speicher
-  }
+  const stored = readStored(`feldspur.session:${p.path}`);
   return p.sessions.find((s) => s.id === stored)?.id ?? p.sessions[0]?.id ?? null;
 }

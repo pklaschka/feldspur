@@ -11,6 +11,7 @@ import type { SessionTranscript } from "./session-transcript.ts";
 /** Wanduhrzeit am Einsatzort in ms, gelesen als UTC (wie LocalMs im Kern). */
 type LocalMs = number;
 import { germanDate } from "./methods-table.ts";
+import { htmlEscape } from "./xml.ts";
 
 export type CalendarKind = "audio" | "video" | "photo" | "diary";
 
@@ -103,7 +104,7 @@ const KIND_FILL: Record<CalendarKind, string> = {
 /** Text auf eine Zeichenzahl kürzen; SVG bricht nicht um und kennt keine Breite der Schrift. */
 const fit = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s);
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = htmlEscape;
 
 /**
  * Der Feldkalender als SVG-Grafik, etwa für den Methodenteil: Uhrzeit-Achse oben, je Tag eine Zeile mit Datum, Titel

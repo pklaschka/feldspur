@@ -7,6 +7,7 @@ import type { ContextRow, SessionView } from "../../shared/api.ts";
 import type { ApplyView } from "../Notes.tsx";
 import { Button, ContextMark, cx } from "../ui.tsx";
 import { ContextThumb, contextFor, selectionOf } from "./parts.tsx";
+import { readStored, writeStored } from "../stored.ts";
 
 const api = window.feldspur;
 
@@ -14,13 +15,7 @@ const api = window.feldspur;
 const SHOWN = 8;
 
 const collapsedKey = (sessionId: string) => `feldspur.context-collapsed.${sessionId}`;
-function readCollapsed(sessionId: string): boolean {
-  try {
-    return localStorage.getItem(collapsedKey(sessionId)) === "1";
-  } catch {
-    return false;
-  }
-}
+const readCollapsed = (sessionId: string) => readStored(collapsedKey(sessionId)) === "1";
 
 export function ContextStrip({
   view,
@@ -44,11 +39,7 @@ export function ContextStrip({
   const toggle = () => {
     const next = !collapsed;
     setCollapsed(next);
-    try {
-      localStorage.setItem(collapsedKey(sessionId), next ? "1" : "0");
-    } catch {
-      /* Einstellung ist nur Bequemlichkeit */
-    }
+    writeStored(collapsedKey(sessionId), next ? "1" : "0");
   };
   const move = (c: ContextRow, to: number) => {
     if (to < 1 || to > items.length || to === c.position) return;

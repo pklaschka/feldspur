@@ -20,6 +20,7 @@ import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
 import { FILE_STATE_TEXT } from "./Originals.tsx";
 import { Button, ContextMark, cx, FlagMark, Notice, Panel, StepHeader, Toggle } from "./ui.tsx";
+import { readStoredObject, writeStored } from "./stored.ts";
 
 const api = window.feldspur;
 
@@ -63,13 +64,13 @@ const DEFAULTS: Options = {
 };
 const KEY = "feldspur.export-options";
 function loadOptions(): Options {
-  try {
-    const o = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Options>) };
-    // Früher ließ sich der Viewer ohne Video wählen (und fiel dann still weg); jetzt hält er das Video fest.
-    return o.viewer && !o.video ? { ...o, viewer: false } : o;
-  } catch {
-    return DEFAULTS;
-  }
+  const stored = readStoredObject(KEY);
+  // Nur bekannte Schalter mit passendem Typ übernehmen; ältere oder beschädigte Werte fallen auf den Standard zurück.
+  const o = { ...DEFAULTS };
+  for (const k of Object.keys(DEFAULTS) as (keyof Options)[])
+    if (typeof stored[k] === typeof DEFAULTS[k]) (o as Record<string, unknown>)[k] = stored[k];
+  // Früher ließ sich der Viewer ohne Video wählen (und fiel dann still weg); jetzt hält er das Video fest.
+  return o.viewer && !o.video ? { ...o, viewer: false } : o;
 }
 
 /** Pfad einer Datei im Ausgabeordner, mit dem Trenner, den der Ordner schon hat (Windows oder sonst). */
@@ -103,11 +104,7 @@ export function ExportStep({
   const set = (patch: Partial<Options>) =>
     setOpts((o) => {
       const next = { ...o, ...patch };
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        // ohne Speicher gelten die Einstellungen nur bis zum Neustart
-      }
+      writeStored(KEY, JSON.stringify(next));
       return next;
     });
   const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, byEpisodes } = opts;
