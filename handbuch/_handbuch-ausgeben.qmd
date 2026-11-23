@@ -1,122 +1,98 @@
 ## Ausgeben {#sec-ausgeben}
 
 Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Einsatz** in den Ordner, den du wählst. Er
-heißt nach Datum und Titel, etwa `Feldtag_2026-09-14_Wochenmarkt`. Hat ein anderer Einsatz des Projekts mit gleichem
-Datum und Titel schon dorthin ausgegeben, bekommt der Ordner eine Nummer, etwa `Feldtag_2026-09-14_Wochenmarkt (2)`;
-so überschreibt kein Einsatz die Dateien eines anderen. Einsatztranskript,
-Dokumentvariablen und Begleitprotokoll sind immer dabei. Was dazukommt, wählst du mit Schaltern in drei Gruppen:
-**Montagevideo** (Video, Ton und Viewer), **Nachweise im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste)
-und **Für den Schnitt** (Schnittliste). Ist vorher noch etwas
-offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen Links
-dorthin.
+heißt nach Datum und Titel, etwa `Feldtag_2026-09-14_Wochenmarkt`; gibt es dort schon einen gleichnamigen Ordner eines
+anderen Einsatzes, hängt Feldspur eine Nummer an. Einsatztranskript, Dokumentvariablen und Begleitprotokoll sind immer
+dabei. Was dazukommt, wählst du mit Schaltern in drei Gruppen: **Montagevideo** (Video, Ton und Viewer), **Nachweise
+im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste) und **Für den Schnitt** (Schnittliste). Ist vorher noch
+etwas offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen
+Links dorthin.
 
-Den Stand der letzten Ausgabe merkt sich Feldspur in der Projektdatei, auch über einen Neustart hinweg. Oben im Schritt
-steht dann, wann und wohin ausgegeben wurde, und ob die Ausgabe noch passt.
+Den Stand der letzten Ausgabe merkt sich Feldspur in der Projektdatei. Oben im Schritt steht, wann und wohin
+ausgegeben wurde und ob die Ausgabe noch passt:
 
-Passt sie, fasst eine Karte den Einsatz in wenigen Zahlen zusammen: **Zeitraum** (erste und letzte Uhrzeit der
-Montage), **Quellen** (Dateien und Geräte), Zeilen im **Einsatztranskript** und die volle **Montage-ID**, mit der du
-später aus der Ausgabe zitierst. **Im Viewer ansehen** öffnet den mit ausgegebenen Viewer im Browser (nur, wenn er mit
-ausgegeben wurde), **Im Ordner zeigen** öffnet den Ausgabeordner. Die einzelnen Dateien klappt der Link mit ihrer
-Zahl auf, etwa **8 Dateien anzeigen**.
-
-- **Aktuell** (direkt nach der Ausgabe **Fertig**): Einsatz, Originale und Einstellungen sind genau wie bei der Ausgabe.
+- **Aktuell** (direkt nach der Ausgabe **Fertig**): Einsatz, Originale und Einstellungen sind genau wie bei der
+  Ausgabe. Eine Karte nennt **Zeitraum**, **Quellen**, die Zeilen im **Einsatztranskript** und die volle
+  **Montage-ID**. **Im Viewer ansehen** öffnet den Viewer im Browser (wenn er mit ausgegeben wurde), **Im Ordner
+  zeigen** den Ausgabeordner. Die einzelnen Dateien klappt ein Link auf, etwa **8 Dateien anzeigen**.
 - **Veraltet**: Seitdem hat sich etwas geändert. Darunter steht, was: der Einsatz selbst (Zeiten, Mitschrift, Tagebuch,
   Episoden, Angaben), neue oder entfernte Quellen, veränderte oder fehlende Originale (mit Kurzzeichen) oder andere
-  Einstellungen als damals, z. B. jetzt mit Montagevideo. Machst du eine Änderung rückgängig, ist die Ausgabe wieder
-  aktuell.
-- Fehlen Dateien im **Ausgabeordner**, ist die Dateiliste aufgeklappt und die fehlenden sind durchgestrichen. Findet
-  Feldspur keine der Dateien mehr, steht dort stattdessen ein Satz: Vermutlich wurde der Ordner verschoben, umbenannt
-  oder gelöscht.
-
-Betrifft eine Änderung viele Originale, nennt Feldspur die ersten Kurzzeichen und zählt den Rest („A-01, A-02, A-03,
-A-04 und 108 weitere“); alle stehen im Tooltip.
+  Einstellungen als damals. Nimmst du die Änderung zurück, ist die Ausgabe wieder aktuell.
+- Fehlen Dateien im **Ausgabeordner**, sind sie in der Dateiliste durchgestrichen. Fehlen alle, wurde der Ordner
+  vermutlich verschoben, umbenannt oder gelöscht.
 
 ![Veraltete Ausgabe nach einem Neustart, mit den Gründen](bilder/ausgeben-veraltet.png){#fig-ausgeben-veraltet}
 
-Ist die Ausgabe veraltet oder fehlen Dateien, rechnet **Erneut ausgeben** nur das Geänderte neu und geht ohne Nachfrage in den Ordner der letzten Ausgabe (der
-Knopf nennt ihn als Hinweis). Für einen anderen Ordner gibt es **In anderen Ordner ausgeben…**; der Ordnerdialog
-beginnt dann beim bisherigen Ordner. Ist eine Datei der letzten Ausgabe noch in Word, Excel oder MAXQDA geöffnet, meldet
-Feldspur das gleich zu Beginn („… ist noch in einem anderen Programm geöffnet“) und nicht erst nach dem Video. Feldspur ist dabei vorsichtig: Lieber einmal zu oft „Veraltet“ als
-eine alte Ausgabe, die als aktuell gilt.
+**Erneut ausgeben** rechnet nur das Geänderte neu und schreibt ohne Nachfrage in den Ordner der letzten Ausgabe. Für
+einen anderen Ordner gibt es **In anderen Ordner ausgeben…**. Ist eine Datei der letzten Ausgabe noch in Word, Excel
+oder MAXQDA geöffnet, meldet Feldspur das gleich zu Beginn. Im Zweifel zeigt Feldspur lieber einmal zu oft „Veraltet“
+als eine alte Ausgabe, die als aktuell gilt.
 
-Erster Schritt jeder Ausgabe, gleich nach der Wahl des Ordners, ist die Prüfung der Originale mit ihrer Prüfsumme
-(@sec-originale). Bei großen Einsätzen dauert das einige Minuten; der Balken zeigt, wie viele Gigabyte schon geprüft
-sind, und **Abbrechen** geht auch hier. Schon geprüfte Dateien merkt sich Feldspur, bis die App beendet wird. Ist alles
-da und unverändert, geht die Ausgabe ohne Halt weiter. Sonst hält sie an, bevor etwas geschrieben ist, und es steht da,
-was auffällt:
+Jede Ausgabe beginnt, gleich nach der Wahl des Ordners, mit der Prüfung der Originale gegen ihre Prüfsumme
+(@sec-originale). Bei großen Einsätzen dauert das einige Minuten; **Abbrechen** geht auch hier. Ist alles da und
+unverändert, läuft die Ausgabe durch. Sonst hält sie an, bevor etwas geschrieben ist:
 
 - **Fehlt** eine Datei, die die Ausgabe braucht, geht es erst nach dem Neu-Verknüpfen weiter. Gebraucht werden Fotos
   und Tagebuchseiten (für das Einsatztranskript) und, mit Montagevideo, alle Ton- und Videoaufnahmen.
 - **Verändert** ist eine Datei, wenn sie nicht mehr dieselbe ist wie beim Einsammeln. Mit **Trotzdem ausgeben**
-  geht es bewusst weiter, in den schon gewählten Ordner; das Begleitprotokoll nennt weiter die Prüfsumme vom Einsammeln. Ebenso bei fehlenden
+  geht es bewusst weiter; das Begleitprotokoll nennt weiter die Prüfsumme vom Einsammeln. Ebenso bei fehlenden
   Dateien, die diese Ausgabe nicht braucht (z. B. Ton ohne Montagevideo).
 
 ![Ausgabe mit Vorschau des Einsatztranskripts](bilder/ausgeben.png){#fig-ausgeben}
 
 ### Einsatztranskript (.docx)
 
-Das **Einsatztranskript** (bis Version 0.2 "Zeitgerüst") ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format `#hh:mm:ss-z#`, die
-auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. Dazu kommen Mitschrift, Fotos und
-Ausschnitte aus den Tagebuchseiten, auch aus PDFs. Im Kopf stehen die Einsatzdaten und die **Montage-ID**. Zeilenumbrüche in einem abgetippten Tagebuchtext bleiben
-erhalten; der Eintrag bleibt dabei ein Absatz mit einer einzigen Zeitmarke.
+Das **Einsatztranskript** ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format
+`#hh:mm:ss-z#`, die auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. Dazu kommen
+Mitschrift, Fotos und Ausschnitte aus den Tagebuchseiten. Im Kopf stehen die Einsatzdaten und die **Montage-ID**.
 
-Gibt es Kontext (@sec-kontext), steht vor der ersten Zeitmarke ein Abschnitt **Kontext** mit allen Stücken ohne
-Zeitmarke, jedes als "Kontext · Titel" mit Fundstelle, Bild und Text. Die Zeitmarken beginnen danach unter
-**Chronologie**. Weil der Kontext keine Zeitmarke trägt, verknüpft MAXQDA ihn mit keiner Stelle im Video; codieren
-lässt er sich wie jeder andere Text. Das Montagevideo bleibt unverändert. In der Karte **Kontext** links legst du die
-Reihenfolge fest.
+Gibt es Kontext (@sec-kontext), steht er vor der ersten Zeitmarke in einem Abschnitt **Kontext**, jedes Stück mit
+Titel, Fundstelle, Bild und Text. Die Zeitmarken beginnen danach unter **Chronologie**. Ohne Zeitmarke verknüpft
+MAXQDA den Kontext mit keiner Stelle im Video; codieren lässt er sich wie jeder andere Text. Die Reihenfolge legst du
+in der Karte **Kontext** links fest.
 
 ### Montagevideo (.mp4)
 
 Das **Montagevideo** legt Bild und Ton aller Aufnahmen des Einsatzes auf die gemeinsame Zeitachse. Es zeigt die
 Uhrzeit, die gerade laufenden Videos (bis zu vier nebeneinander) mit Kurzzeichen, Datei und Stelle im Original, die
-laufenden Tonquellen und die Montage-ID (@sec-montage-id). Fotos und Tagebuch stehen schon im Einsatztranskript und fehlen deshalb im Video.
+laufenden Tonquellen und die Montage-ID (@sec-montage-id). Fotos und Tagebuch stehen im Einsatztranskript und fehlen
+deshalb im Video.
 
-Einsatztranskript und Montagevideo gehören zusammen: **Erst beide zusammen** geben das Material eines Einsatzes vollständig
-und zeitlich zugeordnet wieder. Das Einsatztranskript enthält, was als Text vorliegt, dazu Fotos und Tagebuchausschnitte. Das
-Montagevideo enthält Bild und Ton auch dort, wo nichts mitgeschrieben ist. Oft wird der Großteil im Einsatztranskript
-codiert. Was sich sehen oder hören, aber schwer in Worte fassen lässt, codierst du direkt im Video. In der
-Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlicher Tiere.
+Einsatztranskript und Montagevideo gehören zusammen: **Erst beide zusammen** geben das Material eines Einsatzes
+vollständig und zeitlich zugeordnet wieder. Das Einsatztranskript enthält, was als Text vorliegt, das Montagevideo
+Bild und Ton auch dort, wo nichts mitgeschrieben ist. Was sich sehen oder hören, aber schwer in Worte fassen lässt,
+codierst du direkt im Video. In der Multispecies-Ethnografie ist das häufig so, etwa beim Verhalten nichtmenschlicher
+Tiere.
 
 Optionen:
 
 - **Montagevideo mit ausgeben** (Standard): Ist der Schalter aus, entstehen nur Einsatztranskript, Dokumentvariablen
-  und Begleitprotokoll. Hinter dem Schalter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“. Feldspur rechnet
-  das aus den Strecken, in denen ein Video oder Ton läuft. Wie groß die Datei wirklich wird, hängt am Rechner und am
-  Bild; nach jeder Ausgabe vergleicht Feldspur deshalb Schätzung und echte Größe und schätzt danach genauer.
+  und Begleitprotokoll. Dahinter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“; mit jeder Ausgabe wird
+  die Schätzung genauer.
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.
-  Alles aus der Zeit dazwischen (Mitschrift, Fotos, Tagebuch) steht im Einsatztranskript an der Tafel, nach Uhrzeit
-  geordnet.
+  Was in der Zeit dazwischen entstand (Mitschrift, Fotos, Tagebuch), steht im Einsatztranskript an der Tafel.
 - **Ton aller Geräte mischen**: sonst nur die Haupttonquelle.
-- **Zusätzlich eine Tonspur je Gerät** (Standard): Die Mischung (oder Haupttonquelle) bleibt Tonspur 1 und ist als
-  Standard markiert; MAXQDA und jeder Player spielen sie wie bisher. Dahinter folgt für jedes Gerät mit Ton eine eigene
-  Spur mit dem Namen des Geräts, das Referenzgerät zuerst. Jede Spur ist so lang wie das Video und still, wo das Gerät
-  nicht läuft. In VLC (Audio › Audiospur), QuickTime oder einem Schnittprogramm hörst du so ein Gerät allein, etwa
-  wenn eine Stimme im Rekorder untergeht und das Handy näher dran war. Bei nur einem Gerät mit Ton entfällt die Extraspur.
+- **Zusätzlich eine Tonspur je Gerät** (Standard): Die Mischung (oder Haupttonquelle) bleibt Tonspur 1; MAXQDA und
+  jeder Player spielen sie wie bisher. Dahinter folgt für jedes Gerät mit Ton eine eigene Spur mit dem Namen des
+  Geräts. In VLC (Audio › Audiospur), QuickTime, einem Schnittprogramm oder im Viewer hörst du so ein Gerät allein,
+  etwa wenn eine Stimme im Rekorder untergeht und das Handy näher dran war.
 - **Schnittliste für DaVinci Resolve** (Datei › Importieren › Timeline), falls du die Montage dort weiterbearbeiten
   willst.
-- **Viewer zum Ansehen im Browser** (Standard): Neben dem Video entsteht eine HTML-Datei, in der du Video und
-  Einsatztranskript zusammen im Browser ansiehst (@sec-viewer). Der Viewer spielt das Montagevideo ab. Solange er
-  gewählt ist, bleibt **Montagevideo mit ausgeben** deshalb an und lässt sich nicht abwählen; der Grund steht an der
-  Zeile. Wählst du den Viewer ab, kannst du auch das Video weglassen.
-- **LIESMICH mit Tabelle für den Methodenteil** (Standard): erklärt den Ordner (@sec-liesmich).
-- **Änderungsprotokoll** (Standard): jede Änderung an diesem Einsatz als CSV (@sec-aenderungsprotokoll-ausgabe).
-- **Prüfsummenliste** (Standard): `manifest-sha256.txt` mit der Prüfsumme jeder Datei im Ordner
-  (@sec-pruefsummenliste).
+- **Viewer zum Ansehen im Browser** (Standard): eine HTML-Datei, in der du Video und Einsatztranskript zusammen
+  ansiehst (@sec-viewer). Weil der Viewer das Montagevideo abspielt, bleibt **Montagevideo mit ausgeben** deshalb an,
+  solange er gewählt ist.
+- **LIESMICH mit Tabelle für den Methodenteil** (@sec-liesmich), **Änderungsprotokoll**
+  (@sec-aenderungsprotokoll-ausgabe) und **Prüfsummenliste** (@sec-pruefsummenliste), alle drei Standard.
 
 Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
-Ein Montagevideo in Echtzeit rechnet bei einem langen Einsatz eine Weile. Hast du dich bei den Optionen vertan, hältst
-du die Ausgabe neben dem Fortschrittsbalken mit **Abbrechen** an. Die Ausgabe gilt dann nicht als fertig, auch eine
-frühere Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben im Zwischenspeicher, der nächste Versuch
-geht deshalb schneller. Den Zwischenspeicher eines Einsatzes, der 30 Tage nicht ausgegeben wurde, räumt Feldspur beim
-Start weg; er belegt sonst etwa so viel Platz wie das Montagevideo.
-
-Solange die Ausgabe läuft, geht der Rechner nicht in den Ruhezustand. Der Bildschirm darf sich ausschalten, und du
-kannst das Fenster verdecken oder in den Hintergrund legen; die Ausgabe läuft weiter. Am Laptop lohnt trotzdem das
-Netzteil. Klappst du einen Mac zu, schläft er je nach Einstellung trotzdem ein; dann den Deckel offen lassen.
+Ein Montagevideo in Echtzeit rechnet bei einem langen Einsatz eine Weile. Der Rechner geht dabei nicht in den
+Ruhezustand, und du kannst das Fenster in den Hintergrund legen; einen Mac lässt du besser aufgeklappt. Mit
+**Abbrechen** neben dem Fortschrittsbalken hältst du die Ausgabe an. Sie gilt dann nicht als fertig, auch eine frühere
+Ausgabe im selben Ordner nicht mehr. Fertige Videoabschnitte bleiben 30 Tage im Zwischenspeicher, der nächste Versuch
+geht deshalb schneller.
 
 ### Montage-ID {#sec-montage-id}
 
@@ -124,9 +100,9 @@ Die **Montage-ID** ist eine Kennung wie `FS-7KQ2-M9XD-3F8A`. Sie steht im Kopf d
 in den Dokumentvariablen. An ihr erkennst du, welches Video zu welchem Einsatztranskript gehört und welche Fassung
 du vor dir hast.
 
-Feldspur vergibt sie nicht fortlaufend und nicht bei jeder Ausgabe neu, sondern **errechnet** sie aus dem Stand
-des Einsatzes. Derselbe Stand ergibt deshalb immer dieselbe ID, auch nach einem Neustart, auf einem anderen Rechner
-oder in einer späteren Ausgabe. Sie besteht aus zwei Teilen, die du einzeln lesen kannst:
+Feldspur vergibt sie nicht fortlaufend, sondern **errechnet** sie aus dem Stand des Einsatzes. Derselbe Stand ergibt
+deshalb immer dieselbe ID, auch nach einem Neustart, auf einem anderen Rechner oder in einer späteren Ausgabe. Sie
+besteht aus zwei Teilen:
 
 | Teil | im Beispiel | beschreibt |
 |:--|:-----|:----|
@@ -135,17 +111,10 @@ oder in einer späteren Ausgabe. Sie besteht aus zwei Teilen, die du einzeln les
 
 : Die Teile der Montage-ID {#tbl-montage-id-teile}
 
-In die **Montage** gehen ein:
-
-- der **Einsatz** (seine interne Kennung in der Projektdatei, nicht Titel oder Datum),
-- die **Art der Montage**: in Echtzeit, in Echtzeit mit benannten Episoden oder nach Episoden geschnitten,
-- die **Länge** der Montage, auf die Millisekunde,
-- jede **Quelle, die auf der Zeitachse liegt**, mit der Prüfsumme ihrer Originaldatei und ihrem Beginn auf der
-  Zeitachse, ebenfalls auf die Millisekunde. Das sind Videos und Tonaufnahmen, aber auch Fotos und Tagebuchseiten
-  mit Uhrzeit.
-
-In den **Text** geht ein, was im Einsatztranskript steht: der Kopf mit den Einsatzdaten und weiteren
-Angaben, jede Zeile mit ihrer Zeitmarke (Mitschrift, Tagebuch, Fotos), die Bildausschnitte und der Kontext.
+In die **Montage** gehen der Einsatz (seine interne Kennung, nicht Titel oder Datum), die Art und Länge der Montage
+und jede Quelle auf der Zeitachse ein, mit der Prüfsumme ihrer Originaldatei und ihrem Beginn auf die Millisekunde.
+In den **Text** geht ein, was im Einsatztranskript steht: der Kopf, jede Zeile mit ihrer Zeitmarke, die
+Bildausschnitte und der Kontext.
 
 Im **Montagevideo** stehen oben rechts nur die ersten beiden Blöcke, also `FS-7KQ2-M9XD`. Das Video enthält keinen
 Text. Es bleibt deshalb gültig, wenn du nur weiterschreibst, und muss dafür nicht neu gerechnet werden.
@@ -158,7 +127,7 @@ Ausgaben:
 |:---|:-------|
 | alle drei Blöcke gleich | Derselbe Stand. Zeitmarken und Wortlaut stimmen überein. |
 | Montage gleich, Text anders | Gleiches Video, gleiche Zeitmarken. Geändert hat sich nur etwas im Einsatztranskript: Mitschrift, Tagebuchtext, Kontext oder Angaben im Kopf. |
-| Montage anders | Auf der Zeitachse hat sich etwas geändert (oder es ist ein anderer Einsatz). Zeitmarken können auf andere Stellen zeigen, und das Video gehört nicht mehr dazu. Der Textblock ändert sich dabei in aller Regel mit, weil die Zeilen an anderen Stellen stehen. |
+| Montage anders | Auf der Zeitachse hat sich etwas geändert (oder es ist ein anderer Einsatz). Zeitmarken können auf andere Stellen zeigen, und das Video gehört nicht mehr dazu. Der Textblock ändert sich dabei in aller Regel mit. |
 
 : Zwei Montage-IDs vergleichen {#tbl-montage-id-lesen}
 
@@ -187,62 +156,53 @@ Ausgaben:
 
 : Wovon die Montage-ID abhängt {#tbl-montage-id}
 
-Die ID ist an beiden Stellen bewusst streng. Schon ein einzelnes zusätzliches Foto oder eine um eine Millisekunde
-verschobene Aufnahme ergibt eine neue Montage, auch wenn sich das Video dadurch kaum ändert. Und schon ein
-korrigierter Tippfehler ergibt einen neuen Textblock.
+Die ID ist an beiden Stellen bewusst streng. Schon ein zusätzliches Foto oder eine um eine Millisekunde verschobene
+Aufnahme ergibt eine neue Montage, schon ein korrigierter Tippfehler einen neuen Textblock.
 
 ::: {.callout-note}
-Bis Version 0.2 bestand die Montage-ID nur aus den ersten beiden Blöcken (`FS-7KQ2-M9XD`). Die sind geblieben, wie
-sie waren: Ein älteres Montagevideo passt weiter zu einer neuen Ausgabe desselben Stands. Eine ältere Ausgabe zeigt
-Feldspur nach dem Update einmal als **Veraltet** an, weil dem Einsatztranskript der dritte Block fehlt.
+Bis Version 0.2 bestand die Montage-ID nur aus den ersten beiden Blöcken. Die sind geblieben, wie sie waren: Ein
+älteres Montagevideo passt weiter zu einer neuen Ausgabe desselben Stands. Eine ältere Ausgabe zeigt Feldspur einmal
+als **Veraltet** an, weil dem Einsatztranskript der dritte Block fehlt.
 :::
 
 ### Viewer (.html) {#sec-viewer}
 
-Der **Viewer** ist eine einzelne HTML-Datei, die neben dem Montagevideo liegt. Du öffnest sie per Doppelklick in
-Chrome, Edge, Firefox oder Safari; MAXQDA oder Feldspur braucht dafür niemand. Willst du einen Einsatz weitergeben,
-etwa an die Betreuung oder an eine Interpretationsgruppe, kopierst du den ganzen Ordner.
+Der **Viewer** ist eine einzelne HTML-Datei neben dem Montagevideo. Du öffnest sie per Doppelklick in Chrome, Edge,
+Firefox oder Safari; MAXQDA oder Feldspur braucht dafür niemand. Willst du einen Einsatz weitergeben, etwa an die
+Betreuung oder an eine Interpretationsgruppe, kopierst du den ganzen Ordner.
 
 ![Viewer im Browser: links Video und Zeitleiste, rechts das Einsatztranskript](bilder/viewer.png){#fig-viewer}
 
-Links stehen das Video, die Steuerleiste und die Zeitleiste, rechts das Einsatztranskript mit Mitschrift, Fotos und
-Tagebuch. Die Zeile, die gerade läuft, ist getönt, ihre Uhrzeit steht in Terrakotta.
+Links stehen das Video, die Steuerleiste und die Zeitleiste, rechts das Einsatztranskript. Die Zeile, die gerade
+läuft, ist getönt.
 
-- Ein **Klick** auf eine Zeile springt im Video an diese Stelle. Markierst du Text, etwa zum Kopieren, springt das
-  Video nicht.
+- Ein **Klick** auf eine Zeile springt im Video an diese Stelle.
 - Mit dem Schalter **Text läuft mit** (Taste [T]{.kbd}) folgt der Text dem Video. Scrollst du selbst, hält er an;
   **Zur aktuellen Stelle** bringt dich zurück.
 - Die **Zeitleiste** zeigt Episoden, Zwischenzeiten, Fotos, Tagebuch und je Gerät eine Spur. Das **Mausrad** über der
-  Zeitleiste zoomt, ohne [Strg]{.kbd} oder [⌘]{.kbd}, ebenso die Knöpfe und Tasten [+]{.kbd} und [−]{.kbd}. Mit [Umschalt]{.kbd} und Mausrad
-  oder durch Ziehen an der Uhrzeitleiste verschiebst du den Ausschnitt. **Alles** zeigt wieder den ganzen Einsatz.
-  Beim Abspielen bleibt die Fahne, also der Zeitzeiger, im Ausschnitt.
+  Zeitleiste zoomt, ebenso [+]{.kbd} und [−]{.kbd}; mit [Umschalt]{.kbd} und Mausrad verschiebst du den Ausschnitt.
+  **Alles** zeigt wieder den ganzen Einsatz.
 - Dazu kommen die **Suche** und das Fenster **Kontext** (@sec-kontext). Unter **Ansicht** blendest du Zeilenarten
   ein oder aus, änderst die Schriftgröße, wählst hell oder dunkel und legst fest, ob am Rand Uhrzeit, Videozeit oder
   `#Marke#` steht.
 - **Stelle kopieren** legt Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID in die Zwischenablage.
-- Ins **Vollbild** kommst du mit dem Knopf rechts in der Steuerleiste, mit der Taste [F]{.kbd} oder per Doppelklick ins
-  Video; [Esc]{.kbd} beendet es. Alle Tasten zeigt das Tastatur-Zeichen oben rechts oder die Taste [?]{.kbd}.
+- Ins **Vollbild** kommst du mit der Taste [F]{.kbd} oder per Doppelklick ins Video. Alle Tasten zeigt die Taste
+  [?]{.kbd}.
 
-Findet der Viewer das Video nicht, weil es fehlt oder anders heißt, steht dort ein Hinweis mit dem Knopf
-**Videodatei wählen…**. Das Einsatztranskript bleibt auch ohne Video lesbar.
+Findet der Viewer das Video nicht, weil es fehlt oder anders heißt, bietet er **Videodatei wählen…** an. Das
+Einsatztranskript bleibt auch ohne Video lesbar.
 
-Zu hören ist zunächst die Mischung. Hat das Video eine Tonspur je Gerät (siehe die Optionen oben), kannst du auch
-einzelne Geräte hören. Der Knopf **Erweiterte Tonspurkontrolle** öffnet dafür einen kurzen Assistenten. Was du dort
-tun musst, hängt vom Browser ab:
+Zu hören ist zunächst die Mischung. Hat das Video eine Tonspur je Gerät, öffnet **Erweiterte Tonspurkontrolle** einen
+kurzen Assistenten, mit dem du einzelne Geräte hörst. Safari spielt die Tonspuren selbst. Chrome, Edge und Firefox
+brauchen dafür einmal die Videodatei: Zieh sie in den Assistenten oder wähle **Video freigeben…**. Chrome und Edge
+merken sich die Freigabe (**Erneut freigeben**), in Firefox wählst du das Video jedes Mal neu.
 
-- Safari spielt die Tonspuren selbst und braucht keine Freigabe.
-- Chrome, Edge und Firefox spielen von sich aus nur die erste Tonspur. Für die anderen musst du dem Browser die
-  Videodatei einmal freigeben: Zieh sie in den Assistenten oder wähle **Video freigeben…**. Chrome und Edge merken
-  sich die Freigabe und fragen beim nächsten Öffnen nur kurz nach (**Erneut freigeben**). In Firefox wählst du das
-  Video jedes Mal neu.
+Danach hat jede Gerätespur die Knöpfe **S** (nur diese Spur hören) und **M** (stumm). Mit den Tasten [1]{.kbd} bis
+[9]{.kbd} hörst du nur ein Gerät, mit [0]{.kbd} oder **Alle hören** wieder die Mischung. Bei einem anderen Tempo als
+1× ist immer die Mischung zu hören.
 
-Danach hat jede Gerätespur die Knöpfe **S** (nur diese Spur hören) und **M** (stumm). Mit den Tasten [1]{.kbd} bis [9]{.kbd}
-hörst du nur ein Gerät, mit [0]{.kbd} oder **Alle hören** wieder die Mischung. Bei einem anderen Tempo als 1× ist immer
-die Mischung zu hören.
-
-Der Viewer lädt nichts aus dem Netz und schickt nichts weg. Schriften, Bilder und Programm stecken in der Datei;
-gespeichert wird nur die Freigabe des Videos im Browser. Weil die Bilder eingebettet sind, wächst die Datei mit jedem
-Foto und jeder Tagebuchseite um grob 150 KB.
+Der Viewer lädt nichts aus dem Netz und schickt nichts weg. Schriften, Bilder und Programm stecken in der Datei; sie
+wächst deshalb mit jedem Foto und jeder Tagebuchseite um grob 150 KB.
 
 ### Dokumentvariablen (.xlsx)
 
@@ -251,22 +211,20 @@ Ort, Zeitzone, Forschende, Geräte, Referenzuhr, Zahl der Quellen, Beginn und En
 Montage-ID und deine **weiteren Angaben** aus den Einsatzdaten (z. B. DOI). So kannst du in MAXQDA später nach Ort,
 Datum oder Gerät filtern und vergleichen.
 
-Die ersten beiden Spalten sind Dokumentgruppe und Dokumentname. Der Dokumentname ist der Name, den MAXQDA dem
-Einsatztranskript beim Import gibt (Dateiname ohne Endung). Liegt das Dokument in MAXQDA in einer Dokumentgruppe, trag
-deren Namen vorher in der Spalte "Dokumentgruppe" ein, sonst findet MAXQDA das Dokument nicht.
+Die ersten beiden Spalten sind Dokumentgruppe und Dokumentname (der Dateiname des Einsatztranskripts ohne Endung).
+Liegt das Dokument in MAXQDA in einer Dokumentgruppe, trag deren Namen vorher in der Spalte "Dokumentgruppe" ein,
+sonst findet MAXQDA das Dokument nicht.
 
 ### Begleitprotokoll (.csv)
 
-Das **Begleitprotokoll** hält für jede Datei Herkunft und Zeitnachweis fest: Kurzzeichen, Originaldatei,
-Prüfsumme, Gerät, verwendeter Zeitbeleg und Uhrkorrektur. Gibt es Kontext, kommen die Spalten **Rolle**, **Kontext** und
-**Kontext entstanden** dazu, in den Dokumentvariablen die Zahl der **Kontextstücke**. So bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript
-beruht, und das Material lässt sich sauber archivieren.
+Das **Begleitprotokoll** hält für jede Datei Herkunft und Zeitnachweis fest: Kurzzeichen, Originaldatei, Prüfsumme,
+Gerät, verwendeter Zeitbeleg und Uhrkorrektur, bei Kontext auch **Rolle**, **Kontext** und **Kontext entstanden**. So
+bleibt nachvollziehbar, worauf jede Lage im Einsatztranskript beruht, und das Material lässt sich sauber archivieren.
 
 ### LIESMICH (.html) {#sec-liesmich}
 
-Mit **LIESMICH mit Tabelle für den Methodenteil** legt Feldspur die Datei `LIESMICH.html` in den Ausgabeordner. Sie
-ist für Menschen gedacht, die den Ordner später öffnen, auch für dich selbst in ein paar Jahren, und lässt sich in
-jedem Browser lesen und drucken. Darin steht:
+Die Datei `LIESMICH.html` ist für Menschen gedacht, die den Ordner später öffnen, auch für dich selbst in ein paar
+Jahren. Sie lässt sich in jedem Browser lesen und drucken. Darin steht:
 
 - welcher Einsatz das ist, mit der ganzen Montage-ID,
 - was im Ordner liegt und wozu jede Datei dient,
@@ -275,35 +233,30 @@ jedem Browser lesen und drucken. Darin steht:
 - die Tabelle für den Methodenteil dieses Einsatzes (@sec-methodenteil), darunter Feldspur mit Version und DOI.
 
 Die Tabelle steht dort, weil sie die Montage-ID trägt: So bleibt sie bei genau der Fassung, die sie beschreibt.
-Einsatztranskript und Montagevideo sind auch ohne die LIESMICH vollständig und zitierfähig. Sie beschreibt die
-Ausgabe nur. Ist der Schalter aus, fehlt die Datei, sonst ändert sich nichts.
+Einsatztranskript und Montagevideo sind auch ohne die LIESMICH vollständig und zitierfähig.
 
 ### Änderungsprotokoll (.csv) {#sec-aenderungsprotokoll-ausgabe}
 
-Mit **Änderungsprotokoll** legt Feldspur `…_Aenderungsprotokoll.csv` in den Ordner: jede Änderung an diesem Einsatz
-mit Zeit (UTC), Aktion und den Werten vorher und nachher, so wie im Projektmenü unter **Änderungsprotokoll…**
-(@sec-erste-schritte). Darin steht nur, was diesen Einsatz betrifft: der Einsatz selbst, seine Geräte und Quellen
-(auch gelöschte), Zeitbelege, Anker, Tagebuch, Mitschrift und Notizen. Andere Einsätze und Projektweites wie Personen
-bleiben draußen. Das Protokoll hält den Stand beim Start der Ausgabe fest.
+`…_Aenderungsprotokoll.csv` führt jede Änderung an diesem Einsatz mit Zeit (UTC), Aktion und den Werten vorher und
+nachher, so wie im Projektmenü unter **Änderungsprotokoll…** (@sec-erste-schritte). Darin steht nur, was diesen
+Einsatz betrifft, auch gelöschte Quellen; andere Einsätze und Projektweites wie Personen bleiben draußen. Das
+Protokoll hält den Stand beim Start der Ausgabe fest.
 
 ### Prüfsummenliste (manifest-sha256.txt) {#sec-pruefsummenliste}
 
-Mit **Prüfsummenliste** schreibt Feldspur zuletzt `manifest-sha256.txt`. Sie führt für jede andere Datei im Ordner
-die SHA-256-Prüfsumme, auch für Montagevideo und LIESMICH. Damit lässt sich später zeigen, dass der Ordner noch genau
-so ist, wie Feldspur ihn ausgegeben hat. Das Format ist das von `sha256sum`: Im Ordner prüft
-`sha256sum -c manifest-sha256.txt` jede Datei (unter macOS `shasum -a 256 -c manifest-sha256.txt`). Bei einem langen
-Montagevideo dauert das Rechnen der Prüfsummen am Ende der Ausgabe einen Moment.
-
-Die Prüfsummen der Originaldateien stehen weiter im Begleitprotokoll.
+Zuletzt schreibt Feldspur `manifest-sha256.txt` mit der SHA-256-Prüfsumme jeder anderen Datei im Ordner, auch von
+Montagevideo und LIESMICH. Damit lässt sich später zeigen, dass der Ordner noch genau so ist, wie Feldspur ihn
+ausgegeben hat. Das Format ist das von `sha256sum`: Im Ordner prüft `sha256sum -c manifest-sha256.txt` jede Datei
+(unter macOS `shasum -a 256 -c manifest-sha256.txt`). Die Prüfsummen der Originaldateien stehen weiter im
+Begleitprotokoll.
 
 ### In MAXQDA
 
-Lies das Einsatztranskript in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei zu.
-Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt in MAXQDA,
-im Text des Einsatztranskripts und, wo nichts verschriftlicht ist, direkt in Abschnitten des Videos.
-Ein Einsatz ergibt genau ein MAXQDA-Dokument. Die Dokumentvariablen liest du danach über **Variablen ›
-Dokumentvariablen importieren** aus der .xlsx-Datei ein; mehrere Einsätze kannst du dafür auch in einer Tabelle
-untereinander kopieren.
+Lies das Einsatztranskript in MAXQDA als Transkript mit Zeitmarken ein und ordne ihm das Montagevideo als Mediendatei
+zu. Danach springt ein Klick auf eine Zeitmarke an die passende Stelle im Video. Codiert wird wie gewohnt, im Text
+des Einsatztranskripts und, wo nichts verschriftlicht ist, direkt in Abschnitten des Videos. Ein Einsatz ergibt genau
+ein MAXQDA-Dokument. Die Dokumentvariablen liest du danach über **Variablen › Dokumentvariablen importieren** aus der
+.xlsx-Datei ein; mehrere Einsätze kannst du dafür auch in einer Tabelle untereinander kopieren.
 
 ### Aus der Ausgabe zitieren {#sec-stelle-zitieren}
 
@@ -312,17 +265,15 @@ stecken deine Entscheidungen. Welche Uhr gilt, was nebeneinanderliegt, was du wi
 Videodatei steht für sich und ohne Zusammenhang da. Meine Empfehlung deshalb: Zitiere eine Stelle **aus der Ausgabe**,
 nicht aus der Originaldatei dahinter und auch nicht aus dem Projekt in Feldspur.
 
-Der Grund für das Zweite: Das Projekt ist ein Arbeitsstand und ändert sich mit jedem Handgriff. Die Ausgabe ist das,
-was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings erst, wenn du sie festhältst, denn
-**Erneut ausgeben** überschreibt die Dateien im selben Ordner. Dateien der letzten Ausgabe, die diesmal nicht entstehen,
-weil du etwa das Montagevideo oder die Prüfsummenliste abgewählt hast, räumt Feldspur dabei weg; andere Dateien im
-Ordner bleiben liegen. So gehst du vor:
+Das Projekt ist ein Arbeitsstand und ändert sich mit jedem Handgriff. Die Ausgabe ist das, was du festhalten,
+archivieren und weitergeben kannst. Fest ist sie allerdings erst, wenn du sie festhältst, denn **Erneut ausgeben**
+überschreibt die Dateien im selben Ordner und räumt Dateien der letzten Ausgabe weg, die diesmal nicht entstehen
+(etwa ein abgewähltes Montagevideo). So gehst du vor:
 
 1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
    ist.
-2. Sichere den Ausgabeordner als Ganzes und unverändert (Einsatztranskript, Montagevideo, Viewer, Dokumentvariablen,
-   Begleitprotokoll, LIESMICH, Änderungsprotokoll, Prüfsummenliste). Die Prüfsummenliste zeigt später, dass nichts
-   verändert wurde (@sec-pruefsummenliste). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
+2. Sichere den Ausgabeordner als Ganzes und unverändert. Die Prüfsummenliste zeigt später, dass nichts verändert wurde
+   (@sec-pruefsummenliste). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
    Adresse vergibt, etwa eine DOI.
 3. Zitiere aus genau dieser Fassung. Im Viewer legt **Stelle kopieren** die Angabe in die Zwischenablage:
    Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID.
@@ -335,8 +286,7 @@ Eine Angabe kann dann so aussehen (die Werte sind erfunden):
 > #00:05:02-0# (10:07:02 Uhr).
 
 Im Methodenteil erklärst du einmal, was ein Montagevideo und ein Einsatztranskript sind und womit sie entstanden sind
-(Feldspur mit Version, @sec-zitieren). Dafür gibt es eine Tabelle zum Kopieren und einen Mustertext
-(@sec-methodenteil). Nachvollziehbar bleibt der Weg zurück zum Original trotzdem: Das
+(@sec-methodenteil, Feldspur mit Version, @sec-zitieren). Der Weg zurück zum Original bleibt nachvollziehbar: Das
 Begleitprotokoll nennt für jede Datei Herkunft, Prüfsumme und den Zeitbeleg, auf dem ihre Lage beruht.
 
 Änderst du nach dem Zitieren noch etwas und gibst erneut aus, dann sichere die neue Ausgabe als eigene Fassung und
@@ -356,52 +306,43 @@ einzelnen Einsatz.
 ![Die Übersicht: oben der Feldkalender, darunter die Kennwerte für den Methodenteil](bilder/uebersicht.png){#fig-uebersicht}
 
 Oben steht der **Feldkalender**, je Einsatz eine Zeile: Datum, Titel und Ort, die Zahl der Quellen und der Zeilen im
-Einsatztranskript, Geräteuhren ohne Abgleich und der Stand der Ausgabe. Gezähltes steht als Text da, Zustände als
-farbige Marken. Passen alle Ausgaben zum Stand, steht neben dem Projektnamen **Alle Ausgaben aktuell**. In der Mitte
-jeder Zeile liegt der Einsatz auf einer Uhrzeit-Achse, die für alle Einsätze gleich ist: Ton und Video als Balken,
-Fotos als Rauten, Tagebucheinträge als Striche zur Notierzeit. Untereinander sieht man so, was ein einzelner Einsatz
-verbirgt, etwa wiederkehrende Uhrzeiten, dichte und dünne Phasen oder Einsätze ohne Ton. Was das bedeutet,
-entscheidest du; Feldspur legt die Einsätze nur nebeneinander.
+Einsatztranskript, Geräteuhren ohne Abgleich und der Stand der Ausgabe. Passen alle Ausgaben zum Stand, steht neben
+dem Projektnamen **Alle Ausgaben aktuell**. In der Mitte jeder Zeile liegt der Einsatz auf einer Uhrzeit-Achse, die
+für alle Einsätze gleich ist: Ton und Video als Balken, Fotos als Rauten, Tagebucheinträge als Striche zur Notierzeit.
+Untereinander sieht man so, was ein einzelner Einsatz verbirgt, etwa wiederkehrende Uhrzeiten, dichte und dünne Phasen
+oder Einsätze ohne Ton.
 
-Die Achse reicht nur so weit, wie es zum Tag eines Einsatzes gehört: vom Mittag des Vortags bis zum Mittag des
-Folgetags, damit auch Nächte über Mitternacht passen. Liegt eine Quelle weit davon weg, etwa weil die Uhr einer Kamera
-auf 2019 zurückgesprungen ist oder das Datum des Einsatzes nicht stimmt, fehlt sie im Feldkalender. Die Zeile sagt
-dann **1 Quelle weit weg vom Datum**, **Abgleichen** führt zum Einsatz, und in den Kennwerten steht beim Montagevideo
-statt einer Länge **Länge unklar**.
+Die Achse reicht vom Mittag des Vortags bis zum Mittag des Folgetags. Liegt eine Quelle weit davon weg, etwa weil die
+Uhr einer Kamera auf 2019 zurückgesprungen ist, fehlt sie im Feldkalender. Die Zeile sagt dann **1 Quelle weit weg
+vom Datum**, und **Abgleichen** führt zum Einsatz.
 
-Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit.
-Fährst du mit der Maus über eine Spur, zeigt eine Linie durch alle Einsätze die Uhrzeit an dieser Stelle; so
-vergleichst du dieselbe Uhrzeit über die Einsätze. Mit **Nach Ort gruppieren** stehen Einsätze am selben Ort
-zusammen, sonst gilt die Folge nach Datum. **Als Grafik speichern…** schreibt die gewählten Einsätze als SVG-Grafik,
-etwa für den Methodenteil oder einen Vortrag; sie lässt sich in Word, LibreOffice, Inkscape oder Affinity einfügen
-und weiter bearbeiten. Danach führt **Im Ordner zeigen** zur gespeicherten Datei.
+Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit. Mit
+**Nach Ort gruppieren** stehen Einsätze am selben Ort zusammen, sonst gilt die Folge nach Datum. **Als Grafik
+speichern…** schreibt die gewählten Einsätze als SVG-Grafik, etwa für den Methodenteil oder einen Vortrag; sie lässt
+sich in Word, LibreOffice, Inkscape oder Affinity einfügen und weiter bearbeiten.
 
 Darunter stehen die **Kennwerte** als zwei Tabellen zum Kopieren:
 
 - **Eingang**: die Aufzeichnungen je Art und Gerät, mit Anzahl, Dauer (bei Ton und Video) und Zeitbeleg. Wurde die
   Uhr eines Geräts korrigiert, steht die Korrektur dabei. Über mehrere Einsätze steht je Art eine Zeile, und die
-  Spalte **Gerät** fällt weg: Geräte legst du je Einsatz an, und ob es in zwei Einsätzen dasselbe war, weiß Feldspur nicht.
+  Spalte **Gerät** fällt weg: Ob es in zwei Einsätzen dasselbe Gerät war, weiß Feldspur nicht.
 - **Ausgabe**: je Einsatz das Einsatztranskript mit der Zahl seiner Zeilen und der ganzen Montage-ID, dazu das
-  Montagevideo mit Länge und Art der Montage. Die Zeile zum Montagevideo fehlt, wenn du den Einsatz zuletzt ohne
-  Video ausgegeben hast.
+  Montagevideo mit Länge und Art der Montage (nur, wenn du es zuletzt mit ausgegeben hast).
 
 Darunter steht Feldspur mit Version und DOI. Die Tabellen fassen alle Einsätze zusammen, vor denen ein Häkchen
-steht; einzelne wählst du im Feldkalender darüber ab. Abgewählte Einsätze fehlen auch in der gespeicherten Grafik.
-
-**Tabellen kopieren** legt die Tabellen so in die Zwischenablage, dass Word, LibreOffice und Pages echte Tabellen
-einfügen, **Als Markdown kopieren** als Text. Spalten und Wortlaut passt du danach in deinem Dokument an. Eine Datei
-entsteht dabei nicht.
+steht; abgewählte Einsätze fehlen auch in der gespeicherten Grafik. **Tabellen kopieren** legt die Tabellen so in die
+Zwischenablage, dass Word, LibreOffice und Pages echte Tabellen einfügen, **Als Markdown kopieren** als Text. Spalten
+und Wortlaut passt du danach in deinem Dokument an.
 
 Feldspur zählt und misst hier nur. In der Übersicht steht „412 Zeilen“, aber kein Urteil darüber, ob das viel oder
 genug ist. Das bleibt bei dir. Farbig sind deshalb nur Zustände, die Feldspur ohnehin meldet, etwa eine veraltete
 Ausgabe oder eine Geräteuhr ohne Abgleich, nie eine Menge.
 
 Die Kennwerte beschreiben den Stand im Projekt. An jedem Einsatz steht, ob er so schon als Ausgabe vorliegt:
-**Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert), **Ausgabe
-fehlt im Ordner** (Dateien der letzten Ausgabe sind verschoben oder gelöscht) oder **nicht ausgegeben**. Steht dort
-nicht „aktuell“, führt **Ausgeben** (bei einer früheren Ausgabe **Erneut ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Gib den Einsatz aus, bevor du die Kennwerte übernimmst,
-sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst. Bei einem Einsatz ohne Quellen steht
-dort stattdessen **Einsammeln**; das führt in seinen ersten Schritt.
+**Ausgabe aktuell**, **Ausgabe veraltet**, **Ausgabe fehlt im Ordner** oder **nicht ausgegeben**. Steht dort nicht
+„aktuell“, führt **Ausgeben** (bei einer früheren Ausgabe **Erneut ausgeben**) direkt in den Schritt Ausgeben dieses
+Einsatzes. Gib den Einsatz aus, bevor du die Kennwerte übernimmst, sonst passen Montage-ID und Umfang nicht zu den
+Dateien, aus denen du zitierst.
 
 So kann das Ergebnis für zwei Einsätze aussehen (die Werte sind erfunden). Bei einem einzelnen Einsatz, etwa in der
 LIESMICH, kommt in der Eingangstabelle die Spalte **Gerät** mit den Namen der Geräte dazu.
