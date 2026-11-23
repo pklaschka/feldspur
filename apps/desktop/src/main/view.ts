@@ -51,7 +51,7 @@ function levelRow(s: Source, levels: Map<Id, number | null>): LevelRow {
  * (auf die erlaubte Abweichung genau) oder dieselbe vermutete Ursache. Ab drei Dateien, bei Geräten mit nur
  * zwei Dateien auch schon bei zwei.
  */
-export function groupConflicts(
+function groupConflicts(
   sources: Source[],
   placements: Map<Id, Placement>,
   devices: Map<Id, { label: string }>,

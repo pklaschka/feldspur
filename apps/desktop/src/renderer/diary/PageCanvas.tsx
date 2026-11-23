@@ -267,9 +267,9 @@ export function PageCanvas({
 
 /** Natürliche Größe eines Scans (Bild in Pixeln, PDF-Seite in Punkten, beim PDF höchstens 900 px breit). */
 /** Schon bekannte Größen: Beim Blättern zurück steht die Seite sofort in der richtigen Größe da. */
-export const naturalSizes = new Map<string, { w: number; h: number }>();
+const naturalSizes = new Map<string, { w: number; h: number }>();
 
-export function useNaturalSize(surface: Surface): { w: number; h: number } | null {
+function useNaturalSize(surface: Surface): { w: number; h: number } | null {
   const key = `${surface.sourceId}#${surface.page}`;
   const known = naturalSizes.get(key);
   const loaded = useLoaded(known ? null : key, async () => {

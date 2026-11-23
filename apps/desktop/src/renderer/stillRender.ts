@@ -16,7 +16,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /** Zeichnet den Ausschnitt höchstens maxW breit in eine neue Leinwand. */
-export async function renderImageRef(ref: ImageRef, pdf: boolean, maxW = 1000): Promise<HTMLCanvasElement> {
+async function renderImageRef(ref: ImageRef, pdf: boolean, maxW = 1000): Promise<HTMLCanvasElement> {
   const r = ref.region ?? { page: 0, x: 0, y: 0, w: 1, h: 1 };
   let src: CanvasImageSource;
   let sw: number;

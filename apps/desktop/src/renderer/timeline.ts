@@ -19,7 +19,7 @@ export function setTrackHeight(h: number): void {
   BAR_Y = (TRACK_H - BAR_H) / 2;
 }
 /** Kurze Clips bleiben sichtbar und anklickbar. */
-export const MIN_CLIP_W = 6;
+const MIN_CLIP_W = 6;
 
 export interface Track {
   device: DeviceRow | null;
@@ -41,7 +41,7 @@ export interface Scale {
 export const xOf = (s: Scale, t: number) => ((t - s.start) / MIN) * s.pxPerMin;
 export const tOf = (s: Scale, x: number) => s.start + (x / s.pxPerMin) * MIN;
 
-export function trackTop(i: number): number {
+function trackTop(i: number): number {
   return RULER_H + EPISODE_H + i * TRACK_H;
 }
 
@@ -96,7 +96,7 @@ export function hitTest(items: Item[], s: Scale, x: number, y: number): Item | n
   return best;
 }
 
-export function tickStep(pxPerMin: number): number {
+function tickStep(pxPerMin: number): number {
   for (const m of [1, 2, 5, 10, 15, 30, 60, 120]) if (m * pxPerMin >= 64) return m * MIN;
   return 240 * MIN;
 }

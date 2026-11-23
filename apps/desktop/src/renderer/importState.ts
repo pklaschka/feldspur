@@ -15,7 +15,7 @@ export interface ImportJob {
   cancelling: boolean;
 }
 
-export type ImportNotice =
+type ImportNotice =
   | { kind: "done"; text: string; warnings: { fileName: string; message: string }[] }
   | { kind: "cancelled"; read: number; total: number };
 

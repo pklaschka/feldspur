@@ -17,7 +17,7 @@ const MODE_OPTIONS: { value: DiaryMode; label: string; title: string }[] = [
  * Seitenzahl im Notizbuch am Eintrag. Leer zeigt die Zählung des Scans oder einen Vorschlag
  * (vom vorigen Eintrag weitergezählt); beim Hineinklicken steht der Vorschlag schon drin.
  */
-export function PageField({
+function PageField({
   label,
   ariaLabel,
   pageNo,

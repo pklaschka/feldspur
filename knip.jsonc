@@ -1,0 +1,28 @@
+// Sucht ungenutzte Dateien, Exporte und Abhängigkeiten (`vp run knip`, Teil von `vp run check`).
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.{ts,mjs}", "handbuch/*.ts"],
+      "project": ["scripts/**/*.{ts,mjs}", "handbuch/**/*.ts"],
+      // Die Paketskripte laufen im Wurzelordner, ihre Werkzeuge gehören zur App (apps/desktop).
+      "ignoreDependencies": ["better-sqlite3", "electron", "electron-builder"],
+    },
+    "apps/desktop": {
+      "entry": ["src/main/main.ts", "src/preload/preload.ts", "test/**/*.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.{ts,tsx}"],
+      "ignoreDependencies": [
+        // Wird über @feldspur/core gebündelt; die App braucht es selbst für die native Bibliothek im Paket.
+        "better-sqlite3",
+        // Ruft scripts/package-desktop.mjs auf.
+        "electron-builder",
+      ],
+    },
+    "packages/*": {
+      "entry": ["test/**/*.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"],
+    },
+  },
+  // Kommen vom System bzw. aus CI, nicht aus npm.
+  "ignoreBinaries": ["ffmpeg", "ffprobe", "quarto"],
+}

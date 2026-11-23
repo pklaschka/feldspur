@@ -68,7 +68,7 @@ function throttled(send: (done: number, total: number) => void): (done: number, 
  */
 const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
 /** So lange darf die Oberfläche für ein Häppchen Einblendungen oder ein Standbild brauchen. */
-export const BRIDGE_TIMEOUT_MS = 120_000;
+const BRIDGE_TIMEOUT_MS = 120_000;
 const RENDERER_EVENTS = ["render-process-gone", "did-start-loading", "destroyed"] as const;
 
 function askRenderer<T>(wc: WebContents, signal: AbortSignal, what: string, send: (id: number) => void): Promise<T> {

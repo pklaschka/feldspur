@@ -97,7 +97,7 @@ const KIND_PATHS: Record<SourceKind, string> = {
   gps: "M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14ZM8 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z",
   other: "M4 8h.01M8 8h.01M12 8h.01",
 };
-export function KindIcon({ kind, size = 15 }: { kind: SourceKind; size?: number }) {
+function KindIcon({ kind, size = 15 }: { kind: SourceKind; size?: number }) {
   return (
     <svg
       width={size}
@@ -327,7 +327,7 @@ export function StatusLegend({ context = false }: { context?: boolean }) {
 const STATUS_LEGEND = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit" } as const;
 
 /** Text zum Zeichen K, für Tooltips und Screenreader. */
-export const CONTEXT_HINT = "Kontext: bewusst ohne Uhrzeit, steht vor der Chronologie";
+const CONTEXT_HINT = "Kontext: bewusst ohne Uhrzeit, steht vor der Chronologie";
 
 /**
  * Zeichen für Kontext (Issue #108): K im kleinen Quadrat, neutral (Tinte auf Papier). Mit `arrow` als →K für

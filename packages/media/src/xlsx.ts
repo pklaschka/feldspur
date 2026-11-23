@@ -62,7 +62,7 @@ export function xlsx(rows: Cell[][], sheetName = "Tabelle1"): Buffer {
 }
 
 /** ZIP-Archiv (Deflate), wie es Office-Dateien brauchen. */
-export function zip(entries: { name: string; data: Buffer }[]): Buffer {
+function zip(entries: { name: string; data: Buffer }[]): Buffer {
   const locals: Buffer[] = [];
   const central: Buffer[] = [];
   let offset = 0;

@@ -35,14 +35,14 @@ export interface FineAlignStart {
 }
 
 /** Stelle mit Millisekunden: „1:23.456“. */
-export function msText(ms: number): string {
+function msText(ms: number): string {
   const sign = ms < 0 ? "−" : "";
   const a = Math.abs(Math.round(ms));
   return `${sign}${formatDuration(a - (a % 1000))}.${String(a % 1000).padStart(3, "0")}`;
 }
 
 /** Verschiebung „+0,347 s“. */
-export function shiftText(ms: number): string {
+function shiftText(ms: number): string {
   const s = (Math.abs(ms) / 1000).toFixed(3).replace(".", ",");
   return `${ms > 0 ? "+" : ms < 0 ? "−" : "±"}${s} s`;
 }

@@ -12,7 +12,7 @@ import { ContextThumb } from "./parts.tsx";
 const api = window.feldspur;
 
 /** Was „Zurück in die Chronologie“ bewirkt. */
-export function returnText(c: ContextRow): string {
+function returnText(c: ContextRow): string {
   if (c.wouldStartMs !== null)
     return `Liegt dann wieder bei ${clock(c.wouldStartMs)}${c.wouldStartBasis ? ` (${c.wouldStartBasis})` : ""}.`;
   return "Hat keine Uhrzeit und landet dann unter „Ohne Uhrzeit“.";

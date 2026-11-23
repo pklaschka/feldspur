@@ -7,7 +7,7 @@ import { useDraft } from "../hooks.ts";
 import type { InspectorActions } from "./actions.ts";
 
 /** „212 Zeilen übernommen, 3 hinter dem Ende der Aufnahme ausgelassen“. */
-export function importMessage(count: number, dropped: number): string {
+function importMessage(count: number, dropped: number): string {
   const text = `${count} ${count === 1 ? "Zeile" : "Zeilen"} übernommen`;
   return dropped > 0 ? `${text}, ${dropped} hinter dem Ende der Aufnahme ausgelassen` : text;
 }

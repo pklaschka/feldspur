@@ -23,7 +23,7 @@ const AV = new Set(["audio", "video"]);
 type Target = { kind: "source"; source: Source } | { kind: "entry"; entry: DiaryEntry };
 
 /** „source:<id>“ oder „entry:<id>“ auflösen. Weitere Bilder einer Seite stehen für ihre Hauptquelle. */
-export function parseKey(s: ProjectStore, key: string): Target {
+function parseKey(s: ProjectStore, key: string): Target {
   const [kind, id] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
   if (kind === "source") {
     let source = s.getSource(id);
@@ -67,7 +67,7 @@ export function contextFind(s: ProjectStore, key: string): string {
 }
 
 /** Fundstelle eines Eintrags: „T-01 · S. 3, Eintrag 2“ bzw. „Text ohne Scan“. */
-export function entryFind(s: ProjectStore, e: DiaryEntry): string {
+function entryFind(s: ProjectStore, e: DiaryEntry): string {
   const first = e.regions[0];
   if (!first) return "Text ohne Scan";
   const src = s.getSource(first.sourceId);
@@ -141,7 +141,7 @@ function entriesOnPage(s: ProjectStore, page: Source): DiaryEntry[] {
  * Ganze Tagebuchseite als Kontext: Ohne Einträge entsteht einer über die ganze Seite (wie bei der Randnotiz),
  * Einträge ohne Uhrzeit werden Kontext. Datierte Einträge bleiben, wo sie sind: Dann geht es nur über die Abtipp-Ansicht.
  */
-export function markPageContext(s: ProjectStore, sourceId: Id): Id {
+function markPageContext(s: ProjectStore, sourceId: Id): Id {
   let page = s.getSource(sourceId);
   if (page.partOf) page = s.getSource(page.partOf);
   if (page.kind !== "diary") throw new Error("Keine Tagebuchseite");

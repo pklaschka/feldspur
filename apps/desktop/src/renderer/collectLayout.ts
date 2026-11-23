@@ -5,7 +5,7 @@
  */
 
 /** Ab so vielen Dateien scrollt die Liste in der Karte; darunter wächst die Karte einfach mit. */
-export const SCROLL_FROM = 13;
+const SCROLL_FROM = 13;
 
 export const isScrollingList = (total: number) => total >= SCROLL_FROM;
 

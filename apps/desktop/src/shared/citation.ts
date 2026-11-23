@@ -9,11 +9,10 @@
 /** DOI für alle Versionen (Concept-DOI bei Zenodo); führt immer zur neuesten Version. */
 export const ALL_VERSIONS_DOI = "10.5281/zenodo.24289969";
 /** Kennung desselben Eintrags in der Zenodo-API (`conceptrecid`). */
-export const ZENODO_CONCEPT_ID = "24289969";
-export const SOFTWARE_TITLE =
-  "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen";
+const ZENODO_CONCEPT_ID = "24289969";
+const SOFTWARE_TITLE = "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen";
 export const SOFTWARE_LICENSE = "EUPL-1.2";
-export const AUTHOR = { family: "Klaschka", given: "Zuri Nimca", initials: "Z. N." } as const;
+const AUTHOR = { family: "Klaschka", given: "Zuri Nimca", initials: "Z. N." } as const;
 
 export type CitationFormat = "apa" | "bibtex" | "doi";
 
