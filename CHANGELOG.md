@@ -4,6 +4,20 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.4.0-rc.4 – 2026-11-23 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at a10c02f7d300db5987c8b80e91a95e0672cf0f72 -->
+
+### Behoben
+
+- Montagevideo: scheitert die Hardware-Dekodierung, rechnet der Abschnitt ohne neu ([#248](https://github.com/pklaschka/feldspur/pull/248), @pklaschka)
+
+### Hinter den Kulissen
+
+- CI: ffmpeg wie im Paket aus dem Cache statt per apt ([#246](https://github.com/pklaschka/feldspur/pull/246), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.3...v0.4.0-rc.4
+
 ## 0.4.0-rc.3 – 2026-11-23 (Vorabversion)
 
 <!-- Release notes generated using configuration in .github/release.yml at 07e6c93ee3a7cdedbf21a1bd95286226c81a75be -->

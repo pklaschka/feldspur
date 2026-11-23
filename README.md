@@ -104,7 +104,7 @@ verändern, gehört zu jeder Angabe die Version oder der Stand.
 **Das Programm**, wenn Material mit Feldspur aufbereitet wurde – mit Version oder Commit:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
-> (Version 0.4.0-rc.3) \[Software\]. <https://purl.archive.org/feldspur/repo>
+> (Version 0.4.0-rc.4) \[Software\]. <https://purl.archive.org/feldspur/repo>
 
 **Diesen Text**, wenn es um Begründung, Einordnung, die Entstehung mit KI oder das Handbuch geht – mit dem Stand,
 der oben auf der Seite bzw. auf dem Titelblatt des PDFs steht, z. B.:
