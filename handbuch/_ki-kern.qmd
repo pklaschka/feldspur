@@ -6,7 +6,8 @@ Von mir stammen die Fragestellung, das Konzept, die Anforderungen aus der Feldfo
 die Richtung vor, sehe Ergebnisse durch und probiere sie aus. Jede Zeile Code lese ich allerdings nicht selbst gegen.
 Commits, an denen die KI beteiligt war, tragen im Repository eine `Co-Authored-By`-Zeile.
 
-Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat).
+Für die Entwicklung nutze ich ein Claude-Pro-Abo (ca. 21 € im Monat).^[Das gilt bis einschließlich Version 0.1.0. Für die
+Weiterentwicklung danach kamen auch größere Claude-Abonnements zum Einsatz.]
 Auch das kann sich nicht jede\*r leisten – es entsteht also ein weiteres diskriminierendes Gefälle in der Forschung.
 Und umso wichtiger ist es mir, das Ergebnis als Open Source zur Verfügung zu stellen.
 
