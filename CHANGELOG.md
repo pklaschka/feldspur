@@ -4,6 +4,33 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.4.0-rc.3 – 2026-11-23 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at 07e6c93ee3a7cdedbf21a1bd95286226c81a75be -->
+
+### Behoben
+
+- Änderungsprotokoll nennt Anker und Einsammeln beim Namen, CSV ohne Formeln, Schließen während der Ausgabe bricht sauber ab ([#232](https://github.com/pklaschka/feldspur/pull/232), @pklaschka)
+- Randfälle aus dem Test von v0.4.0: Feldkalender, erneute Ausgabe, Anker und Ausgabeordner ([#239](https://github.com/pklaschka/feldspur/pull/239), @pklaschka)
+- Randfälle aus dem Test von v0.4.0: Nachträge aus der Durchsicht ([#240](https://github.com/pklaschka/feldspur/pull/240), @pklaschka)
+- Durchsehen: Der Rollbalken der Zeitachse verschiebt die Ansicht nicht mehr ([#242](https://github.com/pklaschka/feldspur/pull/242), @pklaschka)
+- Projektwechsel während eines Dialogs oder einer Rechnung: verständliche Meldung statt Fehler aus dem geschlossenen Projekt ([#245](https://github.com/pklaschka/feldspur/pull/245), @pklaschka)
+
+### Dokumentation
+
+- Handbuch gekürzt: weniger Wiederholungen, kürzere Kapitel ([#241](https://github.com/pklaschka/feldspur/pull/241), @pklaschka)
+
+### Hinter den Kulissen
+
+- Release-Bau festgezurrt: Zeitlimits, festgelegte Actions, geprüftes ffmpeg-Quellarchiv ([#233](https://github.com/pklaschka/feldspur/pull/233), @pklaschka)
+- Ausgabe-Optionen als ein Typ, Migrationen per Test eingefroren, Checklisten für neue Tabellen und IPC-Aufrufe ([#234](https://github.com/pklaschka/feldspur/pull/234), @pklaschka)
+- knip prüft ungenutzte Exporte, Dateien und Abhängigkeiten ([#235](https://github.com/pklaschka/feldspur/pull/235), @pklaschka)
+- Alte Montage-Zwischenspeicher wegräumen, kleine Duplikate zusammenführen ([#237](https://github.com/pklaschka/feldspur/pull/237), @pklaschka)
+- Labels mit Emoji, Prüfung auf Changelog-Label ([#238](https://github.com/pklaschka/feldspur/pull/238), @pklaschka)
+- main.ts, ExportStep und Overview in kleinere Teile aufgeteilt ([#243](https://github.com/pklaschka/feldspur/pull/243), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.2...v0.4.0-rc.3
+
 ## 0.4.0-rc.2 – 2026-11-23 (Vorabversion)
 
 <!-- Release notes generated using configuration in .github/release.yml at 2d530670200990ad859c00ca89a0c4bbf1a9be38 -->

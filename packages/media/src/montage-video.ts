@@ -27,7 +27,7 @@ import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
 import { log } from "./log.ts";
 import { probeMedia } from "./probe.ts";
-import { PROBE_TIMEOUT_MS, runTool, STALL_MS } from "./process.ts";
+import { PROBE_TIMEOUT_MS, runTool, STALL_MS, ToolError } from "./process.ts";
 
 const FRAME_MS = 1000 / FPS;
 const RATE = 48_000;
@@ -90,6 +90,17 @@ export interface Piece {
   /** Laufende Tonquellen, die Hauptquelle zuerst (Referenzgerät, sonst die längste). */
   audios: MediaRef[];
 }
+
+/**
+ * Hardware-Dekodierung der Videos (`-hwaccel auto`), solange sie geht. Eigentlich weicht ffmpeg von selbst auf
+ * Software aus; dem statischen ffmpeg unter Linux fehlen aber ohne Grafiktreiber-Bibliotheken (libva, CUDA) die
+ * Geräte, und es stürzt ab. Scheitert ein Abschnitt mit Hardware-Dekodierung und gelingt ohne, rechnet Feldspur bis
+ * zum Neustart ohne. Bewusst kein Muster in der Fehlerausgabe: Die Meldungen unterscheiden sich je System und Treiber
+ * (VAAPI, VideoToolbox, D3D11), ein Absturz hinterlässt oft gar keine.
+ */
+let hwaccel = true;
+
+const withoutHwaccel = (args: string[]) => args.filter((a, k) => a !== "-hwaccel" && args[k - 1] !== "-hwaccel");
 
 /** ffmpeg mit Fortschritt: meldet die schon geschriebene Ausgabezeit in ms. */
 async function ffProgress(args: string[], onTimeMs: (ms: number) => void, signal?: AbortSignal): Promise<void> {
@@ -659,29 +670,42 @@ export async function renderMontage(
         }
         filters.push(`${last}format=yuv420p${rate === 1 ? `,fps=${FPS}` : ""},trim=duration=${durS.toFixed(3)}[out]`);
         const tmp = join(pdir, "v.mp4");
-        await ffProgress(
-          [
-            ...args,
-            "-filter_complex",
-            filters.join(";"),
-            "-map",
-            "[out]",
-            "-frames:v",
-            String(frameCount),
-            "-r",
-            String(FPS),
-            ...enc,
-            "-g",
-            String(FPS * 2),
-            "-an",
-            tmp,
-          ],
-          (ms) => {
-            doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS)));
-            report();
-          },
-          signal,
-        );
+        const full = [
+          ...args,
+          "-filter_complex",
+          filters.join(";"),
+          "-map",
+          "[out]",
+          "-frames:v",
+          String(frameCount),
+          "-r",
+          String(FPS),
+          ...enc,
+          "-g",
+          String(FPS * 2),
+          "-an",
+          tmp,
+        ];
+        const progress = (ms: number) => {
+          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS)));
+          report();
+        };
+        // Mehrere Abschnitte laufen gleichzeitig: Jeder merkt sich, ob er mit Hardware-Dekodierung begonnen hat.
+        const hw = hwaccel && p.videos.length > 0;
+        try {
+          await ffProgress(hw ? full : withoutHwaccel(full), progress, signal);
+        } catch (e) {
+          // Abgebrochen (auch weil ein anderer Abschnitt oder der Ton gescheitert ist) oder ohnehin ohne: Fehler melden.
+          if (!hw || signal?.aborted || !(e instanceof ToolError)) throw e;
+          // Sonst einmal ohne Hardware-Dekodierung, auch nach einem Stillstand (hängender Treiber). Lag es nicht
+          // daran, scheitert auch dieser Lauf, und sein Fehler nennt den Grund ohne die Meldungen der Treiber.
+          log("montage", `${what}: mit Hardware-Dekodierung gescheitert (${e.message}), rechnet ohne neu`);
+          doneFrames.set(i, 0);
+          report();
+          await ffProgress(withoutHwaccel(full), progress, signal);
+          if (hwaccel) log("montage", "Hardware-Dekodierung geht hier nicht, bis zum Neustart abgeschaltet");
+          hwaccel = false;
+        }
         await rename(tmp, vOut).catch(async () => {
           await copyFile(tmp, vOut);
         });
