@@ -32,6 +32,8 @@ export interface ExportOptions {
   /** Zeichnet Uhrzeit, Leisten und Tafeltexte ins Video (in der App über die Oberfläche). */
   overlay?: OverlayRenderer;
   onProgress?: (step: string, done: number, total: number) => void;
+  /** Die Vorabprüfung ist durch, gleich entsteht die erste Datei im Zielordner. */
+  onWriting?: () => void;
   /** Zusätzlich eine Schnittliste für DaVinci Resolve (FCPXML) mit Standbildern daneben. */
   resolve?: boolean;
   /** Zwischenspeicher für fertige Videoabschnitte (je Einsatz ein eigener Ordner). */
@@ -311,6 +313,7 @@ export async function exportSession(
     log("ausgabe", `Vorprüfung gescheitert: ${friendly instanceof Error ? friendly.message : String(friendly)}`);
     throw new ExportPrecheckError(friendly instanceof Error ? friendly.message : String(friendly), { cause: e });
   }
+  opts.onWriting?.();
   const work = await mkdtemp(join(tmpdir(), "feldspur-export-"));
   log("ausgabe", `Zielordner beschreibbar; Arbeitsordner ${work}`);
   try {

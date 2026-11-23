@@ -4,7 +4,7 @@
  */
 import type { ChangeEntry, ChangeStep, History } from "@feldspur/core";
 import { excelCsv } from "@feldspur/media/csv";
-import { decisionText, fieldChanges, OP_LABEL, TABLE_LABEL } from "../shared/changelog.ts";
+import { decisionText, fieldChanges, OP_LABEL, stepLabel, TABLE_LABEL } from "../shared/changelog.ts";
 
 export function changeLogRows(steps: ChangeStep[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -12,14 +12,7 @@ export function changeLogRows(steps: ChangeStep[]): unknown[][] {
   for (const s of steps.toReversed()) {
     for (const c of s.changes) {
       const fields = fieldChanges(c);
-      const base = [
-        s.at,
-        s.step,
-        s.label ?? "(ohne Beschriftung)",
-        TABLE_LABEL[c.table] ?? c.table,
-        OP_LABEL[c.op],
-        c.rowKey,
-      ];
+      const base = [s.at, s.step, stepLabel(s), TABLE_LABEL[c.table] ?? c.table, OP_LABEL[c.op], c.rowKey];
       if (!fields.length) rows.push([...base, "", "", ""]);
       // Entscheidungen lesbar statt als JSON (der Rohwert steht in der Projektdatei).
       const show = (field: string, v: unknown) => (field === "decision" && v !== null ? decisionText(v) : v);

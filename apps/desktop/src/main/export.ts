@@ -13,7 +13,6 @@ import {
   entryText,
   exportSession,
   methodsSummary,
-  ExportPrecheckError,
   type ImageRef,
   montagePreview,
   type MontagePreview,
@@ -282,6 +281,16 @@ function keepAwake(wc: WebContents): () => void {
   };
 }
 
+/** Laufende Ausgabe abbrechen, welche es auch ist: beim Schließen der App. */
+export function abortExport(): void {
+  controller?.abort();
+}
+
+/** Fortschritt melden, solange das Fenster noch da ist (beim Schließen läuft die Ausgabe noch kurz weiter). */
+function safeSend(wc: WebContents, channel: string, ...args: unknown[]): void {
+  if (!wc.isDestroyed()) wc.send(channel, ...args);
+}
+
 /** Laufende Ausgabe dieses Einsatzes abbrechen (sonst nichts). */
 export function cancelExport(sessionId: string): void {
   if (running === sessionId) controller?.abort();
@@ -319,7 +328,7 @@ export async function runExport(
     // bei großen Einsätzen Minuten, schon geprüfte Dateien merkt sich die App. Findet die Prüfung etwas, entscheidet
     // die Person; der gewählte Ordner kommt mit zurück, damit „Trotzdem ausgeben“ nicht noch einmal fragt.
     const send = throttled((done: number, total: number) =>
-      wc.send(IPC.exportProgress, { sessionId, step: EXPORT_CHECK_STEP, done, total }),
+      safeSend(wc, IPC.exportProgress, { sessionId, step: EXPORT_CHECK_STEP, done, total }),
     );
     let check;
     try {
@@ -337,7 +346,8 @@ export async function runExport(
       await sessionLevels(s, sessionId, {
         measureMissing: opts.video,
         signal: ctrl.signal,
-        onProgress: (done, total) => wc.send(IPC.exportProgress, { sessionId, step: "Lautstärke messen", done, total }),
+        onProgress: (done, total) =>
+          safeSend(wc, IPC.exportProgress, { sessionId, step: "Lautstärke messen", done, total }),
       });
     } catch (e) {
       if (ctrl.signal.aborted) return { cancelled: true };
@@ -347,8 +357,9 @@ export async function runExport(
     const settings = exportSettings(s, sessionId, opts);
     const fingerprint = exportFingerprint(s, sessionId, settings);
     const dir = join(parent, baseName(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, opts.realtime))));
-    // Schlägt die Ausgabe in denselben Ordner fehl oder wird abgebrochen, liegen dort womöglich halbe Dateien:
-    // dann gilt der alte Stand nicht. Scheitert schon die Vorabprüfung, ist noch nichts geschrieben: Stand behalten.
+    // Sobald in denselben Ordner geschrieben wird, gilt der alte Stand nicht mehr: Schlägt die Ausgabe fehl, bricht
+    // sie ab oder stürzt die App ab, lägen dort sonst halbe Dateien unter dem Vermerk „aktuell“. Scheitert schon die
+    // Vorabprüfung, ist noch nichts geschrieben: Stand behalten.
     const r = await exportSession(s, sessionId, dir, {
       signal: ctrl.signal,
       video: opts.video,
@@ -371,10 +382,11 @@ export async function runExport(
       manifest: settings.manifest,
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(app.getPath("userData"), "Montage-Zwischenspeicher", sessionId),
-      onProgress: (step, done, total) => wc.send(IPC.exportProgress, { sessionId, step, done, total }),
+      onProgress: (step, done, total) => safeSend(wc, IPC.exportProgress, { sessionId, step, done, total }),
+      onWriting: () => {
+        if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);
+      },
     }).catch((e: unknown) => {
-      if (!(e instanceof ExportPrecheckError) && s.getExportRecord(sessionId)?.dir === dir)
-        s.deleteExportRecord(sessionId);
       if (ctrl.signal.aborted) return null;
       throw e;
     });

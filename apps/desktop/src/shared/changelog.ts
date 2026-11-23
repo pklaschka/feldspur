@@ -2,7 +2,7 @@
  * Änderungsprotokoll lesbar machen: Bereiche und Arten auf Deutsch, je Änderung die Felder, die sich geändert haben.
  * Wird in der Oberfläche und für die CSV-Ausgabe genutzt.
  */
-import type { ChangeEntry } from "@feldspur/core";
+import type { ChangeEntry, ChangeStep } from "@feldspur/core";
 
 export const TABLE_LABEL: Record<string, string> = {
   project_meta: "Projekt",
@@ -10,14 +10,24 @@ export const TABLE_LABEL: Record<string, string> = {
   persons: "Person",
   devices: "Gerät",
   sources: "Quelle",
-  evidence: "Zeitbeleg",
   time_evidence: "Zeitbeleg",
-  anchors: "Anker",
+  sync_anchors: "Anker",
   diary_entries: "Tagebucheintrag",
   transcript_lines: "Mitschrift",
   source_notes: "Notiz",
   episode_edits: "Episoden-Anpassung",
 };
+
+/**
+ * Beschriftung eines Schritts. Schritte ohne eigene Beschriftung entstehen außerhalb von Rückgängig (Einsammeln,
+ * Tonspur-Abgleich); ihr Name ergibt sich aus dem, was sie geändert haben.
+ */
+export function stepLabel(s: Pick<ChangeStep, "label" | "changes">): string {
+  if (s.label) return s.label;
+  if (s.changes.some((c) => ["sources", "devices", "time_evidence"].includes(c.table))) return "Dateien eingesammelt";
+  if (s.changes.length && s.changes.every((c) => c.table === "sync_anchors")) return "Anker vorgeschlagen";
+  return "Automatisch geändert";
+}
 
 /** Feldnamen, die im Protokoll häufig vorkommen, lesbar; unbekannte bleiben wie in der Datenbank. */
 export const FIELD_LABEL: Record<string, string> = {

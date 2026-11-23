@@ -250,4 +250,21 @@ describe("Als Kopie öffnen", () => {
       "Wiederhergestellt.feldspur",
     ]);
   });
+
+  it("ersetzt eine beschädigte Datei samt ihrem alten Journal durch eine gesunde Kopie", () => {
+    // Angenommen: eine Sicherung und daneben eine beschädigte Projektdatei mit liegengebliebenem Journal
+    const s = seeded();
+    const backup = nextBackupPathFor("automatisch");
+    s.backupTo(backup);
+    s.close();
+    const broken = join(dir, "Kaputt.feldspur");
+    writeFileSync(broken, "kaputt");
+    writeFileSync(`${broken}-wal`, "altes Journal");
+    writeFileSync(`${broken}-shm`, "alter Index");
+    // Wenn: die Sicherung unter dem Namen der beschädigten Datei gespeichert wird
+    copyProjectFile(backup, broken);
+    // Dann: ist sie gesund, und weder Journal noch halbe Datei bleiben liegen
+    expect(checkProjectFile(broken).ok).toBe(true);
+    expect(readdirSync(dir).filter((f) => f.startsWith("Kaputt"))).toEqual(["Kaputt.feldspur"]);
+  });
 });

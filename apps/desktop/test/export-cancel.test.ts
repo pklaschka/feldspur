@@ -17,7 +17,7 @@ vi.mock("electron", () => ({
   ipcMain: { on: () => {}, handle: () => {} },
   powerSaveBlocker: (power.blocker = fakePowerSaveBlocker()),
 }));
-const { cancelExport, exportRunning, runExport } = await import("../src/main/export.ts");
+const { abortExport, cancelExport, exportRunning, runExport } = await import("../src/main/export.ts");
 
 describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler", () => {
   let dir: string;
@@ -56,6 +56,25 @@ describe.skipIf(!hasFfmpeg())("Ausgabe in denselben Ordner: Abbruch und Fehler",
     // Dann: gilt der alte Stand nicht mehr (dort liegen womöglich halbe Dateien), ein Video gibt es nicht
     expect(store.getExportRecord(sessionId)).toBeNull();
     expect(readdirSync(join(out, readdirSync(out)[0]!)).some((f) => f.endsWith(".mp4"))).toBe(false);
+    expect(exportRunning()).toBe(false);
+  });
+
+  it("vergisst die alte Ausgabe schon beim ersten Schreiben, damit ein Absturz keine halbe als aktuell hinterlässt", async () => {
+    const out = join(dir, "absturz");
+    // Angenommen: eine fertige Ausgabe in diesem Ordner
+    await runExport(store, fakeWebContents(), sessionId, out, { video: false });
+    expect(store.getExportRecord(sessionId)).not.toBeNull();
+
+    // Wenn: erneut mit Video in denselben Ordner ausgegeben wird und die App beim Video geschlossen wird
+    let duringVideo: unknown = "nicht erreicht";
+    const wc = fakeWebContents((channel: string, p: ExportProgress) => {
+      if (channel !== IPC.exportProgress || p.step !== "Montagevideo" || duringVideo !== "nicht erreicht") return;
+      duringVideo = store.getExportRecord(sessionId);
+      abortExport();
+    });
+    // Dann: war der alte Stand schon während des Videos vergessen, und das Schließen bricht die Ausgabe ab
+    expect(await runExport(store, wc, sessionId, out, { video: true })).toEqual({ cancelled: true });
+    expect(duringVideo).toBeNull();
     expect(exportRunning()).toBe(false);
   });
 
