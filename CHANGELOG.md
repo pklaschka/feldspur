@@ -4,6 +4,25 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.4.0-rc.2 – 2026-11-23 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at 2d530670200990ad859c00ca89a0c4bbf1a9be38 -->
+
+### Verbessert
+
+- Übersicht, Ausgeben und LIESMICH: klarere Texte, Uhrzeit unter dem Mauszeiger, ruhigere Anordnung ([#223](https://github.com/pklaschka/feldspur/pull/223), @pklaschka)
+
+### Dokumentation
+
+- Handbuch: Texte und Bildschirmfotos an v0.4.0 angeglichen, neues Bild der Übersicht ([#224](https://github.com/pklaschka/feldspur/pull/224), @pklaschka)
+
+### Hinter den Kulissen
+
+- Schema der Projektdatei: Drizzle an die Migrationen angleichen und per Test absichern ([#222](https://github.com/pklaschka/feldspur/pull/222), @pklaschka)
+- Handbuch-Rundgang prüft die neuen Begriffe aus Übersicht, Ausgeben und Durchsehen ([#225](https://github.com/pklaschka/feldspur/pull/225), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.1...v0.4.0-rc.2
+
 ## 0.4.0-rc.1 – 2026-11-22 (Vorabversion)
 
 <!-- Release notes generated using configuration in .github/release.yml at 024f3a1f279daf3966434b3985e6185568187c7e -->
