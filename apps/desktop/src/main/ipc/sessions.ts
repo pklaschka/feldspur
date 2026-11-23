@@ -1,19 +1,8 @@
-/** IPC-Aufrufe zu Einsätzen: anlegen und ändern, Einsammeln, Quellen und Geräte. */
-import { existsSync } from "node:fs";
+/** IPC-Aufrufe zu Einsätzen: anlegen, ändern und löschen, Einsammeln, Quellen und Geräte ordnen. */
 import { basename } from "node:path";
 import { dialog, ipcMain } from "electron";
-import {
-  applyImport,
-  applyReread,
-  rereadChanges,
-  rereadSource,
-  type RereadSource,
-  ScanCache,
-  scanPaths,
-  type ScanProgress,
-} from "@feldspur/media";
+import { applyImport, ScanCache, scanPaths, type ScanProgress } from "@feldspur/media";
 import { IPC, type ImportResult, type NewSessionInput, type SessionPatch } from "../../shared/api.ts";
-import { clearDeviceChecks } from "../edits.ts";
 import { exportingSession } from "../export.ts";
 import { updateSessionDetails } from "../session.ts";
 import {
@@ -27,17 +16,8 @@ import {
 } from "../sources.ts";
 import { buildSessionView } from "../view.ts";
 import { relinkDuplicates } from "../originals.ts";
-import {
-  analyzing,
-  currentStore,
-  importing,
-  parentWindow,
-  projectInfo,
-  requireStore,
-  stillOpen,
-  undoable,
-  undoableView,
-} from "../state.ts";
+import { analyzing, currentStore, importing, parentWindow, projectInfo, requireStore } from "../state.ts";
+import { undoable, undoableView } from "./undoable.ts";
 
 /** Schon vollständig gelesene Dateien: Ein zweiter Versuch nach einem Abbruch muss sie nicht erneut lesen. */
 const scanCache = new ScanCache();
@@ -107,11 +87,12 @@ export function registerSessionsIpc(): void {
     };
   });
 
-  undoable(IPC.renameDevice, "Gerät umbenannt", (_e, deviceId: string, label: string) => {
-    const s = requireStore();
-    const d = s.updateDevice(deviceId, { label: label.trim() || s.getDevice(deviceId).label });
-    return buildSessionView(s, d.sessionId);
-  });
+  undoableView(
+    IPC.renameDevice,
+    "Gerät umbenannt",
+    (s, deviceId: string, label: string) =>
+      s.updateDevice(deviceId, { label: label.trim() || s.getDevice(deviceId).label }).sessionId,
+  );
 
   undoable(IPC.updateSession, "Einsatzdaten geändert", (_e, sessionId: string, patch: SessionPatch) => {
     const s = requireStore();
@@ -145,80 +126,4 @@ export function registerSessionsIpc(): void {
   undoableView(IPC.setFollows, "Folgeaufnahme gesetzt", (s, sourceId: string, prevId: string | null) =>
     setFollows(s, sourceId, prevId),
   );
-
-  undoable(IPC.setReference, "Referenzuhr gewählt", (_e, deviceId: string) => {
-    const s = requireStore();
-    const d = s.setReferenceDevice(deviceId);
-    return buildSessionView(s, d.sessionId);
-  });
-
-  ipcMain.handle(IPC.rereadDevice, async (_e, deviceId: string) => {
-    const s = requireStore();
-    const device = s.getDevice(deviceId);
-    const sources = s.listSources(device.sessionId).filter((x) => x.deviceId === deviceId);
-    const read: RereadSource[] = [];
-    const missing: string[] = [];
-    // Erst alles lesen (dauert), dann in einem Schritt übernehmen: der lässt sich rückgängig machen.
-    for (const src of sources) {
-      if (!existsSync(src.originalPath)) {
-        missing.push(src.label);
-        continue;
-      }
-      try {
-        read.push(await rereadSource(src));
-      } catch {
-        missing.push(src.label);
-      }
-    }
-    stillOpen(s);
-    // Erst prüfen, ob sich etwas ändert: ein leerer Schritt im Verlauf hilft niemandem.
-    const changed = rereadChanges(s, device.sessionId, read)
-      ? s.history.record(`Zeitbelege neu gelesen: ${device.label}`, () => applyReread(s, device.sessionId, read))
-      : 0;
-    return { view: buildSessionView(s, device.sessionId), changed, missing };
-  });
-  undoableView(
-    IPC.clearDeviceChecks,
-    (s, deviceId: string) => `Bestätigungen entfernt: ${s.getDevice(deviceId).label}`,
-    (s, deviceId: string) => clearDeviceChecks(s, deviceId),
-  );
-  undoable(IPC.setDeviceTimeZone, "Zeitzone geändert", (_e, deviceId: string, timeZone: string | null) => {
-    const s = requireStore();
-    const zone = timeZone?.trim() || null;
-    if (zone) {
-      try {
-        new Intl.DateTimeFormat("de", { timeZone: zone });
-      } catch {
-        throw new Error(`Unbekannte Zeitzone „${zone}“`);
-      }
-    }
-    const d = s.updateDevice(deviceId, { timeZone: zone });
-    return buildSessionView(s, d.sessionId);
-  });
-  undoable(
-    IPC.setDeviceUtc,
-    (s, deviceId: string, utc: boolean) =>
-      `Zeitstempel von ${s.getDevice(deviceId).label} als ${utc ? "UTC" : "Ortszeit"} gelesen`,
-    (_e, deviceId: string, utc: boolean) => {
-      const s = requireStore();
-      const d = s.updateDevice(deviceId, { timestampsAreUtc: utc });
-      return buildSessionView(s, d.sessionId);
-    },
-  );
-
-  undoable(IPC.setDeviceOffset, "Uhrabweichung geändert", (_e, deviceId: string, offsetMs: number | null) => {
-    const s = requireStore();
-    const d = s.updateDevice(
-      deviceId,
-      offsetMs === null
-        ? { offsetBasis: "unknown", clockOffsetMs: 0, isReference: false }
-        : {
-            offsetBasis: "manual",
-            clockOffsetMs: Math.round(offsetMs),
-            clockOffsetUncertaintyMs: 1000,
-            isReference: false,
-          },
-    );
-    return buildSessionView(s, d.sessionId);
-  });
 }

@@ -75,8 +75,9 @@ function registerMediaProtocol(): void {
     try {
       const url = new URL(req.url);
       const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
-      if (url.host !== "source" || !currentStore()) return new Response("Nicht gefunden", { status: 404 });
-      const src = currentStore()!.getSource(id);
+      const s = currentStore();
+      if (url.host !== "source" || !s) return new Response("Nicht gefunden", { status: 404 });
+      const src = s.getSource(id);
       return fileResponse(src.originalPath, src.fileName, req.headers.get("range"));
     } catch {
       return new Response("Nicht gefunden", { status: 404 });

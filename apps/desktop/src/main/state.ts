@@ -1,26 +1,39 @@
 /**
  * Zustand des Hauptprozesses: offenes Projekt, Fenster, laufende Arbeiten. Die IPC-Aufrufe in ipc/ greifen nur
- * hierüber darauf zu; `stillOpen` und `undoable` halten die Regeln für alle fest.
+ * hierüber darauf zu; `stillOpen` hält die Regel für Aufrufe mit `await` fest.
  */
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, type BrowserWindow } from "electron";
 import { backupDir, checkProjectFile, listBackups, ProjectStore } from "@feldspur/core";
 import type { ProjectInfo } from "../shared/api.ts";
 import { abortExport, exportRunning } from "./export.ts";
 import { rememberProject } from "./recent.ts";
 import { AutoBackup } from "./backup.ts";
-import { buildSessionView } from "./view.ts";
 
 let store: ProjectStore | null = null;
+let win: BrowserWindow | null = null;
+/** Zuletzt gescheitertes Öffnen: dort sucht „Sicherung als Kopie öffnen…“ zuerst nach Sicherungen. */
+let failedPath: string | null = null;
 /** Laufendes Einsammeln je Einsatz, zum Abbrechen. */
 export const importing = new Map<string, AbortController>();
 /** Einsätze, deren Tonspuren gerade analysiert werden, zum Abbrechen. */
 export const analyzing = new Map<string, AbortController>();
-let win: BrowserWindow | null = null;
 export const autoBackup = new AutoBackup();
-/** Zuletzt gescheitertes Öffnen: dort sucht „Sicherung als Kopie öffnen…“ zuerst nach Sicherungen. */
-let failedPath: string | null = null;
+
+/** Das offene Projekt, falls eins offen ist. */
+export const currentStore = (): ProjectStore | null => store;
+
+export const lastFailedPath = (): string | null => failedPath;
+
+export const mainWindow = (): BrowserWindow | null => win;
+
+/** Das Hauptfenster als Eltern für Dialoge. */
+export const parentWindow = (): BrowserWindow => win!;
+
+export function setWindow(w: BrowserWindow): void {
+  win = w;
+}
 
 /** Die gebündelte App lädt better-sqlite3 über eine Datei neben der App (siehe scripts/fetch-electron-sqlite.mjs). */
 function nativeBinding(): string | undefined {
@@ -96,48 +109,4 @@ export function openStore(path: string, create: boolean, fresh = create): Projec
   win?.setTitle(`Feldspur · ${info.name}`);
   rememberProject(info.path, info.name);
   return info;
-}
-
-/**
- * IPC-Aufruf, der Daten ändert, als ein Schritt für Rückgängig. Die Ansicht wird im selben Schritt gebaut; das
- * stört nicht, weil sie nichts schreibt.
- */
-export function undoable<A extends unknown[], R>(
-  channel: string,
-  /** Beschriftung im Verlauf; als Funktion, wenn sie die betroffene Quelle nennen soll (vor der Änderung gelesen). */
-  label: string | ((s: ProjectStore, ...args: A) => string),
-  handler: (e: Electron.IpcMainInvokeEvent, ...args: A) => R,
-): void {
-  ipcMain.handle(channel, (e, ...args) => {
-    const s = requireStore();
-    const text = typeof label === "string" ? label : label(s, ...(args as A));
-    return s.history.record(text, () => handler(e, ...(args as A)));
-  });
-}
-
-/** Das offene Projekt, falls eins offen ist. */
-export const currentStore = (): ProjectStore | null => store;
-
-export const mainWindow = (): BrowserWindow | null => win;
-
-/** Das Hauptfenster als Eltern für Dialoge. */
-export const parentWindow = (): BrowserWindow => win!;
-
-export function setWindow(w: BrowserWindow): void {
-  win = w;
-}
-
-/** Zuletzt gescheitertes Öffnen: dort sucht „Sicherung als Kopie öffnen…“ zuerst nach Sicherungen. */
-export const lastFailedPath = (): string | null => failedPath;
-
-/** Wie `undoable`, für die häufigste Form: Die Änderung nennt ihren Einsatz, die Antwort ist dessen neue Ansicht. */
-export function undoableView<A extends unknown[]>(
-  channel: string,
-  label: string | ((s: ProjectStore, ...args: A) => string),
-  change: (s: ProjectStore, ...args: A) => string,
-): void {
-  undoable(channel, label, (_e, ...args: A) => {
-    const s = requireStore();
-    return buildSessionView(s, change(s, ...args));
-  });
 }

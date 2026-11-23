@@ -1,15 +1,12 @@
-/** IPC-Aufrufe fürs Ausgeben: Vorschau, Stand, Ausgabe, Originale prüfen und Projektübersicht. */
+/** IPC-Aufrufe fürs Ausgeben: Vorschau, Stand, Ausgabe, Originale prüfen und wiederfinden. */
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { dialog, ipcMain, shell } from "electron";
-import { fieldCalendarSvg, type CalendarDay } from "@feldspur/media";
 import { IPC, type ExportRequest } from "../../shared/api.ts";
 import {
   cancelExport,
   exportCard,
   exportStatus,
-  projectOverview,
   montagePlan,
   previewExport,
   registerOverlayBridge,
@@ -20,9 +17,9 @@ import { checkOriginals, relinkFile, searchOriginals } from "../originals.ts";
 import { citationInfo } from "../citation.ts";
 import { softwareLine } from "../../shared/methods-table.ts";
 import { ALL_VERSIONS_DOI } from "../../shared/citation.ts";
-import { parentWindow, projectInfo, requireStore, stillOpen } from "../state.ts";
+import { parentWindow, requireStore, stillOpen } from "../state.ts";
 
-export function registerOutputIpc(): void {
+export function registerExportIpc(): void {
   registerOverlayBridge();
 
   ipcMain.handle(IPC.previewExport, (_e, sessionId: string, realtime?: boolean) =>
@@ -41,22 +38,6 @@ export function registerOutputIpc(): void {
     const path = join(record.dir, String(name));
     if (!existsSync(path)) return false;
     return (await shell.openPath(path)) === "";
-  });
-  ipcMain.handle(IPC.projectOverview, () => ({
-    sessions: projectOverview(requireStore()),
-    citation: citationInfo(),
-  }));
-  ipcMain.handle(IPC.saveFieldCalendar, async (_e, days: CalendarDay[]) => {
-    if (!Array.isArray(days) || !days.length) return null;
-    const info = projectInfo()!;
-    const r = await dialog.showSaveDialog(parentWindow(), {
-      title: "Feldkalender speichern",
-      defaultPath: join(dirname(info.path), `${basename(info.path, ".feldspur")}_Feldkalender.svg`),
-      filters: [{ name: "SVG-Grafik", extensions: ["svg"] }],
-    });
-    if (r.canceled || !r.filePath) return null;
-    await writeFile(r.filePath, fieldCalendarSvg(days), "utf8");
-    return r.filePath;
   });
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
     montagePlan(requireStore(), sessionId, realtime),

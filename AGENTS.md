@@ -69,8 +69,9 @@ release. Add a tool name to select part of the graph. For example, run
 
 **Neuer IPC-Aufruf:** Kanal in `IPC` und Methode in der Schnittstelle (`apps/desktop/src/shared/api.ts`), Brücke in
 `apps/desktop/src/preload/preload.ts`, Handler in der passenden Datei unter `apps/desktop/src/main/ipc/` (ändert er
-Daten: `undoable`). Offenes Projekt, Fenster und laufende Arbeiten nur über `apps/desktop/src/main/state.ts`.
-Nach jedem `await` im Handler mit `stillOpen(s)` prüfen, ob noch dasselbe Projekt offen ist.
+Daten: `undoable` oder `undoableView` aus `ipc/undoable.ts`). Offenes Projekt, Fenster und laufende Arbeiten nur über
+`apps/desktop/src/main/state.ts`. Nach jedem `await` im Handler mit `stillOpen(s)` prüfen, ob noch dasselbe Projekt
+offen ist.
 
 **Neue Ausgabe-Option:** nur in `ExportRequestOptions` (`apps/desktop/src/shared/api.ts`) ergänzen; `ExportChoices` und
 `ExportRequest` leiten sich davon ab. Danach `exportSettings` (`apps/desktop/src/main/export.ts`) und, falls sie das

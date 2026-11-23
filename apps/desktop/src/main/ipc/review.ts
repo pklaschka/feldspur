@@ -8,6 +8,7 @@ import {
   IPC,
   type ContextDetails,
   type DiaryPatch,
+  type PageNumberingInput,
   type Region,
   type TranscriptPatch,
   type SourceNoteInput,
@@ -24,12 +25,13 @@ import {
   sortContextByPage,
 } from "../context.ts";
 import { addRegion, createEntry, deleteEntry, moveRegion, patchEntry, removeRegion, setRegionPage } from "../diary.ts";
-import { parseClockNear, sessionSpan } from "../edits.ts";
+import { parseClockNear, sessionSpan, setPageNumbering } from "../edits.ts";
 import { addNote, deleteNote, updateNote } from "../notes.ts";
 import { addLine, deleteLine, importLines, updateLine } from "../transcript.ts";
 import { addEpisodeAround, moveEpisodeEdge, timelineEnvelopes } from "../episodes.ts";
 import { buildSessionView } from "../view.ts";
-import { parentWindow, requireStore, stillOpen, undoable, undoableView } from "../state.ts";
+import { parentWindow, requireStore, stillOpen } from "../state.ts";
+import { undoable, undoableView } from "./undoable.ts";
 
 function setDiaryNote(s: ProjectStore, sourceId: string, clock: string): string {
   const src = s.getSource(sourceId);
@@ -46,24 +48,21 @@ function setDiaryNote(s: ProjectStore, sourceId: string, clock: string): string 
 }
 
 export function registerReviewIpc(): void {
-  undoable(
+  undoableView(
     IPC.moveEpisodeEdge,
     "Episodengrenze verschoben",
-    (_e, id: string, edge: "start" | "end", from: number, to: number) => {
-      const s = requireStore();
+    (s, id: string, edge: "start" | "end", from: number, to: number) => {
       moveEpisodeEdge(s, id, edge, from, to);
-      return buildSessionView(s, id);
+      return id;
     },
   );
-  undoable(IPC.addEpisodeAround, "Mini-Episode angelegt", (_e, id: string, atMs: number) => {
-    const s = requireStore();
+  undoableView(IPC.addEpisodeAround, "Mini-Episode angelegt", (s, id: string, atMs: number) => {
     addEpisodeAround(s, id, atMs);
-    return buildSessionView(s, id);
+    return id;
   });
-  undoable(IPC.resetEpisodes, "Episoden zurückgesetzt", (_e, id: string) => {
-    const s = requireStore();
+  undoableView(IPC.resetEpisodes, "Episoden zurückgesetzt", (s, id: string) => {
     s.clearEpisodeEdits(id);
-    return buildSessionView(s, id);
+    return id;
   });
   ipcMain.handle(IPC.envelopes, (_e, id: string) => timelineEnvelopes(requireStore(), id));
 
@@ -143,6 +142,10 @@ export function registerReviewIpc(): void {
   undoableView(IPC.deleteDiaryEntry, "Tagebucheintrag gelöscht", (s, entryId: string) => deleteEntry(s, entryId));
   undoableView(IPC.patchDiaryEntry, "Tagebucheintrag geändert", (s, entryId: string, patch: DiaryPatch) =>
     patchEntry(s, entryId, patch),
+  );
+
+  undoableView(IPC.setPageNumbering, "Seitenzählung geändert", (s, items: PageNumberingInput[]) =>
+    setPageNumbering(s, items),
   );
 
   // Kontext (Issue #108): Beschriftungen nennen das Stück, damit das Änderungsprotokoll die Entscheidung belegt.

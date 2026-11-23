@@ -1,11 +1,21 @@
-/** IPC-Aufrufe fürs Abgleichen: Tonspuren analysieren, Anker, Zeitbelege, Lage und Lautstärke. */
+/** IPC-Aufrufe fürs Abgleichen: Tonspuren analysieren, Uhren der Geräte, Anker, Zeitbelege, Lage und Lautstärke. */
+import { existsSync } from "node:fs";
 import { ipcMain } from "electron";
 import type { ProjectStore } from "@feldspur/core";
-import { analyzeSession, measureSource, refineAlignment } from "@feldspur/media";
-import { IPC, type AnchorInput, type LevelInput, type PageNumberingInput, type TimeInput } from "../../shared/api.ts";
+import {
+  analyzeSession,
+  applyReread,
+  measureSource,
+  refineAlignment,
+  rereadChanges,
+  rereadSource,
+  type RereadSource,
+} from "@feldspur/media";
+import { IPC, type AnchorInput, type LevelInput, type TimeInput } from "../../shared/api.ts";
 import {
   addManualAnchor,
   addTimeEvidence,
+  clearDeviceChecks,
   confirmAnchors,
   confirmPlacement,
   decideMany,
@@ -17,12 +27,12 @@ import {
   removeEvidence,
   replaceAnchor,
   setLevel,
-  setPageNumbering,
   toggleEvidence,
 } from "../edits.ts";
 import { buildSessionView } from "../view.ts";
 import { unreachableForAnalysis } from "../originals.ts";
-import { analyzing, currentStore, requireStore, stillOpen, undoable, undoableView } from "../state.ts";
+import { analyzing, currentStore, requireStore, stillOpen } from "../state.ts";
+import { undoableView } from "./undoable.ts";
 
 /** „F-003, Dateiname“ für Beschriftungen im Verlauf. */
 function evidenceLabel(s: ProjectStore, evidenceId: string): { source: string; kind: string; checked: boolean } {
@@ -64,8 +74,77 @@ export function registerSyncIpc(): void {
     };
   });
 
-  undoable(IPC.confirmAnchor, "Vorschlag übernommen", (_e, anchorId: string) => {
+  // Uhren der Geräte: Referenzuhr, Abweichung, Zeitzone, Zeitbelege aus den Dateien.
+  undoableView(
+    IPC.setReference,
+    "Referenzuhr gewählt",
+    (s, deviceId: string) => s.setReferenceDevice(deviceId).sessionId,
+  );
+  undoableView(
+    IPC.setDeviceOffset,
+    "Uhrabweichung geändert",
+    (s, deviceId: string, offsetMs: number | null) =>
+      s.updateDevice(
+        deviceId,
+        offsetMs === null
+          ? { offsetBasis: "unknown", clockOffsetMs: 0, isReference: false }
+          : {
+              offsetBasis: "manual",
+              clockOffsetMs: Math.round(offsetMs),
+              clockOffsetUncertaintyMs: 1000,
+              isReference: false,
+            },
+      ).sessionId,
+  );
+  undoableView(IPC.setDeviceTimeZone, "Zeitzone geändert", (s, deviceId: string, timeZone: string | null) => {
+    const zone = timeZone?.trim() || null;
+    if (zone) {
+      try {
+        new Intl.DateTimeFormat("de", { timeZone: zone });
+      } catch {
+        throw new Error(`Unbekannte Zeitzone „${zone}“`);
+      }
+    }
+    return s.updateDevice(deviceId, { timeZone: zone }).sessionId;
+  });
+  undoableView(
+    IPC.setDeviceUtc,
+    (s, deviceId: string, utc: boolean) =>
+      `Zeitstempel von ${s.getDevice(deviceId).label} als ${utc ? "UTC" : "Ortszeit"} gelesen`,
+    (s, deviceId: string, utc: boolean) => s.updateDevice(deviceId, { timestampsAreUtc: utc }).sessionId,
+  );
+  ipcMain.handle(IPC.rereadDevice, async (_e, deviceId: string) => {
     const s = requireStore();
+    const device = s.getDevice(deviceId);
+    const sources = s.listSources(device.sessionId).filter((x) => x.deviceId === deviceId);
+    const read: RereadSource[] = [];
+    const missing: string[] = [];
+    // Erst alles lesen (dauert), dann in einem Schritt übernehmen: der lässt sich rückgängig machen.
+    for (const src of sources) {
+      if (!existsSync(src.originalPath)) {
+        missing.push(src.label);
+        continue;
+      }
+      try {
+        read.push(await rereadSource(src));
+      } catch {
+        missing.push(src.label);
+      }
+    }
+    stillOpen(s);
+    // Erst prüfen, ob sich etwas ändert: ein leerer Schritt im Verlauf hilft niemandem.
+    const changed = rereadChanges(s, device.sessionId, read)
+      ? s.history.record(`Zeitbelege neu gelesen: ${device.label}`, () => applyReread(s, device.sessionId, read))
+      : 0;
+    return { view: buildSessionView(s, device.sessionId), changed, missing };
+  });
+  undoableView(
+    IPC.clearDeviceChecks,
+    (s, deviceId: string) => `Bestätigungen entfernt: ${s.getDevice(deviceId).label}`,
+    (s, deviceId: string) => clearDeviceChecks(s, deviceId),
+  );
+
+  undoableView(IPC.confirmAnchor, "Vorschlag übernommen", (s, anchorId: string) => {
     const a = s.getAnchor(anchorId);
     s.confirmAnchor(anchorId);
     // Weitere Vorschläge für dasselbe Gerät sind damit erledigt: seine Uhr ist jetzt abgeglichen.
@@ -73,26 +152,24 @@ export function registerSyncIpc(): void {
     for (const other of s.listAnchors(a.sessionId)) {
       if (other.proposed && device && s.getSource(other.b.sourceId).deviceId === device) s.deleteAnchor(other.id);
     }
-    return buildSessionView(s, a.sessionId);
+    return a.sessionId;
   });
-  undoable(
+  undoableView(
     IPC.confirmAnchors,
     (s, sessionId: string, anchorIds: string[]) => {
       const n = proposalsToConfirm(s, sessionId, anchorIds).length;
       return n === 1 ? "Vorschlag übernommen" : `${n} Vorschläge übernommen`;
     },
-    (_e, sessionId: string, anchorIds: string[]) => {
-      const s = requireStore();
+    (s, sessionId: string, anchorIds: string[]) => {
       confirmAnchors(s, sessionId, anchorIds);
-      return buildSessionView(s, sessionId);
+      return sessionId;
     },
   );
 
-  undoable(IPC.rejectAnchor, "Anker entfernt", (_e, anchorId: string) => {
-    const s = requireStore();
+  undoableView(IPC.rejectAnchor, "Anker entfernt", (s, anchorId: string) => {
     const a = s.getAnchor(anchorId);
     s.deleteAnchor(anchorId);
-    return buildSessionView(s, a.sessionId);
+    return a.sessionId;
   });
 
   undoableView(
@@ -163,9 +240,6 @@ export function registerSyncIpc(): void {
   );
   undoableView(IPC.setLevel, "Lautstärke geändert", (s, sourceId: string, input: LevelInput) =>
     setLevel(s, sourceId, input),
-  );
-  undoableView(IPC.setPageNumbering, "Seitenzählung geändert", (s, items: PageNumberingInput[]) =>
-    setPageNumbering(s, items),
   );
   ipcMain.handle(IPC.measureLevel, async (_e, sourceId: string) => {
     const s = requireStore();

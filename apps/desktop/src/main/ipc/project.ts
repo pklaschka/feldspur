@@ -1,4 +1,7 @@
-/** IPC-Aufrufe zum Projekt: öffnen und anlegen, Rückgängig und Verlauf, Sicherungen, Zitieren, Zwischenablage. */
+/**
+ * IPC-Aufrufe zum Projekt: öffnen und anlegen, Rückgängig und Verlauf, Projektübersicht, Sicherungen, Zitieren,
+ * Zwischenablage.
+ */
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
@@ -12,9 +15,10 @@ import {
   fileStamp,
   type TouchedRow,
 } from "@feldspur/core";
+import { fieldCalendarSvg, type CalendarDay } from "@feldspur/media";
 import { IPC, type HistoryResult, type HistoryTarget, type SessionView } from "../../shared/api.ts";
 import { changeLogCsv } from "../changelog.ts";
-import { exportRunning } from "../export.ts";
+import { exportRunning, projectOverview } from "../export.ts";
 import { buildSessionView } from "../view.ts";
 import { forgetProject, recentProjects } from "../recent.ts";
 import { cancelCitationLookup, citationInfo, lookupCitationDoi } from "../citation.ts";
@@ -124,6 +128,23 @@ export function registerProjectIpc(): void {
   });
   ipcMain.handle(IPC.forgetRecent, (_e, path: string) => forgetProject(path));
 
+  ipcMain.handle(IPC.projectOverview, () => ({
+    sessions: projectOverview(requireStore()),
+    citation: citationInfo(),
+  }));
+  ipcMain.handle(IPC.saveFieldCalendar, async (_e, days: CalendarDay[]) => {
+    if (!Array.isArray(days) || !days.length) return null;
+    const info = projectInfo()!;
+    const r = await dialog.showSaveDialog(parentWindow(), {
+      title: "Feldkalender speichern",
+      defaultPath: join(dirname(info.path), `${basename(info.path, ".feldspur")}_Feldkalender.svg`),
+      filters: [{ name: "SVG-Grafik", extensions: ["svg"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    await writeFile(r.filePath, fieldCalendarSvg(days), "utf8");
+    return r.filePath;
+  });
+
   ipcMain.handle(IPC.backups, () => autoBackup.overview());
   ipcMain.handle(IPC.citationInfo, () => citationInfo());
   ipcMain.handle(IPC.lookupCitationDoi, () => lookupCitationDoi());
@@ -179,7 +200,8 @@ export function registerProjectIpc(): void {
     });
     if (r.canceled || !r.filePath) return null;
     const dest = r.filePath.endsWith(".feldspur") ? r.filePath : `${r.filePath}.feldspur`;
-    if (currentStore() && resolve(dest) === resolve(currentStore()!.path))
+    const openPath = currentStore()?.path;
+    if (openPath && resolve(dest) === resolve(openPath))
       throw new Error("Die Kopie darf nicht das offene Projekt ersetzen. Bitte einen anderen Namen wählen.");
     if (resolve(dest) === resolve(src)) throw new Error("Die Kopie braucht einen anderen Namen als die Sicherung.");
     if (exportRunning()) throw new Error("Während einer Ausgabe lässt sich kein anderes Projekt öffnen.");

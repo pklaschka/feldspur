@@ -1,5 +1,5 @@
 /** Alle IPC-Aufrufe anmelden, nach Arbeitsschritt geordnet. */
-import { registerOutputIpc } from "./output.ts";
+import { registerExportIpc } from "./export.ts";
 import { registerProjectIpc } from "./project.ts";
 import { registerReviewIpc } from "./review.ts";
 import { registerSessionsIpc } from "./sessions.ts";
@@ -10,5 +10,5 @@ export function registerIpc(): void {
   registerSessionsIpc();
   registerSyncIpc();
   registerReviewIpc();
-  registerOutputIpc();
+  registerExportIpc();
 }
