@@ -183,7 +183,12 @@ export function ExportStep({
               onOpenChange={setWatching}
               levels={new Map(view.rows.map((r) => [r.id, r.level]))}
             />
-            <ExportOptions opts={opts} set={set} withEpisodes={withEpisodes} preview={preview} />
+            <ExportOptions
+              opts={opts}
+              set={set}
+              withEpisodes={withEpisodes}
+              videoBytes={preview && !empty ? preview.videoBytes : null}
+            />
             {view.context.length > 0 && <ContextCard view={view} onView={onView} />}
             {open.length > 0 && !empty && (
               <section className="mt-5 border-t border-line pt-3 text-[0.9rem]" data-testid="export-open">

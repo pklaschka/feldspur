@@ -9,17 +9,16 @@ export function ExportOptions({
   opts,
   set,
   withEpisodes,
-  preview,
+  videoBytes,
 }: {
   opts: Options;
   set: (patch: Partial<Options>) => void;
   /** Sind unter „Durchsehen“ Episoden eingeschaltet? Nur dann lässt sich nach Episoden schneiden. */
   withEpisodes: boolean;
-  /** Für die geschätzte Größe des Videos; null, solange die Montage berechnet wird. */
-  preview: SessionTranscriptPreview | null;
+  /** Geschätzte Größe des Videos; null, solange die Montage berechnet wird oder leer ist. */
+  videoBytes: SessionTranscriptPreview["videoBytes"] | null;
 }) {
   const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, byEpisodes } = opts;
-  const empty = !preview || preview.durationMs <= 0;
   return (
     <>
       <OptionGroup title="Montagevideo">
@@ -28,11 +27,7 @@ export function ExportOptions({
           onChange={(v) => set({ video: v })}
           disabled={viewer}
           label="Montagevideo mit ausgeben"
-          size={
-            preview && !empty
-              ? aboutSize(preview.videoBytes.video + (deviceTracks ? preview.videoBytes.deviceTracks : 0))
-              : undefined
-          }
+          size={videoBytes ? aboutSize(videoBytes.video + (deviceTracks ? videoBytes.deviceTracks : 0)) : undefined}
           hint={
             viewer
               ? "Bleibt an, weil der Viewer dieses Video abspielt. Zum Ausschalten zuerst den Viewer abwählen."
