@@ -30,6 +30,7 @@ import {
   type OverviewSession,
   type ExportRunResult,
   type SessionTranscriptPreview,
+  type ExportChoices,
 } from "../shared/api.ts";
 import { checkOriginals } from "./originals.ts";
 import { sessionChangeLogCsv } from "./changelog.ts";
@@ -176,21 +177,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
 }
 
 /** Einstellungen so, wie sie das Ergebnis bestimmen (Episodenschnitt nur, wenn der Einsatz Episoden bildet). */
-export function exportSettings(
-  s: ProjectStore,
-  sessionId: string,
-  opts: {
-    video: boolean;
-    resolve?: boolean;
-    mixAudio?: boolean;
-    realtime?: boolean;
-    deviceTracks?: boolean;
-    viewer?: boolean;
-    readme?: boolean;
-    changeLog?: boolean;
-    manifest?: boolean;
-  },
-): ExportSettings {
+export function exportSettings(s: ProjectStore, sessionId: string, opts: ExportChoices): ExportSettings {
   return {
     video: opts.video,
     resolve: opts.resolve === true,
@@ -207,21 +194,7 @@ export function exportSettings(
 }
 
 /** Letzte Ausgabe des Einsatzes im Vergleich zum jetzigen Stand; null, wenn er noch nie ausgegeben wurde. */
-export function exportStatus(
-  s: ProjectStore,
-  sessionId: string,
-  opts: {
-    video: boolean;
-    resolve?: boolean;
-    mixAudio?: boolean;
-    realtime?: boolean;
-    deviceTracks?: boolean;
-    viewer?: boolean;
-    readme?: boolean;
-    changeLog?: boolean;
-    manifest?: boolean;
-  },
-): ExportStatus | null {
+export function exportStatus(s: ProjectStore, sessionId: string, opts: ExportChoices): ExportStatus | null {
   const record = s.getExportRecord(sessionId);
   return record ? compareExport(s, record, exportSettings(s, sessionId, opts)) : null;
 }
@@ -301,16 +274,7 @@ export async function runExport(
   wc: WebContents,
   sessionId: string,
   parent: string,
-  opts: {
-    video: boolean;
-    resolve?: boolean;
-    mixAudio?: boolean;
-    realtime?: boolean;
-    deviceTracks?: boolean;
-    viewer?: boolean;
-    readme?: boolean;
-    changeLog?: boolean;
-    manifest?: boolean;
+  opts: ExportChoices & {
     /** Zeile zur Software (Version, DOI) für die LIESMICH. */
     software?: string;
     /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */

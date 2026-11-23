@@ -45,7 +45,32 @@ release. Add a tool name to select part of the graph. For example, run
   Sicherungen, jeder ffmpeg/ffprobe-Aufruf mit Befehlszeile) mit `log(bereich, text)` aus `packages/media/src/log.ts`
   vermerken. Erscheint auf stderr, in der nicht gepackten App von selbst; `FELDSPUR_LOG=1` schaltet es überall ein
   (auch in Tests und in der installierten App, aus dem Terminal gestartet), `FELDSPUR_LOG=0` ab.
-- Vor dem Commit: `vp run check` und `vp run test` (die Skripte enthalten zusätzlich die Typprüfung der App).
+- Vor dem Commit: `vp run check` und `vp run test` (`check` enthält zusätzlich die Typprüfung der App).
+
+## Checklisten
+
+**Neue Tabelle in der Projektdatei:**
+
+1. Neue Stufe am Ende von `packages/core/src/db/migrations.ts` und dieselbe Tabelle in `packages/core/src/db/schema.ts`
+   (`schema.test.ts` vergleicht beide).
+2. Nur Zwischenergebnis oder Ausgabestand? Dann in `CACHE_TABLES` (`packages/core/src/db/history.ts`): leert den
+   Verlauf nicht und fehlt im Änderungsprotokoll.
+3. Sonst einen deutschen Namen in `TABLE_LABEL` (`apps/desktop/src/shared/changelog.ts`, ein Test prüft das) und
+   prüfen, ob `sessionSteps` (`apps/desktop/src/main/changelog.ts`) die Zeilen dem richtigen Einsatz zuordnet
+   (`session_id` oder `source_id`).
+4. Gehört die Tabelle zu einem Einsatz: in die Löschliste von `deleteSession` (`packages/core/src/db/store.ts`).
+5. Bestimmt sie, was ausgegeben wird: in `contentHash` (`packages/media/src/export-state.ts`), sonst bleibt eine
+   veraltete Ausgabe „aktuell“.
+6. Nach dem Release, das die Stufe enthält: ihren Fingerabdruck in `FROZEN` (`packages/core/test/migrations.test.ts`)
+   nachtragen.
+
+**Neuer IPC-Aufruf:** Kanal in `IPC` und Methode in der Schnittstelle (`apps/desktop/src/shared/api.ts`), Brücke in
+`apps/desktop/src/preload/preload.ts`, Handler in `apps/desktop/src/main/main.ts` (ändert er Daten: `undoable`).
+Nach jedem `await` im Handler mit `stillOpen(s)` prüfen, ob noch dasselbe Projekt offen ist.
+
+**Neue Ausgabe-Option:** nur in `ExportRequestOptions` (`apps/desktop/src/shared/api.ts`) ergänzen; `ExportChoices` und
+`ExportRequest` leiten sich davon ab. Danach `exportSettings` (`apps/desktop/src/main/export.ts`) und, falls sie das
+Ergebnis ändert, den Fingerabdruck nachziehen.
 
 ## Tests lesbar schreiben
 

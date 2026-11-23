@@ -520,6 +520,17 @@ export interface ExportRequestOptions {
   acceptOriginals?: boolean;
 }
 
+/**
+ * Was eine Ausgabe enthält, wie es Main, Ausgabestand und Fingerabdruck sehen. Nur `video` ist Pflicht; fehlende
+ * Schalter gelten als an, außer der Schnittliste (`resolve`). Eine neue Option kommt in `ExportRequestOptions` und
+ * gilt damit überall.
+ */
+export type ExportChoices = Pick<ExportRequestOptions, "video"> &
+  Partial<Omit<ExportRequestOptions, "video" | "reuseDir" | "dir" | "acceptOriginals">>;
+
+/** Anfrage aus der Oberfläche: die Auswahl samt Zielordner und Umgang mit der Prüfung. */
+export type ExportRequest = ExportChoices & Pick<ExportRequestOptions, "reuseDir" | "dir" | "acceptOriginals">;
+
 export type { ExportStatus, ExportDifference } from "@feldspur/media";
 
 /** Erster Schritt jeder Ausgabe, nach der Ordnerwahl: Originale mit Prüfsumme prüfen (done/total in Bytes). */
@@ -869,20 +880,7 @@ export interface FeldspurApi {
    * existiert; der Dialog beginnt sonst dort. Erster Schritt nach der Ordnerwahl ist die Prüfung der Originale;
    * findet sie etwas, kommt { originals, parent } zurück (außer acceptOriginals übergeht Auffälligkeiten).
    */
-  exportSession(
-    sessionId: string,
-    opts: {
-      video: boolean;
-      resolve?: boolean;
-      mixAudio?: boolean;
-      realtime?: boolean;
-      deviceTracks?: boolean;
-      viewer?: boolean;
-      dir?: string;
-      reuseDir?: boolean;
-      acceptOriginals?: boolean;
-    },
-  ): Promise<ExportRunResult | null>;
+  exportSession(sessionId: string, opts: ExportRequest): Promise<ExportRunResult | null>;
   /** Laufende Ausgabe abbrechen; ffmpeg wird beendet, die Ausgabe gilt nicht als fertig. */
   cancelExport(sessionId: string): Promise<void>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
