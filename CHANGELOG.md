@@ -4,6 +4,16 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.4.0-rc.5 – 2026-11-23 (Vorabversion)
+
+<!-- Release notes generated using configuration in .github/release.yml at 5548f03f36ca59a2718ed4de8af8d0f7d3623939 -->
+
+### Behoben
+
+- Montagevideo: unruhiges Bild (Wasser, Laub) zerfällt nicht mehr in Blöcke ([#253](https://github.com/pklaschka/feldspur/pull/253), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.4...v0.4.0-rc.5
+
 ## 0.4.0-rc.4 – 2026-11-23 (Vorabversion)
 
 <!-- Release notes generated using configuration in .github/release.yml at a10c02f7d300db5987c8b80e91a95e0672cf0f72 -->
