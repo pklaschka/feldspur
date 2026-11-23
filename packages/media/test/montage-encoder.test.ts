@@ -32,7 +32,7 @@ describe("Encoder für das Montagevideo wählen (Issue #252)", () => {
       "-rate_control",
       "quality",
       "-quality",
-      "60",
+      "40",
     ]);
     expect(await pickEncoder(liste("h264_mf", "mpeg4"), ohne("-rate_control"))).toEqual([
       "-c:v",

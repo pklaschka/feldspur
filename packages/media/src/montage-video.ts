@@ -185,12 +185,15 @@ const MAX_VIDEO_KBPS = 8000;
  * - Media Foundation (Windows): Qualitätsmodus, wenn der Encoder des Rechners ihn kann, sonst die Bitrate.
  * - OpenH264 (Linux): kennt keine feste Qualität; `-qmin` hält es bei ruhigem Bild davon ab, die Bitrate
  *   auszuschöpfen, die Bitrate deckelt unruhiges Bild.
+ *
+ * Die Stufen sind an libx264 mit CRF 23 ausgerichtet (gemessen an ruhigem, mittlerem und sehr unruhigem Bild, siehe
+ * Issue #252): ähnliche Qualität bei ähnlicher Größe. Die Rechenzeit der Encoder ändert sich dadurch nicht.
  */
 const ENCODERS: readonly (readonly [codec: string, ...args: string[]])[] = [
   ["libx264", "-preset", "veryfast", "-crf", "23"],
   ["h264_videotoolbox", "-q:v", "55"],
   ["h264_videotoolbox", "-b:v", `${MAX_VIDEO_KBPS}k`],
-  ["h264_mf", "-rate_control", "quality", "-quality", "60"],
+  ["h264_mf", "-rate_control", "quality", "-quality", "40"],
   ["h264_mf", "-b:v", `${MAX_VIDEO_KBPS}k`],
   ["libopenh264", "-b:v", `${MAX_VIDEO_KBPS}k`, "-qmin", "26"],
   ["mpeg4", "-q:v", "4"],
