@@ -51,6 +51,7 @@ import {
   type SessionView,
   type SourceNoteInput,
   type ProjectInfo,
+  type ExportRequest,
 } from "../shared/api.ts";
 import { changeLogCsv } from "./changelog.ts";
 import {
@@ -161,6 +162,15 @@ function requireStore(): ProjectStore {
   return store;
 }
 
+/**
+ * Nach jedem `await` in einem IPC-Aufruf: Ist das Projekt von vorher noch offen? Sonst endet der Aufruf mit einer
+ * verständlichen Meldung, statt in ein geschlossenes oder fremdes Projekt zu schreiben.
+ */
+function stillOpen(s: ProjectStore): ProjectStore {
+  if (store !== s) throw new Error("Das Projekt wurde inzwischen gewechselt");
+  return s;
+}
+
 function bindingOpts(): { nativeBinding?: string } {
   const binding = nativeBinding();
   return binding ? { nativeBinding: binding } : {};
@@ -208,21 +218,6 @@ function openStore(path: string, create: boolean, fresh = create): ProjectInfo |
   rememberProject(info.path, info.name);
   return info;
 }
-
-type ExportRequest = {
-  video: boolean;
-  resolve?: boolean;
-  mixAudio?: boolean;
-  realtime?: boolean;
-  deviceTracks?: boolean;
-  viewer?: boolean;
-  readme?: boolean;
-  changeLog?: boolean;
-  manifest?: boolean;
-  dir?: string;
-  reuseDir?: boolean;
-  acceptOriginals?: boolean;
-};
 
 /**
  * IPC-Aufruf, der Daten ändert, als ein Schritt für Rückgängig. Die Ansicht wird im selben Schritt gebaut; das
@@ -597,6 +592,7 @@ function registerIpc(): void {
         path = r.filePaths[0];
       }
       const lines = parseTranscript(await readFile(path, "utf8"), basename(path));
+      stillOpen(s);
       // Nur der schreibende Teil ist ein Schritt für Rückgängig; Dateidialog und Parsen liegen davor.
       const label = opts.mode === "replace" ? "Mitschrift ersetzt" : "Transkript importiert";
       const r = s.history.record(label, () => importLines(s, sourceId, lines, opts.mode));
@@ -684,10 +680,11 @@ function registerIpc(): void {
     });
     const dir = r.filePaths[0];
     if (r.canceled || !dir) return null;
+    stillOpen(s);
     const result = await searchOriginals(s, sessionId, dir, (done, phase, fileName) => {
       if (!e.sender.isDestroyed()) e.sender.send(IPC.originalsProgress, { sessionId, phase, done, total: 0, fileName });
     });
-    return { view: buildSessionView(s, sessionId), result };
+    return { view: buildSessionView(stillOpen(s), sessionId), result };
   });
   ipcMain.handle(IPC.relinkOriginal, async (_e, sourceId: string) => {
     const s = requireStore();
@@ -699,7 +696,8 @@ function registerIpc(): void {
     });
     const path = r.filePaths[0];
     if (r.canceled || !path) return null;
-    return buildSessionView(s, await relinkFile(s, sourceId, path));
+    const sessionId = await relinkFile(stillOpen(s), sourceId, path);
+    return buildSessionView(stillOpen(s), sessionId);
   });
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 
@@ -727,8 +725,7 @@ function registerIpc(): void {
         missing.push(src.label);
       }
     }
-    const store = requireStore();
-    if (store !== s) throw new Error("Das Projekt wurde inzwischen gewechselt");
+    stillOpen(s);
     // Erst prüfen, ob sich etwas ändert: ein leerer Schritt im Verlauf hilft niemandem.
     const changed = rereadChanges(s, device.sessionId, read)
       ? s.history.record(`Zeitbelege neu gelesen: ${device.label}`, () => applyReread(s, device.sessionId, read))
@@ -935,7 +932,7 @@ function registerIpc(): void {
   ipcMain.handle(IPC.measureLevel, async (_e, sourceId: string) => {
     const s = requireStore();
     await measureSource(s, sourceId);
-    return buildSessionView(s, s.getSource(sourceId).sessionId);
+    return buildSessionView(stillOpen(s), s.getSource(sourceId).sessionId);
   });
 
   undoable(IPC.createDiaryEntry, "Tagebucheintrag angelegt", (_e, sourceId: string, region: Region) => {

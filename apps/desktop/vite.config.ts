@@ -22,7 +22,7 @@ const shared: PackConfig = {
   target: "node22",
   dts: false,
   deps: {
-    alwaysBundle: [/^@feldspur\//, "better-sqlite3", "bindings", "file-uri-to-path"],
+    alwaysBundle: [/^@feldspur\//, "better-sqlite3"],
     // Die gebündelten Abhängigkeiten sind für die eigenständige Electron-Ausgabe beabsichtigt.
     onlyBundle: false,
     // better-sqlite3 wird mit eingebündelt; die native Bibliothek kommt immer über nativeBinding.
