@@ -31,7 +31,7 @@ import {
 } from "../edits.ts";
 import { buildSessionView } from "../view.ts";
 import { unreachableForAnalysis } from "../originals.ts";
-import { analyzing, currentStore, requireStore, stillOpen } from "../state.ts";
+import { analyzing, currentStore, requireStore, stillOpen, whileOpen } from "../state.ts";
 import { undoableView } from "./undoable.ts";
 
 /** „F-003, Dateiname“ für Beschriftungen im Verlauf. */
@@ -243,7 +243,7 @@ export function registerSyncIpc(): void {
   );
   ipcMain.handle(IPC.measureLevel, async (_e, sourceId: string) => {
     const s = requireStore();
-    await measureSource(s, sourceId);
-    return buildSessionView(stillOpen(s), s.getSource(sourceId).sessionId);
+    await whileOpen(s, measureSource(s, sourceId));
+    return buildSessionView(s, s.getSource(sourceId).sessionId);
   });
 }

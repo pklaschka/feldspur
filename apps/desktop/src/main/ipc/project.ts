@@ -32,6 +32,7 @@ import {
   parentWindow,
   projectInfo,
   requireStore,
+  stillOpen,
 } from "../state.ts";
 
 /** Rückgängig/Wiederholen ausführen und das Ergebnis für die Oberfläche zusammenstellen. */
@@ -95,7 +96,7 @@ export function registerProjectIpc(): void {
       filters: [{ name: "CSV", extensions: ["csv"] }],
     });
     if (r.canceled || !r.filePath) return null;
-    await writeFile(r.filePath, changeLogCsv(s.history), "utf8");
+    await writeFile(r.filePath, changeLogCsv(stillOpen(s).history), "utf8");
     return r.filePath;
   });
   ipcMain.handle(IPC.currentProject, () => projectInfo());
@@ -167,7 +168,7 @@ export function registerProjectIpc(): void {
     });
     if (r.canceled || !r.filePath) return null;
     const dest = r.filePath.endsWith(".feldspur") ? r.filePath : `${r.filePath}.feldspur`;
-    s.backupTo(dest);
+    stillOpen(s).backupTo(dest);
     return dest;
   });
   ipcMain.handle(IPC.openBackupCopy, async (_e, given?: string) => {
