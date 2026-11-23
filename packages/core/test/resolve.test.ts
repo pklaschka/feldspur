@@ -259,8 +259,12 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   });
 
   /** Kamera von Hand um 28 s daneben geschätzt, dazu ein Anker vom ersten Clip zu einem Foto von Handy B (#228). */
-  const fotoAnKamera = (opts: { swap?: boolean; fotoZuerst?: boolean; klatschen?: boolean } = {}) => {
+  const fotoAnKamera = (
+    opts: { swap?: boolean; fotoZuerst?: boolean; klatschen?: boolean; ohneZeit?: boolean } = {},
+  ) => {
     const input = testmarkt();
+    // Ohne eigene Zeit: das Foto trägt weder Metadaten noch eine Zeit im Dateinamen, nur der Anker legt es.
+    if (opts.ohneZeit) input.evidence = input.evidence.filter((e) => e.sourceId !== "IMG_20260914_104050.jpg");
     const cam = input.devices.find((d) => d.id === "camA")!;
     Object.assign(cam, { clockOffsetMs: 195_000, clockOffsetUncertaintyMs: 1_000, offsetBasis: "manual" });
     const clip = { sourceId: "C0012.MP4", atMediaMs: 5_000 };
@@ -278,15 +282,17 @@ describe("Zeitbestimmung: Sonderfälle", () => {
   };
 
   it.each`
-    reihenfolge            | swap     | fotoZuerst
-    ${"Klatschen zuerst"}  | ${false} | ${false}
-    ${"Foto-Anker zuerst"} | ${false} | ${true}
-    ${"Seiten vertauscht"} | ${true}  | ${true}
+    reihenfolge                                   | swap     | fotoZuerst | ohneZeit
+    ${"Klatschen zuerst"}                         | ${false} | ${false}   | ${false}
+    ${"Foto-Anker zuerst"}                        | ${false} | ${true}    | ${false}
+    ${"Seiten vertauscht"}                        | ${true}  | ${true}    | ${false}
+    ${"Foto ohne eigene Zeit, Klatschen zuerst"}  | ${false} | ${false}   | ${true}
+    ${"Foto ohne eigene Zeit, Foto-Anker zuerst"} | ${false} | ${true}    | ${true}
   `(
     "Ankerkette über eine von Hand geschätzte Kamera zieht das Foto mit ($reihenfolge, #228)",
-    ({ swap, fotoZuerst }) => {
+    ({ swap, fotoZuerst, ohneZeit }) => {
       // Angenommen: Kamera von Hand +3:15 (wahr +2:47), Foto von Handy B per Anker an Clip V-01 bei 0:05
-      const input = fotoAnKamera({ swap, fotoZuerst });
+      const input = fotoAnKamera({ swap, fotoZuerst, ohneZeit });
       // Wenn: das Klatschen die Kamera an die Referenz bindet
       const res = resolveTimeline(input);
       // Dann: rückt das Foto mit der Kamera, und kein Anker widerspricht

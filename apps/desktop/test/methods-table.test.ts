@@ -144,6 +144,18 @@ describe("Ausgabe je Einsatz", () => {
     ]);
   });
 
+  it.each`
+    montage       | umfang
+    ${"Echtzeit"} | ${"Länge unklar, 2 Quellen weit weg vom Datum, Echtzeit"}
+    ${"Episoden"} | ${"1:30:00, Episoden"}
+  `("nennt bei Quellen weit weg vom Datum in $montage: $umfang (#226)", ({ montage, umfang }) => {
+    // Angenommen: zwei Quellen liegen weit weg vom Datum des Einsatzes
+    const e = einsatz(1);
+    const weit = { ...e, output: { ...e.output, farFromDate: 2, mode: montage } };
+    // Dann: steht in Echtzeit keine Länge (die Montage überbrückt die Lücke), nach Episoden schon
+    expect(outputTable([weit]).rows[1]).toEqual(["", "Montagevideo", ".mp4", umfang, ""]);
+  });
+
   it("lässt das Montagevideo weg, wenn ohne Video ausgegeben wird, und nennt Kontextstücke", () => {
     const e = einsatz(1);
     const ohne = { ...e, output: { ...e.output, video: false, context: 3, lines: 1 } };

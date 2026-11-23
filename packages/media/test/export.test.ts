@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatClock, ProjectStore } from "@feldspur/core";
@@ -173,6 +173,22 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     const csv = readFileSync(join(out, r.files[3]!), "utf8");
     expect(csv.split("\r\n")[0]).toContain("Kurzzeichen;Art;Datei");
     expect(csv).toContain("ZOOM0001.m4a");
+  });
+
+  it("räumt Video, Viewer und Schnittliste einer früheren Ausgabe weg, wenn sie diesmal fehlen (#227)", async () => {
+    // Angenommen: im Ordner liegen Video, Viewer und Schnittliste einer früheren Ausgabe und eine fremde Datei
+    const out = join(dir, "ohne-video");
+    mkdirSync(out, { recursive: true });
+    const alt = [
+      "Feldtag_2026-09-14_Testmarkt.mp4",
+      "Feldtag_2026-09-14_Testmarkt.html",
+      "Feldtag_2026-09-14_Testmarkt_Resolve.fcpxml",
+    ];
+    for (const f of [...alt, "eigene-notiz.txt"]) writeFileSync(join(out, f), "alt");
+    // Wenn: ohne Video und ohne Schnittliste ausgegeben wird
+    const r = await exportSession(store, sessionId, out, { video: false, previousFiles: alt });
+    // Dann: liegen nur die neuen Dateien und die fremde Datei im Ordner
+    expect(readdirSync(out).sort()).toEqual([...r.files, "eigene-notiz.txt"].sort());
   });
 
   it("bricht mit vorab abgebrochenem Signal ab, ohne etwas zu schreiben", async () => {

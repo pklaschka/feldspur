@@ -167,9 +167,12 @@ export function outputTable(sessions: MethodsNumbers[]): MethodsTable {
       o.context ? `${lines}, ${count(o.context, "Kontextstück", "Kontextstücke")}` : lines,
       o.montageId,
     ]);
-    // Liegt etwas weit weg vom Datum, überbrückt die Montage die Lücke; eine Länge mit fünfstelligen Stunden wäre
-    // keine ehrliche Angabe (#226).
-    const far = o.farFromDate ? `Länge unklar, ${count(o.farFromDate, "Quelle", "Quellen")} weit weg vom Datum` : "";
+    // Liegt etwas weit weg vom Datum, überbrückt die Montage in Echtzeit die Lücke; eine Länge mit fünfstelligen
+    // Stunden wäre keine ehrliche Angabe (#226). Nach Episoden geschnitten ist die Lücke nur eine Tafel.
+    const far =
+      o.farFromDate && o.mode === "Echtzeit"
+        ? `Länge unklar, ${count(o.farFromDate, "Quelle", "Quellen")} weit weg vom Datum`
+        : "";
     if (o.video) rows.push(["", "Montagevideo", ".mp4", `${far || hms(o.durationMs)}, ${o.mode}`, ""]);
   }
   return {

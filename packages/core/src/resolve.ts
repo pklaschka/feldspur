@@ -688,7 +688,8 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     placeAll();
     let changed = false;
     anchorConflicts.length = 0;
-    // Nach jeder geänderten Uhr neu legen: Die Lagen dieser Runde stammen noch von der alten Uhr.
+    // Nach jeder geänderten Uhr neu legen: Die Lagen dieser Runde stammen noch von der alten Uhr. Abgeleitete Belege
+    // sammelt eine Runde dagegen wie bisher, sonst kostete jeder einzelne eine ganze Runde.
     anchors: for (const anchor of input.anchors) {
       if (!anchor.enabled || anchor.proposed) continue;
       for (const [known, other] of [
@@ -739,7 +740,10 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         const circular = !!otherSrc.deviceId && from.has(otherSrc.deviceId);
         const overManual = clock?.basis === "manual" && !!deviceEv && !knownOnManual && !circular;
         const refines = viaSpokenClock || overManual;
-        if (po && !refines) {
+        // Liegt die andere Aufnahme über den Beleg, den dieser Anker selbst abgeleitet hat, ist das kein Widerspruch:
+        // Der Beleg wandert unten mit der bekannten Seite mit (#228, Foto ohne eigene Zeit).
+        const ownDerived = !deviceEv && po?.basis.evidenceId === `anchor:${anchor.id}:${other.sourceId}`;
+        if (po && !refines && !ownDerived) {
           const diff = po.startMs + other.atMediaMs - moment;
           if (
             Math.abs(diff) > combineUncertainty(unc, po.uncertaintyMs) + CONFLICT_TOLERANCE_MS &&
@@ -778,7 +782,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             existing.localMs = moment;
             existing.uncertaintyMs = unc;
             changed = true;
-            break anchors;
+            continue;
           }
           derived.push({
             id,
@@ -794,8 +798,8 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             enabled: true,
             decision: null,
           });
+          // Kein Neustart der Runde: Ein neuer Beleg ändert keine Uhr; die nächste Runde legt mit ihm neu.
           changed = true;
-          break anchors;
         }
       }
     }

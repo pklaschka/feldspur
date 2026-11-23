@@ -1,6 +1,7 @@
 /**
  * Ausgeben: Einsatztranskript (.docx), Dokumentvariablen (.xlsx), Begleitprotokoll (.csv) und Montagevideo in einen Ordner.
  */
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
@@ -37,7 +38,8 @@ export interface ExportOptions {
   /**
    * Dateien der letzten Ausgabe dieses Einsatzes im selben Ordner (#227). Was davon diesmal nicht entsteht (etwa das
    * Montagevideo oder die Prüfsummenliste, wenn sie abgewählt sind), wird vor dem Schreiben entfernt, damit der Ordner
-   * nicht zwei Fassungen mischt. Andere Dateien im Ordner bleiben unberührt.
+   * nicht zwei Fassungen mischt. Dasselbe gilt ohne diese Liste für alle Namen, die eine Ausgabe mit diesem Dateinamen
+   * schreiben könnte (etwa nach einer abgebrochenen Ausgabe). Andere Dateien im Ordner bleiben unberührt.
    */
   previousFiles?: readonly string[];
   /** Zusätzlich eine Schnittliste für DaVinci Resolve (FCPXML) mit Standbildern daneben. */
@@ -303,7 +305,15 @@ export async function exportSession(
     ...(opts.readme ? [README_NAME] : []),
     ...(opts.manifest ? [MANIFEST_NAME] : []),
   ];
-  const leftover = (opts.previousFiles ?? []).filter((f) => !planned.includes(f));
+  const possible = [
+    `${base}.mp4`,
+    `${base}.html`,
+    `${base}_Resolve.fcpxml`,
+    `${base}_Aenderungsprotokoll.csv`,
+    README_NAME,
+    MANIFEST_NAME,
+  ];
+  const leftover = [...new Set([...(opts.previousFiles ?? []), ...possible])].filter((f) => !planned.includes(f));
   const started = performance.now();
   log(
     "ausgabe",
@@ -320,13 +330,15 @@ export async function exportSession(
     throw new ExportPrecheckError(friendly instanceof Error ? friendly.message : String(friendly), { cause: e });
   }
   opts.onWriting?.();
-  for (const f of leftover) {
-    await rm(outPath(outDir, f), { force: true });
-    log("ausgabe", `entfernt ${f} aus der letzten Ausgabe (diesmal nicht dabei)`);
-  }
   const work = await mkdtemp(join(tmpdir(), "feldspur-export-"));
   log("ausgabe", `Zielordner beschreibbar; Arbeitsordner ${work}`);
   try {
+    for (const f of leftover) {
+      const path = outPath(outDir, f);
+      if (!existsSync(path)) continue;
+      await rm(path, { force: true });
+      log("ausgabe", `entfernt ${f} aus einer früheren Ausgabe (diesmal nicht dabei)`);
+    }
     const sources = new Map(transcript.input.sources.map((s) => [s.id, s]));
     const withImages = transcript.entries.filter((e) => e.images.length);
     const stills = new Map<SessionTranscriptEntry, (Still | null)[]>();
