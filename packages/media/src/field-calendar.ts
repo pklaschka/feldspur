@@ -61,7 +61,8 @@ export function farFromDate(transcript: SessionTranscript): number {
   let n = 0;
   for (const s of input.sources) {
     const p = s.partOf ? undefined : resolved.placements.get(s.id);
-    if (p && !(nearDay(date, p.startMs) && nearDay(date, p.endMs))) n++;
+    // Nur, was ganz draußen liegt: Eine Aufnahme über den Rand steht gekappt im Feldkalender.
+    if (p && (ofDay(date, p.endMs) < NEAR_FROM || ofDay(date, p.startMs) > NEAR_TO)) n++;
   }
   return n;
 }

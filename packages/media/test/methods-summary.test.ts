@@ -187,7 +187,7 @@ describe.skipIf(!hasFfmpeg())("Quellen weit weg vom Datum des Einsatzes (#226)",
     fall                         | datum           | weit | marken
     ${"Kamerauhr zurückgesetzt"} | ${"2026-09-14"} | ${1} | ${1}
     ${"Datum vertippt"}          | ${"2026-10-01"} | ${2} | ${0}
-  `("$fall: $weit weit weg, $marken Marke im Feldkalender", async ({ datum, weit, marken }) => {
+  `("$fall: $weit weit weg, Marken im Feldkalender: $marken", async ({ datum, weit, marken }) => {
     const sessionId = store.addSession({ title: `Weit weg ${datum}`, date: datum }).id;
     applyImport(store, sessionId, await scanPaths([dir]));
     const s = methodsSummary(store, sessionId, SETTINGS);

@@ -160,7 +160,8 @@ export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boole
  * Ordner der Ausgabe im gewählten Ordner `parent`: `<base>`, außer ein anderer Einsatz dieses Projekts hat schon dorthin
  * ausgegeben (gleiches Datum und gleicher Titel, oder Titel, die sich nur in Zeichen unterscheiden, die nicht in
  * Dateinamen dürfen). Dann `<base> (2)`, `<base> (3)` …: der erste Ordner, den kein anderer Einsatz belegt (#230). Groß-
- * und Kleinschreibung zählen nicht, weil macOS und Windows sie im Dateinamen meist nicht unterscheiden.
+ * und Kleinschreibung zählen nicht, weil macOS und Windows sie im Dateinamen meist nicht unterscheiden. Hat dieser
+ * Einsatz schon in einen dieser Ordner ausgegeben, bleibt er dort, auch wenn inzwischen ein niedrigerer frei ist.
  */
 function exportDir(s: ProjectStore, sessionId: string, parent: string, base: string): string {
   const key = (d: string) => resolve(d).toLowerCase();
@@ -169,6 +170,15 @@ function exportDir(s: ProjectStore, sessionId: string, parent: string, base: str
     const dir = other.id === sessionId ? undefined : s.getExportRecord(other.id)?.dir;
     if (dir) taken.add(key(dir));
   }
+  const own = s.getExportRecord(sessionId)?.dir;
+  const prefix = key(join(parent, base));
+  if (
+    own &&
+    !taken.has(key(own)) &&
+    key(own).startsWith(prefix) &&
+    /^(?: \(\d+\))?$/.test(key(own).slice(prefix.length))
+  )
+    return own;
   for (let n = 1; ; n++) {
     const dir = join(parent, n === 1 ? base : `${base} (${n})`);
     if (!taken.has(key(dir))) return dir;
@@ -380,7 +390,8 @@ export async function runExport(
       onProgress: (step, done, total) => safeSend(wc, IPC.exportProgress, { sessionId, step, done, total }),
       previousFiles: previous && same(previous.dir, dir) ? previous.files : [],
       onWriting: () => {
-        if (s.getExportRecord(sessionId)?.dir === dir) s.deleteExportRecord(sessionId);
+        const record = s.getExportRecord(sessionId);
+        if (record && same(record.dir, dir)) s.deleteExportRecord(sessionId);
       },
     }).catch((e: unknown) => {
       if (ctrl.signal.aborted) return null;
