@@ -17,7 +17,7 @@ import { checkOriginals, relinkFile, searchOriginals } from "../originals.ts";
 import { citationInfo } from "../citation.ts";
 import { softwareLine } from "../../shared/methods-table.ts";
 import { ALL_VERSIONS_DOI } from "../../shared/citation.ts";
-import { parentWindow, requireStore, stillOpen } from "../state.ts";
+import { parentWindow, requireStore, stillOpen, whileOpen } from "../state.ts";
 
 export function registerExportIpc(): void {
   registerOverlayBridge();
@@ -58,6 +58,7 @@ export function registerExportIpc(): void {
       });
       if (r.canceled || !r.filePaths[0]) return null;
       parent = r.filePaths[0];
+      stillOpen(s);
     }
     // Zeile zur Software für die LIESMICH: Version und DOI wie in „Feldspur zitieren“, ohne Abfrage im Netz.
     const c = citationInfo();
@@ -88,10 +89,11 @@ export function registerExportIpc(): void {
     const dir = r.filePaths[0];
     if (r.canceled || !dir) return null;
     stillOpen(s);
-    const result = await searchOriginals(s, sessionId, dir, (done, phase, fileName) => {
+    const search = searchOriginals(s, sessionId, dir, (done, phase, fileName) => {
       if (!e.sender.isDestroyed()) e.sender.send(IPC.originalsProgress, { sessionId, phase, done, total: 0, fileName });
     });
-    return { view: buildSessionView(stillOpen(s), sessionId), result };
+    const result = await whileOpen(s, search);
+    return { view: buildSessionView(s, sessionId), result };
   });
   ipcMain.handle(IPC.relinkOriginal, async (_e, sourceId: string) => {
     const s = requireStore();
@@ -103,8 +105,8 @@ export function registerExportIpc(): void {
     });
     const path = r.filePaths[0];
     if (r.canceled || !path) return null;
-    const sessionId = await relinkFile(stillOpen(s), sourceId, path);
-    return buildSessionView(stillOpen(s), sessionId);
+    const sessionId = await whileOpen(s, relinkFile(stillOpen(s), sourceId, path));
+    return buildSessionView(s, sessionId);
   });
   ipcMain.handle(IPC.showInFolder, (_e, path: string) => shell.showItemInFolder(path));
 }

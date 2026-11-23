@@ -71,7 +71,8 @@ release. Add a tool name to select part of the graph. For example, run
 `apps/desktop/src/preload/preload.ts`, Handler in der passenden Datei unter `apps/desktop/src/main/ipc/` (ändert er
 Daten: `undoable` oder `undoableView` aus `ipc/undoable.ts`). Offenes Projekt, Fenster und laufende Arbeiten nur über
 `apps/desktop/src/main/state.ts`. Nach jedem `await` im Handler mit `stillOpen(s)` prüfen, ob noch dasselbe Projekt
-offen ist.
+offen ist; schreibt die erwartete Arbeit selbst nach einem `await` ins Projekt, mit `await whileOpen(s, …)` auf sie
+warten.
 
 **Neue Ausgabe-Option:** nur in `ExportRequestOptions` (`apps/desktop/src/shared/api.ts`) ergänzen; `ExportChoices` und
 `ExportRequest` leiten sich davon ab. Danach `exportSettings` (`apps/desktop/src/main/export.ts`) und, falls sie das

@@ -63,6 +63,19 @@ export function stillOpen(s: ProjectStore): ProjectStore {
   return s;
 }
 
+/**
+ * Auf eine Arbeit warten, die selbst nach einem `await` noch ins Projekt schreibt (erst Prüfsumme oder Pegel rechnen,
+ * dann speichern). Wurde das Projekt inzwischen gewechselt, zählt das und nicht der Folgefehler aus dem
+ * geschlossenen Projekt.
+ */
+export async function whileOpen<T>(s: ProjectStore, work: Promise<T>): Promise<T> {
+  try {
+    return await work;
+  } finally {
+    stillOpen(s);
+  }
+}
+
 export function bindingOpts(): { nativeBinding?: string } {
   const binding = nativeBinding();
   return binding ? { nativeBinding: binding } : {};
