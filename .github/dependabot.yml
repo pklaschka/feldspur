@@ -1,0 +1,17 @@
+# Hält die eingebundenen Actions aktuell. Fremde Actions sind auf einen Commit festgelegt (Kommentar nennt die
+# Version); Dependabot schlägt neue Stände als PR vor, wöchentlich gesammelt.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/*
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    labels:
+      - intern
+    commit-message:
+      prefix: "CI:"
