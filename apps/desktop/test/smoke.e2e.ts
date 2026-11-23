@@ -848,12 +848,18 @@ try {
     const tl = page.locator("canvas").first();
     const tlBox = (await tl.boundingBox())!;
     const tlScroll = () => tl.evaluate((c) => c.parentElement!.parentElement!.scrollLeft);
+    // Höhe des Kastens um die Zeitachse: Wächst er mit dem Rollbalken, rutscht alles darunter nach unten.
+    const tlHeight = () => tl.evaluate((c) => c.parentElement!.parentElement!.offsetHeight);
+    const fitHeight = await tlHeight();
     const atMouse = tlBox.x + tlBox.width * 0.4;
     await page.mouse.move(atMouse, tlBox.y + 30 + 40 + 26);
     for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -120);
     await page.waitForTimeout(100);
     const zoomed = await tlScroll();
     if (zoomed <= 0) throw new Error("Mausrad hat nicht an der Mausposition gezoomt");
+    // Dann: Der Rollbalken, der beim Hineinzoomen erscheint, verschiebt nichts.
+    if ((await tlHeight()) !== fitHeight)
+      throw new Error(`Zeitachse ist beim Zoomen von ${fitHeight} auf ${await tlHeight()} px gewachsen`);
     await shot("-zeitachse-zoom");
     for (let i = 0; i < 8; i++) await page.mouse.wheel(0, 120);
     await page.waitForTimeout(100);
