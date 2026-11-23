@@ -26,50 +26,41 @@ werden nicht doppelt übernommen. Landen Dateien anderswo im Fenster, übernimmt
 
 : Zeitquellen und ihre Genauigkeit {#tbl-zeitquellen}
 
-**Beginn oder Ende?** MP4-Dateien sagen nicht, ob `creation_time` den Aufnahmebeginn meint oder den Moment, in dem die
-Datei gespeichert wurde. Viele Android-Handys, etwa Google Pixel, schreiben das **Ende**. Feldspur erkennt das beim
-Einsammeln an allen Videos eines Geräts gemeinsam: Ergibt Uhrzeit im Dateinamen plus Länge ungefähr `creation_time`,
-oder würden sich die Clips eines Geräts sonst überlappen (was physisch nicht geht), gilt der Stempel als Ende. In der
-Detailleiste steht dann **Metadaten (Aufnahmeende …)**. Kurze Clips unter 20 Sekunden erkennt Feldspur am Pixel-Namen
-auch einzeln. Sammelst du die Dateien eines Geräts nach und nach ein, betrachtet Feldspur die schon eingesammelten
-Clips desselben Geräts mit und zieht ihre Zeiten nach; das Ergebnis ist dasselbe wie beim Einsammeln auf einmal.
+**Beginn oder Ende?** MP4-Dateien sagen nicht, ob `creation_time` den Aufnahmebeginn meint oder das Speichern der
+Datei. Viele Android-Handys, etwa Google Pixel, schreiben das **Ende**. Feldspur erkennt das an allen Videos eines
+Geräts gemeinsam, auch wenn du sie nach und nach einsammelst: Passt die Uhrzeit im Dateinamen plus Länge dazu, oder
+würden sich die Clips sonst überlappen, gilt der Stempel als Ende. In der Detailleiste steht dann **Metadaten
+(Aufnahmeende …)**.
 
-**UTC im Dateinamen:** Pixel-Handys benennen Dateien nach der Uhrzeit in UTC, nicht nach der Ortszeit. Feldspur rechnet
-sie wie als UTC markierte Metadaten in die Zeitzone des Einsatzes um.
+**UTC im Dateinamen:** Pixel-Handys benennen Dateien nach der Uhrzeit in UTC. Feldspur rechnet sie in die Zeitzone
+des Einsatzes um.
 
 **Kamera-Timecode:** Viele Videokameras schreiben einen bildgenauen Timecode, ihre Uhr aber nur auf die Sekunde. Läuft
-der Timecode frei mit (in der Kamera meist „Free Run“), ist sein Abstand zur Kamerauhr in allen Clips gleich. Feldspur
-schätzt diesen Abstand aus allen Clips des Geräts im Einsatz, auch wenn du sie nach und nach einsammelst, und ordnet jeden Clip damit auf Bruchteile einer
-Sekunde genau ein; untereinander liegen die Clips dann bildgenau. Das klappt ab zwei Clips desselben Geräts. Wurde der
-Timecode zwischendurch neu gesetzt, wertet Feldspur die Abschnitte davor und danach getrennt aus. Läuft er nur während
-der Aufnahme („Rec Run“), passen die Clips nicht zusammen, und Feldspur nimmt wie bisher die Kamerauhr. Drop-Frame-Timecode (29,97 mit `;`) wertet Feldspur nicht aus.
+der Timecode frei mit („Free Run“), ordnet Feldspur ab zwei Clips desselben Geräts jeden Clip auf Bruchteile einer
+Sekunde genau ein; untereinander liegen die Clips dann bildgenau. Läuft er nur während der Aufnahme („Rec Run“), gilt
+die Kamerauhr. Drop-Frame-Timecode (29,97 mit `;`) wertet Feldspur nicht aus.
 
-**Zeitzone der Kamera:** Das Aufnahme-XML nennt die Zeitzone, auf die die Kamera eingestellt war, und Feldspur zeigt sie
-im Zeitbeleg an (z. B. „Zeitzone der Kamera +01:00“). Passt sie nicht zur Zeitzone des Einsatzes (etwa +01:00 im
-Sommer in Deutschland), ist meist nur die Zone falsch eingestellt und die Uhr trotzdem nach der Ortszeit gestellt.
-Feldspur nimmt dann die Uhrzeit, wie die Kamera sie anzeigte, und stellt das Gerät im Gerätemenü unter **Zeitstempel in
-UTC** auf **Sind schon Ortszeit, so lesen**. Stimmte die Zone doch, stell dort auf **Sind UTC, in Ortszeit umrechnen**.
+**Zeitzone der Kamera:** Das Aufnahme-XML nennt die Zeitzone, auf die die Kamera eingestellt war. Passt sie nicht zur
+Zeitzone des Einsatzes (etwa +01:00 im Sommer in Deutschland), ist meist nur die Zone falsch eingestellt und die Uhr
+trotzdem nach der Ortszeit gestellt. Feldspur nimmt dann die Uhrzeit, wie die Kamera sie anzeigte, und stellt das
+Gerät im Gerätemenü unter **Zeitstempel in UTC** auf **Sind schon Ortszeit, so lesen**. Stimmte die Zone doch, stell
+dort auf **Sind UTC, in Ortszeit umrechnen**.
 
 ### Große Ordner
 
 Die meiste Zeit kostet die Prüfsumme: Feldspur muss dafür jede Datei einmal ganz lesen. Bei einer vollen Speicherkarte
 mit stundenlangen Videos kann das dauern, von einer externen Festplatte oder einem Netzlaufwerk deutlich länger als von
-der internen SSD. Während des Einsammelns siehst du daher, wie viele Dateien und Gigabyte schon gelesen sind, welche
-Datei gerade dran ist und, nach ein paar Sekunden, eine geschätzte Restzeit. Du kannst dabei in andere Schritte oder
+der internen SSD. Du siehst dabei den Fortschritt und eine geschätzte Restzeit und kannst in andere Schritte oder
 Einsätze wechseln; das Einsammeln läuft weiter.
 
 ![Einsammeln einer großen Speicherkarte: Fortschritt, Restzeit und Abbrechen](bilder/einsammeln-gross.png){#fig-einsammeln-gross}
 
 - **Abbrechen** beendet das Lesen sofort. In den Einsatz kommt dann **nichts**: Feldspur übernimmt Dateien erst, wenn
-  alle gelesen sind, und dann auf einmal. Was vorher schon im Einsatz war, bleibt unverändert.
-- **Ein neuer Versuch** mit demselben Ordner übernimmt die schon gelesenen Dateien sofort, solange Feldspur offen
-  bleibt und die Dateien unverändert sind. Nach einem Neustart liest Feldspur sie erneut.
-- **Unlesbare Dateien** (fehlende Leserechte, defekte Verknüpfungen) überspringt Feldspur und nennt sie danach unter
-  den Hinweisen; der Rest wird trotzdem eingesammelt.
+  alle gelesen sind. Ein neuer Versuch mit demselben Ordner geht schneller, solange Feldspur offen bleibt.
+- **Unlesbare Dateien** überspringt Feldspur und nennt sie danach unter den Hinweisen.
 
 ::: {.callout-tip}
-Sehr große Bestände lieber in Etappen einsammeln, etwa eine Speicherkarte nach der anderen. Doppelte Dateien erkennt
-Feldspur an der Prüfsumme und übernimmt sie nicht zweimal.
+Sehr große Bestände lieber in Etappen einsammeln, etwa eine Speicherkarte nach der anderen.
 :::
 
 ![Eingesammelte Quellen, nach Geräten gruppiert](bilder/einsammeln.png){#fig-einsammeln}
@@ -79,8 +70,8 @@ Feldspur an der Prüfsumme und übernimmt sie nicht zweimal.
 Feldspur gruppiert die Quellen nach **Geräten**, weil jedes Gerät seine eigene Uhr hat. Es erkennt das Gerät am
 Kameramodell in den Metadaten oder an der Art, wie die Dateien benannt sind. Jede Quelle bekommt ein Kurzzeichen wie
 im Begleitprotokoll: `V-01` für Video, `A-01` für Audio, `F-001` für Fotos, `T-01` für Tagebuchseiten.
-Hat ein Gerät viele Dateien, scrollt seine Liste innerhalb der Karte. Darunter steht, wie viele davon noch zu
-**prüfen** sind oder **ohne Zeit**; ein Klick darauf springt zur ersten davon.
+Unter der Liste eines Geräts steht, wie viele Dateien noch zu **prüfen** sind oder **ohne Zeit**; ein Klick darauf
+springt zur ersten davon.
 
 Über die Menüs ⋯ an jeder Quelle und an jedem Gerät kannst du nachhelfen:
 
@@ -93,22 +84,19 @@ Hat ein Gerät viele Dateien, scrollt seine Liste innerhalb der Karte. Darunter 
   Folgeaufnahme ohne eigene Zeit beginnt am Ende der vorigen.
 - **Als weiteres Bild zu Seite …**: eine Rückseite oder ein zweiter Scan derselben Tagebuchseite. Das Bild übernimmt
   die Zeit der Seite, ihr Gerät und ihre Art (ein Foto an einer Tagebuchseite wird selbst zur Seite, `F-…` zu `T-…`).
-- **Als Tagebuchseite behandeln** / **Als Foto behandeln**: Ob ein Bild eine Tagebuchseite ist, schätzt Feldspur beim
-  Einsammeln am Dateinamen ("Tagebuch", "Scan", "Seite 3" …) und daran, ob Kameradaten (EXIF) fehlen. Mit dem Handy
-  abfotografierte Notizbuchseiten haben aber EXIF und landen deshalb bei den Fotos; umgekehrt kann ein Foto ohne EXIF
-  mit passendem Namen als Seite gelten. Beim Umstellen bekommt das Bild ein neues Kurzzeichen, kommt in das Gerät
-  „Tagebuch“ bzw. in das Fotogerät, das Feldspur beim Einsammeln gewählt hätte, und weitere Bilder der Seite gehen
-  mit. Ein dadurch leeres Gerät verschwindet. Eine Tagebuchseite liegt auf der Zeitachse nur nach ihren Randnotizen und
-  Einträgen, nicht nach der Aufnahmezeit des Fotos (@sec-tagebuch). Eine Seite mit Einträgen lässt sich erst wieder
-  als Foto behandeln, wenn die Einträge gelöscht sind.
+- **Als Tagebuchseite behandeln** / **Als Foto behandeln**: Ob ein Bild eine Tagebuchseite ist, schätzt Feldspur am
+  Dateinamen ("Tagebuch", "Scan", "Seite 3" …) und daran, ob Kameradaten (EXIF) fehlen. Mit dem Handy abfotografierte
+  Notizbuchseiten landen deshalb bei den Fotos. Beim Umstellen bekommt das Bild ein neues Kurzzeichen und wechselt das
+  Gerät. Eine Tagebuchseite liegt auf der Zeitachse nur nach ihren Randnotizen und Einträgen, nicht nach der
+  Aufnahmezeit des Fotos (@sec-tagebuch). Eine Seite mit Einträgen wird erst wieder zum Foto, wenn die Einträge
+  gelöscht sind.
 - **Zeitzone der Geräteuhr** (Menü am Gerät), falls ein Gerät auf eine andere Zeitzone gestellt war als der Einsatz.
 - **Zeitbelege neu lesen** (Menü am Gerät) liest Metadaten, Dateinamen und Kamera-Timecode aller Quellen des Geräts
-  noch einmal aus den Originaldateien, etwa wenn eine neuere Feldspur-Fassung mehr Zeitquellen kennt
-  (@sec-zeitquellen). Anker, angesagte Uhrzeiten, Handeingaben und deine Entscheidungen bleiben, ebenso die
-  Einstellungen des Geräts. Rückgängig machen geht wie immer mit [Strg/⌘+Z]{.kbd}.
-- **Bestätigungen entfernen** (Menü am Gerät) nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen an den Quellen
-  des Geräts auf einmal zurück. Eine Bestätigung hält eine Lage fest; ohne sie folgen die Quellen wieder dem
-  genauesten Zeitbeleg, zum Beispiel einem neu gelesenen Timecode.
+  noch einmal aus den Originaldateien, etwa wenn eine neuere Feldspur-Fassung mehr Zeitquellen kennt. Anker, angesagte
+  Uhrzeiten, Handeingaben und deine Entscheidungen bleiben.
+- **Bestätigungen entfernen** (Menü am Gerät) nimmt alle „geprüft“-Bestätigungen und Entscheidungen bei Widersprüchen
+  an den Quellen des Geräts zurück. Die Quellen folgen dann wieder dem genauesten Zeitbeleg, zum Beispiel einem neu
+  gelesenen Timecode.
 - **Aus Projekt entfernen** nimmt die Quelle aus dem Projekt; die Originaldatei bleibt, wo sie ist.
 
 Wenn alles eingesammelt ist, geht es mit **Weiter: Uhren abgleichen →** zum Abgleichen.
@@ -117,11 +105,9 @@ Wenn alles eingesammelt ist, geht es mit **Weiter: Uhren abgleichen →** zum Ab
 
 Feldspur kopiert nichts: Es merkt sich, wo jedes Original liegt, und liest es dort. Verschiebst du den Ordner mit den
 Aufnahmen, steckst ein Laufwerk um oder öffnest das Projekt auf einem anderen Rechner, findet Feldspur die Dateien
-unter dem alten Pfad nicht mehr. Dann steht unter den Schritten **„Feldspur findet 2 Originaldateien nicht.“** und in
-der Detailleiste der Quelle ein Hinweis. Im Projekt ist dabei nichts verloren: Zeiten, Mitschrift, Notizen und
-Tagebuchtexte bleiben vollständig. Nur Vorschau, Tonanalyse und Ausgabe brauchen die Originale; die Tonanalyse
-überspringt fehlende Aufnahmen und nennt sie. Ist eine Datei **verändert**, sagt die Leiste das eigens: Sie ist nicht
-mehr die Datei vom Einsammeln, und nur eine unveränderte Kopie lässt sich neu verknüpfen.
+nicht mehr. Dann steht unter den Schritten **„Feldspur findet 2 Originaldateien nicht.“** und in der Detailleiste der
+Quelle ein Hinweis. Im Projekt ist dabei nichts verloren: Zeiten, Mitschrift, Notizen und Tagebuchtexte bleiben
+vollständig. Nur Vorschau, Tonanalyse und Ausgabe brauchen die Originale.
 
 Mit **Originale suchen…** öffnet sich eine Liste aller Quellen mit ihrem Zustand:
 
@@ -135,28 +121,24 @@ Mit **Originale suchen…** öffnet sich eine Liste aller Quellen mit ihrem Zust
 
 : Zustände der Originaldateien {#tbl-originale}
 
-- **Ordner durchsuchen…** sucht alle fehlenden und veränderten Originale in einem Ordner und seinen Unterordnern
-  (versteckte Ordner ausgenommen, höchstens 50 000 Dateien). Kandidaten sind Dateien gleicher Größe, gleichnamige
-  zuerst; so findet sich auch eine umbenannte Datei.
+- **Ordner durchsuchen…** sucht alle fehlenden und veränderten Originale in einem Ordner und seinen Unterordnern.
+  So findet sich auch eine umbenannte Datei.
 - **Datei wählen…** verknüpft eine einzelne Quelle mit einer Datei, die du selbst auswählst.
 - **Alle Prüfsummen prüfen** liest alle Originale einmal und vergleicht sie mit der Prüfsumme vom Einsammeln. Bei
   langen Videos dauert das einige Minuten; bis zum Beenden merkt sich Feldspur das Ergebnis.
 
 Feldspur übernimmt einen neuen Pfad **nur, wenn die Prüfsumme (SHA-256) stimmt**. Eine Datei mit gleichem Namen, aber
-anderem Inhalt wird nie übernommen; die Suche nennt sie mit Grund. Jede Neuverknüpfung ist ein eigener Schritt, den du
-rückgängig machen kannst, und steht mit altem und neuem Pfad im Änderungsprotokoll. Der Dateiname im Quellennachweis
-bleibt der vom Einsammeln. Sammelst du die verschobenen Dateien einfach erneut ein, verknüpft Feldspur sie ebenso neu,
-statt sie doppelt aufzunehmen.
-
-Prüfergebnisse sind keine Forschungsdaten: Sie stehen nicht in der Projektdatei und nicht in der Ausgabe.
+anderem Inhalt wird nie übernommen; eine veränderte Datei lässt sich deshalb nicht neu verknüpfen. Jede Neuverknüpfung
+steht mit altem und neuem Pfad im Änderungsprotokoll. Der Dateiname im Quellennachweis bleibt der vom Einsammeln.
+Sammelst du die verschobenen Dateien einfach erneut ein, verknüpft Feldspur sie ebenso neu, statt sie doppelt
+aufzunehmen.
 
 ### Formate {#sec-formate}
 
 Feldspur nimmt jede Datei auf und liest ihre Zeit, so gut es geht. Ansehen, abhören und mitschreiben kannst du aber
-nur Formate, die das Programmfenster selbst darstellen kann. Feldspur legt dafür keine eigenen Kopien an. Wandle
-andere Formate vorher selbst um, und sammle die umgewandelte Datei zusätzlich ein oder statt des Originals. Ins
-Montagevideo kommen auch die Videos und Tonaufnahmen aus der rechten Spalte, weil FFmpeg sie liest. Kann Feldspur eine
-Datei nicht zeigen, steht in der Detailleiste ein Hinweis.
+nur Formate, die das Programmfenster selbst darstellen kann; eigene Kopien legt Feldspur dafür nicht an. Wandle andere
+Formate vorher selbst um, und sammle die umgewandelte Datei zusätzlich ein oder statt des Originals. Ins Montagevideo
+kommen auch die Videos und Tonaufnahmen aus der rechten Spalte, weil FFmpeg sie liest.
 
 | Art | Geht direkt | Selbst umwandeln |
 |:-----|:---------|:---------|

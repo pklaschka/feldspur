@@ -14,9 +14,9 @@ Referenzuhr.
 ### Abweichung eintragen
 
 Weißt du, wie weit ein Gerät abweicht, trägst du es direkt ein: "Kamera geht 2:47 vor" wird zu `+2:47` (oder kurz
-`+247`; nur Ziffern füllen von rechts Sekunden, Minuten, Stunden, `-30` sind 30 Sekunden). Auch große
-Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches Datum gestellt war. Ein leeres Feld löscht den Abgleich; kann Feldspur die Eingabe nicht
-lesen, färbt sich das Feld rot und die bisherige Abweichung bleibt, bis du sie korrigierst oder mit [Esc]{.kbd} zurückholst.
+`+247`, `-30` sind 30 Sekunden). Auch große Abweichungen gehen, etwa `+1 Tag 2:00:00`, wenn die Uhr auf ein falsches
+Datum gestellt war. Ein leeres Feld löscht den Abgleich. Kann Feldspur die Eingabe nicht lesen, färbt sich das Feld
+rot, und die bisherige Abweichung bleibt.
 
 ### Tonspuren abgleichen
 
@@ -27,19 +27,13 @@ Mit **Tonspuren abgleichen** hört Feldspur alle Audio- und Videodateien durch u
   ab.
 
 Daraus entstehen **Vorschläge** ("Uhr geht +2:47, gefunden in V-01"). Ein Vorschlag zählt erst, wenn du ihn
-**übernimmst**. Steht dabei "unsicher, bitte anhören", prüfe die Stelle vorher, am besten mit **Fein justieren…**
-(siehe unten). Was nicht passt, **verwirfst** du. Sind mehrere Vorschläge eindeutig, übernimmst du sie mit **Alle
-eindeutigen übernehmen** auf einmal. Hat ein Gerät mehrere eindeutige Vorschläge, zählt dabei der sicherste, und
-**Rückgängig** nimmt die ganze Übernahme in einem Schritt zurück.
+**übernimmst**. Steht dabei "unsicher, bitte anhören", prüfe die Stelle vorher mit **Fein justieren…** (siehe unten).
+Was nicht passt, **verwirfst** du. **Alle eindeutigen übernehmen** übernimmt alle eindeutigen Vorschläge auf einmal,
+je Gerät den sichersten.
 
-Beim Übernehmen rückt der Punkt der Uhr sichtbar an seinen Platz, und die Zeile bleibt kurz grün hinterlegt (mit der
-Systemeinstellung „Bewegung reduzieren“ nur die Hinterlegung). Darunter steht als Beleg der Anker, der die Uhr
-jetzt trägt. **Beide anhören** spielt beide Stellen gleichzeitig ab, die erste links, die zweite rechts, ohne den
-Feinabgleich zu öffnen. Liegen sie richtig, verschmelzen sie zu einem Klang. Dasselbe gilt für eine Abweichung, die du
-von Hand einträgst, und für einen Anker von Hand.
-
-Stimmen alle Uhren, sagt Feldspur das ("Alle 5 Uhren stimmen jetzt überein"), und
-**Weiter: Durchsehen →** wird zum Hauptknopf.
+Unter einer abgeglichenen Uhr steht als Beleg der Anker, der sie jetzt trägt. **Beide anhören** spielt beide Stellen
+gleichzeitig ab, die erste links, die zweite rechts. Liegen sie richtig, verschmelzen sie zu einem Klang. Stimmen alle
+Uhren, wird **Weiter: Durchsehen →** zum Hauptknopf.
 
 Dabei erkennt Feldspur auch längere **Stille** (ab 5 Minuten) und laute Stellen darin. Das braucht es später für die
 Episoden (@sec-durchsehen).
@@ -58,10 +52,9 @@ nach; das Feld zeigt dann "über Anker". Löschst du den Anker, gilt wieder dein
 
 Für einen genauen Abgleich zweier Tonspuren öffnest du mit **Fein abgleichen…** (beim Anker) oder
 **Fein justieren…** (bei einem Vorschlag) den **Feinabgleich**. Er legt die Waveforms beider Aufnahmen übereinander,
-etwa um eine Stimme, die laut einen bestimmten Satz sagt, einen Klatscher oder eine Tür. Du ziehst die zweite
-Waveform, bis beide deckungsgleich sind, und zoomst dafür hinein. **Einrasten** sucht die genaue Lage im Umkreis
-(auf wenige Millisekunden), **Anhören** spielt beide Aufnahmen zugleich ab, eine links, eine rechts. Der Anker sitzt
-danach auf etwa ± 20 ms genau.
+etwa um einen Klatscher oder eine Tür. Du ziehst die zweite Waveform, bis beide deckungsgleich sind. **Einrasten**
+sucht die genaue Lage im Umkreis, **Anhören** spielt beide Aufnahmen zugleich ab, eine links, eine rechts. Der Anker
+sitzt danach auf etwa ± 20 ms genau.
 
 ### Uhrzeit von Hand
 
@@ -74,10 +67,8 @@ Ansage markieren**) und bestätigst mit **Eintragen**:
 - **Von Hand**: gilt nur für diese Quelle und hat Vorrang vor gelesenen Zeiten. Hat die Quelle auch eine Zeit der
   Geräteuhr, kannst du **Uhr von „Gerät“ danach richten** ankreuzen; dann rücken die übrigen Dateien des Geräts mit.
 
-Doppelpunkte musst du nirgends tippen. Bei Uhrzeiten setzt Feldspur sie beim Tippen selbst: "103045" wird 10:30:45,
-"1030" wird 10:30 (die Sekunden darfst du weglassen), mit [↑]{.kbd} und [↓]{.kbd} verschiebst du um eine Minute, mit [Umschalt]{.kbd} um zehn. Bei einer **Stelle
-in der Aufnahme** füllen die Ziffern von rechts: "320" wird 3:20, "10320" wird 1:03:20, "45" sind 45 Sekunden.
-Dasselbe gilt für die Stellen beim Setzen eines Ankers.
+Bei einer **Stelle in der Aufnahme** füllen die Ziffern von rechts: "320" wird 3:20, "10320" wird 1:03:20, "45" sind
+45 Sekunden. Dasselbe gilt für die Stellen beim Setzen eines Ankers.
 
 **Über Mitternacht:** Eine Uhrzeit trägt kein Datum. Feldspur legt sie auf den Tag, der zu den Aufnahmen passt: Läuft
 ein Einsatz vom 14. bis kurz nach Mitternacht, landet "00:02" am 15. Bei einer Quelle zählt die Stelle in der

@@ -27,22 +27,18 @@ Die Legende unter der Zeitachse erklärt die Zeichen:
 ### Lagen prüfen
 
 Ist die Lage einer Quelle unsicher, zeigt die Zeitachse oben einen Knopf wie **3 zu prüfen · Nächste →**. Er springt
-der Reihe nach zu diesen Stellen, in der Reihenfolge der Liste **Zu prüfen** (siehe unten); mehrere Dateien mit
-demselben Widerspruch zählen als eine Stelle. Passt die Lage, bestätigst du das rechts in der Detailleiste mit
-**✓ Lage passt, als geprüft markieren**; dort steht dann **Von Hand geprüft: Die Lage passt.** Danach wählt Feldspur gleich die nächste zu
-prüfende Stelle und holt sie ins Bild. Der Balken unter **Stand des Einsatzes** wird dabei sichtbar ein Stück grüner.
-Ist keine mehr übrig, bleibt die Auswahl stehen, der Hinweis unten meldet **Alle Stellen geprüft**, und statt des
-Knopfs steht dort **Alle Stellen geprüft · Weiter: Ausgeben →** (sobald auch keine Datei mehr ohne Zeit ist). Kommt
-später wieder etwas zum Prüfen dazu, steht der Knopf **… zu prüfen · Nächste →** wieder da. Die Bestätigung ist ein eigener Zeitbeleg und lässt sich mit **Zurücknehmen** wieder löschen. Ist die Uhr des
-ganzen Geräts unbekannt, kannst du dort auch für alle seine Dateien bestätigen, dass die Uhr stimmt (**Uhr von … stimmt**).
+der Reihe nach zu diesen Stellen; mehrere Dateien mit demselben Widerspruch zählen als eine. Passt die Lage,
+bestätigst du das rechts in der Detailleiste mit **✓ Lage passt, als geprüft markieren**; dort steht dann **Von Hand
+geprüft: Die Lage passt.** Feldspur wählt danach gleich die nächste Stelle, und der Balken unter **Stand des
+Einsatzes** wird ein Stück grüner. Ist keine mehr übrig, steht statt des Knopfs **Alle Stellen geprüft · Weiter:
+Ausgeben →** (sobald auch keine Datei mehr ohne Zeit ist). Die Bestätigung ist ein eigener Zeitbeleg und lässt sich
+mit **Zurücknehmen** wieder löschen. Ist die Uhr des ganzen Geräts unbekannt, kannst du auch für alle seine Dateien
+bestätigen, dass die Uhr stimmt (**Uhr von … stimmt**).
 
 Tastenkürzel in Durchsehen (nicht, solange du in einem Textfeld schreibst oder ein Dialog offen ist):
 
 - [N]{.kbd}: nächste zu prüfende Stelle, [Umschalt+N]{.kbd}: vorige,
 - [Strg+Enter]{.kbd} (macOS: [⌘+Enter]{.kbd}): **Lage passt** für die gewählte Quelle.
-
-Wer drei Lagen mit der Maus bestätigt hat, bekommt einmal einen Hinweis auf diese Tasten. Nach **Verstanden** kommt er
-nicht wieder.
 
 ### Wenn Zeitbelege sich widersprechen {#sec-widersprueche}
 
@@ -52,10 +48,9 @@ vergleicht sie. Liegen sie weiter auseinander, als ihre Genauigkeit erklärt, is
 - **deutlich** (umrandetes ≠): unter 5 Minuten Unterschied,
 - **stark** (gefülltes ≠): 5 Minuten oder mehr.
 
-Harmlose Unterschiede meldet Feldspur nicht: Ein Dateiname wie `IMG_20260914_1018` kennt nur die Minute, eine Minute
-Rundung ist dann in Ordnung. Ganze Stunden Unterschied deutet Feldspur als Zeitzone oder Sommerzeit, und ob Metadaten
-als UTC oder Ortszeit gemeint sind, probiert es selbst aus. Hängen Belege an verschiedenen Uhren, die noch nicht
-abgeglichen sind, steht dort nur **Uhr nicht abgeglichen** statt eines Widerspruchs.
+Harmlose Unterschiede meldet Feldspur nicht: eine Minute Rundung, wenn der Dateiname nur die Minute kennt, oder ganze
+Stunden, die es als Zeitzone oder Sommerzeit deutet. Hängen Belege an verschiedenen Uhren, die noch nicht abgeglichen
+sind, steht dort nur **Uhr nicht abgeglichen** statt eines Widerspruchs.
 
 ![Ein starker Widerspruch: rechts der Vergleich der Belege, auf der Zeitachse die Vergleichslage](bilder/widerspruch.png){#fig-widerspruch}
 
@@ -82,9 +77,8 @@ Passt keiner der Belege, trägst du die Uhrzeit über **Keine der beiden: Uhrzei
 abschalten, dann zählt er nicht mehr.
 
 Die Entscheidung wird im Projekt gespeichert, mit Datum, gewähltem Beleg, Begründung und dem Stand der Belege zu
-diesem Zeitpunkt. Sie bleibt nach dem Wiederöffnen sichtbar, steht im Änderungsprotokoll und lässt sich mit
-**Rückgängig** (auch direkt in der Meldung nach dem Entscheiden) oder **Zurücknehmen** aufheben. Ändern sich die Belege später so, dass die Entscheidung
-nicht mehr zum Stand passt, etwa durch einen neuen Abgleich, meldet Feldspur **Entscheidung neu prüfen**.
+diesem Zeitpunkt. Sie steht im Änderungsprotokoll und lässt sich mit **Zurücknehmen** aufheben. Passt sie später
+nicht mehr zum Stand der Belege, etwa nach einem neuen Abgleich, meldet Feldspur **Entscheidung neu prüfen**.
 
 ### Ohne Uhrzeit
 
@@ -122,7 +116,7 @@ Was Feldspur vorschlägt, kannst du direkt auf der Zeitachse anpassen:
   sie aus, damit Gesprächsstellen auffallen.
 
 Hast du etwas angepasst, steht unter "Episoden" **↺ zurücksetzen**; damit verwirfst du alle Anpassungen des Einsatzes.
-Jede Anpassung lässt sich auch einzeln rückgängig machen ([Strg+Z]{.kbd}). Feldspur speichert die Anpassung je Aufnahme ab
-Dateibeginn, sie wandert also mit, wenn du den Abgleich der Uhren später änderst.
+Feldspur speichert die Anpassung je Aufnahme ab Dateibeginn, sie wandert also mit, wenn du den Abgleich der Uhren
+später änderst.
 
 Von hier aus geht es weiter zum Abtippen des Tagebuchs (@sec-tagebuch) und zum Mitschreiben (@sec-mitschreiben).

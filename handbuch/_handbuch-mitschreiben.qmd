@@ -34,8 +34,7 @@ die **Tonquelle**. Dann:
 : Tastenkürzel beim Mitschreiben {#tbl-mitschreiben-tasten}
 
 Die Tasten gelten überall im Dialog, auch wenn du vorher auf das Video, die Waveform oder eine freie Fläche geklickt
-hast. Tippst du, während kein Textfeld ausgewählt ist, geht es in der neuen Zeile weiter. Zum Danebenlegen gibt es sie
-auch auf dem [Spickblatt](https://purl.archive.org/feldspur/tastenkuerzel) (A4 quer).
+hast. Tippst du, während kein Textfeld ausgewählt ist, geht es in der neuen Zeile weiter.
 
 ### Andere Spuren zur selben Zeit
 
