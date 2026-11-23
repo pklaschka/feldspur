@@ -646,7 +646,10 @@ function Timeline({
         </div>
         <div
           ref={scroller}
-          className={cx("relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden", panning && "cursor-grabbing")}
+          // overflow-x-scroll statt -auto: Der Platz für den Rollbalken ist immer da. Sonst wächst der Kasten beim
+          // Hineinzoomen um die Balkenhöhe (Windows, Linux, macOS mit Maus) und alles darunter rutscht nach unten.
+          // scrollbar-gutter hilft hier nicht, es hält nur Platz für senkrechte Balken frei.
+          className={cx("relative min-w-0 flex-1 overflow-x-scroll overflow-y-hidden", panning && "cursor-grabbing")}
           onMouseDown={onPanStart}
           onAuxClick={(e) => e.button === 1 && e.preventDefault()}
           onScroll={(e) => {
