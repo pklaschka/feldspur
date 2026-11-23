@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron } from "playwright-core";
 import { ablauf } from "./ablauf.ts";
+import { h264 } from "../../../packages/media/test/fixtures.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "feldspur-timecode-"));
 const src = join(dir, "Kamera");
@@ -32,10 +33,7 @@ for (const [name, start, tc] of [
     "lavfi",
     "-i",
     "testsrc2=size=160x90:rate=50:duration=20",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "ultrafast",
+    ...h264(),
     "-timecode",
     tc,
     "-metadata",

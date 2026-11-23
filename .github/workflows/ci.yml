@@ -50,9 +50,32 @@ jobs:
         with:
           node-version: 22
           cache: true
+      # Linux prüft mit der LGPL-Fassung von ffmpeg/ffprobe, die auch im Installationspaket steckt
+      # (scripts/fetch-ffmpeg.mjs, BtbN „latest“): schneller als apt (rund 60 s, hing gelegentlich minutenlang am
+      # Ubuntu-Spiegel) und näher an dem, was ausgeliefert wird (OpenH264 statt libx264). Der Cache gilt eine
+      # Kalenderwoche; so folgt die CI dem täglichen Bau mit etwas Abstand und lädt nicht bei jedem Lauf 130 MB.
+      - name: Kalenderwoche (Linux)
+        if: runner.os == 'Linux'
+        id: woche
+        run: echo "woche=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: FFmpeg-Cache (Linux)
+        if: runner.os == 'Linux'
+        id: ffmpeg-cache
+        uses: actions/cache@v6
+        with:
+          path: apps/desktop/vendor/ffmpeg/linux-x64
+          key: ffmpeg-ci-linux-x64-${{ hashFiles('scripts/fetch-ffmpeg.mjs', 'scripts/check-ffmpeg.mjs') }}-${{ steps.woche.outputs.woche }}
       - name: FFmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg xvfb
+        run: |
+          if [ "${{ steps.ffmpeg-cache.outputs.cache-hit }}" != "true" ]; then node scripts/fetch-ffmpeg.mjs; fi
+          head -n 4 apps/desktop/vendor/ffmpeg/linux-x64/BUILD.txt
+          echo "$PWD/apps/desktop/vendor/ffmpeg/linux-x64" >> "$GITHUB_PATH"
+          # xvfb gehört zum Runner-Image; nur wenn es einmal fehlt, über apt (ohne Empfehlungen und man-db-Lauf).
+          if ! command -v xvfb-run > /dev/null; then
+            sudo rm -f /var/lib/man-db/auto-update
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb
+          fi
       - name: FFmpeg (macOS)
         if: runner.os == 'macOS'
         run: brew install ffmpeg

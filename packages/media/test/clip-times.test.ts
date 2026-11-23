@@ -17,7 +17,7 @@ import {
 import { evidenceFromFilename, evidenceFromMediaTags } from "../src/evidence.ts";
 import { applyImport, applyReread, scanPaths, stampsLookLocal, type ImportCandidate } from "../src/import.ts";
 import type { MediaProbe } from "../src/probe.ts";
-import { ff, hasFfmpeg } from "./fixtures.ts";
+import { ff, h264, hasFfmpeg } from "./fixtures.ts";
 
 // Erfundene Aufnahmen nach dem Muster eines Pixel-Handys: Name = Beginn in UTC, creation_time = Ende (+ ~2 s).
 const probe = (durationMs: number, tags: Record<string, string>, extra: Partial<MediaProbe> = {}): MediaProbe => ({
@@ -226,10 +226,7 @@ describe("Kamera-Timecode", () => {
         "lavfi",
         "-i",
         "testsrc2=size=64x36:rate=50:duration=1",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "ultrafast",
+        ...h264(),
         "-timecode",
         tc,
         "-metadata",
