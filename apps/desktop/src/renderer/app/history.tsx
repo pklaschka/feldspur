@@ -26,7 +26,7 @@ const NOTIFY = new Set([
   "Entscheidung zurückgenommen",
 ]);
 
-/** Beschriftung des Löschschritts für einen Einsatz (wie in main.ts). */
+/** Beschriftung des Löschschritts für einen Einsatz (wie in main/ipc/sessions.ts). */
 export const SESSION_DELETED = "Einsatz gelöscht";
 
 export interface HistoryState {
