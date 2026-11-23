@@ -8,7 +8,18 @@
  *
  * Wiederhergestellt wird nie über das Original, sondern immer in eine neue Datei („Als Kopie öffnen“).
  */
-import { existsSync, mkdirSync, openSync, readdirSync, readSync, closeSync, statSync, unlinkSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readSync,
+  closeSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { MIGRATIONS } from "./migrations.ts";
@@ -118,8 +129,19 @@ export function nextBackupPath(projectPath: string, kind: BackupKind, at: Date =
 /** Datenbank über eine offene Verbindung in eine neue Datei schreiben (konsistent, mit WAL-Inhalt). */
 export function vacuumInto(sqlite: Database.Database, dest: string): void {
   mkdirSync(dirname(dest), { recursive: true });
-  if (existsSync(dest)) unlinkSync(dest);
-  sqlite.prepare("VACUUM INTO ?").run(dest);
+  // Erst daneben schreiben, dann ersetzen: Scheitert das Schreiben (voller Datenträger), bleibt eine vorhandene Datei
+  // heil. Begleitdateien einer früheren Datei gleichen Namens müssen weg, sonst hielte SQLite ihr altes Journal für
+  // einen Teil der neuen Datei.
+  const part = `${dest}.teil`;
+  rmSync(part, { force: true });
+  try {
+    sqlite.prepare("VACUUM INTO ?").run(part);
+  } catch (e) {
+    rmSync(part, { force: true });
+    throw e;
+  }
+  for (const suffix of ["-wal", "-shm", "-journal"]) rmSync(dest + suffix, { force: true });
+  renameSync(part, dest);
 }
 
 /** Ergebnis der Prüfung einer Projektdatei, bevor Feldspur sie öffnet. */

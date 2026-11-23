@@ -16,6 +16,22 @@ describe("excelCsv", () => {
     expect(excelCsv([["x;y", 'sagt "hallo"', "zwei\nZeilen"]])).toBe('﻿"x;y";"sagt ""hallo""";"zwei\nZeilen"\r\n');
   });
 
+  it.each`
+    text                   | zelle
+    ${"- lacht"}           | ${"'- lacht"}
+    ${'=HYPERLINK("x")'}   | ${'"\'=HYPERLINK(""x"")"'}
+    ${"+0:03"}             | ${"'+0:03"}
+    ${"@Ali"}              | ${"'@Ali"}
+    ${"\tTab"}             | ${"'\tTab"}
+    ${"Marktstand - Ecke"} | ${"Marktstand - Ecke"}
+  `("Text „$text“ bleibt in Excel Text: $zelle", ({ text, zelle }) => {
+    expect(excelCsv([[text]])).toBe(`\uFEFF${zelle}\r\n`);
+  });
+
+  it("lässt negative Zahlen als Zahl stehen", () => {
+    expect(excelCsv([[-5, 1.5]])).toBe("\uFEFF-5;1.5\r\n");
+  });
+
   it("schreibt Objekte als JSON", () => {
     expect(excelCsv([[{ a: 1 }, true]])).toBe('﻿"{""a"":1}";true\r\n');
   });

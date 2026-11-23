@@ -5,7 +5,7 @@
 import type { ChangeStep } from "@feldspur/core";
 import { Dialog } from "radix-ui";
 import { useEffect, useState } from "react";
-import { FIELD_LABEL, OP_LABEL, TABLE_LABEL, fieldChanges, showValue } from "../shared/changelog.ts";
+import { FIELD_LABEL, OP_LABEL, TABLE_LABEL, fieldChanges, showValue, stepLabel } from "../shared/changelog.ts";
 import { Button, CloseButton, cx } from "./ui.tsx";
 
 const api = window.feldspur;
@@ -97,7 +97,7 @@ export function ChangeLog({ open, onOpenChange }: { open: boolean; onOpenChange:
                         !s.label && "text-muted italic",
                       )}
                     >
-                      {s.label ?? "Ohne Beschriftung (z. B. Einsammeln)"}
+                      {stepLabel(s)}
                     </span>
                     <span className="flex-none text-[0.82rem] text-muted">
                       {s.changes.length === 1 ? "1 Änderung" : `${s.changes.length} Änderungen`}

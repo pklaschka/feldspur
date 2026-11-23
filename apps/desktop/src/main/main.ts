@@ -87,6 +87,7 @@ import {
 } from "./edits.ts";
 import {
   cancelExport,
+  abortExport,
   exportRunning,
   exportingSession,
   exportCard,
@@ -168,8 +169,9 @@ function bindingOpts(): { nativeBinding?: string } {
 /** Projekt schließen; vorher Änderungen seit der letzten automatischen Sicherung sichern. */
 function closeStore(): void {
   if (!store) return;
-  // Eine laufende Analyse schreibt in dieses Projekt; sie endet mit dem Projekt.
+  // Eine laufende Analyse oder Ausgabe liest und schreibt dieses Projekt; sie endet mit dem Projekt.
   for (const ctrl of analyzing.values()) ctrl.abort();
+  abortExport();
   autoBackup.detach();
   store.close();
   store = null;
@@ -192,10 +194,13 @@ function openStore(path: string, create: boolean, fresh = create): ProjectInfo |
       throw new Error(`„${basename(path)}“ lässt sich nicht öffnen. ${check.problem}${hint}`);
     }
   }
-  closeStore();
-  store = create
+  // Erst das neue Projekt öffnen, dann das alte schließen: Scheitert das Öffnen (etwa weil sich vor einer Umstellung
+  // keine Sicherung anlegen lässt), bleibt das bisherige Projekt nutzbar.
+  const next = create
     ? ProjectStore.create(path, { name: basename(path).replace(/\.feldspur$/, ""), ...opts })
     : ProjectStore.open(path, { ...opts, backupBeforeMigration: true });
+  closeStore();
+  store = next;
   lastFailedPath = null;
   autoBackup.attach(store, { fresh });
   const info = projectInfo()!;
@@ -664,8 +669,10 @@ function registerIpc(): void {
   ipcMain.handle(IPC.checkOriginals, (e, sessionId: string, video: boolean) =>
     checkOriginals(requireStore(), sessionId, {
       video,
-      onProgress: (done, total, fileName) =>
-        e.sender.send(IPC.originalsProgress, { sessionId, phase: "prüfen", done, total, fileName }),
+      onProgress: (done, total, fileName) => {
+        if (!e.sender.isDestroyed())
+          e.sender.send(IPC.originalsProgress, { sessionId, phase: "prüfen", done, total, fileName });
+      },
     }),
   );
   ipcMain.handle(IPC.searchOriginals, async (e, sessionId: string) => {
@@ -677,9 +684,9 @@ function registerIpc(): void {
     });
     const dir = r.filePaths[0];
     if (r.canceled || !dir) return null;
-    const result = await searchOriginals(s, sessionId, dir, (done, phase, fileName) =>
-      e.sender.send(IPC.originalsProgress, { sessionId, phase, done, total: 0, fileName }),
-    );
+    const result = await searchOriginals(s, sessionId, dir, (done, phase, fileName) => {
+      if (!e.sender.isDestroyed()) e.sender.send(IPC.originalsProgress, { sessionId, phase, done, total: 0, fileName });
+    });
     return { view: buildSessionView(s, sessionId), result };
   });
   ipcMain.handle(IPC.relinkOriginal, async (_e, sourceId: string) => {
@@ -1088,6 +1095,7 @@ function createWindow(): void {
       detail: "Beim Schließen bricht sie ab; die halb geschriebenen Dateien bleiben unvollständig.",
     });
     if (choice === 0) e.preventDefault();
+    else abortExport();
   });
   win.webContents.on("will-navigate", (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));

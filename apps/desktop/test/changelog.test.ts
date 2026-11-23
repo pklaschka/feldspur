@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { ProjectStore } from "@feldspur/core";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { sessionChangeLogCsv } from "../src/main/changelog.ts";
+import { MIGRATIONS } from "../../../packages/core/src/db/migrations.ts";
 import { addLine } from "../src/main/transcript.ts";
+import { stepLabel, TABLE_LABEL } from "../src/shared/changelog.ts";
 
 let dir: string;
 let store: ProjectStore;
@@ -65,5 +67,25 @@ describe("Änderungsprotokoll im Ausgabeordner eines Einsatzes", () => {
     expect(csv).toContain("Quelle entfernt");
     expect(csv).not.toContain("Flohmarkt");
     expect(csv).not.toContain("Teller");
+  });
+});
+
+describe("Bezeichnungen im Änderungsprotokoll", () => {
+  it("jede Tabelle der Projektdatei hat einen deutschen Namen, außer Zwischenspeichern und dem Protokoll selbst", () => {
+    const tables = [...MIGRATIONS.join("\n").matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)/g)].map((m) => m[1]!);
+    const ohne = new Set(["audio_analysis", "export_records", "change_log"]);
+    expect(tables.filter((t) => !ohne.has(t) && !(t in TABLE_LABEL))).toEqual([]);
+    expect(Object.keys(TABLE_LABEL).filter((t) => !tables.includes(t))).toEqual([]);
+  });
+
+  const change = (table: string) => ({ table, op: "insert" as const, rowKey: "1", before: null, after: {} });
+  it.each`
+    fall                          | label               | tabellen                                   | name
+    ${"mit eigener Beschriftung"} | ${"Zeile gelöscht"} | ${["transcript_lines"]}                    | ${"Zeile gelöscht"}
+    ${"vom Einsammeln"}           | ${null}             | ${["devices", "sources", "time_evidence"]} | ${"Dateien eingesammelt"}
+    ${"vom Tonspur-Abgleich"}     | ${null}             | ${["sync_anchors"]}                        | ${"Anker vorgeschlagen"}
+    ${"sonst ohne Beschriftung"}  | ${null}             | ${["sessions"]}                            | ${"Automatisch geändert"}
+  `("ein Schritt $fall heißt „$name“", ({ label, tabellen, name }) => {
+    expect(stepLabel({ label, changes: (tabellen as string[]).map(change) })).toBe(name);
   });
 });

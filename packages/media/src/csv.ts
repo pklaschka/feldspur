@@ -3,8 +3,16 @@
  * Gemeinsam für Begleitprotokoll und Änderungsprotokoll.
  */
 
+/**
+ * Text, der mit = + - @ Tab oder Wagenrücklauf beginnt, hielten Excel und LibreOffice für eine Formel: aus „- lacht“
+ * würde #NAME?, aus „=HYPERLINK(…)“ ein Link. Ein vorangestelltes Apostroph lässt ihn Text bleiben (Empfehlung von
+ * OWASP zur CSV-Einschleusung). Gilt für jede Textzelle, auch für „+0:03“; Zahlen bleiben Zahlen.
+ */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
 const cell = (v: unknown): string => {
-  const s = v === null || v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
+  const raw = v === null || v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
+  const s = typeof v === "string" && FORMULA_START.test(raw) ? `'${raw}` : raw;
   return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
