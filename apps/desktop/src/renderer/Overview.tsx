@@ -359,7 +359,12 @@ function clockLabel(ms: number): string {
   return `${hourLabel(Math.floor(min / 60) * 3_600_000)}:${String(((min % 60) + 60) % 60).padStart(2, "0")}`;
 }
 
-const EXPORTED_TEXT = { current: "Ausgabe aktuell", stale: "Ausgabe veraltet", none: "nicht ausgegeben" } as const;
+const EXPORTED_TEXT = {
+  current: "Ausgabe aktuell",
+  stale: "Ausgabe veraltet",
+  missing: "Ausgabe fehlt im Ordner",
+  none: "nicht ausgegeben",
+} as const;
 
 /** Raster jeder Zeile des Feldkalenders: Häkchen, Tag, Spur, Fakten; schmal stehen Spur und Fakten unter dem Tag. */
 const ROW =
@@ -498,6 +503,18 @@ function DayRow({
         </p>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {s.unsynced > 0 && <Pill tone="warn">{count(s.unsynced, "Geräteuhr", "Geräteuhren")} ohne Abgleich</Pill>}
+          {/* Was weit weg vom Datum liegt, steht nicht im Feldkalender (#226); hier sieht man, dass es fehlt. */}
+          {s.output.farFromDate > 0 && (
+            <>
+              <Pill tone="warn">{count(s.output.farFromDate, "Quelle", "Quellen")} weit weg vom Datum</Pill>
+              {chosen && (
+                <Button variant="link" onClick={() => onOpen(s.sessionId, "sync")}>
+                  Abgleichen<span aria-hidden> →</span>
+                  <span className="sr-only">: {label}</span>
+                </Button>
+              )}
+            </>
+          )}
           {s.sources === 0 ? (
             chosen && (
               <Button variant="link" onClick={() => onOpen(s.sessionId, "collect")}>
@@ -509,10 +526,10 @@ function DayRow({
             <Pill tone="good">{EXPORTED_TEXT.current}</Pill>
           ) : (
             <>
-              <Pill tone={s.exported === "stale" ? "warn" : "plain"}>{EXPORTED_TEXT[s.exported]}</Pill>
+              <Pill tone={s.exported === "none" ? "plain" : "warn"}>{EXPORTED_TEXT[s.exported]}</Pill>
               {chosen && s.output.durationMs > 0 && (
                 <Button variant="link" onClick={() => onOpen(s.sessionId, "export")}>
-                  {s.exported === "stale" ? "Erneut ausgeben" : "Ausgeben"}
+                  {s.exported === "none" ? "Ausgeben" : "Erneut ausgeben"}
                   <span aria-hidden> →</span>
                   <span className="sr-only">: {label}</span>
                 </Button>

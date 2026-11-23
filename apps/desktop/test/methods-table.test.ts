@@ -43,6 +43,7 @@ const einsatz = (n: number, patch: Partial<MethodsSessionSummary> = {}): Methods
     mode: "Echtzeit",
     montageId: `FS-AAA${n}-BBB${n}-CCC${n}`,
     montageVideoId: `FS-AAA${n}-BBB${n}`,
+    farFromDate: 0,
     video: true,
   },
   exported: "current",

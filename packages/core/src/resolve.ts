@@ -658,12 +658,38 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     });
   }
 
-  const maxRounds = input.anchors.length + 1;
+  // Woraus eine über Anker abgeleitete Uhr stammt: die Geräte, an deren Uhr die bekannte Seite des Ankers hing (auch
+  // über mehrere Anker hinweg). Ändert sich eine dieser Uhren, wird die abgeleitete neu berechnet (Issue #228): sonst
+  // bliebe ein Foto an der alten Schätzung einer Kamera hängen, die ein zweiter Anker inzwischen korrigiert hat.
+  const before = new Map(clocks);
+  const via = new Map<Id, Set<Id>>();
+  /** Geräte, von deren Uhr die Lage einer Quelle abhängt (leer, wenn ihr Beleg die wahre Uhrzeit nennt). */
+  const derivedFrom = new Map<Id, Set<Id>>();
+  const dependsOn = (sourceId: Id, ev: TimeEvidence | undefined): Set<Id> => {
+    // Ein aus einem Anker abgeleiteter Beleg hängt an dem, woran die andere Seite jenes Ankers hing.
+    const fromAnchor = ev ? derivedFrom.get(ev.id) : undefined;
+    if (fromAnchor) return new Set([...fromAnchor].flatMap((d) => [d, ...(via.get(d) ?? [])]));
+    const deviceId = sourceById.get(sourceId)?.deviceId;
+    if (!deviceId || ev?.clock === "true") return new Set();
+    return new Set([deviceId, ...(via.get(deviceId) ?? [])]);
+  };
+  const setClock = (c: DeviceClock, from: Set<Id>) => {
+    clocks.set(c.deviceId, c);
+    via.set(c.deviceId, from);
+    for (const [id, deps] of via)
+      if (id !== c.deviceId && deps.has(c.deviceId)) {
+        clocks.set(id, before.get(id)!);
+        via.delete(id);
+      }
+  };
+
+  const maxRounds = 4 * (input.anchors.length + input.devices.length) + 4;
   for (let round = 0; round <= maxRounds; round++) {
     placeAll();
     let changed = false;
     anchorConflicts.length = 0;
-    for (const anchor of input.anchors) {
+    // Nach jeder geänderten Uhr neu legen: Die Lagen dieser Runde stammen noch von der alten Uhr.
+    anchors: for (const anchor of input.anchors) {
       if (!anchor.enabled || anchor.proposed) continue;
       for (const [known, other] of [
         [anchor.a, anchor.b],
@@ -704,8 +730,14 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
         const knownSrc = sourceById.get(known.sourceId);
         const knownClock = knownSrc?.deviceId ? clocks.get(knownSrc.deviceId) : undefined;
         const knownEv = candidates.get(known.sourceId)?.find((c) => c.ev.id === pk.basis.evidenceId)?.ev;
-        const knownOnManual = knownClock?.basis === "manual" && knownEv?.clock !== "true";
-        const overManual = clock?.basis === "manual" && !!deviceEv && !knownOnManual;
+        const from = dependsOn(known.sourceId, knownEv);
+        // Auch eine Uhr, die nur über Anker an einer geschätzten Uhr hängt, ist geschätzt.
+        const knownOnManual =
+          (knownEv?.clock !== "true" && knownClock?.basis === "manual") ||
+          [...from].some((d) => clocks.get(d)?.basis === "manual");
+        // Hängt die bekannte Seite selbst an der Uhr des anderen Geräts, misst der Anker nichts Neues.
+        const circular = !!otherSrc.deviceId && from.has(otherSrc.deviceId);
+        const overManual = clock?.basis === "manual" && !!deviceEv && !knownOnManual && !circular;
         const refines = viaSpokenClock || overManual;
         if (po && !refines) {
           const diff = po.startMs + other.atMediaMs - moment;
@@ -721,18 +753,35 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
           // Geräteuhr zeigte im Moment des Ankers:
           const deviceShows =
             effectiveLocal(deviceEv.ev, device, session.timeZone) - deviceEv.ev.atMediaMs + other.atMediaMs;
-          clocks.set(clock.deviceId, {
-            deviceId: clock.deviceId,
-            offsetMs: deviceShows - moment,
-            uncertaintyMs: combineUncertainty(unc, deviceEv.ev.uncertaintyMs),
-            basis: "anchor",
-            viaAnchorId: anchor.id,
-            viaEvidenceId: deviceEv.ev.id,
-          });
+          if (circular) continue;
+          setClock(
+            {
+              deviceId: clock.deviceId,
+              offsetMs: deviceShows - moment,
+              uncertaintyMs: combineUncertainty(unc, deviceEv.ev.uncertaintyMs),
+              basis: "anchor",
+              viaAnchorId: anchor.id,
+              viaEvidenceId: deviceEv.ev.id,
+            },
+            from,
+          );
           changed = true;
-        } else if (!deviceEv && !derived.some((d) => d.id === `anchor:${anchor.id}:${other.sourceId}`)) {
+          break anchors;
+        } else if (!deviceEv) {
+          // Abgeleiteter Beleg für eine Aufnahme ohne eigene Zeit; liegt die bekannte Seite inzwischen anders (ihre Uhr
+          // wurde nachgemessen), wandert er mit.
+          const id = `anchor:${anchor.id}:${other.sourceId}`;
+          const existing = derived.find((d) => d.id === id);
+          derivedFrom.set(id, from);
+          if (existing) {
+            if (existing.localMs === moment && existing.uncertaintyMs === unc) continue;
+            existing.localMs = moment;
+            existing.uncertaintyMs = unc;
+            changed = true;
+            break anchors;
+          }
           derived.push({
-            id: `anchor:${anchor.id}:${other.sourceId}`,
+            id,
             sourceId: other.sourceId,
             kind: "anchor",
             clock: "true",
@@ -746,6 +795,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
             decision: null,
           });
           changed = true;
+          break anchors;
         }
       }
     }

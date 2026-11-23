@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectStore, type ExportSettings } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
+import { nearDay } from "../src/field-calendar.ts";
 import { analyzeSession } from "../src/analyze.ts";
 import { exportFingerprint } from "../src/export-state.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { methodsSummary } from "../src/methods-summary.ts";
 import { buildSessionTranscript } from "../src/session-transcript.ts";
-import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay } from "./fixtures.ts";
+import { outputTable } from "../src/methods-table.ts";
+import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncAudio, makeSyncDay } from "./fixtures.ts";
 
 const SETTINGS: ExportSettings = {
   video: true,
@@ -143,5 +145,59 @@ describe.skipIf(!hasFfmpeg())("Zahlen für die Tabelle zum Methodenteil", () => 
     expect(summary({ ...SETTINGS, video: false }).exported).toBe("stale");
     store.updateSession(sessionId, { place: "Marktplatz" });
     expect(summary().exported).toBe("stale");
+  });
+
+  it("verspricht keine aktuelle Ausgabe, wenn ihre Dateien im Ordner fehlen (#229)", () => {
+    // Angenommen: eine Ausgabe zum jetzigen Stand, deren Dateien aber nicht (mehr) im Ordner liegen
+    store.saveExportRecord({
+      sessionId,
+      exportedAt: "2026-09-15T08:00:00.000Z",
+      dir: join(dir, "gelöscht"),
+      files: ["Feldtag_2026-09-14_Testmarkt.docx"],
+      durationMs: 1000,
+      options: SETTINGS,
+      fingerprint: exportFingerprint(store, sessionId, SETTINGS),
+    });
+    // Dann: gilt sie als fehlend, nicht als aktuell
+    expect(summary().exported).toBe("missing");
+  });
+});
+
+describe.skipIf(!hasFfmpeg())("Quellen weit weg vom Datum des Einsatzes (#226)", () => {
+  let dir: string;
+  let store: ProjectStore;
+
+  // Angenommen: eine Aufnahme vom 14.09.2026 und ein Foto, dessen Kamerauhr auf 2019 zurückgesetzt war
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), "feldspur-weitweg-"));
+    makeSyncAudio(join(dir, "ZOOM0001.m4a"), { seconds: 4, creationTime: "2026-09-14T08:15:00.000000Z" });
+    makePhoto(join(dir, "Foto.jpg"), "0x8a4fbf", {
+      make: "Testwerk",
+      model: "TK-1",
+      dateTimeOriginal: "2019:01:01 00:00:10",
+    });
+    store = ProjectStore.open(":memory:");
+  });
+  afterAll(() => {
+    store?.close();
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  });
+
+  it.each`
+    fall                         | datum           | weit | marken
+    ${"Kamerauhr zurückgesetzt"} | ${"2026-09-14"} | ${1} | ${1}
+    ${"Datum vertippt"}          | ${"2026-10-01"} | ${2} | ${0}
+  `("$fall: $weit weit weg, $marken Marke im Feldkalender", async ({ datum, weit, marken }) => {
+    const sessionId = store.addSession({ title: `Weit weg ${datum}`, date: datum }).id;
+    applyImport(store, sessionId, await scanPaths([dir]));
+    const s = methodsSummary(store, sessionId, SETTINGS);
+    // Dann: zählt die Zeile, was weit weg liegt
+    expect(s.output.farFromDate).toBe(weit);
+    // Und: im Feldkalender steht nur, was zum Tag gehört, so dass die Achse lesbar bleibt
+    expect(s.marks).toHaveLength(marken);
+    expect(s.marks.every((m) => nearDay(datum, m.fromMs) && nearDay(datum, m.toMs))).toBe(true);
+    // Und: die Kennwerte nennen keine Länge mit fünfstelligen Stunden
+    const umfang = outputTable([s]).rows.find((r) => r[1] === "Montagevideo")![3];
+    expect(umfang).toBe(`Länge unklar, ${weit === 1 ? "1 Quelle" : `${weit} Quellen`} weit weg vom Datum, Echtzeit`);
   });
 });

@@ -258,6 +258,58 @@ describe("Zeitbestimmung: Sonderfälle", () => {
     expect(formatClock(res.placements.get("C0013.MP4")!.startMs)).toBe("10:40:10");
   });
 
+  /** Kamera von Hand um 28 s daneben geschätzt, dazu ein Anker vom ersten Clip zu einem Foto von Handy B (#228). */
+  const fotoAnKamera = (opts: { swap?: boolean; fotoZuerst?: boolean; klatschen?: boolean } = {}) => {
+    const input = testmarkt();
+    const cam = input.devices.find((d) => d.id === "camA")!;
+    Object.assign(cam, { clockOffsetMs: 195_000, clockOffsetUncertaintyMs: 1_000, offsetBasis: "manual" });
+    const clip = { sourceId: "C0012.MP4", atMediaMs: 5_000 };
+    const foto = { sourceId: "IMG_20260914_104050.jpg", atMediaMs: 0 };
+    const anchor = {
+      ...input.anchors[0]!,
+      id: "foto",
+      kind: "manual" as const,
+      a: opts.swap ? foto : clip,
+      b: opts.swap ? clip : foto,
+    };
+    if (opts.klatschen === false) input.anchors[0]!.enabled = false;
+    input.anchors = opts.fotoZuerst ? [anchor, ...input.anchors] : [...input.anchors, anchor];
+    return input;
+  };
+
+  it.each`
+    reihenfolge            | swap     | fotoZuerst
+    ${"Klatschen zuerst"}  | ${false} | ${false}
+    ${"Foto-Anker zuerst"} | ${false} | ${true}
+    ${"Seiten vertauscht"} | ${true}  | ${true}
+  `(
+    "Ankerkette über eine von Hand geschätzte Kamera zieht das Foto mit ($reihenfolge, #228)",
+    ({ swap, fotoZuerst }) => {
+      // Angenommen: Kamera von Hand +3:15 (wahr +2:47), Foto von Handy B per Anker an Clip V-01 bei 0:05
+      const input = fotoAnKamera({ swap, fotoZuerst });
+      // Wenn: das Klatschen die Kamera an die Referenz bindet
+      const res = resolveTimeline(input);
+      // Dann: rückt das Foto mit der Kamera, und kein Anker widerspricht
+      expect(res.deviceClocks.get("camA")!.offsetMs).toBe(167_000);
+      expect(clock(res.placements.get("IMG_20260914_104050.jpg")!.startMs)).toBe("10:16:05");
+      expect(res.placements.get("IMG_20260914_104050.jpg")!.status).toBe("ok");
+      expect(res.anchorConflicts).toEqual([]);
+    },
+  );
+
+  it("ein Anker zu einem Foto ohne abgeglichene Uhr misst die von Hand geschätzte Kamera nicht (#228)", () => {
+    // Angenommen: Kamera von Hand +3:15, kein Klatschen, nur der Anker Foto = V-01 bei 0:05
+    const input = fotoAnKamera({ klatschen: false });
+    // Wenn: Feldspur die Zeitachse berechnet
+    const res = resolveTimeline(input);
+    // Dann: bleibt die Kamera bei der Handeingabe, das Foto folgt ihr, der zweite Clip liegt wie ohne den Anker
+    const ohne = resolveTimeline({ ...input, anchors: [] });
+    expect(res.deviceClocks.get("camA")!.basis).toBe("manual");
+    expect(res.deviceClocks.get("phoneB")!.basis).toBe("anchor");
+    expect(clock(res.placements.get("IMG_20260914_104050.jpg")!.startMs)).toBe("10:15:37");
+    expect(res.placements.get("C0013.MP4")).toEqual(ohne.placements.get("C0013.MP4"));
+  });
+
   it("ohne Anker gilt wieder die Handeingabe", () => {
     // Angenommen: Abweichung von Hand +2:45, das Klatschen ist abgeschaltet
     const input = testmarkt();

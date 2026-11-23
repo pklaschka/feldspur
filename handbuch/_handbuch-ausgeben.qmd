@@ -1,6 +1,9 @@
 ## Ausgeben {#sec-ausgeben}
 
-Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Einsatz**: Einsatztranskript,
+Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Einsatz** in den Ordner, den du wählst. Er
+heißt nach Datum und Titel, etwa `Feldtag_2026-09-14_Wochenmarkt`. Hat ein anderer Einsatz des Projekts mit gleichem
+Datum und Titel schon dorthin ausgegeben, bekommt der Ordner eine Nummer, etwa `Feldtag_2026-09-14_Wochenmarkt (2)`;
+so überschreibt kein Einsatz die Dateien eines anderen. Einsatztranskript,
 Dokumentvariablen und Begleitprotokoll sind immer dabei. Was dazukommt, wählst du mit Schaltern in drei Gruppen:
 **Montagevideo** (Video, Ton und Viewer), **Nachweise im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste)
 und **Für den Schnitt** (Schnittliste). Ist vorher noch etwas
@@ -311,7 +314,9 @@ nicht aus der Originaldatei dahinter und auch nicht aus dem Projekt in Feldspur.
 
 Der Grund für das Zweite: Das Projekt ist ein Arbeitsstand und ändert sich mit jedem Handgriff. Die Ausgabe ist das,
 was du festhalten, archivieren und weitergeben kannst. Fest ist sie allerdings erst, wenn du sie festhältst, denn
-**Erneut ausgeben** überschreibt die Dateien im selben Ordner. So gehst du vor:
+**Erneut ausgeben** überschreibt die Dateien im selben Ordner. Dateien der letzten Ausgabe, die diesmal nicht entstehen,
+weil du etwa das Montagevideo oder die Prüfsummenliste abgewählt hast, räumt Feldspur dabei weg; andere Dateien im
+Ordner bleiben liegen. So gehst du vor:
 
 1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
    ist.
@@ -358,6 +363,12 @@ Fotos als Rauten, Tagebucheinträge als Striche zur Notierzeit. Untereinander si
 verbirgt, etwa wiederkehrende Uhrzeiten, dichte und dünne Phasen oder Einsätze ohne Ton. Was das bedeutet,
 entscheidest du; Feldspur legt die Einsätze nur nebeneinander.
 
+Die Achse reicht nur so weit, wie es zum Tag eines Einsatzes gehört: vom Mittag des Vortags bis zum Mittag des
+Folgetags, damit auch Nächte über Mitternacht passen. Liegt eine Quelle weit davon weg, etwa weil die Uhr einer Kamera
+auf 2019 zurückgesprungen ist oder das Datum des Einsatzes nicht stimmt, fehlt sie im Feldkalender. Die Zeile sagt
+dann **1 Quelle weit weg vom Datum**, **Abgleichen** führt zum Einsatz, und in den Kennwerten steht beim Montagevideo
+statt einer Länge **Länge unklar**.
+
 Ein Klick auf den Titel öffnet den Einsatz, ein Klick in die Achse öffnet ihn in Durchsehen an dieser Uhrzeit.
 Fährst du mit der Maus über eine Spur, zeigt eine Linie durch alle Einsätze die Uhrzeit an dieser Stelle; so
 vergleichst du dieselbe Uhrzeit über die Einsätze. Mit **Nach Ort gruppieren** stehen Einsätze am selben Ort
@@ -386,9 +397,9 @@ genug ist. Das bleibt bei dir. Farbig sind deshalb nur Zustände, die Feldspur o
 Ausgabe oder eine Geräteuhr ohne Abgleich, nie eine Menge.
 
 Die Kennwerte beschreiben den Stand im Projekt. An jedem Einsatz steht, ob er so schon als Ausgabe vorliegt:
-**Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert) oder
-**nicht ausgegeben**. Steht dort nicht „aktuell“, führt **Ausgeben** (bei einer veralteten Ausgabe **Erneut
-ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Gib den Einsatz aus, bevor du die Kennwerte übernimmst,
+**Ausgabe aktuell**, **Ausgabe veraltet** (im Einsatz hat sich seit der letzten Ausgabe etwas geändert), **Ausgabe
+fehlt im Ordner** (Dateien der letzten Ausgabe sind verschoben oder gelöscht) oder **nicht ausgegeben**. Steht dort
+nicht „aktuell“, führt **Ausgeben** (bei einer früheren Ausgabe **Erneut ausgeben**) direkt in den Schritt Ausgeben dieses Einsatzes. Gib den Einsatz aus, bevor du die Kennwerte übernimmst,
 sonst passen Montage-ID und Umfang nicht zu den Dateien, aus denen du zitierst. Bei einem Einsatz ohne Quellen steht
 dort stattdessen **Einsammeln**; das führt in seinen ersten Schritt.
 

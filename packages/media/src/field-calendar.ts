@@ -40,9 +40,43 @@ export const CALENDAR_LABEL: Record<CalendarKind, string> = {
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
-/** Marken eines Einsatzes. Tagebucheinträge stehen zur Notierzeit, so wie im Einsatztranskript angezeigt. */
+/**
+ * Was zum Tag eines Einsatzes gehört: von 12 Uhr am Vortag bis 12 Uhr am Folgetag (Nachtschichten über Mitternacht
+ * eingeschlossen). Eine Lage weit außerhalb (Kamerauhr auf 2019 zurückgesetzt, Datum des Einsatzes vertippt) ist
+ * fast immer ein Fehler; sie bliebe sonst auf einer Achse über Jahre stehen und machte alle Tage unlesbar (#226).
+ */
+const NEAR_FROM = -12 * HOUR;
+const NEAR_TO = 36 * HOUR;
+
+/** Liegt die Zeit (LocalMs) am Tag des Einsatzes oder in der Nacht davor bzw. danach? */
+export const nearDay = (date: string, t: number): boolean => {
+  const d = ofDay(date, t);
+  return d >= NEAR_FROM && d <= NEAR_TO;
+};
+
+/** Quellen auf der Zeitachse, die weit weg vom Datum des Einsatzes liegen (Tagebucheinträge zählen mit ihrer Seite). */
+export function farFromDate(transcript: SessionTranscript): number {
+  const { input, resolved } = transcript;
+  const date = input.session.date;
+  let n = 0;
+  for (const s of input.sources) {
+    const p = s.partOf ? undefined : resolved.placements.get(s.id);
+    if (p && !(nearDay(date, p.startMs) && nearDay(date, p.endMs))) n++;
+  }
+  return n;
+}
+
+/**
+ * Marken eines Einsatzes. Tagebucheinträge stehen zur Notierzeit, so wie im Einsatztranskript angezeigt. Was weit weg
+ * vom Datum liegt (siehe `farFromDate`), bleibt draußen; Bereiche, die über den Rand reichen, werden dort gekappt.
+ */
 export function calendarMarks(transcript: SessionTranscript): CalendarMark[] {
   const { input, resolved } = transcript;
+  const date = input.session.date;
+  const from = dayStart(date) + NEAR_FROM;
+  const to = dayStart(date) + NEAR_TO;
+  const clip = (m: CalendarMark): CalendarMark[] =>
+    m.toMs < from || m.fromMs > to ? [] : [{ ...m, fromMs: Math.max(from, m.fromMs), toMs: Math.min(to, m.toMs) }];
   const marks: CalendarMark[] = [];
   for (const s of input.sources) {
     if (s.partOf || (s.kind !== "audio" && s.kind !== "video" && s.kind !== "photo")) continue;
@@ -51,7 +85,9 @@ export function calendarMarks(transcript: SessionTranscript): CalendarMark[] {
   }
   for (const d of resolved.diary.values()) marks.push({ kind: "diary", fromMs: d.notedAtMs, toMs: d.notedAtMs });
   // Bereiche zuerst, damit Punkte darüber liegen; sonst nach Zeit.
-  return marks.sort((a, b) => Number(a.fromMs === a.toMs) - Number(b.fromMs === b.toMs) || a.fromMs - b.fromMs);
+  return marks
+    .flatMap(clip)
+    .sort((a, b) => Number(a.fromMs === a.toMs) - Number(b.fromMs === b.toMs) || a.fromMs - b.fromMs);
 }
 
 /** Mitternacht des Datums als LocalMs. */
