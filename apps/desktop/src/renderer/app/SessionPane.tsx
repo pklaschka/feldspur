@@ -13,7 +13,7 @@ import type { ProjectInfo, SessionPatch, SessionView } from "../../shared/api.ts
 import { Collect } from "../Collect.tsx";
 import { DiaryEditor } from "../DiaryEditor.tsx";
 import { ExportStep } from "../ExportStep.tsx";
-import { percent, useExport } from "../exportState.tsx";
+import { useExport } from "../exportState.tsx";
 import { formatDay } from "../format.ts";
 import { Inspector } from "../Inspector.tsx";
 import { OriginalsBanner, OriginalsDialog } from "../Originals.tsx";
@@ -185,10 +185,7 @@ export function SessionPane({
       id: "export",
       n: 4,
       title: "Ausgeben",
-      badge:
-        exporting.job?.sessionId === view.session.id
-          ? `läuft ${percent(exporting.job.progress, exporting.job.video)} %`
-          : null,
+      badge: exporting.job?.sessionId === view.session.id ? `läuft ${exporting.job.percent} %` : null,
     },
   ];
   const selectedRow = view.rows.find((r) => r.id === selected) ?? null;
