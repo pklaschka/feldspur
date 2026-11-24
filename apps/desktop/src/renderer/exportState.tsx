@@ -5,6 +5,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   EXPORT_CHECK_STEP,
+  EXPORT_LEVELS_STEP,
   type ExportOutcome,
   type ExportProgress,
   type ExportRequestOptions,
@@ -21,6 +22,11 @@ export interface ExportJob {
   sessionId: string;
   video: boolean;
   progress: ExportProgress | null;
+  /**
+   * Gezeigter Anteil (0–100): `percent` des letzten Stands, aber nie kleiner als schon gezeigt. Ein Schritt, der
+   * außer der Reihe oder ein zweites Mal gemeldet wird, lässt den Balken so nicht zurückspringen (Issue #257).
+   */
+  percent: number;
   /** Beginn des Videoschritts: Zeitpunkt und schon fertige Sekunden, für die Restzeit. */
   videoFrom: { at: number; done: number } | null;
   /** Abbrechen ist angefordert, ffmpeg wird beendet. */
@@ -73,14 +79,14 @@ export function ExportProvider({ children }: { children: ReactNode }) {
         setJob((j) => {
           if (!j || j.sessionId !== p.sessionId) return j;
           const videoFrom = p.step === "Montagevideo" ? (j.videoFrom ?? { at: Date.now(), done: p.done }) : j.videoFrom;
-          return { ...j, progress: p, videoFrom };
+          return { ...j, progress: p, percent: Math.max(j.percent, percent(p, j.video)), videoFrom };
         }),
       ),
     [],
   );
   const start = (sessionId: string, opts: ExportRequestOptions, key?: string) => {
     if (job) return;
-    setJob({ sessionId, video: opts.video, progress: null, videoFrom: null, cancelling: false });
+    setJob({ sessionId, video: opts.video, progress: null, percent: 0, videoFrom: null, cancelling: false });
     setErrors((x) => without(x, sessionId));
     setCancelled((x) => without(x, sessionId));
     setHeld((x) => without(x, sessionId));
@@ -130,15 +136,19 @@ export function useExport(): ExportState {
 }
 
 /**
- * Fortschritt als Prozent (0–100), grob über die Schritte gewichtet. Ohne Video ist die Prüfung der Originale fast
- * die ganze Arbeit, mit Video das Montagevideo.
+ * Fortschritt eines gemeldeten Stands als Prozent (0–100), grob über die Schritte gewichtet. Ohne Video ist die Prüfung
+ * der Originale fast die ganze Arbeit, mit Video das Montagevideo. Die Schrittnamen sind die, die
+ * `packages/media/src/export.ts` und `apps/desktop/src/main/export.ts` melden; ein Schritt, der hier fehlt, ergibt 0.
+ * Angezeigt wird `ExportJob.percent`, das nie hinter einen schon gezeigten Wert zurückfällt.
  */
 export function percent(p: ExportProgress | null, video = true): number {
   if (!p) return 0;
   const frac = p.total ? p.done / p.total : 0;
   const steps: [string, number, number][] = video
     ? [
-        [CHECK_STEP, 0, 10],
+        [CHECK_STEP, 0, 8],
+        // Gemessen wird nur für das Montagevideo, und nur, was noch keinen Pegel hat.
+        [EXPORT_LEVELS_STEP, 8, 10],
         ["Standbilder", 10, 15],
         ["Montagevideo", 15, 95],
         ["Einsatztranskript", 95, 99],

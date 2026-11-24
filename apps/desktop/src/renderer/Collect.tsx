@@ -1,3 +1,12 @@
+/**
+ * Schritt 1 „Einsammeln“: Dateien oder Ordner ablegen, danach je Gerät (`Device`) eine Karte mit seinen Quellen
+ * (`sources`), ihrer Lage auf der Zeitachse und ihrem Status. Eingebunden von `app/SessionPane.tsx`.
+ *
+ * Das Einsammeln selbst (Dateien suchen, Metadaten und Prüfsummen lesen) läuft im Hauptprozess
+ * (`apps/desktop/src/main/ipc/sessions.ts`, `packages/media`); den Stand dazu hält `importState.ts` außerhalb dieser
+ * Komponente, damit er einen Wechsel des Schritts übersteht; die neue Ansicht nach dem Einsammeln übernimmt
+ * `app/SessionPane.tsx`. Die Originale werden nie kopiert oder verändert.
+ */
 import { isScrollingList, openStatusCounts } from "./collectLayout.ts";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
@@ -9,7 +18,6 @@ import {
   dismissImportNotice,
   importPercent,
   importRemainingMs,
-  registerImportView,
   startImport,
   useImport,
   type ImportJob,
@@ -24,7 +32,6 @@ const api = window.feldspur;
 export function Collect({
   view,
   guard,
-  onView,
   selected,
   onSelect,
   onRename,
@@ -35,7 +42,7 @@ export function Collect({
 }: {
   view: SessionView;
   guard: Guard;
-  onView: (v: SessionView) => void;
+  /** Gewählte Quelle (id); ihre Einzelheiten zeigt die Detailleiste (`Inspector.tsx`). */
   selected: string | null;
   onSelect: (id: string) => void;
   onRename: (deviceId: string, label: string) => void;
@@ -52,7 +59,6 @@ export function Collect({
   // Einsammeln läuft im Hintergrund weiter, auch wenn diese Ansicht kurz verschwindet; nur eins zur Zeit.
   const busy = !!imp.job;
   const notice = imp.notices[sessionId] ?? null;
-  useEffect(() => registerImportView(sessionId, onView), [sessionId, onView]);
 
   const importPaths = (paths: string[]) => void startImport(sessionId, paths, guard);
   const onDrop = (e: DragEvent) => {

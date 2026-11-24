@@ -1,6 +1,12 @@
 /**
  * Laufendes Einsammeln, außerhalb der Ansicht gehalten (Issue #73): Wer während eines großen Imports den Schritt
- * wechselt, findet Fortschritt und Abbrechen beim Zurückkommen wieder. Die eigentliche Arbeit läuft im Hauptprozess.
+ * wechselt, findet Fortschritt und Abbrechen beim Zurückkommen wieder. Die eigentliche Arbeit läuft im Hauptprozess
+ * (`apps/desktop/src/main/ipc/sessions.ts`, Einlesen in `packages/media/src/import.ts`); gezeigt wird alles in
+ * `Collect.tsx`. Die neue Ansicht des Einsatzes übernimmt `app/SessionPane.tsx`, in welchem Schritt auch immer
+ * (Issue #258).
+ *
+ * Der Stand liegt in einer Variablen des Moduls statt in React, damit er auch gilt, während keine Ansicht ihn
+ * zeigt. Es läuft höchstens ein Einsammeln zur selben Zeit.
  */
 import { useSyncExternalStore } from "react";
 import type { ImportProgress, ImportResult, SessionView } from "../shared/api.ts";
@@ -35,7 +41,7 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-/** Wer gerade die Ansicht des Einsatzes zeigt und das Ergebnis übernehmen will. */
+/** Wer gerade die Ansicht des Einsatzes hält und das Ergebnis übernehmen will (`app/SessionPane.tsx`). */
 const sinks = new Map<string, (v: SessionView) => void>();
 
 /** Ansicht beim Einsammeln anmelden; gibt die Abmeldung zurück. */
@@ -92,6 +98,8 @@ export async function startImport(
     set({ ...state, notices: { ...state.notices, [sessionId]: { kind: "cancelled", ...r.cancelled } } });
     return;
   }
+  // Angemeldet ist der offene Einsatz, gleich in welchem Schritt. Ist gerade ein anderer Einsatz offen, übernimmt
+  // niemand die Ansicht: Sie wird beim nächsten Öffnen dieses Einsatzes frisch geladen.
   sinks.get(sessionId)?.(r.view);
   set({
     ...state,

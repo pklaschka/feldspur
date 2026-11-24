@@ -366,6 +366,9 @@ export async function exportSession(
 
     const files: string[] = [];
     const media = `${base}.mp4`;
+    // Pegel nur für das Montagevideo neu messen (dekodiert ganze Dateien); ohne Video gilt, was schon gemessen ist.
+    // Die App misst schon vor den Standbildern (`apps/desktop/src/main/export.ts`); hier bleibt nur, was dabei nicht
+    // lesbar war. Der Schritt wird dann ein zweites Mal gemeldet, die Oberfläche hält den Fortschritt fest.
     const levels = await sessionLevels(store, sessionId, {
       measureMissing: opts.video !== false,
       signal,

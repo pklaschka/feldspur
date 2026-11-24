@@ -120,6 +120,7 @@ function Editor({
   const [aAt, setAAt] = useState(start.aAtMs);
   // B relativ zu A: Stelle in B = Stelle in A + delta.
   const [delta, setDelta] = useState(start.bAtMs - start.aAtMs);
+  /** Ausgangswert von `delta` für das gewählte Paar, für die Anzeige „… gegenüber vorher“. */
   const [startDelta, setStartDelta] = useState(start.bAtMs - start.aAtMs);
   const [zoom, setZoom] = useState(2);
   const [scale, setScale] = useState<WaveformScale>("log");
@@ -131,26 +132,14 @@ function Editor({
   const bAt = aAt + delta;
 
   const pick = (side: "a" | "b", id: string) => {
-    if (side === "a") {
-      setAId(id);
-      setDelta(
-        guessB(
-          av.find((r) => r.id === id),
-          b,
-          aAt,
-        ) - aAt,
-      );
-    } else {
-      setBId(id);
-      setDelta(
-        guessB(
-          a,
-          av.find((r) => r.id === id),
-          aAt,
-        ) - aAt,
-      );
-    }
-    setStartDelta(delta);
+    const picked = av.find((r) => r.id === id);
+    if (side === "a") setAId(id);
+    else setBId(id);
+    // Das neue Paar beginnt an seiner eigenen Startlage: Sie ist auch der Ausgangswert für „gegenüber vorher“,
+    // nicht die Lage des vorigen Paars (Issue #259).
+    const next = (side === "a" ? guessB(picked, b, aAt) : guessB(a, picked, aAt)) - aAt;
+    setDelta(next);
+    setStartDelta(next);
     setSnap(null);
   };
 
@@ -278,7 +267,9 @@ function Editor({
             <span className="font-mono text-[0.9rem]" data-testid="fine-result">
               {a.label} bei {msText(aAt)} = {b.label} bei {msText(bAt)}
             </span>
-            <span className="text-[0.85rem] text-muted">{shiftText(delta - startDelta)} gegenüber vorher</span>
+            <span className="text-[0.85rem] text-muted" data-testid="fine-shift">
+              {shiftText(delta - startDelta)} gegenüber vorher
+            </span>
             {outOfB && <span className="text-[0.85rem] text-warn">liegt außerhalb der zweiten Aufnahme</span>}
             <input
               className="min-w-40 flex-1"
