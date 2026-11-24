@@ -2,7 +2,8 @@
  * Laufendes Einsammeln, außerhalb der Ansicht gehalten (Issue #73): Wer während eines großen Imports den Schritt
  * wechselt, findet Fortschritt und Abbrechen beim Zurückkommen wieder. Die eigentliche Arbeit läuft im Hauptprozess
  * (`apps/desktop/src/main/ipc/sessions.ts`, Einlesen in `packages/media/src/import.ts`); gezeigt wird alles in
- * `Collect.tsx`. Die neue Ansicht des Einsatzes übernimmt `app/SessionPane.tsx`, in welchem Schritt auch immer
+ * `Collect.tsx`, dazu ein kurzer Stand am Reiter „Einsammeln“ (`importTabText`), der in jedem Schritt zu sehen ist.
+ * Die neue Ansicht des Einsatzes übernimmt `app/SessionPane.tsx`, in welchem Schritt auch immer
  * (Issue #258).
  *
  * Der Stand liegt in einer Variablen des Moduls statt in React, damit er auch gilt, während keine Ansicht ihn
@@ -133,4 +134,13 @@ export function importPercent(p: ImportProgress | null): number {
   if (!p || p.phase !== "reading") return 0;
   if (p.bytesTotal > 0) return Math.min(100, Math.round((p.bytesDone / p.bytesTotal) * 100));
   return p.total ? Math.round((p.done / p.total) * 100) : 0;
+}
+
+/**
+ * Kurzer Stand für den Reiter „Einsammeln“, mit denselben Worten wie am Reiter „Ausgeben“: „läuft 42 %“. Solange noch
+ * Dateien gesucht werden, steht nur „läuft“ da: Wie viel zu lesen ist, weiß erst, wer alle Ordner durchsucht hat,
+ * und eine Prozentzahl wäre bis dahin erfunden (0 % sähe nach Stillstand aus).
+ */
+export function importTabText(p: ImportProgress | null): string {
+  return p?.phase === "reading" ? `läuft ${importPercent(p)} %` : "läuft";
 }
