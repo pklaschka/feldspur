@@ -4,6 +4,16 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
+## 0.4.1 – 2026-11-24
+
+Hotfix auf Grundlage von 0.4.0. Die Neuerungen, die seitdem in `main` liegen, kommen mit 0.5.0.
+
+### Behoben
+
+- Fortschritt, Einsammeln und Feinabgleich: drei Anzeigefehler behoben ([#260](https://github.com/pklaschka/feldspur/pull/260), @pklaschka)
+
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0...v0.4.1
+
 ## 0.4.0 – 2026-11-24
 
 <!-- Release notes generated using configuration in .github/release.yml at 1398da14e523494358de2f7c00c4027a65425144 -->
