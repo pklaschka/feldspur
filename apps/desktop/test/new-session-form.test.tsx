@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
-/** Formular „Neuer Einsatz“ auf der Startseite eines leeren Projekts (`apps/desktop/src/renderer/app/start.tsx`). */
+/**
+ * Formular „Neuer Einsatz“ auf der Startseite eines leeren Projekts und die Vorschau daneben
+ * (`apps/desktop/src/renderer/app/start.tsx`).
+ */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { NewSessionForm } from "../src/renderer/app/start.tsx";
+import { FirstSession, NewSessionForm } from "../src/renderer/app/start.tsx";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -49,5 +52,37 @@ describe("NewSessionForm (Hero)", () => {
     const host = render(<NewSessionForm hero onCreate={onCreate} />);
     act(() => host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     expect(onCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("FirstSession (Vorschau der Kopfzeile)", () => {
+  const preview = (host: HTMLElement) => host.querySelector<HTMLElement>("[data-testid=session-preview]")!;
+
+  it("zeigt leere Felder als Platzhalter und die vier Schritte", () => {
+    const host = render(<FirstSession onCreate={() => {}} />);
+    const [, date, place] = [...host.querySelectorAll("input")];
+    type(date!, "");
+    type(place!, "");
+    const head = preview(host).querySelector("[aria-hidden]")!;
+    expect(head.textContent).toBe("TT.MM.TitelOrt");
+    const steps = [...preview(host).querySelectorAll("li")].map((li) => li.textContent);
+    expect(steps.map((t) => t?.split(" · ")[0]?.slice(1))).toEqual([
+      "Einsammeln",
+      "Abgleichen",
+      "Durchsehen",
+      "Ausgeben",
+    ]);
+  });
+
+  it("schreibt Titel, Datum und Ort beim Tippen mit", () => {
+    const host = render(<FirstSession onCreate={() => {}} />);
+    const [title, date, place] = [...host.querySelectorAll("input")];
+    // Wenn: die Felder ausgefüllt werden
+    type(title!, "  Wochenmarkt Süd ");
+    type(date!, "2026-09-14");
+    type(place!, "Marktplatz");
+    // Dann: steht der Einsatz so in der Vorschau, wie ihn die Kopfzeile gleich zeigt
+    const head = preview(host).querySelector("[aria-hidden]")!;
+    expect([...head.children].map((c) => c.textContent)).toEqual(["14.09.", "Wochenmarkt Süd", "Marktplatz"]);
   });
 });

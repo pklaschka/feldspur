@@ -18,7 +18,7 @@ import { ProjectMenu, RecentList } from "./Recent.tsx";
 import { ResizeHandle, usePaneWidth } from "./resize.tsx";
 import { renderImageRefJpeg } from "./stillRender.ts";
 import { Button, cx, ErrorBanner, ErrorProvider, Panel, TooltipProvider } from "./ui.tsx";
-import { HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
+import { FirstSession, HERO_TITLE_ID, Logo, NewSessionForm } from "./app/start.tsx";
 import { SessionPane } from "./app/SessionPane.tsx";
 import { StrayDropHint, useStrayDrop } from "./app/strayDrop.tsx";
 import { DeletedToast, SESSION_DELETED } from "./app/history.tsx";
@@ -295,12 +295,7 @@ export function App() {
             ) : (
               <main className="col-span-2 p-8">
                 <ErrorBanner className="mb-4 max-w-[52ch]" />
-                <h2 className="mb-1 text-[1.4rem] font-semibold">Noch kein Einsatz</h2>
-                <p className="max-w-[52ch] text-muted">
-                  Ein Einsatz ist ein Tag im Feld, zum Beispiel „Wochenmarkt Südstadt“. Lege den ersten Einsatz an und
-                  sammle dann alles ein, was an diesem Tag aufgezeichnet wurde.
-                </p>
-                <NewSessionForm hero onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
+                <FirstSession onCreate={(input) => void guard(() => api.createSession(input)).then(adoptNew)} />
                 <StrayDropHint
                   n={strayDrop}
                   text="Lege zuerst einen Einsatz an; Dateien kommen dann über „Einsammeln“ hinein."
