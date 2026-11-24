@@ -731,6 +731,39 @@ await kapitel("einsammeln", async () => {
   });
 });
 
+// Zuletzt, weil beides den Stand der Ausgabe und des Feldkalenders verändert.
+await kapitel("ausgeben", async () => {
+  await ablauf("Die Übersicht meldet eine Ausgabe, die im Ordner fehlt", async () => {
+    // Wenn: der Ausgabeordner verschoben wird, dann steht am Einsatz, dass die Ausgabe fehlt
+    const { renameSync } = await import("node:fs");
+    const ausgabe = join(dir, "Ausgabe");
+    renameSync(ausgabe, `${ausgabe}-verschoben`);
+    await page.reload();
+    await knopf("Übersicht").click();
+    await siehe("Ausgabe fehlt im Ordner", page.getByTestId("overview-days").getByText("Ausgabe fehlt im Ordner"));
+    renameSync(`${ausgabe}-verschoben`, ausgabe);
+  });
+
+  await ablauf("Eine Quelle weit weg vom Datum fehlt im Feldkalender", async () => {
+    // Angenommen: die Uhr einer Kamera ist auf 2019 zurückgesprungen
+    const weit = join(dir, "Falsche Uhr");
+    mkdirSync(weit);
+    makePhoto(join(weit, "IMG_20190314_120000.jpg"), "0x8a1f70");
+    await page.evaluate(async ([id, p]) => window.feldspur.importPaths(id!, [p!]), [sessionId, weit]);
+    await page.reload();
+    await knopf("Übersicht").click();
+    // Dann: die Zeile des Einsatzes nennt die Quelle, und „Abgleichen“ führt zum Einsatz
+    const tage = page.getByTestId("overview-days");
+    await siehe("1 Quelle weit weg vom Datum", tage.getByText("1 Quelle weit weg vom Datum"));
+    await siehe("Abgleichen", tage.getByRole("button", { name: /^Abgleichen/ }));
+    await tage
+      .getByRole("button", { name: /^Abgleichen/ })
+      .first()
+      .click();
+    await page.getByRole("tab", { name: /Abgleichen/, selected: true }).waitFor();
+  });
+});
+
 await app.close();
 
 const fehler = befunde.filter((b) => !b.imHandbuch || !b.inApp);
