@@ -3,14 +3,23 @@
  * Fassungen von @fontsource-variable/source-sans-3 und source-serif-4, wie in der App).
  * Source Sans 3 und Source Serif 4: © 2023 Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’.
  * Lizenz: SIL Open Font License 1.1 (https://openfontlicense.org), erlaubt das Einbetten in Dokumente.
+ *
+ * Gehört zum Schritt „Ausgeben“: `fontCss` in `packages/media/src/viewer/html.ts` macht daraus die
+ * `@font-face`-Regeln der Viewer-Datei. Eingebettet, weil der Viewer nichts nachladen darf (siehe `VIEWER_CSP` dort).
  */
+/** Ein Schriftschnitt für den Viewer. */
 export interface ViewerFont {
   family: string;
   weight: number;
   style: "normal" | "italic";
+  /** Die WOFF2-Datei als Base64, ohne `data:`-Vorspann. */
   woff2: string;
 }
 
+/**
+ * Alle Schnitte, die `packages/media/src/viewer/style.ts` verwendet: Source Sans 3 für den Text, Source Serif 4 für
+ * Überschriften und Tagebucheinträge.
+ */
 export const VIEWER_FONTS: ViewerFont[] = [
   {
     family: "Source Sans 3",

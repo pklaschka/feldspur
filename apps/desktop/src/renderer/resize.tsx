@@ -1,11 +1,13 @@
 /**
  * Seitenleisten in der Breite verstellbar: Griff am Rand ziehen, Pfeiltasten oder Doppelklick
- * (zurück auf Standard). Die Breiten merkt sich die App auf diesem Rechner.
+ * (zurück auf Standard). Die Breiten merkt sich die App auf diesem Rechner (`stored.ts`). Genutzt in `App.tsx` für
+ * die Einsatzliste links und die Detailleiste rechts.
  */
 import { useState, type KeyboardEvent, type PointerEvent } from "react";
 import { cx } from "./ui.tsx";
 import { readStored, writeStored } from "./stored.ts";
 
+/** Breite einer Leiste in CSS-Pixeln mit ihren Grenzen; `set` begrenzt und merkt sich den Wert. */
 export interface PaneWidth {
   width: number;
   set: (w: number) => void;
@@ -14,6 +16,7 @@ export interface PaneWidth {
   max: number;
 }
 
+/** `key` unterscheidet die Leisten im Speicher; `initial` gilt beim ersten Start und nach Doppelklick. */
 export function usePaneWidth(key: string, initial: number, min: number, max: number): PaneWidth {
   const clamp = (w: number) => Math.round(Math.max(min, Math.min(max, w)));
   const [width, setWidth] = useState(() => {

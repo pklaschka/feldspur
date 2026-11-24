@@ -1,3 +1,8 @@
+/**
+ * Prüfkasten der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`) für unsichere Lagen: Status „prüfen“ ohne
+ * Widerspruch (Widersprüche behandelt `apps/desktop/src/renderer/inspector/ConflictPanel.tsx`). Die Gründe sind die
+ * Hinweise der Zeitbestimmung (`notes`, aus `packages/core/src/resolve.ts`), übersetzt von `checkReason`.
+ */
 import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { Button } from "../ui.tsx";
 import type { InspectorActions } from "./actions.ts";

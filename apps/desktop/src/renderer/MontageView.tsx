@@ -1,6 +1,11 @@
 /**
  * Montage in der App ansehen, ohne sie zu rechnen: spielt die Originale an den Stellen ab,
  * an denen sie im Montagevideo stünden, mit denselben Einblendungen.
+ *
+ * Dialog im Schritt „Ausgeben“ (`ExportStep.tsx`, „Montage ansehen…“). Den Ablaufplan (`MontagePreview`: Stücke mit
+ * ihren Videos und Tonquellen) liefert der Hauptprozess (`montagePreview`, `apps/desktop/src/main/export.ts`) aus
+ * dem Einsatztranskript, ohne ffmpeg zu starten. Maße und Felder der Bühne kommen aus
+ * `packages/media/src/layout.ts`, die Einblendungen zeichnet `overlay.ts`, beides wie beim gerechneten Video.
  */
 import { formatClock, formatDuration } from "@feldspur/core/time";
 import { H, LAYOUT, MAX_TILES, videoTiles, W } from "@feldspur/media/layout";
@@ -28,6 +33,7 @@ export function MontageView({
   levels,
 }: {
   sessionId: string;
+  /** Echtzeit (ganzer Einsatz am Stück) statt nach Episoden geschnitten; wie in der Ausgabe gewählt. */
   realtime: boolean;
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -67,13 +73,19 @@ export function MontageView({
   );
 }
 
+/**
+ * Bühne und Wiedergabe. Eine eigene Uhr (`t`, ms ab Beginn der Montage) gibt den Takt; die Medien-Elemente
+ * werden ihr nachgeführt (`follow`), statt selbst die Zeit vorzugeben.
+ */
 function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, LevelRow | null> }) {
   const { pieces, durationMs, header } = plan;
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
+  /** Die Uhr in voller Auflösung; `t` zieht beim Abspielen nur etwa zehnmal je Sekunde nach. */
   const tRef = useRef(0);
   const videoEls = useRef<(HTMLVideoElement | null)[]>([]);
   const audioEls = useRef<(HTMLAudioElement | null)[]>([]);
+  /** „Ton aller Geräte“: aus = nur die erste Tonquelle des Stücks. */
   const [mixAll, setMixAll] = useState(true);
   const overlay = useRef<HTMLCanvasElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -185,6 +197,7 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
           className="absolute top-1/2 left-1/2 origin-center bg-[#10171b]"
           style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${scale})` }}
         >
+          {/* Feste Zahl von Elementen, die wiederverwendet werden: Welche Quelle wo läuft, setzt `follow`. */}
           {Array.from({ length: MAX_TILES }, (_, k) => {
             const b = tiles[k] ?? LAYOUT.main;
             return (
@@ -230,6 +243,7 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
   );
 }
 
+/** Leiste unter der Bühne: Zeitstrahl mit den Stücken (Episoden kräftig, Tafeln blass), Springen, Abspielen. */
 function Controls({
   pieces,
   durationMs,
@@ -244,7 +258,9 @@ function Controls({
 }: {
   pieces: PreviewPiece[];
   durationMs: number;
+  /** Stelle in der Montage, ms ab Beginn. */
   t: number;
+  /** Uhrzeit des Einsatztags an dieser Stelle, in ms. */
   clock: number;
   playing: boolean;
   onPlay: () => void;
@@ -274,6 +290,7 @@ function Controls({
           ))}
           <span className="absolute inset-y-0 left-0 bg-accent" style={{ width: pct(t) }} />
         </div>
+        {/* Unsichtbarer Schieberegler über dem gezeichneten Zeitstrahl: bedient Maus und Tastatur. */}
         <input
           type="range"
           aria-label="Stelle in der Montage"

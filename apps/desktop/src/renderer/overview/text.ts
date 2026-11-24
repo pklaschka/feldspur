@@ -1,4 +1,4 @@
-/** Kurze Texte der Übersicht: reine Hilfen ohne Oberfläche. */
+/** Kurze Texte der Übersicht (`apps/desktop/src/renderer/Overview.tsx`): reine Hilfen ohne Oberfläche. */
 import type { OverviewSession } from "../../shared/api.ts";
 import { germanDate } from "../../shared/methods-table.ts";
 

@@ -1,3 +1,7 @@
+/**
+ * Arbeitsprotokoll (`packages/media/src/log.ts`, Issue #168): Ein- und Ausschalten, Form der Zeilen, und dass
+ * Einsammeln und Ausgeben ihre Schritte vermerken.
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

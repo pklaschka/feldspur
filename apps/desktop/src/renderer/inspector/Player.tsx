@@ -1,3 +1,8 @@
+/**
+ * Abspieler der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`). Seine Stelle teilt er über `usePlayback`
+ * (`apps/desktop/src/renderer/playback.tsx`) mit der Zeitachse und dem Formular für Zeitbelege. Die Datei liefert der
+ * Hauptprozess über das eigene Protokoll hinter `mediaUrl` (`apps/desktop/src/shared/api.ts`).
+ */
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { mediaUrl, type SourceRow } from "../../shared/api.ts";
 import { clock } from "../format.ts";

@@ -2,6 +2,13 @@
  * Einsammeln: Dateien und Ordner durchgehen, Art erkennen, Metadaten und
  * Prüfsumme lesen, Zeitbelege und eine Gerätevermutung bilden. Ergebnis ist
  * ein Importplan, den die Oberfläche anzeigt, bevor er ins Projekt übernommen wird.
+ *
+ * Einordnung: erster Schritt der App. `apps/desktop/src/main/ipc/sessions.ts` ruft `scanPaths` (nur lesen) und
+ * danach `applyImport` (schreibt Geräte, Quellen (`sources`) und Zeitbelege (`TimeEvidence`) in die Projektdatei).
+ * Der untere Teil der Datei gehört zu „Zeitbelege neu lesen“ im Gerätemenü
+ * (`apps/desktop/src/main/ipc/sync.ts`, IPC `rereadDevice`): `rereadSource`, `rereadChanges`, `applyReread`.
+ * Bausteine: `classify.ts` (Art), `probe.ts` (Metadaten), `evidence.ts` und `clip-times.ts` (Zeitbelege), `hash.ts`
+ * (Prüfsumme), alle in `packages/media/src/`.
  */
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
@@ -19,18 +26,23 @@ import { sha256File } from "./hash.ts";
 import { log, logSince, logSize } from "./log.ts";
 import { probeMedia, readImageExif, type ImageExif, type MediaProbe } from "./probe.ts";
 
+/** Eine gelesene Datei im Importplan: alles, was `applyImport` braucht, um daraus eine Quelle (`Source`) zu machen. */
 export interface ImportCandidate {
   path: string;
   fileName: string;
   sizeBytes: number;
   sha256: string;
   kind: SourceKind;
+  /** Länge in ms; null bei allem außer Ton und Video oder wenn sie nicht lesbar war. */
   durationMs: number | null;
+  /** Rohe Metadaten: `media` (ffprobe, `MediaProbe`) und/oder `exif` (`ImageExif`). */
   metadata: Record<string, unknown>;
   /** Gerätevermutung: gleiche Schlüssel = gleiches Gerät. */
   deviceKey: string;
   deviceLabel: string;
+  /** Zeitbelege aus Metadaten und Dateiname; leer bei Tagebuch und Notizen. */
   evidence: EvidenceDraft[];
+  /** Hinweise für die Oberfläche („Keine Zeitangabe gefunden“). */
   warnings: string[];
 }
 
@@ -66,6 +78,7 @@ export interface ScanOptions {
   onSkipped?: (path: string, message: string) => void;
 }
 
+/** Gefundene Datei vor dem Lesen; Größe und Änderungszeit dienen als Schlüssel im `ScanCache`. */
 interface Listed {
   path: string;
   size: number;
@@ -91,6 +104,7 @@ export class ScanCache {
   }
 }
 
+/** Kurzer deutscher Grund, warum eine Datei oder ein Ordner nicht lesbar war. */
 const errText = (e: unknown) => {
   const code = (e as NodeJS.ErrnoException).code;
   if (code === "ENOENT") return "nicht gefunden";
@@ -98,6 +112,7 @@ const errText = (e: unknown) => {
   return (e as Error).message.split("\n")[0] ?? String(e);
 };
 
+/** Datei oder Ordner (mit allen Unterordnern) in `out` sammeln; `found` meldet jeden Fund für den Fortschritt. */
 async function walk(path: string, out: Listed[], opts: ScanOptions, found: () => void): Promise<void> {
   opts.signal?.throwIfAborted();
   let st;
@@ -130,6 +145,7 @@ async function walk(path: string, out: Listed[], opts: ScanOptions, found: () =>
   }
 }
 
+/** Alle Dateien unter `paths`, jede nur einmal, auch wenn Pfade sich überschneiden. */
 async function listWithStats(paths: string[], opts: ScanOptions = {}): Promise<Listed[]> {
   const out: Listed[] = [];
   let last = 0;
@@ -153,10 +169,12 @@ async function listWithStats(paths: string[], opts: ScanOptions = {}): Promise<L
   return out.filter((f) => !seen.has(f.path) && !!seen.add(f.path));
 }
 
+/** Nur die Pfade aller Dateien, die das Einsammeln lesen würde. */
 export async function listFiles(paths: string[]): Promise<string[]> {
   return (await listWithStats(paths)).map((f) => f.path);
 }
 
+/** Name eines vermuteten Geräts, wenn die Metadaten kein Modell nennen. */
 const KIND_DEVICE: Partial<Record<SourceKind, string>> = {
   video: "Kamera",
   audio: "Audiorekorder",
@@ -202,6 +220,7 @@ function timeEvidenceOf(fileName: string, probe: MediaProbe | null, exif: ImageE
   return [...(probe ? evidenceFromMediaTags(probe) : []), ...evidenceFromExif(exif), ...evidenceFromFilename(fileName)];
 }
 
+/** Eine Datei lesen: Art, Metadaten, Zeitbelege, Gerätevermutung und Prüfsumme (die ganze Datei wird gelesen). */
 export async function inspectFile(
   path: string,
   opts: { signal?: AbortSignal; onBytes?: (bytes: number) => void } = {},
@@ -216,6 +235,7 @@ export async function inspectFile(
   if (kind === "video" || kind === "audio") {
     try {
       probe = await probeMedia(path, { signal: opts.signal });
+      // Videoendung, aber nur eine Tonspur: als Tonaufnahme führen.
       if (kind === "video" && !probe.hasVideo && probe.hasAudio) kind = "audio";
       if (probe.durationMs === null) warnings.push("Länge nicht lesbar");
     } catch (e) {
@@ -224,6 +244,7 @@ export async function inspectFile(
     }
   } else if (kind === "photo" || kind === "diary") {
     exif = await readImageExif(path);
+    // Zweite Einschätzung, jetzt mit EXIF: Ein Bild mit Kameradaten ist ein Foto, auch wenn der Name nach Scan klingt.
     kind = classify(fileName, { hasCameraExif: !!(exif?.model || exif?.dateTimeOriginal) });
   }
 
@@ -460,6 +481,7 @@ export function applyImport(
       result.sources.push(src);
     }
     const tz = store.getSession(sessionId).timeZone;
+    // Nur für neu angelegte Geräte: Deuten die Dateien auf Ortszeit, „Zeitstempel sind UTC“ ausschalten.
     result.devicesCreated = result.devicesCreated.map((d) => {
       const own = ordered.filter((c) => c.deviceKey === d.matchKey);
       return stampsLookLocal(own, tz) || cameraZoneDiffers(own, tz)
@@ -493,7 +515,9 @@ export async function rereadSource(source: Source, opts: { signal?: AbortSignal 
   return { source, metadata, evidence };
 }
 
+/** Belege, die aus der Datei gelesen sind und deshalb beim neuen Lesen ersetzt werden dürfen. */
 const READ_KINDS = new Set(["metadata", "filename"]);
+/** Zwei Belege mit gleichem Schlüssel gelten als derselbe (Vergleich alt gegen neu gelesen). */
 const evidenceKey = (e: EvidenceDraft) =>
   [e.kind, e.clock, e.atMediaMs, e.localMs, e.utcMs ?? "", e.uncertaintyMs, e.detail, e.raw].join("|");
 
@@ -520,6 +544,10 @@ export function rereadChanges(store: ProjectStore, sessionId: Id, read: RereadSo
   return rereadPlan(store, sessionId, read).some((p) => p.gone.length || p.added.length || p.metadataChanged);
 }
 
+/**
+ * Schon eingesammelte Quelle in der Form eines Kandidaten, damit `refineClipTimes` sie mitrechnen kann. Als
+ * Geräteschlüssel dient die Kennung des Geräts (ohne Gerät die der Quelle).
+ */
 const asCandidate = (r: RereadSource, deviceKey = r.source.deviceId ?? r.source.id): ImportCandidate => ({
   path: r.source.originalPath,
   fileName: r.source.fileName,
@@ -534,6 +562,7 @@ const asCandidate = (r: RereadSource, deviceKey = r.source.deviceId ?? r.source.
   warnings: [],
 });
 
+/** Was „Zeitbelege neu lesen“ ändern würde, ohne es zu schreiben. */
 function rereadPlan(store: ProjectStore, sessionId: Id, read: RereadSource[]) {
   const refined = refineClipTimes(read.map((r) => asCandidate(r)));
   return replacementPlan(

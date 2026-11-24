@@ -5,6 +5,13 @@
  * Das Einsatztranskript steht als fertiges HTML in der Datei (lesbar und druckbar auch ohne Skript); das Skript hängt
  * nur Verhalten an. Alles ist eingebettet (Schriften, Bilder, Skript), nichts wird nachgeladen. Die Datei muss in
  * jedem heutigen Browser laufen, nicht nur in Chromium (siehe AGENTS.md).
+ *
+ * Einordnung: Schritt „Ausgeben“. `exportSession` (`packages/media/src/export.ts`) ruft `sessionTranscriptHtml`
+ * auf, wenn Montagevideo und Viewer gewählt sind, und schreibt das Ergebnis als .html neben das Video; Grundlage ist
+ * dasselbe Einsatztranskript (`SessionTranscript`, `packages/media/src/session-transcript.ts`) wie für die .docx.
+ * Diese Datei läuft in Node (Main-Prozess) und baut die Seite; im Browser läuft nur, was `viewerScript` einbettet:
+ * `runtime.ts` (Verhalten) und `mp4-audio.ts` (Tonspuren lesen). Aussehen: `style.ts`, Schriften: `fonts.ts`.
+ * Für Forschende beschrieben in `handbuch/_handbuch-ausgeben.qmd` (Abschnitt „Viewer (.html)“).
  */
 import { formatClock, type Id, type MontagePlan } from "@feldspur/core";
 import type { Envelope } from "../audio.ts";
@@ -25,10 +32,16 @@ import { VIEWER_CSS } from "./style.ts";
 /** Fassung der eingebetteten Daten (feldspur-daten). */
 const VIEWER_DATA_VERSION = 1;
 
+/** Was `exportSession` (`packages/media/src/export.ts`) dem Viewer außer dem Einsatztranskript mitgibt. */
 export interface ViewerOptions {
   /** Dateiname des Montagevideos im selben Ordner. */
   mediaFileName: string;
+  /**
+   * Bilder je Zeile (Fotos, Tagebuchscans) als JPEG, in der Reihenfolge von `entry.images`. Sie werden eingebettet;
+   * `null` oder fehlend heißt: nicht eingebettet, die Seite verweist dann auf die Originaldatei.
+   */
   stills: Map<SessionTranscriptEntry, (Still | null)[]>;
+  /** Dasselbe für die Kontextstücke (`transcript.context`). */
   contextStills?: Map<SessionTranscriptContext, (Still | null)[]>;
   /** Tonspuren im Montagevideo, in ihrer Reihenfolge (Spur 1: Mischung). Ohne Angabe nur die Mischung. */
   audioTracks?: { title: string; deviceId?: Id }[];
@@ -36,22 +49,36 @@ export interface ViewerOptions {
   envelopes?: Map<Id, Envelope>;
 }
 
-/** Daten für das Skript; alles Übrige steht als HTML in der Seite. Zeiten in ms Videozeit. */
+/**
+ * Daten für das Skript; alles Übrige steht als HTML in der Seite. Zeiten in ms Videozeit.
+ * Steht als JSON im Element `feldspur-daten` und wird in `packages/media/src/viewer/runtime.ts` als `D` gelesen.
+ * Die Namen sind kurz, weil sie je Abschnitt und Aufnahme wiederkehren. Ändert sich die Form: `VIEWER_DATA_VERSION`.
+ */
 export interface ViewerData {
   v: number;
   title: string;
+  /** Feldtag, schon in der Schreibweise der Seite (TT.MM.JJJJ). */
   date: string;
+  /** Volle Montage-ID (drei Blöcke), siehe `handbuch/_begriffe.qmd`. */
   montageId: string;
   mediaFile: string;
   durationMs: number;
+  /** Montage in Echtzeit (`MontagePlan.mode === "realtime"`): die Uhrzeit läuft auch zwischen den Aufnahmen weiter. */
   realtime: boolean;
-  /** e: Episode, g: Zwischenzeit in Echtzeit, c: kurze Tafel (Uhrzeit steht still). */
+  /**
+   * Abschnitte der Montage (`MontagePlan.segments`, `packages/core/src/montage.ts`).
+   * k = e: Episode, g: Zwischenzeit in Echtzeit, c: kurze Tafel (Uhrzeit steht still). n: Nummer der Episode, nur
+   * wenn Episoden benannt sind. m0/m1: Beginn und Ende in ms Videozeit; c0/c1: dieselben Stellen als Uhrzeit
+   * (ms, Ortszeit des Einsatzes wie `LocalMs` in `packages/core/src/time.ts`).
+   */
   segments: { k: "e" | "g" | "c"; n?: number; m0: number; m1: number; c0: number; c1: number }[];
   /** Tonspuren im Video; Spur 0 ist die Mischung. */
   audio: string[];
+  /** Gerätespuren der Zeitleiste: eine Bahn je Gerät mit Ton, darin seine Aufnahmen (`clips`, m0/m1 in ms). */
   lanes: {
     title: string;
     kind: "audio" | "video";
+    /** Dieses Gerät ist die Referenzuhr des Einsatzes. */
     ref: boolean;
     /** Index der eigenen Tonspur im Video, sonst -1. */
     audio: number;
@@ -70,7 +97,11 @@ function videoTime(ms: number): string {
   return `${Math.floor(s / 3600)}:${p2(Math.floor(s / 60) % 60)}:${p2(s % 60)}`;
 }
 
-/** Uhrzeit an einer Stelle des Videos; in einer Tafel der Beginn der Zwischenzeit. */
+/**
+ * Uhrzeit an einer Stelle des Videos; in einer Tafel der Beginn der Zwischenzeit.
+ * Umkehrung von `MontagePlan.toMontage`. Im Browser rechnet `clockMsAt` in `packages/media/src/viewer/runtime.ts`
+ * dasselbe aus den eingebetteten Abschnitten; beide müssen zusammenpassen.
+ */
 export function clockAtMontage(plan: MontagePlan, ms: number): number {
   const seg =
     plan.segments.find((s) => ms >= s.montageStartMs && ms < s.montageStartMs + s.montageMs) ?? plan.segments.at(-1);
@@ -79,6 +110,11 @@ export function clockAtMontage(plan: MontagePlan, ms: number): number {
   return linear ? seg.fromMs + Math.min(ms - seg.montageStartMs, seg.toMs - seg.fromMs) : seg.fromMs;
 }
 
+/**
+ * Zeichen der Zeilenarten als SVG-Pfade im 16er-Raster. Die Schlüssel sind zum Teil `SessionTranscriptEntry.kind`
+ * (photo, diary, sync, card, end). `audio` und `video` stehen noch einmal in `runtime.ts` (IC_AUDIO, IC_VIDEO),
+ * weil das eingebettete Skript nichts von hier beziehen darf.
+ */
 const ICON: Record<string, string> = {
   audio: "M8 2.5a2 2 0 0 1 2 2v3.5a2 2 0 0 1-4 0V4.5a2 2 0 0 1 2-2ZM4 8a4 4 0 0 0 8 0M8 12v2.5",
   video: "M3 5.5h7.5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1ZM11.5 8.2 15 6v6l-3.5-2.2",
@@ -94,6 +130,7 @@ const svg = (d: string, cls = "ic") =>
   `<svg class="${cls}" viewBox="0 0 16 16" aria-hidden="true"><path d="${d}"/></svg>`;
 const CLOSE = svg("m4 4 8 8M12 4l-8 8");
 const FLAG = `<svg viewBox="0 0 13 14" aria-hidden="true"><path d="M1.5 1v12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1.5 1.2 12 4.2 1.5 7.2Z" fill="currentColor"/></svg>`;
+/** Das App-Symbol für die Titelzeile, als Zeichnung eingebettet (die Seite darf keine Bilddatei nachladen). */
 const SYMBOL = `<svg class="symbol" viewBox="64 64 896 896" role="img" aria-label="Feldspur"><defs><linearGradient id="sym-bg" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#e6ab68"/><stop offset="1" stop-color="#bf5f34"/></linearGradient><linearGradient id="sym-paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf6e9"/><stop offset="1" stop-color="#f3e5cc"/></linearGradient></defs><rect x="64" y="64" width="896" height="896" rx="200" fill="url(#sym-bg)"/><g transform="rotate(-4 512 540)"><rect x="196" y="250" width="632" height="560" rx="48" fill="#6e3218" opacity="0.28" transform="translate(8 20)"/><rect x="196" y="250" width="632" height="560" rx="48" fill="url(#sym-paper)"/><rect x="262" y="368" width="330" height="72" rx="36" fill="#7f8f5a"/><rect x="404" y="494" width="358" height="72" rx="36" fill="#d07a3e"/><rect x="300" y="620" width="250" height="72" rx="36" fill="#a8452c"/></g><line x1="522" y1="222" x2="522" y2="840" stroke="#3a281d" stroke-width="30" stroke-linecap="round"/><path d="M522 218 L 700 270 L 522 322 Z" fill="#3a281d" stroke="#3a281d" stroke-width="22" stroke-linejoin="round"/></svg>`;
 
 /** Content-Security-Policy: keine Netzzugriffe, nur Eingebettetes und das Video daneben. */
@@ -101,6 +138,7 @@ export const VIEWER_CSP =
   "default-src 'none'; img-src data: blob:; media-src 'self' file: blob: data:; style-src 'unsafe-inline'; " +
   "script-src 'unsafe-inline'; font-src data:; base-uri 'none'; form-action 'none'";
 
+/** „2026-09-14“ → „14.09.2026“; alles andere bleibt, wie es ist. */
 function displayDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return y && m && d ? `${d}.${m}.${y}` : iso;
@@ -141,6 +179,8 @@ function lanesOf(
   audioTracks: { title: string; deviceId?: Id }[],
   envelopes?: Map<Id, Envelope>,
 ): ViewerData["lanes"] {
+  // Dieselben Stücke und Bildnummern, aus denen `packages/media/src/montage-video.ts` das Video baut: So liegen
+  // die Balken genau dort, wo die Aufnahme im Video zu hören ist.
   const pieces = planPieces(transcript);
   const frameMs = 1000 / FPS;
   const clips = new Map<Id, { label: string; file: string; f0: number; f1: number; source: Id; fromMs: number }[]>();
@@ -160,6 +200,7 @@ function lanesOf(
       kinds.get(dev)!.add(a.source.kind);
       const list = clips.get(dev) ?? [];
       clips.set(dev, list);
+      // Schließt das Stück lückenlos an das vorige derselben Quelle an, wird daraus ein durchgehender Balken.
       const last = list.findLast((c) => c.label === a.source.label);
       if (last && last.f1 === p.f0) last.f1 = p.f1;
       else
@@ -177,6 +218,7 @@ function lanesOf(
     title: d.title,
     kind: kinds.get(d.deviceId)?.has("video") ? "video" : "audio",
     ref: d.deviceId === ref,
+    // Spur 0 ist die Mischung und gehört keinem Gerät, deshalb erst ab 1 suchen.
     audio: audioTracks.findIndex((t, k) => k > 0 && t.deviceId === d.deviceId),
     clips: (clips.get(d.deviceId) ?? [])
       .toSorted((a, b) => a.f0 - b.f0)
@@ -190,6 +232,10 @@ function lanesOf(
   }));
 }
 
+/**
+ * Stellt die Daten für das Skript zusammen (Abschnitte, Tonspuren, Gerätespuren). Eigens exportiert für Tests
+ * (`packages/media/test/viewer.test.ts`) und über `packages/media/src/index.ts`.
+ */
 export function viewerData(
   transcript: SessionTranscript,
   opts: Pick<ViewerOptions, "mediaFileName" | "audioTracks" | "envelopes">,
@@ -217,12 +263,14 @@ export function viewerData(
   };
 }
 
+/** Ein eingebettetes Bild als Knopf (das Skript vergrößert es); ohne Bild der Hinweistext `missing`. */
 function imageButton(still: Still | null, caption: string, missing: string): string {
   if (!still) return `<span class="noimg">${esc(missing)}</span>`;
   const src = `data:image/jpeg;base64,${still.data.toString("base64")}`;
   return `<button class="img" type="button" aria-label="Bild vergrößern: ${esc(caption)}"><img src="${src}" width="${still.width}" height="${still.height}" alt="${esc(caption)}" loading="lazy" decoding="async"></button>`;
 }
 
+/** Alle Bilder einer Zeile oder eines Kontextstücks. `scanOnly`: Tagebuchseite, die nur als Scan vorliegt. */
 function images(
   refs: SessionTranscriptEntry["images"],
   stills: (Still | null)[],
@@ -242,6 +290,12 @@ function images(
     .join("")}</div>`;
 }
 
+/**
+ * Eine Zeile des Einsatztranskripts als `<li>`: Randspalte mit Uhrzeit (Knopf zum Springen), Zeichen der Zeilenart,
+ * Text. `data-m` (ms Videozeit) und die Klasse `k-<kind>` liest das Skript, um die Zeile dem Video zuzuordnen.
+ * `ctx`: Kontextstücke, auf die verwiesen werden kann (Schlüssel → Element-ID bzw. Name).
+ * `lastSrc`: zuletzt genannte Aufnahme über die Zeilen hinweg, damit ihr Name nur beim Wechsel erscheint.
+ */
 function entryHtml(
   t: SessionTranscript,
   e: SessionTranscriptEntry,
@@ -253,6 +307,8 @@ function entryHtml(
   const clockMs = clockAtMontage(t.plan, e.montageMs);
   const gutter = e.kind === "diary" ? e.clock.slice(0, 5) : (e.clock.split("–")[0] ?? "") || formatClock(clockMs);
   const jump = e.kind === "end" ? "Zum Ende springen" : `Zu ${gutter} springen`;
+  // Drei Schreibweisen der Stelle (Uhrzeit, Videozeit, Zeitmarke wie in der .docx); welche zu sehen ist, wählt
+  // man im Viewer unter „Ansicht“ (CSS über `data-zeit`).
   const tm = `<button class="tm num" type="button" aria-label="${esc(jump)}"><span class="c">${esc(gutter)}</span><span class="v">${videoTime(e.montageMs)}</span><span class="m">${timestamp(e.montageMs)}</span></button>`;
   const glyph =
     e.kind === "start"
@@ -265,6 +321,7 @@ function entryHtml(
   const gl = `<span class="gl" aria-hidden="true">${glyph}</span>`;
   let tx = "";
   if (e.kind === "episode") {
+    // Episodenkopf mit kleinem Lageplan: ein Streifen je Abschnitt, so breit wie seine Dauer, diese Episode betont.
     const n = Number(/\d+/.exec(e.head)?.[0] ?? 0);
     const eps = t.plan.segments.filter((s) => s.kind === "episode").length;
     const lage = t.plan.segments
@@ -293,6 +350,8 @@ function entryHtml(
       tx += "<br>";
     }
     if (e.kind === "card" && e.clock) tx += `<span class="ck num"> · ${esc(e.clock)} · </span>`;
+    // Der Verweis auf Kontextstücke steht im Text am Zeilenende (so braucht ihn die .docx). Hier wird er
+    // abgeschnitten und durch Knöpfe ersetzt, die das Kontextfenster an der Stelle öffnen.
     const refs = (e.contextRefs ?? []).filter((k) => ctx.keyToId.has(k));
     const refText = ` → Kontext: ${refs.map((k) => ctx.names.get(k)).join("; ")}`;
     if (refs.length && body.endsWith(refText)) body = body.slice(0, -refText.length);
@@ -328,11 +387,13 @@ function contextDetails(details: string, mentions: number[]): string {
     .join(", ")}`;
 }
 
+/** Ein Kontextstück für das Fenster „Kontext“. `mentions`: Videozeiten (ms) der Verweise. */
 function contextHtml(c: SessionTranscriptContext, id: string, stills: (Still | null)[], mentions: number[]): string {
   const name = c.head.replace(/^Kontext · /, "");
   return `<li class="c-item" id="${id}"><h3>${esc(name)}</h3>${c.details ? `<p class="det">${contextDetails(c.details, mentions)}</p>` : ""}${images(c.images, stills, `Kontext · ${name}`, false)}${c.body ? `<p class="body">${esc(c.body)}</p>` : ""}</li>`;
 }
 
+/** `@font-face`-Regeln mit den Schriften aus `packages/media/src/viewer/fonts.ts` als `data:`-Adressen. */
 function fontCss(): string {
   return VIEWER_FONTS.map(
     (f) =>
@@ -340,14 +401,21 @@ function fontCss(): string {
   ).join("\n");
 }
 
-/** Das Skript: Teilfunktionen als Quelltext, ohne Bezüge nach außen (siehe runtime.ts). */
+/**
+ * Das Skript: Teilfunktionen als Quelltext, ohne Bezüge nach außen (siehe runtime.ts).
+ * `viewerMain` bekommt `readMp4Audio` als Argument, weil es im Browser kein gemeinsames Modul gibt.
+ */
 export function viewerScript(): string {
   const js = `"use strict";\n(${viewerMain.toString()})(${readMp4Audio.toString()});`;
   // Ein „</script“ im Quelltext würde das Skript-Element beenden.
   return js.replace(/<\/(script)/gi, "<\\/$1");
 }
 
-/** Die ganze Seite. */
+/**
+ * Die ganze Seite: Kopf mit CSS und Schriften, links Video, Steuerleiste und Zeitleiste, rechts das
+ * Einsatztranskript, dazu Kontextfenster und Dialoge, am Ende Daten und Skript. Die IDs im Gerüst sind die
+ * Schnittstelle zu `packages/media/src/viewer/runtime.ts` (dort `$("…")`) und `style.ts`.
+ */
 export function sessionTranscriptHtml(transcript: SessionTranscript, opts: ViewerOptions): string {
   const h = transcript.header;
   const data = viewerData(transcript, opts);
@@ -385,6 +453,7 @@ export function sessionTranscriptHtml(transcript: SessionTranscript, opts: Viewe
       : "",
     "Am Rand steht die Uhrzeit. Ein Klick auf eine Zeile springt zur Stelle im Video.",
   ].filter(Boolean);
+  // „<“ maskieren: Ein „</script“ in Titel oder Dateinamen würde das Daten-Element sonst vorzeitig beenden.
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const title = `${h.title} · ${date} – Einsatztranskript mit Video`;
   const ctxCount = transcript.context.length;

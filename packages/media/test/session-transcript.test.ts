@@ -1,3 +1,7 @@
+/**
+ * Reihenfolge der Zeilen im Einsatztranskript (`packages/media/src/session-transcript.ts`), mit einem Projekt im
+ * Speicher und ohne Mediendateien.
+ */
 import { ProjectStore } from "@feldspur/core";
 import { describe, expect, it } from "vite-plus/test";
 import { buildSessionTranscript } from "../src/session-transcript.ts";

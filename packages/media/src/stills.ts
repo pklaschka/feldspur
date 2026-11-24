@@ -1,6 +1,10 @@
 /**
  * Standbilder für Einsatztranskript und Montage: Fotos verkleinert, Tagebuch-Rahmen ausgeschnitten.
  * Läuft über ffmpeg, die Originale bleiben unberührt.
+ *
+ * Einordnung: Schritt „Ausgeben“. Aufgerufen von `stillOf` in `packages/media/src/export.ts` für die Bilder im
+ * Einsatztranskript. Für Formate, die ffmpeg nicht kann (PDF), bittet `stillOf` stattdessen die Oberfläche um ein
+ * Bild.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -8,6 +12,7 @@ import type { Source } from "@feldspur/core";
 import type { ImageRef } from "./session-transcript.ts";
 import { runTool, STILL_TIMEOUT_MS } from "./process.ts";
 
+/** Fertiges Standbild: JPEG-Daten und Größe in Pixeln. */
 export interface Still {
   data: Buffer;
   width: number;
@@ -44,12 +49,14 @@ export async function renderStill(
   src: Source,
   ref: ImageRef,
   outDir: string,
+  /** `name`: Dateiname ohne Endung in `outDir` (dem Arbeitsordner der Ausgabe). */
   opts: { maxWidth?: number; name: string; signal?: AbortSignal },
 ): Promise<Still | null> {
   if (!canRenderStill(src)) return null;
   const maxW = opts.maxWidth ?? 1000;
   const r = ref.region;
   const filters: string[] = [];
+  // Ein Rahmen über (fast) das ganze Bild braucht keinen Zuschnitt.
   if (r && (r.w < 0.999 || r.h < 0.999)) {
     const f = (v: number) => v.toFixed(5);
     filters.push(`crop=iw*${f(r.w)}:ih*${f(r.h)}:iw*${f(r.x)}:ih*${f(r.y)}`);

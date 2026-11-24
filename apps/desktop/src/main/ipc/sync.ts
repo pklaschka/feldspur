@@ -1,4 +1,12 @@
-/** IPC-Aufrufe fürs Abgleichen: Tonspuren analysieren, Uhren der Geräte, Anker, Zeitbelege, Lage und Lautstärke. */
+/**
+ * IPC-Aufrufe fürs Abgleichen: Tonspuren analysieren, Uhren der Geräte, Anker (`SyncAnchor`), Zeitbelege
+ * (`TimeEvidence`), Lage und Lautstärke.
+ *
+ * Gegenstücke in der Oberfläche (`apps/desktop/src/renderer/`): Schritt „Abgleichen“ (`Sync.tsx`), Feinabgleich
+ * (`FineAlign.tsx`) und die Seitenleiste zu einer Quelle (`Inspector.tsx`, `inspector/`), die auch in „Durchsehen“
+ * Widersprüche entscheidet. Die Regeln stehen in `../edits.ts`; hier wird nie eine Lage gespeichert, nur Belege und
+ * Anker, aus denen `packages/core/src/resolve.ts` sie neu berechnet.
+ */
 import { existsSync } from "node:fs";
 import { ipcMain } from "electron";
 import type { ProjectStore } from "@feldspur/core";
@@ -44,6 +52,7 @@ export function registerSyncIpc(): void {
   ipcMain.handle(IPC.cancelAnalyze, (_e, sessionId: string) => {
     analyzing.get(sessionId)?.abort();
   });
+  // Wie das Einsammeln kein Schritt für Rückgängig: Hüllkurven und Vorschläge für Anker entstehen automatisch.
   ipcMain.handle(IPC.analyze, async (e, sessionId: string) => {
     const s = requireStore();
     if (analyzing.has(sessionId)) throw new Error("Die Tonspuren dieses Einsatzes werden schon analysiert.");
@@ -144,6 +153,7 @@ export function registerSyncIpc(): void {
     (s, deviceId: string) => clearDeviceChecks(s, deviceId),
   );
 
+  // Anker: Vorschläge aus der Analyse übernehmen oder verwerfen.
   undoableView(IPC.confirmAnchor, "Vorschlag übernommen", (s, anchorId: string) => {
     const a = s.getAnchor(anchorId);
     s.confirmAnchor(anchorId);
@@ -172,6 +182,7 @@ export function registerSyncIpc(): void {
     return a.sessionId;
   });
 
+  // Lage und Zeitbelege einer Quelle: bestätigen, bei Widersprüchen entscheiden, Uhrzeit eintragen, Belege schalten.
   undoableView(
     IPC.confirmPlacement,
     (s, sourceId: string, _startMs: number) => `Lage bestätigt: ${s.getSource(sourceId).label}`,
@@ -221,6 +232,7 @@ export function registerSyncIpc(): void {
     (s, evidenceId: string) => removeEvidence(s, evidenceId),
   );
 
+  // Anker von Hand und Feinabgleich („Einrasten“ liest nur und schreibt nichts).
   undoableView(IPC.addAnchor, "Anker gesetzt", (s, input: AnchorInput) => addManualAnchor(s, input));
   undoableView(IPC.replaceAnchor, "Anker geändert", (s, anchorId: string, input: AnchorInput) =>
     replaceAnchor(s, anchorId, input),
@@ -238,6 +250,7 @@ export function registerSyncIpc(): void {
       });
     },
   );
+  // Lautstärke-Angleichung. Der gemessene Pegel ist ein Zwischenergebnis und kein Schritt für Rückgängig.
   undoableView(IPC.setLevel, "Lautstärke geändert", (s, sourceId: string, input: LevelInput) =>
     setLevel(s, sourceId, input),
   );

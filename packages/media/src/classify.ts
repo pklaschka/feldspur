@@ -1,5 +1,12 @@
+/**
+ * Quellenart (`SourceKind`) und Dateinamen-Familie aus dem Dateinamen bestimmen (rein, ohne I/O).
+ *
+ * Einordnung: Schritt Einsammeln. `packages/media/src/import.ts` entscheidet damit, welche Dateien übersprungen
+ * werden, wie eine Datei gelesen wird (ffprobe oder EXIF) und zu welchem Gerät sie vermutlich gehört.
+ */
 import type { SourceKind } from "@feldspur/core";
 
+/** Dateiendung (klein, ohne Punkt) → Quellenart. Unbekannte Endungen ergeben „other“. */
 const EXT: Record<string, SourceKind> = {
   // Video
   mp4: "video",
@@ -41,12 +48,14 @@ const EXT: Record<string, SourceKind> = {
   gpx: "gps",
   kml: "gps",
   geojson: "gps",
-  // Scans
+  // Scans: ein PDF gilt immer als Tagebuch
   pdf: "diary",
 };
 
+/** Namen, die nach einer gescannten oder fotografierten Tagebuchseite klingen („Scan“, „Seite 3“, „S012“). */
 const DIARY_HINT = /tagebuch|diary|feldnotiz|fieldnote|notizbuch|scan|seite[\s_-]?\d|s\d{2,3}(?!\d)/i;
 
+/** Endung in Kleinbuchstaben ohne Punkt; leer, wenn der Name keine hat. */
 export function extensionOf(fileName: string): string {
   const m = /\.([^.\\/]+)$/.exec(fileName);
   return m ? m[1]!.toLowerCase() : "";

@@ -1,8 +1,15 @@
+/**
+ * Texte für die Oberfläche: Uhrzeiten, Abweichungen, Größen und Bezeichnungen anzeigen und getippte Uhrzeiten und
+ * Abweichungen lesen. Reine Funktionen ohne React, von fast allen Ansichten genutzt; getestet in
+ * `apps/desktop/test/format.test.ts`. Zeiten sind Millisekunden in der Ortszeit des Einsatzes (`LocalMs`,
+ * `packages/core/src/time.ts`), Abweichungen und Stellen in Aufnahmen Millisekunden.
+ */
 import type { SourceKind } from "@feldspur/core/model";
 import type { SourceRow } from "../shared/api.ts";
 import { formatClock, formatDuration } from "@feldspur/core/time";
 import { digitsDurationMs } from "../shared/duration-digits.ts";
 
+/** Art einer Quelle (`SourceKind`) als Wort für die Oberfläche. */
 export const KIND_LABEL: Record<SourceKind, string> = {
   video: "Video",
   audio: "Audio",
@@ -13,12 +20,14 @@ export const KIND_LABEL: Record<SourceKind, string> = {
   other: "Sonstiges",
 };
 
+/** Lage auf der Zeitachse als Text: Uhrzeit oder Spanne „10:15:00 – 10:42:10“; „?“ für eine Quelle ohne Zeit. */
 export function lage(startMs: number | null, endMs: number | null): string {
   if (startMs === null) return "?";
   if (endMs === null || endMs === startMs) return formatClock(startMs);
   return `${formatClock(startMs)} – ${formatClock(endMs)}`;
 }
 
+/** Abweichung einer Geräteuhr von der Referenzuhr als Text („+2:47“ = geht vor); null heißt: noch kein Abgleich. */
 export function offsetText(ms: number | null): string {
   return ms === null ? "unbekannt" : ms === 0 ? "± 0:00" : formatDuration(ms, { sign: true });
 }
@@ -85,6 +94,7 @@ export function clock(ms: number): string {
   return formatClock(ms);
 }
 
+/** „2026-09-14“ → „14.09.“ (für die Einsatzliste). */
 export function formatDay(date: string): string {
   const [, m, d] = date.split("-");
   return `${d}.${m}.`;
@@ -139,6 +149,7 @@ export function dbText(db: number): string {
   return `${db > 0 ? "+" : db < 0 ? "−" : "±"}${Math.abs(db).toFixed(1).replace(".", ",")} dB`;
 }
 
+/** Dateigröße mit deutschem Komma: „812 KB“, „3,4 MB“, „1,25 GB“. */
 export function bytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
@@ -152,8 +163,10 @@ export function aboutSize(n: number): string {
   return `ca. ${Math.max(1, Math.round(n / 1024 ** 2))} MB`;
 }
 
+/** Wie sicher die Lage einer Quelle ist, als Wort; dieselben Wörter in allen Schritten und in der Legende. */
 export const STATUS_TEXT = { ok: "sicher", check: "prüfen", unplaced: "ohne Zeit", context: "Kontext" } as const;
 
+/** Art eines Zeitbelegs (`TimeEvidence.kind`) als Wort; „geprüft“ ist die bestätigte Lage („Lage passt“). */
 export const EVIDENCE_LABEL: Record<string, string> = {
   metadata: "Metadaten",
   filename: "Dateiname",
@@ -163,7 +176,10 @@ export const EVIDENCE_LABEL: Record<string, string> = {
   checked: "geprüft",
 };
 
-/** „B1: Text“ → Sprecher B1. */
+/**
+ * „B1: Text“ → Sprecher B1, für fertig eingegebene oder importierte Zeilen (`transcriber/draft.ts`). Beim Tippen
+ * gilt die strengere Fassung `leadingSpeaker` in `transcribe.ts`.
+ */
 export function splitSpeaker(input: string): { speaker: string | null; text: string } {
   const m = /^\s*([\p{L}\d]{1,6}):\s+(.*)$/su.exec(input);
   return m ? { speaker: m[1]!, text: m[2]! } : { speaker: null, text: input };

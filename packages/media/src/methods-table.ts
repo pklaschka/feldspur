@@ -3,6 +3,10 @@
  * Eingang (Aufzeichnungen je Art und Gerät) und eine für die Ausgabe (Einsatztranskript und Montagevideo je Einsatz).
  * Ohne Node und ohne Electron (nur Typ-Importe), damit Ausgabe (LIESMICH), Oberfläche und Tests dieselben Texte nutzen.
  * Nur Gezähltes und Gemessenes, keine Bewertung.
+ *
+ * Einordnung: Die Zahlen kommen aus `packages/media/src/methods-summary.ts`. Die Tabellen zeigt und kopiert die
+ * Übersicht (`apps/desktop/src/renderer/overview/Metrics.tsx`, über `apps/desktop/src/shared/methods-table.ts`),
+ * und die LIESMICH der Ausgabe (`packages/media/src/readme.ts`) setzt sie für einen einzelnen Einsatz ein.
  */
 import type { SourceKind } from "@feldspur/core";
 import type { MethodsBasis, MethodsMaterialRow, MethodsSessionSummary } from "./methods-summary.ts";
@@ -14,6 +18,7 @@ export type MethodsNumbers = Pick<MethodsSessionSummary, "title" | "date" | "mat
 /** Abschnitt des Handbuchs mit dem Mustertext, der erklärt, was Montagevideo und Einsatztranskript sind. */
 export const METHODS_HANDBOOK_URL = "https://purl.archive.org/feldspur#sec-methodenteil";
 
+/** Eine fertige Tabelle als Text: Überschrift, Kopfzeile, Zeilen. Daraus entstehen Markdown, HTML und Text. */
 export interface MethodsTable {
   caption: string;
   head: string[];

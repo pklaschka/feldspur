@@ -1,4 +1,8 @@
-/** Anmelden von IPC-Aufrufen, die Daten ändern: jeder Aufruf ist ein Schritt für Rückgängig. */
+/**
+ * Anmelden von IPC-Aufrufen, die Daten ändern: jeder Aufruf ist ein Schritt für Rückgängig und eine Zeile im
+ * Änderungsprotokoll (`packages/core/src/db/history.ts`). Die Dateien in diesem Ordner nutzen das statt
+ * `ipcMain.handle`, sobald ein Aufruf ins Projekt schreibt.
+ */
 import { ipcMain } from "electron";
 import type { ProjectStore } from "@feldspur/core";
 import { requireStore } from "../state.ts";

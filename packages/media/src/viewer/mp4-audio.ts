@@ -4,11 +4,19 @@
  *
  * Läuft im Browser (eingebettet in den Viewer) und in Node (Tests). Deshalb ganz ohne Importe und ohne Bezüge
  * nach außen: Der Viewer bettet die Funktion über Function#toString ein.
+ *
+ * Einordnung: Teil des Viewers, der im Schritt „Ausgeben“ neben das Montagevideo geschrieben wird. `viewerScript`
+ * (`packages/media/src/viewer/html.ts`) bettet `readMp4Audio` ein; aufgerufen wird es in `grant`
+ * (`packages/media/src/viewer/runtime.ts`), sobald jemand das Video für die „Erweiterte Tonspurkontrolle“
+ * freigibt.
+ * Die App selbst liest Mediendateien nicht hiermit, sondern mit ffprobe.
  */
 
+/** Eine Tonspur des Montagevideos mit der Lage all ihrer Tonpakete (Samples): genug, um sie selbst abzuspielen. */
 export interface Mp4AudioTrack {
   /** Reihenfolge der Tonspuren in der Datei, ab 0. */
   index: number;
+  /** Kennung der Spur in der Datei (track_ID aus tkhd), 0 falls unbekannt. */
   trackId: number;
   /** Name der Spur (handler_name), z. B. „Mischung aller Geräte“ oder „Audiorekorder ZOOM“. */
   title: string;
@@ -16,9 +24,13 @@ export interface Mp4AudioTrack {
   codec: string;
   /** AudioSpecificConfig aus esds, für AudioDecoder.configure({ description }). */
   config: Uint8Array | null;
+  /** In Hz. */
   sampleRate: number;
   channels: number;
-  /** Je Tonpaket: Lage in der Datei und Beginn in Sekunden Videozeit (Schnittliste schon eingerechnet). */
+  /**
+   * Je Tonpaket: Lage in der Datei und Beginn in Sekunden Videozeit (Schnittliste schon eingerechnet).
+   * `offsets` und `sizes` in Byte, `times` in Sekunden; alle vier Felder haben einen Eintrag je Paket.
+   */
   offsets: Float64Array;
   sizes: Uint32Array;
   times: Float64Array;
@@ -26,7 +38,9 @@ export interface Mp4AudioTrack {
   durations: Float64Array;
 }
 
+/** Ergebnis von `readMp4Audio`. Der Viewer vergleicht Dauer und Zahl der Tonspuren mit dem, was er erwartet. */
 export interface Mp4AudioInfo {
+  /** Länge des Films in Sekunden (aus mvhd). */
   durationS: number;
   /** Gesamtzahl der Spuren (Bild und Ton). */
   trackCount: number;
@@ -47,6 +61,8 @@ export async function readMp4Audio(
   const i32 = (b: Uint8Array, o: number) => u32(b, o) | 0;
   const type = (b: Uint8Array, o: number) => String.fromCharCode(b[o]!, b[o + 1]!, b[o + 2]!, b[o + 3]!);
 
+  // Eine MP4-Datei besteht aus verschachtelten Kästen (Boxen): 4 Byte Länge, 4 Byte Typ, dann der Inhalt.
+  // Länge 1 heißt: die echte Länge folgt als 64-Bit-Zahl; Länge 0: der Kasten reicht bis zum Ende.
   // Oberste Ebene: nur Kopfzeilen lesen, bis moov gefunden ist (mit +faststart steht es vorn).
   let pos = 0;
   let moov: Uint8Array | null = null;
@@ -84,6 +100,7 @@ export async function readMp4Audio(
     }
     return out;
   };
+  /** Inhalt des Kastens am Ende eines Pfads wie ["mdia", "hdlr"]: [Beginn, Ende], oder null. */
   const find = (b: Uint8Array, from: number, to: number, path: string[]): [number, number] | null => {
     let range: [number, number] = [from, to];
     for (const name of path) {
@@ -96,6 +113,7 @@ export async function readMp4Audio(
 
   const m = moov;
   const top = kids(m, 0, m.length);
+  // Zeiteinheit des ganzen Films (Schritte je Sekunde). Jede Spur hat daneben ihre eigene (`scale` aus mdhd).
   const mvhd = top.find((k) => k[0] === "mvhd");
   let movieScale = 1000;
   let durationS = 0;
@@ -124,6 +142,8 @@ export async function readMp4Audio(
     const scale = m[mdhd[0]]! === 1 ? u32(m, mdhd[0] + 20) : u32(m, mdhd[0] + 12);
 
     // Schnittliste: leere Einträge verschieben nach hinten, media_time schneidet vorn ab (AAC-Vorlauf).
+    // Die Dauer eines Eintrags zählt in der Zeiteinheit des Films, media_time in der der Spur; −1 heißt „leer“.
+    // Ausgewertet wird nur bis zum ersten nicht leeren Eintrag.
     let delayS = 0;
     let mediaStart = 0;
     const elst = find(m, from, to, ["edts", "elst"]);
@@ -178,6 +198,8 @@ export async function readMp4Audio(
             }
             return n;
           };
+          // Verschachtelte Beschreibungen in esds: 0x03 Spur, 0x04 Decoder (darin die Formatkennung `oti`,
+          // 0x40 = AAC), 0x05 die AudioSpecificConfig. Die ersten beiden werden nur bis zum Inhalt übersprungen.
           let oti = 0;
           while (p < esds[2]) {
             const tag = m[p++]!;
@@ -214,6 +236,8 @@ export async function readMp4Audio(
     const sizes = new Uint32Array(count);
     for (let i = 0; i < count; i++) sizes[i] = fixed || u32(m, stsz[0] + 12 + 4 * i);
 
+    // stsc fasst Blöcke (Chunks) mit gleich vielen Paketen zu Läufen zusammen; ein Lauf gilt bis zum Beginn des
+    // nächsten. Innerhalb eines Blocks liegen die Pakete lückenlos hintereinander.
     const wide = stco === co64;
     const chunkCount = u32(m, stco[0] + 4);
     const chunkOffset = (c: number) => (wide ? u64(m, stco[0] + 8 + 8 * c) : u32(m, stco[0] + 8 + 4 * c));

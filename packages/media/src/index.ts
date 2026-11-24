@@ -1,3 +1,12 @@
+/**
+ * Öffentliche Schnittstelle von `@feldspur/media`: alles, was mit Dateien arbeitet (Einsammeln, Tonspur-Analyse,
+ * Prüfen der Originale, Ausgeben, Montagevideo). Baut auf `@feldspur/core` (Datenmodell, Zeitbestimmung,
+ * Projektdatei) auf; der Kern kennt dieses Paket nicht.
+ *
+ * Diesen Einstieg lädt nur der Main-Prozess der App (`apps/desktop/src/main/`), denn fast alles hier braucht Node
+ * (Dateisystem, ffmpeg). Die Oberfläche (Renderer) holt sich von hier nur Typen; was sie zur Laufzeit braucht, bindet
+ * sie über die Unterpfade aus `packages/media/package.json` ein (`/layout`, `/field-calendar`, `/methods-table`).
+ */
 export * from "./classify.ts";
 export * from "./evidence.ts";
 export * from "./hash.ts";

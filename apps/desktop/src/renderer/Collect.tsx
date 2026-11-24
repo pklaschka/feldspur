@@ -1,3 +1,11 @@
+/**
+ * Schritt 1 „Einsammeln“: Dateien oder Ordner ablegen, danach je Gerät (`Device`) eine Karte mit seinen Quellen
+ * (`sources`), ihrer Lage auf der Zeitachse und ihrem Status. Eingebunden von `app/SessionPane.tsx`.
+ *
+ * Das Einsammeln selbst (Dateien suchen, Metadaten und Prüfsummen lesen) läuft im Hauptprozess
+ * (`apps/desktop/src/main/ipc/sessions.ts`, `packages/media`); den Stand dazu hält `importState.ts` außerhalb dieser
+ * Komponente, damit er einen Wechsel des Schritts übersteht. Die Originale werden nie kopiert oder verändert.
+ */
 import { isScrollingList, openStatusCounts } from "./collectLayout.ts";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { DeviceRow, SessionView, SourceRow } from "../shared/api.ts";
@@ -35,12 +43,17 @@ export function Collect({
 }: {
   view: SessionView;
   guard: Guard;
+  /** Neue Ansicht des Einsatzes übernehmen (nach dem Einsammeln). */
   onView: (v: SessionView) => void;
+  /** Gewählte Quelle (id); ihre Einzelheiten zeigt die Detailleiste (`Inspector.tsx`). */
   selected: string | null;
   onSelect: (id: string) => void;
   onRename: (deviceId: string, label: string) => void;
+  /** Weiter zum Schritt „Abgleichen“. */
   onNext: () => void;
+  /** Dialog „Tagebuch abtippen“ (`DiaryEditor.tsx`) mit dieser Seite (Quelle) öffnen. */
   onOpenDiary: (pageId: string) => void;
+  /** Dialog „Mitschreiben“ (`Transcriber.tsx`) mit dieser Aufnahme öffnen. */
   onTranscribe: (sourceId: string) => void;
   /** Einsatzdatum ändern (rückgängig machbar); true, wenn es geklappt hat. */
   onSetDate: (date: string) => Promise<boolean>;
@@ -52,6 +65,7 @@ export function Collect({
   // Einsammeln läuft im Hintergrund weiter, auch wenn diese Ansicht kurz verschwindet; nur eins zur Zeit.
   const busy = !!imp.job;
   const notice = imp.notices[sessionId] ?? null;
+  // Das Ergebnis eines Imports kommt über `importState.ts` hier an, auch wenn die Ansicht zwischendurch weg war.
   useEffect(() => registerImportView(sessionId, onView), [sessionId, onView]);
 
   const importPaths = (paths: string[]) => void startImport(sessionId, paths, guard);
@@ -59,10 +73,12 @@ export function Collect({
     e.preventDefault();
     setHover(false);
     if (busy) return;
+    // Die Oberfläche kennt nur `File`-Objekte; den Pfad auf der Platte liefert die Brücke (`preload.ts`).
     importPaths([...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean));
   };
   const empty = view.rows.length === 0;
   const unassigned = view.rows.filter((r) => !r.deviceId);
+  // Häufigster Kalendertag laut Metadaten und Dateinamen, zum Vergleich mit dem Einsatzdatum (`DayHint`).
   const dayHint = dominantDay(view.rows);
 
   return (
@@ -256,6 +272,7 @@ function DayHint({
   );
 }
 
+/** Dateiname ohne Ordner, für Windows- und POSIX-Pfade. */
 const fileOf = (p: string) => p.split(/[\\/]/).pop() ?? p;
 const n = (x: number) => x.toLocaleString("de-DE");
 
@@ -328,6 +345,7 @@ function ImportRunning({ job, big }: { job: ImportJob; big: boolean }) {
   );
 }
 
+/** Karte eines Geräts: Name (anklickbar zum Umbenennen), Referenzuhr und Zeitzone, darunter seine Dateien. */
 function DeviceCard({
   device,
   view,
@@ -409,6 +427,10 @@ function ordered(rows: SourceRow[]): { row: SourceRow; nested: boolean }[] {
   return out;
 }
 
+/**
+ * Dateien eines Geräts mit Kurzzeichen, Lage und Status. Lange Listen scrollen in der Karte und bekommen eine
+ * Fußzeile mit Sprüngen zu dem, was noch offen ist (Grenze und Zählung in `collectLayout.ts`).
+ */
 function SourceList({
   view,
   name,
@@ -521,6 +543,7 @@ function SourceList({
   );
 }
 
+/** Gerätename: Klick macht daraus ein Eingabefeld; Enter oder Verlassen speichert, Esc verwirft. */
 function EditableName({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useDraft(value);

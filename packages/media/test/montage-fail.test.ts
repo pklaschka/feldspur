@@ -1,3 +1,7 @@
+/**
+ * Montagevideo, wenn ein Abschnitt scheitert (`renderMontage` in `packages/media/src/montage-video.ts`): Der erste
+ * Fehler wird gemeldet, und kein ffmpeg-Prozess läuft weiter. Nicht unter Windows.
+ */
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

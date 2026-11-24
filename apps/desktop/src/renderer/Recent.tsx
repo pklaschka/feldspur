@@ -1,5 +1,8 @@
 /**
  * Zuletzt geöffnete Projekte: Liste auf dem Startbildschirm und Projektmenü in der Seitenleiste.
+ *
+ * Beide bindet `apps/desktop/src/renderer/App.tsx` ein. Die Liste selbst führt der Hauptprozess
+ * (`apps/desktop/src/main/recent.ts`); hier wird sie nur über `recentProjects` geholt und über `forgetRecent` gekürzt.
  */
 import { DropdownMenu } from "radix-ui";
 import { useEffect, useState } from "react";
@@ -8,6 +11,7 @@ import { cx } from "./ui.tsx";
 
 const api = window.feldspur;
 
+/** Holt die Liste beim Einbinden und erneut, sobald sich `reload` ändert (das Menü: bei jedem Auf- und Zuklappen). */
 function useRecent(reload: unknown): [RecentProject[], (l: RecentProject[]) => void] {
   const [list, setList] = useState<RecentProject[]>([]);
   useEffect(() => {
@@ -20,6 +24,7 @@ function useRecent(reload: unknown): [RecentProject[], (l: RecentProject[]) => v
   return [list, setList];
 }
 
+/** Wann zuletzt geöffnet: heute mit Uhrzeit, sonst nur das Datum. */
 const when = (iso: string) => {
   const d = new Date(iso);
   const today = new Date();
@@ -29,7 +34,7 @@ const when = (iso: string) => {
     : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
-/** Liste für den Startbildschirm. */
+/** Liste für den Startbildschirm (noch kein Projekt offen). Fehlende Dateien bleiben stehen, durchgestrichen. */
 export function RecentList({ onOpen }: { onOpen: (path: string) => void }) {
   const [list, setList] = useRecent(null);
   if (!list.length) return null;
@@ -73,7 +78,10 @@ export function RecentList({ onOpen }: { onOpen: (path: string) => void }) {
 const ITEM =
   "flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-[0.9rem] outline-none data-[disabled]:cursor-default data-[disabled]:text-muted data-[highlighted]:bg-accent-soft";
 
-/** Projektname in der Seitenleiste als Menü: anderes Projekt öffnen, zuletzt geöffnete, neues, Änderungsprotokoll, Sicherungen. */
+/**
+ * Projektname in der Seitenleiste als Menü: anderes Projekt öffnen, zuletzt geöffnete, neues, Änderungsprotokoll,
+ * Sicherungen.
+ */
 export function ProjectMenu({
   name,
   path,
@@ -95,6 +103,7 @@ export function ProjectMenu({
   onChangeLog: () => void;
   onBackups: () => void;
 }) {
+  // Bei jedem Aufklappen neu holen; das offene Projekt selbst steht nicht in der Auswahl.
   const [list] = useRecent(open);
   const others = list.filter((r) => r.path !== path);
   return (

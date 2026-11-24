@@ -1,4 +1,9 @@
-/** Stand eines Einsatzes in Worten: offene Punkte und Gründe für „prüfen“. */
+/**
+ * Stand eines Einsatzes in Worten: offene Punkte, Reihenfolge der Prüfliste und Gründe für „prüfen“. Reine
+ * Funktionen über der Ansicht des Einsatzes (`SessionView`), geprüft in `apps/desktop/test/inspector-status.test.ts`.
+ * Genutzt von Detailleiste, Prüfliste (`apps/desktop/src/renderer/review/CheckList.tsx`), „Durchsehen“, „Ausgeben“
+ * und `apps/desktop/src/renderer/app/SessionPane.tsx`.
+ */
 import type { SessionView, SourceRow } from "../../shared/api.ts";
 import type { Step } from "../App.tsx";
 
@@ -159,7 +164,10 @@ export function todos(view: SessionView): Todo[] {
   return out;
 }
 
-/** Hinweis aus der Zeitbestimmung in einen verständlichen Satz übersetzen. */
+/**
+ * Hinweis aus der Zeitbestimmung in einen verständlichen Satz übersetzen. Die Hinweistexte (`notes`) erzeugt
+ * `packages/core/src/resolve.ts`; ändert sich dort ein Wortlaut, muss er hier nachgezogen werden.
+ */
 export function checkReason(note: string, deviceLabel: string | undefined): string {
   if (note === "Uhr weicht ab?") return `Die Uhr von ${deviceLabel ?? "diesem Gerät"} ist noch nicht abgeglichen.`;
   if (note === "Keine Referenzuhr gewählt") return "Es ist noch keine Referenzuhr gewählt.";

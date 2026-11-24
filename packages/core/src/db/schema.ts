@@ -2,6 +2,12 @@
  * SQLite-Schema einer .feldspur-Projektdatei (Drizzle).
  * Änderungen hier brauchen immer eine neue Migration in migrations.ts. Die Migrationen gelten in der Datei;
  * test/schema.test.ts vergleicht beide Fassungen (Spalten, Standardwerte, Fremdschlüssel, Indizes).
+ *
+ * Benutzt nur von `packages/core/src/db/store.ts` (Abfragen) und dem Schematest. Was die Spalten bedeuten, steht
+ * an den gleichnamigen Feldern in `packages/core/src/model.ts`; hier heißen sie camelCase, in der Datei
+ * snake_case. Tabellen: `sessions` = Einsätze, `sources` = Quellen, `devices` = Geräte, `time_evidence` =
+ * Zeitbelege, `sync_anchors` = Anker, `diary_entries` = Tagebucheinträge, `transcript_lines` = Mitschrift,
+ * `source_notes` = Arbeitsnotizen, `episode_edits` = Episoden von Hand.
  */
 import { sql } from "drizzle-orm";
 import type { Decision, ExportFingerprint, ExportSettings } from "../model.ts";
@@ -16,9 +22,11 @@ import {
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
+// Spalten-Kürzel: JSON als Text gespeichert bzw. Wahrheitswert als 0/1.
 const json = <T>(name: string) => text(name, { mode: "json" }).$type<T>();
 const bool = (name: string) => integer(name, { mode: "boolean" });
 
+/** Angaben zur Projektdatei selbst als Schlüssel und Wert, z. B. `name`, `format`, `created_at`. */
 export const projectMeta = sqliteTable("project_meta", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -158,6 +166,7 @@ export const anchors = sqliteTable(
   (t) => [index("anchors_session").on(t.sessionId)],
 );
 
+/** Ein Rahmen eines Tagebucheintrags, wie er als JSON in `diary_entries.regions` steht (`DiaryEntry.regions`). */
 export interface DiaryRegionRow {
   sourceId: string;
   x: number;
@@ -263,6 +272,7 @@ export const changeLog = sqliteTable(
   (t) => [index("change_log_step").on(t.step)],
 );
 
+/** Zwischengespeicherte Tonspur-Analyse je Quelle (`AudioAnalysis`); lässt sich jederzeit neu berechnen. */
 export const audioAnalysis = sqliteTable("audio_analysis", {
   sourceId: text("source_id")
     .primaryKey()

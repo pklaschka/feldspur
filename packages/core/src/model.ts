@@ -6,9 +6,18 @@
  * wird nie direkt gespeichert, sondern aus ihren Zeitbelegen (`TimeEvidence`),
  * der Uhrabweichung ihres Geräts und Sync-Ankern berechnet (siehe resolve.ts).
  * So bleibt jederzeit nachvollziehbar, worauf sich eine Einordnung stützt.
+ *
+ * Die Zod-Schemas sind Typ und Prüfung zugleich: `packages/core/src/db/store.ts` prüft damit alles, was in die
+ * Projektdatei geht oder aus ihr gelesen wird. Die Tabellen dazu stehen in `packages/core/src/db/schema.ts`. Die
+ * Oberfläche erreicht die Typen über `@feldspur/core/model`.
+ *
+ * Deutsch ↔ Code: Einsatz = `FieldSession`, Quelle = `Source`, Gerät = `Device`, Zeitbeleg = `TimeEvidence`,
+ * Anker = `SyncAnchor`, Tagebucheintrag = `DiaryEntry`, Mitschrift-Zeile = `TranscriptLine`,
+ * Kontext/Chronologie = `Role`, Abweichung = `clockOffsetMs`, Bezugszeitraum = `lookbackMs`.
  */
 import { z } from "zod";
 
+/** Kennung einer Zeile in der Projektdatei. `ProjectStore` vergibt eine UUID, wenn keine mitkommt. */
 export const Id = z.string().min(1);
 export type Id = z.infer<typeof Id>;
 
@@ -25,6 +34,13 @@ const MediaMs = z.number().int().nonnegative();
 export const Role = z.enum(["timeline", "context"]);
 export type Role = z.infer<typeof Role>;
 
+/**
+ * Art einer Quelle. Bestimmt das Kurzzeichen (V, A, F, T, N, G, X; `LABEL_PREFIX` in `packages/core/src/db/store.ts`)
+ * und die Form auf der Zeitachse: „video“ und „audio“ sind Strecken, alles andere Zeitpunkte. „diary“ =
+ * Tagebuch-Scan (Bild oder PDF), „note“ = Textdatei, „gps“ = Wegaufzeichnung. Beim Einsammeln aus Dateiendung und
+ * Namen erkannt (`packages/media/src/classify.ts`); zwischen Foto und Tagebuch-Scan lässt sich von Hand umstellen
+ * (`setSourceKind` in `apps/desktop/src/main/sources.ts`).
+ */
 export const SourceKind = z.enum(["video", "audio", "photo", "diary", "note", "gps", "other"]);
 export type SourceKind = z.infer<typeof SourceKind>;
 
@@ -53,6 +69,7 @@ export const FieldSession = z.object({
 });
 export type FieldSession = z.infer<typeof FieldSession>;
 
+/** Forschende Person, der Geräte gehören (`Device.personId`). Gilt für das ganze Projekt, nicht je Einsatz. */
 export const Person = z.object({
   id: Id,
   name: z.string().min(1),
@@ -61,10 +78,19 @@ export const Person = z.object({
 });
 export type Person = z.infer<typeof Person>;
 
-/** Woher die Uhrabweichung eines Geräts stammt. */
+/**
+ * Woher die Uhrabweichung eines Geräts stammt: „reference“ = das Gerät ist die Referenzuhr, „manual“ = von Hand
+ * eingetragen, „anchor“ = aus einem Anker gespeichert, „unknown“ = noch nicht abgeglichen. Abweichungen, die die
+ * Zeitbestimmung aus Ankern oder Ansagen errechnet, stehen nicht hier, sondern in `DeviceClock`
+ * (`packages/core/src/resolve.ts`).
+ */
 export const OffsetBasis = z.enum(["reference", "manual", "anchor", "unknown"]);
 export type OffsetBasis = z.infer<typeof OffsetBasis>;
 
+/**
+ * Gerät (`Device`): alles mit einer eigenen Uhr, auch das Tagebuch. Gehört zu genau einem Einsatz. Hier hängt, wie
+ * die Zeitstempel seiner Quellen zu lesen sind: Uhrabweichung, UTC oder Ortszeit, Zeitzone, Dateinamen-Muster.
+ */
 export const Device = z.object({
   id: Id,
   sessionId: Id,
@@ -79,6 +105,7 @@ export const Device = z.object({
    * Kamera geht 2:47 vor → +167000. Nur gültig, wenn offsetBasis ≠ "unknown".
    */
   clockOffsetMs: z.number().int().default(0),
+  /** ± Unsicherheit der Abweichung in ms. */
   clockOffsetUncertaintyMs: z.number().int().nonnegative().default(0),
   offsetBasis: OffsetBasis.default("unknown"),
   /**
@@ -97,9 +124,14 @@ export const Device = z.object({
 });
 export type Device = z.infer<typeof Device>;
 
+/**
+ * Quelle (`Source`): eine eingesammelte Originaldatei mit Prüfsumme und Kurzzeichen. Feldspur merkt sich nur den
+ * Pfad und die Prüfsumme, die Datei selbst bleibt, wo sie ist. Die Lage auf der Zeitachse steht nicht hier.
+ */
 export const Source = z.object({
   id: Id,
   sessionId: Id,
+  /** null = keinem Gerät zugeordnet; Zeiten einer Geräteuhr gelten dann als nicht abgeglichen. */
   deviceId: Id.nullable(),
   /** Kurzzeichen im Quellennachweis: V-01, A-01, F-001, T-01. */
   label: z.string().min(1),
@@ -109,6 +141,7 @@ export const Source = z.object({
   originalPath: z.string(),
   fileName: z.string(),
   sizeBytes: z.number().int().nonnegative(),
+  /** Prüfsumme der Originaldatei; je Einsatz eindeutig, dieselbe Datei kommt nicht zweimal hinein. */
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
   /** Länge bei Audio/Video, sonst null (Zeitpunkt statt Strecke). */
   durationMs: z.number().int().nonnegative().nullable(),
@@ -178,6 +211,12 @@ export const Decision = z.object({
 });
 export type Decision = z.infer<typeof Decision>;
 
+/**
+ * Zeitbeleg (`TimeEvidence`): eine Angabe, wann eine Stelle einer Quelle war. Eine Quelle kann mehrere haben;
+ * welcher gilt und ob sie sich widersprechen, rechnet `packages/core/src/resolve.ts` aus. Beim Einsammeln entstehen
+ * die Arten „metadata“ und „filename“ (`packages/media/src/evidence.ts`); „anchor“ leitet die Zeitbestimmung selbst
+ * ab und speichert es nicht; die übrigen entstehen durch Handlungen in der App.
+ */
 export const TimeEvidence = z.object({
   id: Id,
   sourceId: Id,
@@ -202,19 +241,25 @@ export const TimeEvidence = z.object({
   detail: z.string(),
   /** Rohwert wie gelesen, für das Begleitprotokoll. */
   raw: z.string().default(""),
+  /** Abgeschaltete Belege bestimmen die Lage nicht, bleiben aber gespeichert und im Vergleich sichtbar. */
   enabled: z.boolean().default(true),
   /** Nur bei kind "checked": die Entscheidung bei einem Widerspruch (ältere Bestätigungen: null). */
   decision: Decision.nullable().optional(),
 });
 export type TimeEvidence = z.infer<typeof TimeEvidence>;
 
-/** „Dieser Moment in Quelle A = dieser Moment in Quelle B“. */
+/**
+ * Anker (`SyncAnchor`): „Dieser Moment in Quelle A = dieser Moment in Quelle B“. Aus einem Anker ergibt sich die
+ * Uhrabweichung eines Geräts oder direkt die Lage einer Quelle ohne eigene Zeit (`packages/core/src/resolve.ts`).
+ * Vorschläge („clap“ = Klatschen, „audio-correlation“ = Tonspur-Vergleich) findet `packages/media/src/sync.ts`.
+ */
 export const SyncAnchor = z.object({
   id: Id,
   sessionId: Id,
   kind: z.enum(["clap", "audio-correlation", "manual"]),
   a: z.object({ sourceId: Id, atMediaMs: MediaMs }),
   b: z.object({ sourceId: Id, atMediaMs: MediaMs }),
+  /** ± Unsicherheit, mit der die beiden Stellen zusammenfallen. */
   uncertaintyMs: z.number().int().nonnegative().default(50),
   note: z.string().default(""),
   enabled: z.boolean().default(true),
@@ -225,6 +270,7 @@ export const SyncAnchor = z.object({
 });
 export type SyncAnchor = z.infer<typeof SyncAnchor>;
 
+/** Wie weit ein Tagebucheintrag abgetippt ist: „scan“ = nur Scan, „short“ = Kurzform, „full“ = Volltext. */
 export const DiaryMode = z.enum(["scan", "short", "full"]);
 export type DiaryMode = z.infer<typeof DiaryMode>;
 
@@ -319,6 +365,7 @@ export const EpisodeEdit = z.object({
 });
 export type EpisodeEdit = z.infer<typeof EpisodeEdit>;
 
+/** Strecke von–bis in ms. Je nach Stelle ab Dateianfang (Tonspur-Analyse) oder als Ortszeit (Episoden). */
 export const Interval = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 export type Interval = z.infer<typeof Interval>;
 
@@ -330,9 +377,13 @@ export const AudioAnalysis = z.object({
   sourceId: Id,
   /** Hüllkurve, 1 Byte je Wert (siehe @feldspur/media packEnvelope). */
   envelope: z.instanceof(Uint8Array),
+  /** Werte der Hüllkurve je Sekunde. */
   envelopeRate: z.number().int().positive(),
+  /** Grundrauschen in dBFS. */
   noiseFloorDb: z.number(),
+  /** Leerlauf: Strecken langer Stille. Sie zählen nicht zu Episoden (episodes.ts). */
   idle: z.array(Interval),
+  /** Kurze laute Stellen innerhalb der Stille (Stimmen, Klatschen), mit dB über dem Grundrauschen. */
   loudInIdle: z.array(z.object({ atMs: z.number().int(), aboveFloorDb: z.number() })),
   /** Sprachpegel in dBFS (level.ts speechLevelDb); null = nichts Hörbares oder noch nicht berechnet. */
   speechLevelDb: z.number().nullable().default(null),
@@ -344,9 +395,13 @@ export type AudioAnalysis = z.infer<typeof AudioAnalysis>;
 
 /** Einstellungen einer Ausgabe, soweit sie das Ergebnis verändern. */
 export const ExportSettings = z.object({
+  /** Montagevideo mit ausgeben. */
   video: z.boolean(),
+  /** Schnittliste für DaVinci Resolve (FCPXML, `packages/media/src/fcpxml.ts`). */
   resolve: z.boolean(),
+  /** Ton aller Geräte mischen; false = nur der Ton der Hauptquelle. */
   mixAudio: z.boolean(),
+  /** Montage in Echtzeit; false = nach Episoden geschnitten (montage.ts). */
   realtime: z.boolean(),
   /** Je Gerät eine eigene Tonspur im Montagevideo (Issue #122). Ältere Ausgaben kannten das nicht: aus. */
   deviceTracks: z.boolean().default(false),
@@ -366,6 +421,7 @@ export type ExportSettings = z.infer<typeof ExportSettings>;
  * - content: SHA-256 über alles aus der Projektdatei, was in Einsatztranskript, Variablen, Protokoll und Video eingeht
  * - originals: je Quelle Größe und Änderungszeit der Originaldatei beim Ausgeben („missing“, wenn sie fehlte)
  * - version: Verfahren des Fingerabdrucks; ein anderes zählt immer als veraltet
+ * Berechnet und verglichen in `packages/media/src/export-state.ts`.
  */
 export const ExportFingerprint = z.object({
   version: z.number().int(),
@@ -378,9 +434,11 @@ export type ExportFingerprint = z.infer<typeof ExportFingerprint>;
 export const ExportRecord = z.object({
   sessionId: Id,
   exportedAt: z.iso.datetime(),
+  /** Ordner, in den ausgegeben wurde. */
   dir: z.string(),
   /** Dateinamen im Ordner, ohne Pfad. */
   files: z.array(z.string()),
+  /** Länge der Montage in ms. */
   durationMs: z.number().int().nonnegative(),
   options: ExportSettings,
   fingerprint: ExportFingerprint,

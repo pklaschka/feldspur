@@ -1,3 +1,4 @@
+/** Übersichtsleiste über die ganze Aufnahme in „Mitschreiben“ (`apps/desktop/src/renderer/Transcriber.tsx`). */
 import type { SourceRow, TranscriptRow } from "../../shared/api.ts";
 import { positionText } from "../playback.tsx";
 import { cx } from "../ui.tsx";
@@ -18,10 +19,12 @@ export function Scrubber({
   onSeek,
 }: {
   row: SourceRow;
+  /** Wiedergabestelle in ms. */
   pos: number;
   lines: TranscriptRow[];
   events: Event[];
   bands: WaveBand[];
+  /** Ausschnitt, den die Waveform gerade zeigt. */
   window: { fromMs: number; toMs: number };
   onSeek: (ms: number) => void;
 }) {

@@ -1,3 +1,12 @@
+/**
+ * Brücke zwischen Oberfläche und Hauptprozess. Electron lädt dieses Skript vor der Oberfläche (siehe `createWindow`
+ * in `apps/desktop/src/main/main.ts`); es stellt ihr `window.feldspur` bereit, sonst nichts von Node oder Electron.
+ *
+ * Jede Methode der Schnittstelle (`FeldspurApi`, `apps/desktop/src/shared/api.ts`) reicht ihren Aufruf unverändert an
+ * den gleichnamigen Kanal in `IPC` weiter; die Antwort kommt aus `apps/desktop/src/main/ipc/`. Hier steht keine Logik.
+ * Die `on…`-Methoden gehen in die andere Richtung: Der Hauptprozess meldet Fortschritt oder bittet die Oberfläche,
+ * etwas zu zeichnen; sie geben eine Funktion zum Abmelden zurück.
+ */
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import {
   IPC,
@@ -117,6 +126,7 @@ const api: FeldspurApi = {
     ipcRenderer.on(IPC.exportProgress, listener);
     return () => ipcRenderer.removeListener(IPC.exportProgress, listener);
   },
+  // Anfrage und Antwort gehören über `id` zusammen; der Hauptprozess wartet darauf (`askRenderer` in main/export.ts).
   onOverlayRequest: (render) => {
     const listener = (_e: unknown, id: number, timeline: unknown, frames: unknown[]) => {
       render(timeline, frames).then(

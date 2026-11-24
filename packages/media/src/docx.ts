@@ -1,6 +1,10 @@
 /**
  * Einsatztranskript als .docx für MAXQDA. Zeitmarken im Format #hh:mm:ss-z# (im Test von Zuri erkannt),
  * jede Zeile ein eigener Absatz, Bilder direkt unter ihrer Zeile.
+ *
+ * Einordnung: Schritt Ausgeben. `exportSession` (`packages/media/src/export.ts`) ruft `sessionTranscriptDocx` auf.
+ * Inhalt und Reihenfolge stehen schon fest (`SessionTranscript` aus `packages/media/src/session-transcript.ts`); hier
+ * entsteht nur die Word-Datei daraus. Dieselben Zeilen zeigt der Viewer (`packages/media/src/viewer/html.ts`).
  */
 import { AlignmentType, Document, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from "docx";
 import {
@@ -40,6 +44,7 @@ export const SESSION_TRANSCRIPT_CONTEXT_COLOR = "1D2B33";
 /** Farbe der Uhrzeit hinter der Zeitmarke und der Kopfzeilen. */
 export const SESSION_TRANSCRIPT_CLOCK_COLOR = "5F6B73";
 
+/** Eine Zeile der Chronologie: Zeitmarke, Uhrzeit, Kopf und Text in einem Absatz, darunter ihre Bilder. */
 function entryParagraphs(e: SessionTranscriptEntry, stills: (Still | null)[], width: number): Paragraph[] {
   const runs: TextRun[] = [new TextRun({ text: `${timestamp(e.montageMs)} ` })];
   if (e.clock) runs.push(new TextRun({ text: `Uhrzeit ${e.clock} · `, color: SESSION_TRANSCRIPT_CLOCK_COLOR }));
@@ -64,6 +69,7 @@ function entryParagraphs(e: SessionTranscriptEntry, stills: (Still | null)[], wi
   return out;
 }
 
+/** Je Bild ein Absatz; fehlt das Standbild (null), steht dort ein Hinweis auf die Originaldatei. */
 function imageParagraphs(images: ImageRef[], stills: (Still | null)[], width: number): Paragraph[] {
   const out: Paragraph[] = [];
   images.forEach((ref, i) => {
@@ -145,6 +151,7 @@ export function contextHeaderLine(count: number | undefined): string {
   return `Kontext: ${count} ${count === 1 ? "Stück" : "Stücke"} ohne Zeitmarke, vor der Chronologie.`;
 }
 
+/** Das ganze Dokument als Bytes: Titel, Kopfangaben, Abschnitt „Kontext“ (falls vorhanden), dann Chronologie. */
 export async function sessionTranscriptDocx(transcript: SessionTranscript, opts: DocxOptions): Promise<Buffer> {
   const h = transcript.header;
   const [y, m, d] = h.date.split("-");

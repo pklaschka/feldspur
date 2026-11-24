@@ -1,3 +1,14 @@
+/**
+ * Schritt „Durchsehen“ (`review`): die Zeitachse eines Einsatzes. Je Gerät eine Spur mit seinen Quellen, darüber die
+ * Episoden und die Zeile für Kontext, darunter die Prüfliste und die Quellen ohne Uhrzeit. Hier wird geprüft, ob jede
+ * Quelle an der richtigen Stelle liegt; bestätigt und entschieden wird in der Detailleiste rechts.
+ *
+ * Eingebunden in `apps/desktop/src/renderer/app/SessionPane.tsx` und dort dauerhaft geladen, auch wenn ein anderer
+ * Schritt zu sehen ist. Die Lage der Quellen kommt fertig berechnet in der Ansicht (`SessionView`, `startMs`/`endMs`);
+ * diese Datei hält nur den Ausschnitt (Zoom, Scrollposition) und die Mausbedienung. Gezeichnet wird auf Canvas in
+ * `apps/desktop/src/renderer/timeline.ts`; Rechnen für Ausschnitt, Spuren und Prüfliste liegt in
+ * `apps/desktop/src/renderer/review/`.
+ */
 import { Slider, VisuallyHidden } from "radix-ui";
 import {
   useEffect,
@@ -47,8 +58,13 @@ import { signed } from "../shared/conflict-text.ts";
 import { ContextStrip } from "./context/ContextStrip.tsx";
 import type { ApplyView } from "./Notes.tsx";
 
+/** Breite der Spalte mit den Gerätenamen links neben der Zeitachse, in px. */
 const LABEL_W = 180;
 
+/**
+ * Teilt die Quellen in solche mit Lage (`placed`), ohne Lage (`unplaced`) und Kontext auf und zeigt die Zeitachse,
+ * sobald wenigstens eine Quelle eine Uhrzeit hat; vorher nur Kontext-Zeile und „Ohne Uhrzeit“.
+ */
 export function Review({
   view,
   active,
@@ -67,13 +83,18 @@ export function Review({
   active: boolean;
   /** „Lage passt“ für die gewählte Quelle (Strg/⌘+Enter). */
   onConfirm: (row: SourceRow) => void;
+  /** Gewählte Quelle (ihre Einzelheiten zeigt die Detailleiste). */
   selected: string | null;
   onSelect: (id: string) => void;
+  /** Weiter zu „Ausgeben“. */
   onNext: () => void;
   /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
   onEpisodes: (on: boolean) => void;
   onEpisodeEdit: (e: EpisodeEdit) => void;
-  /** Sprungziel von außen (Suche): Uhrzeit oder Bereich ins Bild holen. */
+  /**
+   * Sprungziel von außen (Suche): Uhrzeit oder Bereich ins Bild holen. `n` zählt jeden Sprung, damit auch derselbe
+   * Sprung ein zweites Mal greift.
+   */
   reveal: (Reveal & { n: number }) | null;
   /** Änderung ausführen und die neue Ansicht übernehmen (Kontext umsortieren). */
   apply: ApplyView;
@@ -82,6 +103,7 @@ export function Review({
 }) {
   // Weitere Bilder einer Seite stehen nicht einzeln auf der Zeitleiste; sie gehören zur Hauptquelle.
   const rows = view.rows.filter((r) => !r.partOf);
+  // Tagebuchseiten liegen über ihren Bezugszeitraum (`diaryWindow`) auf der Achse, auch ohne `startMs`.
   const placed = rows.filter((r) => r.startMs !== null || r.diaryWindow);
   // Kontext ist bewusst ohne Uhrzeit: nicht in der roten Ablage, sondern in der Zeile über der Achse.
   const unplaced = rows.filter((r) => r.startMs === null && !r.diaryWindow && r.status !== "context");
@@ -119,6 +141,10 @@ export function Review({
   );
 }
 
+/**
+ * Die Zeitachse selbst. Der Canvas ist nur so breit wie der sichtbare Kasten und klebt links (`sticky`); gescrollt
+ * wird ein leerer Platzhalter in voller Breite (`innerW`), und gezeichnet wird jeweils der Ausschnitt ab `scrollX`.
+ */
 function Timeline({
   view,
   active,
@@ -156,11 +182,13 @@ function Timeline({
   const [hover, setHover] = useState<{ item: Item; x: number; y: number; clientX: number; clientY: number } | null>(
     null,
   );
+  // Zähler, der nur ein Neuzeichnen auslöst: bei Wechsel zwischen Hell und Dunkel und beim Wiedereinblenden.
   const [themeTick, setThemeTick] = useState(0);
   const envelopes = useEnvelopes(view);
   /** Ziehen einer Episodengrenze: Ausgangslage und aktuelle Lage (Uhrzeit). */
   const [drag, setDrag] = useState<{ edge: "start" | "end"; from: number; t: number } | null>(null);
   const { position, seek } = usePlayback();
+  // Abspielposition als Uhrzeit auf der Achse: Beginn der Quelle plus Stelle in der Aufnahme.
   const playRow = position ? placed.find((r) => r.id === position.sourceId) : undefined;
   const playheadMs = position && playRow?.startMs != null ? playRow.startMs + position.atMs : null;
 
@@ -431,6 +459,7 @@ function Timeline({
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
   };
+  // Die Maus-Handler am Fenster leben über mehrere Renderdurchläufe: Sie lesen den aktuellen Maßstab hierüber.
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
   const onMove = (e: MouseEvent) => {
@@ -761,6 +790,13 @@ function Timeline({
     </div>
   );
 }
+/**
+ * Änderung an den Episoden von Hand, ausgelöst auf der Zeitachse und in
+ * `apps/desktop/src/renderer/app/SessionPane.tsx` an den Hauptprozess gegeben. Zeiten: Uhrzeiten auf der Achse in ms.
+ * - `edge`: Anfang oder Ende einer Episode von `fromMs` nach `toMs` gezogen.
+ * - `loud`: Klick auf eine laute Stelle in der Stille; um sie herum entsteht eine Mini-Episode.
+ * - `reset`: alle Anpassungen verwerfen, Episoden wieder nur aus den Tonspuren.
+ */
 export type EpisodeEdit =
   | { kind: "edge"; edge: "start" | "end"; fromMs: number; toMs: number }
   | { kind: "loud"; atMs: number }

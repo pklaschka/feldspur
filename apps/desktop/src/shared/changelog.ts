@@ -1,9 +1,15 @@
 /**
  * Änderungsprotokoll lesbar machen: Bereiche und Arten auf Deutsch, je Änderung die Felder, die sich geändert haben.
- * Wird in der Oberfläche und für die CSV-Ausgabe genutzt.
+ * Wird in der Oberfläche (`apps/desktop/src/renderer/ChangeLog.tsx`) und für die CSV-Ausgabe
+ * (`apps/desktop/src/main/changelog.ts`) genutzt. Die Schritte selbst zeichnet `packages/core/src/db/history.ts`
+ * auf, mit den Tabellen- und Spaltennamen der Projektdatei; hier bekommen sie deutsche Namen.
  */
 import type { ChangeEntry, ChangeStep } from "@feldspur/core";
 
+/**
+ * Tabellen der Projektdatei als „Bereich“ im Protokoll. Jede neue Tabelle, die keine Zwischenergebnisse hält, braucht
+ * hier einen Namen (siehe AGENTS.md, „Neue Tabelle in der Projektdatei“; ein Test prüft das).
+ */
 export const TABLE_LABEL: Record<string, string> = {
   project_meta: "Projekt",
   sessions: "Einsatz",
@@ -47,12 +53,14 @@ export const FIELD_LABEL: Record<string, string> = {
   timestamps_are_utc: "Zeitstempel in UTC",
 };
 
+/** Art der Änderung an einer Zeile. */
 export const OP_LABEL: Record<ChangeEntry["op"], string> = {
   insert: "angelegt",
   update: "geändert",
   delete: "gelöscht",
 };
 
+/** Ein geändertes Feld mit dem Wert davor und danach (Rohwerte aus der Projektdatei, null = leer). */
 export interface FieldChange {
   field: string;
   before: unknown;

@@ -5,11 +5,17 @@
  *   Fotos und Tagebucheinträge darin zeigen auf den Beginn der Tafel (die Bilder stehen im
  *   Einsatztranskript, nicht im Video).
  * Überlappende Quellen verlängern nichts, alles folgt der Uhrzeit.
+ *
+ * Gehört zum Ausgeben: `packages/media/src/session-transcript.ts` plant damit und trägt die Stellen als Zeitmarken
+ * ins Einsatztranskript ein; Montagevideo, Viewer und Schnittliste folgen demselben Plan. Hier wird nur gerechnet
+ * (Uhrzeit ↔ Stelle im Video), geschnitten wird in `packages/media`. Die Episoden kommen aus
+ * `packages/core/src/episodes.ts`.
  */
 import type { Episode, EpisodeResult, Gap } from "./episodes.ts";
 import type { Id } from "./model.ts";
 import type { LocalMs } from "./time.ts";
 
+/** Art der Montage: „realtime“ = in Echtzeit, „episodes“ = nach Episoden geschnitten (siehe Dateikopf). */
 export type MontageMode = "episodes" | "realtime";
 
 export interface MontageOptions {
@@ -25,6 +31,11 @@ export interface CardItem {
   atMs: LocalMs;
 }
 
+/**
+ * Ein Abschnitt des Montagevideos: eine Episode oder eine Zwischenzeit („card“, bei „episodes“ eine kurze Tafel, bei
+ * „realtime“ die Zwischenzeit in voller Länge). fromMs/toMs sind Uhrzeiten, montageStartMs/montageMs Beginn und Länge
+ * im Video in ms ab Videoanfang.
+ */
 export type MontageSegment =
   | {
       kind: "episode";
@@ -44,9 +55,11 @@ export type MontageSegment =
       montageMs: number;
     };
 
+/** Fertiger Plan: alle Abschnitte in Videoreihenfolge und die Umrechnung von Uhrzeit auf Videostelle. */
 export interface MontagePlan {
   mode: MontageMode;
   segments: MontageSegment[];
+  /** Länge des Montagevideos. */
   durationMs: number;
   /**
    * Stelle im Montagevideo zu einer Uhrzeit. In einer Episode (und in Echtzeit überall) genau,
@@ -55,11 +68,12 @@ export interface MontagePlan {
   toMontage(clockMs: LocalMs, itemId?: Id): number | null;
 }
 
+/** Plan aus Episoden und Zwischenzeiten bauen (rein gerechnet, in der Reihenfolge der Uhrzeit). */
 export function planMontage(
   ep: EpisodeResult,
   /**
-   * Uhrzeit je Foto (Quelle) bzw. Beginn des Bezugszeitraums je Tagebucheintrag;
-   * undefined = in Tafeln nicht eigens zeigen.
+   * Uhrzeit je Foto (Quelle) bzw. je Tagebucheintrag (der Aufrufer in `packages/media/src/session-transcript.ts`
+   * übergibt die Notierzeit); undefined = in Tafeln nicht eigens zeigen.
    */
   timeOf: (kind: "source" | "diary", id: Id) => LocalMs | undefined,
   opts: MontageOptions = {},
@@ -92,6 +106,7 @@ export function planMontage(
         seg: { kind: "card" as const, gap: g, fromMs: g.startMs, toMs: g.endMs, items },
       };
     }),
+    // Bei gleichem Beginn zuerst die Zwischenzeit: Sie endet dort, wo die Episode anfängt.
   ].sort((x, y) => x.at - y.at || (x.seg.kind === "card" ? -1 : 1));
 
   let t = 0;

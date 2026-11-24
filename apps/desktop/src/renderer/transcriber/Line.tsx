@@ -1,4 +1,7 @@
-/** Eine Zeile der Mitschrift: Stelle, Sprecher*in, Text. */
+/**
+ * Eine Zeile der Mitschrift: Stelle, Sprecher*in, Text. Liste, Wiedergabe und Speichern liegen in
+ * `apps/desktop/src/renderer/Transcriber.tsx` (Schritt „Mitschreiben“).
+ */
 import { memo, useRef } from "react";
 import type { TranscriptRow } from "../../shared/api.ts";
 import { clock } from "../format.ts";
@@ -8,6 +11,7 @@ import { Button, CloseButton, cx } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import { isEnter } from "../keys.js";
 
+/** Stelle in der Aufnahme, dahinter die Uhrzeit, sobald die Quelle eine Lage hat (`startMs`). */
 export function At({ ms, startMs }: { ms: number; startMs: number | null }) {
   return (
     <>
@@ -16,14 +20,18 @@ export function At({ ms, startMs }: { ms: number; startMs: number | null }) {
     </>
   );
 }
+/** Was eine Zeile auslösen kann; `apps/desktop/src/renderer/Transcriber.tsx` setzt es um. */
 export interface LineActions {
   seek: (ms: number) => void;
+  /** Zeitmarke der Zeile auf die aktuelle Wiedergabestelle setzen. */
   retime: (id: string) => void;
   patch: (id: string, p: { speaker?: string; text?: string }) => void;
   remove: (id: string) => void;
+  /** Zeile an der Schreibmarke `cursor` in zwei teilen (Strg/⌘+Enter). */
   split: (line: TranscriptRow, cursor: number) => void | Promise<void>;
 }
 
+/** Mit `memo`: Eine Zeile zeichnet nur neu, wenn sie sich ändert, nicht bei jedem Bild der Wiedergabe. */
 export const Line = memo(function Line({
   line,
   current,

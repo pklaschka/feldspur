@@ -4,6 +4,9 @@
  * Kontext ist eine Rolle, kein eigener Datensatz: Umstellen ändert ein Feld, Zeitbelege, Notierzeit, Titel und
  * Verweise bleiben stehen. Die Reihenfolge wird als gewünschte Stelle (`contextOrder`) gespeichert; welche Nummer
  * ein Stück trägt, rechnet die Zeitbestimmung aus (siehe `contextItems` in @feldspur/core).
+ *
+ * Aufgerufen aus `ipc/review.ts` (Kanäle `context:…`), bedient in der Oberfläche unter `src/renderer/context/` und in
+ * „Tagebuch abtippen“. Ein Stück wird überall über seinen Schlüssel angesprochen: „source:<id>“ oder „entry:<id>“.
  */
 import {
   contextItems,
@@ -34,6 +37,7 @@ function parseKey(s: ProjectStore, key: string): Target {
   throw new Error(`Unbekanntes Kontextstück: ${key}`);
 }
 
+/** Einsatz-Id, zu der das Stück gehört. */
 function sessionOf(t: Target): Id {
   return t.kind === "source" ? t.source.sessionId : t.entry.sessionId;
 }
@@ -126,6 +130,7 @@ function placeAt(s: ProjectStore, sessionId: Id, key: string | null, old: number
   writeOrder(s, keys);
 }
 
+/** Alle Einträge mit einem Rahmen auf dieser Tagebuchseite oder einem ihrer weiteren Bilder. */
 function entriesOnPage(s: ProjectStore, page: Source): DiaryEntry[] {
   const parts = new Set([
     page.id,
@@ -199,6 +204,7 @@ export function contextPosition(s: ProjectStore, key: string): number {
   return currentOrder(s, sessionOf(t)).findIndex((c) => c.key === canonical(t)) + 1;
 }
 
+/** Schlüssel in der Schreibweise von @feldspur/core (bei weiteren Bildern einer Seite der der Hauptquelle). */
 function canonical(t: Target): string {
   return t.kind === "source" ? contextKey.source(t.source.id) : contextKey.entry(t.entry.id);
 }

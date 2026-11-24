@@ -10,6 +10,10 @@
  *    gemeinsam ab, welche Uhrabweichung am besten zu allen passt.
  *
  * Ergebnis sind nur Vorschläge. Übernommen wird erst nach Bestätigung.
+ *
+ * Einordnung: Schritt „Abgleichen“. `analyzeSession` (`packages/media/src/analyze.ts`) ruft `proposeAnchors` nach
+ * der Tonspur-Analyse auf und legt die Vorschläge als vorgeschlagene Anker (`SyncAnchor` mit `proposed`) im Projekt
+ * ab. Gerechnet wird nur auf den Hüllkurven (`Envelope` aus `packages/media/src/audio.ts`), keine Datei wird gelesen.
  */
 import {
   effectiveLocal,
@@ -21,28 +25,35 @@ import {
 } from "@feldspur/core";
 import { detectTransients, estimateOffset, type Envelope, type Transient } from "./audio.ts";
 
+/** Vorschlag für einen Anker: Stelle `refAtMs` in der einen Aufnahme ist derselbe Moment wie `atMs` in der anderen. */
 export interface AnchorProposal {
   /** Sicher eingeordnete Aufnahme (Referenzseite). */
   refSourceId: Id;
+  /** Stelle in der Referenzaufnahme, in ms ab Dateianfang. */
   refAtMs: number;
   /** Aufnahme, die abgeglichen wird. */
   sourceId: Id;
+  /** Stelle in dieser Aufnahme, in ms ab Dateianfang. */
   atMs: number;
   method: "clap" | "audio-correlation";
   /** Wie viele Klatscher bzw. wie eindeutig die Korrelation ist. */
   votes: number;
+  /** Stärke des Vorschlags, 0 bis 1 (Güte der Korrelation bzw. Schärfe der beiden Klatscher). */
   score: number;
   confidence: "high" | "low";
-  /** Daraus folgende Uhrabweichung des Geräts (falls es eine Geräteuhr hat). */
+  /** Daraus folgende Uhrabweichung des Geräts (falls es eine Geräteuhr hat); positiv heißt: die Uhr geht vor. */
   impliedDeviceOffsetMs: number | null;
 }
 
+/** Stand des Einsatzes (wie `ResolveInput` aus `packages/core/src/resolve.ts`), seine Zeitachse und die Hüllkurven. */
 export interface ProposeInput {
   sources: Source[];
   devices: Device[];
   evidence: TimeEvidence[];
   session: { timeZone: string };
+  /** Die jetzige Lage aller Quellen; daraus ergibt sich, welche Aufnahmen als sicher eingeordnet gelten. */
   resolved: ResolveResult;
+  /** Hüllkurve je Quelle aus der Tonspur-Analyse; Aufnahmen ohne Hüllkurve bleiben außen vor. */
   envelopes: Map<Id, Envelope>;
 }
 
@@ -57,6 +68,10 @@ export interface ProposeOptions {
 
 const isAv = (s: Source) => s.kind === "audio" || s.kind === "video";
 
+/**
+ * Vorschläge für alle noch nicht sicher eingeordneten Ton- und Videoaufnahmen. Leer, wenn es keine sicher
+ * eingeordnete Aufnahme gibt, an der sich die übrigen ausrichten ließen.
+ */
 export function proposeAnchors(input: ProposeInput, opts: ProposeOptions = {}): AnchorProposal[] {
   const tol = opts.toleranceMs ?? 150;
   // Uhren können weit danebenliegen (Zeitzone vergessen, Datum nie gestellt); kleine Abweichungen gewinnen trotzdem.
@@ -64,6 +79,7 @@ export function proposeAnchors(input: ProposeInput, opts: ProposeOptions = {}): 
   const searchMs = opts.searchMs ?? 10 * 60_000;
   const { resolved } = input;
 
+  // Sicher eingeordnet: Lage von Hand oder über einen Anker, oder ein Gerät mit bekannter Uhrabweichung.
   const trustedIds = new Set<Id>();
   for (const s of input.sources) {
     const p = resolved.placements.get(s.id);
@@ -111,6 +127,7 @@ export function proposeAnchors(input: ProposeInput, opts: ProposeOptions = {}): 
       if (!est || !good(est)) continue;
       const clipStartTrue = rp.startMs + est.lagMs;
       const devStart = deviceStart(s);
+      // Als Stelle des Ankers dient der Anfang der später beginnenden Aufnahme: Dort laufen sicher beide.
       const cand: AnchorProposal = {
         refSourceId: r.id,
         refAtMs: Math.max(0, est.lagMs),

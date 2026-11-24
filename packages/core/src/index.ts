@@ -1,3 +1,11 @@
+/**
+ * Einstieg von `@feldspur/core`: Datenmodell, Zeitbestimmung und Projektdatei, ohne Oberfläche und ohne FFmpeg.
+ *
+ * Von hier importieren der Hauptprozess (`apps/desktop/src/main/`) und `packages/media` (Einsammeln, Tonspur-Analyse,
+ * Ausgeben). Die Oberfläche (Renderer) holt sich von hier nur Typen: `db/` braucht Node und SQLite. Für Rechnungen
+ * nimmt sie die Node-freien Teilpfade aus `packages/core/package.json` (`@feldspur/core/time`, `/model`, `/resolve`,
+ * `/pages`, `/level`, `/waveform`).
+ */
 export * from "./time.ts";
 export * from "./model.ts";
 export * from "./filename.ts";

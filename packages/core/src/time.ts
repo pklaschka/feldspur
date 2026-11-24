@@ -6,6 +6,10 @@
  * die Ortszeit UTC (`LocalMs`). Damit bleibt die Rechnung innerhalb eines Feldtags
  * einfache Addition, auch über eine Sommerzeit-Umstellung hinweg wird nichts
  * verschoben, was das Gerät angezeigt hat.
+ *
+ * Grundlage für alles andere: Zeitbelege, Lagen, Episoden und Montage rechnen in `LocalMs`. Nur beim Lesen von
+ * UTC-Zeitstempeln und bei Geräten mit eigener Zeitzone wird umgerechnet (`utcToLocal`, `localToUtc`). Ohne Node,
+ * auch die Oberfläche nutzt die Datei (`@feldspur/core/time`).
  */
 
 /** Wanduhrzeit am Einsatzort in ms, gelesen als UTC. */
@@ -13,6 +17,7 @@ export type LocalMs = number;
 
 const LOCAL_RE = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,3}))?)?$/;
 
+/** Datum und Uhrzeit (Monat 1–12) → LocalMs. Prüft nichts; dafür gibt es `isValidLocal`. */
 export function localMs(year: number, month: number, day: number, hour = 0, minute = 0, second = 0, ms = 0): LocalMs {
   return Date.UTC(year, month - 1, day, hour, minute, second, ms);
 }
@@ -66,6 +71,8 @@ export function formatDuration(ms: number, opts: { sign?: boolean } = {}): strin
   return h ? `${sign}${h}:${pad(m)}:${pad(s)}` : `${sign}${m}:${pad(s)}`;
 }
 
+// Ein Formatierer je Zeitzone: Das Anlegen ist teuer, und die Zeitbestimmung rechnet bei jedem Durchlauf viele
+// Belege um.
 const dtfCache = new Map<string, Intl.DateTimeFormat>();
 function dtf(timeZone: string): Intl.DateTimeFormat {
   let f = dtfCache.get(timeZone);
@@ -99,6 +106,7 @@ export function utcToLocal(utcMs: number, timeZone: string): LocalMs {
 /** Wanduhrzeit in der Zeitzone → UTC. Bei doppelten Stunden gewinnt die frühere. */
 export function localToUtc(t: LocalMs, timeZone: string): number {
   let guess = t;
+  // Die Abweichung der Zone hängt vom Zeitpunkt ab (Sommerzeit): schätzen, nachrechnen, korrigieren.
   for (let i = 0; i < 3; i++) guess = t - (utcToLocal(guess, timeZone) - guess);
   return guess;
 }

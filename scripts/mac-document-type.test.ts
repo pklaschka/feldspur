@@ -1,3 +1,7 @@
+/**
+ * Prüft die Einträge aus `scripts/mac-document-type.mjs` und das Dateisymbol in `packaging/`: Stimmt hier etwas nicht,
+ * zeigt Finder für Projektdateien wieder ein leeres Blatt (Issue #165).
+ */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";

@@ -1,4 +1,12 @@
-/** Ein Einsatz: Schritte, Detailleiste und alle Dialoge, die dazugehören. */
+/**
+ * Ein Einsatz: Schritte, Detailleiste und alle Dialoge, die dazugehören.
+ *
+ * Hier liegt die Ansicht des Einsatzes (`SessionView`, gebaut im Hauptprozess von `apps/desktop/src/main/view.ts`).
+ * Sie ist der einzige Stand: Ändernde Aufrufe über `window.feldspur` liefern die neue Ansicht mit zurück, und
+ * `setView` ersetzt die alte ganz. Die Oberfläche rechnet also keine Lagen selbst nach. Die Schritte und Dialoge
+ * bekommen die Ansicht und Rückrufe; welche Quelle gewählt ist und welcher Dialog offen ist, steht ebenfalls hier.
+ * `App.tsx` hängt die Komponente mit `key={sessionId}` ein: Ein anderer Einsatz beginnt mit frischem Stand.
+ */
 import { Tabs } from "radix-ui";
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { ProjectInfo, SessionPatch, SessionView } from "../../shared/api.ts";
@@ -29,6 +37,7 @@ import { contextFor } from "../context/parts.tsx";
 
 const api = window.feldspur;
 
+/** Füllt die mittlere und rechte Spalte des Rasters von `App.tsx`: `<main>` mit den Schritten, daneben `Inspector`. */
 export function SessionPane({
   sessionId,
   initialStep,
@@ -92,6 +101,7 @@ export function SessionPane({
 
   if (!view || !step) return <main className="col-span-2 p-8 text-muted">Wird geladen…</main>;
 
+  /** Antwort eines ändernden Aufrufs übernehmen; nach einem Fehler (`guard` liefert undefined) bleibt die Ansicht. */
   const update = (p: Promise<SessionView | undefined>) => void p.then((v) => v && setView(v));
   const sourceActions: SourceActions = {
     remove: (id) => {

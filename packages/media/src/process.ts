@@ -9,6 +9,11 @@
  * - Fehler sind ein ToolError mit einheitlicher Meldung und dem Ende von stderr.
  *
  * Direkte Importe von node:child_process sind außerhalb dieser Datei per Lint-Regel gesperrt.
+ *
+ * Einordnung: unterste Schicht aller Schritte, die Medien lesen oder rechnen. Aufrufer von `runTool` sind
+ * `probe.ts` (Einsammeln), `audio.ts` (Tonspur-Analyse), `waveform.ts` (Mitschreiben, Feinabgleich), `stills.ts` und
+ * `montage-video.ts` (Ausgeben), alle in `packages/media/src/`. Wo die Programme liegen, sagt `tools.ts`; jeder
+ * Aufruf steht mit Befehlszeile im Arbeitsprotokoll (`log.ts`).
  */
 import { spawn } from "node:child_process";
 import { log, logCommand, logSince } from "./log.ts";
@@ -17,6 +22,7 @@ import { toolPaths } from "./tools.ts";
 export type Tool = "ffmpeg" | "ffprobe";
 
 export interface RunToolOptions {
+  /** Abbruch von außen; Aufrufer reichen ihr `signal` immer durch (siehe AGENTS.md). */
   signal?: AbortSignal | undefined;
   /** Höchstdauer insgesamt. */
   timeoutMs?: number | undefined;
@@ -169,6 +175,7 @@ export function runTool(tool: Tool, args: readonly string[], opts: RunToolOption
         child.stderr.destroy();
       }, PIPE_GRACE_MS).unref();
     });
+    // Entschieden wird erst bei close, nicht schon bei exit: Erst dann sind stdout und stderr ganz gelesen.
     child.on("close", (code) => {
       finish(() => {
         if (stopReason !== null) {

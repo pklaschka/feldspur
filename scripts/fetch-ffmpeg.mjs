@@ -8,6 +8,9 @@
  *
  *   node scripts/fetch-ffmpeg.mjs            für die eigene Plattform
  *   FFMPEG_LINE=8.1 …                        Release-Linie (Standard 8.1)
+ *
+ * Von dort packt `scripts/package-desktop.mjs` die Programme ins Paket (resources/bin). In welcher Reihenfolge die
+ * App ihr ffmpeg sucht (Umgebungsvariable, mitgeliefert, im Pfad), steht in `apps/desktop/src/main/tools.ts`.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";

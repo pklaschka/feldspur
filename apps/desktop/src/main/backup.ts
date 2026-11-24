@@ -8,15 +8,24 @@
  *
  * Die letzten zehn bleiben liegen (`BACKUP_KEEP`). Schlägt eine Sicherung fehl (z. B. schreibgeschützter Ordner),
  * arbeitet die App weiter; die Meldung steht im Dialog „Sicherungen“.
+ *
+ * `state.ts` hält das eine `AutoBackup` und meldet Öffnen und Schließen (`attach`, `detach`), `main.ts` ruft `tick`
+ * im Takt von `AUTO_BACKUP_CHECK_MS`. Wie und wohin gesichert wird, steht in `packages/core` (`backupTo`,
+ * `rotateBackups`); Sicherungen von Hand laufen über `ipc/project.ts`.
  */
 import { BACKUP_KEEP, backupDir, listBackups, nextBackupPath, rotateBackups, type ProjectStore } from "@feldspur/core";
 import type { BackupOverview } from "../shared/api.ts";
 import { log } from "@feldspur/media";
 
+/** Mindestabstand zwischen zwei automatischen Sicherungen. */
 export const AUTO_BACKUP_INTERVAL_MS = 30 * 60_000;
 /** So oft schaut die App nach, ob eine Sicherung fällig ist. */
 export const AUTO_BACKUP_CHECK_MS = 5 * 60_000;
 
+/**
+ * Entscheidet, wann gesichert wird. „Geändert“ heißt: Der Änderungszähler des Projekts (`changeCount`) steht anders
+ * als bei der letzten Sicherung. `now` lässt sich in Tests ersetzen.
+ */
 export class AutoBackup {
   private store: ProjectStore | null = null;
   private lastCount = 0;
@@ -46,6 +55,7 @@ export class AutoBackup {
     this.store = null;
   }
 
+  /** Stand für den Dialog „Sicherungen“; null ohne offenes Projekt. */
   overview(): BackupOverview | null {
     const s = this.store;
     if (!s) return null;

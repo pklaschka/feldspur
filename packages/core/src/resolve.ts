@@ -13,6 +13,15 @@
  *    die Abweichung des anderen Geräts, oder (falls die andere Quelle gar keine
  *    eigene Zeit hat) direkt ihre Lage. Sie „erbt“ so die Genauigkeit.
  * 4. Wiederholen, bis sich nichts mehr ändert (Anker können Ketten bilden).
+ *
+ * Gehört zu „Abgleichen“ und „Durchsehen“, wird aber überall gebraucht, wo eine Lage gefragt ist: Der Hauptprozess
+ * baut daraus die Ansicht eines Einsatzes (`apps/desktop/src/main/view.ts`) und prüft Änderungen
+ * (`apps/desktop/src/main/edits.ts`); `packages/media` nutzt das Ergebnis für Episoden, Anker-Vorschläge und das
+ * Einsatztranskript. Die Eingabe (`ResolveInput`) lädt `ProjectStore.loadResolveInput`
+ * (`packages/core/src/db/store.ts`). Das Ergebnis wird nie gespeichert.
+ *
+ * Wörter: „Lage“ = `Placement` (Beginn und Ende einer Quelle auf der Zeitachse), „sicher“/„prüfen“ =
+ * `PlacementStatus` "ok"/"check", „echte Zeit“ = Referenzzeit (`clock: "true"`), „Geräteuhr“ = `clock: "device"`.
  */
 import type {
   DiaryEntry,
@@ -27,12 +36,18 @@ import type {
 } from "./model.ts";
 import { formatDuration, localToUtc, utcToLocal, type LocalMs } from "./time.ts";
 
+/**
+ * Status einer Quelle in der Oberfläche: "ok" = sicher, "check" = prüfen. "unplaced" (ohne Lage, „zuordnen“) setzt
+ * nicht diese Datei: Quellen ohne Lage fehlen in `placements`, den Status ergänzt `apps/desktop/src/main/view.ts`.
+ */
 export type PlacementStatus = "ok" | "check" | "unplaced";
 
+/** Uhr eines Geräts, wie die Zeitbestimmung sie am Ende annimmt (gespeicherte oder errechnete Abweichung). */
 export interface DeviceClock {
   deviceId: Id;
   /** Geräteuhr minus Referenzuhr; null = unbekannt (wird dann als 0 angenommen). */
   offsetMs: number | null;
+  /** ± Unsicherheit der Abweichung. */
   uncertaintyMs: number;
   /** "spoken": aus einer angesagten Uhrzeit in einer Aufnahme des Geräts (nur berechnet, nie gespeichert). */
   basis: OffsetBasis | "spoken";
@@ -41,10 +56,13 @@ export interface DeviceClock {
   viaEvidenceId?: Id;
 }
 
+/** Worauf sich eine Lage stützt; steht in der Oberfläche als Begründung neben der Quelle. */
 export interface PlacementBasis {
   /** "follows": Folgeaufnahme, beginnt am Ende der Vorgängerdatei; "part": weiteres Bild einer Seite. */
   kind: EvidenceKind | "diary" | "follows" | "part";
+  /** Der verwendete Zeitbeleg; fehlt bei "diary", "follows" und "part". */
   evidenceId?: Id;
+  /** Menschenlesbare Herkunft, z. B. das `detail` des Belegs oder „Folgeaufnahme von A-01“. */
   detail: string;
   /** Warum gerade dieser Beleg gilt, auf Deutsch (nur bei Lagen aus Zeitbelegen). */
   reason?: string;
@@ -68,6 +86,7 @@ export type ConflictSeverity = "clear" | "strong";
  */
 export type ConflictCause = "utc" | "hours" | "clock";
 
+/** Ein Zeitbeleg im Vergleich zur verwendeten Lage: eine Zeile der Belegliste im Inspektor. */
 export interface EvidenceComparison {
   evidenceId: Id;
   kind: EvidenceKind;
@@ -98,6 +117,7 @@ export interface EvidenceComparison {
  */
 export type ConflictState = "none" | "open" | "decided" | "stale";
 
+/** Zusammenfassung der Widersprüche einer Quelle für Status und Hinweise. */
 export interface ConflictSummary {
   state: ConflictState;
   /** Schwerster Widerspruch (offen oder entschieden); null ohne Widerspruch. */
@@ -111,6 +131,10 @@ export interface ConflictSummary {
 
 const NO_CONFLICT: ConflictSummary = { state: "none", severity: null, worstMs: 0, count: 0, staleBecause: [] };
 
+/**
+ * Lage einer Quelle auf der Zeitachse (Ortszeit des Einsatzes, Geräteuhr schon korrigiert) samt Begründung, Status
+ * und Vergleich aller Belege. Daraus baut `apps/desktop/src/main/view.ts` die Zeile der Quelle für die Oberfläche.
+ */
 export interface Placement {
   sourceId: Id;
   startMs: LocalMs;
@@ -131,6 +155,7 @@ export interface Placement {
   conflict: ConflictSummary;
 }
 
+/** Lage eines Tagebucheintrags: Notierzeit und der Bezugszeitraum davor (fromMs … toMs, toMs = Notierzeit). */
 export interface DiaryPlacement {
   entryId: Id;
   notedAtMs: LocalMs;
@@ -139,6 +164,7 @@ export interface DiaryPlacement {
   toMs: LocalMs;
 }
 
+/** Alles, was die Zeitbestimmung eines Einsatzes braucht, unverändert aus der Projektdatei. */
 export interface ResolveInput {
   session: FieldSession;
   devices: Device[];
@@ -167,16 +193,21 @@ export interface ContextItem {
   mentionedBy: { entryId: Id; notedAtMs: LocalMs }[];
 }
 
+/** Schlüssel eines Kontextstücks bilden, wie er in `DiaryEntry.contextRefs` steht. */
 export const contextKey = {
   entry: (id: Id) => `entry:${id}`,
   source: (id: Id) => `source:${id}`,
 };
 
+/** Ergebnis der Zeitbestimmung eines Einsatzes. Quellen ohne Lage fehlen in `placements`. */
 export interface ResolveResult {
   /** Kontextstücke in der Reihenfolge der Ausgabe (leer, wenn es keine gibt). */
   context: ContextItem[];
+  /** Je Quelle (Schlüssel: Quellen-Id). Kontext-Quellen sind nicht enthalten. */
   placements: Map<Id, Placement>;
+  /** Je Gerät (Schlüssel: Geräte-Id). */
   deviceClocks: Map<Id, DeviceClock>;
+  /** Je datiertem Tagebucheintrag der Chronologie (Schlüssel: Eintrags-Id). */
   diary: Map<Id, DiaryPlacement>;
   /** Aus Ankern abgeleitete Belege (nicht gespeichert, nur berechnet). */
   derivedEvidence: TimeEvidence[];
@@ -225,6 +256,7 @@ export function assessDeviation(
   return hours ? { verdict: "conflict", severity, hours } : { verdict: "conflict", severity };
 }
 
+/** Art eines Belegs als Wort für die Begründung (`choiceReason`). */
 const KIND_SENTENCE: Record<EvidenceKind, string> = {
   metadata: "Metadaten",
   filename: "Dateiname",
@@ -254,6 +286,7 @@ export function combineUncertainty(...parts: number[]): number {
   return Math.round(Math.sqrt(parts.reduce((s, p) => s + p * p, 0)));
 }
 
+/** Vorrang der Arten bei sonst gleich guten Belegen (kleiner gewinnt); letztes Kriterium in `pickBest`. */
 const KIND_RANK: Record<EvidenceKind, number> = {
   checked: 0,
   manual: 0,
@@ -263,16 +296,20 @@ const KIND_RANK: Record<EvidenceKind, number> = {
   spoken: 4,
 };
 
+/** Ein Zeitbeleg, umgerechnet in einen möglichen Beginn der Quelle. */
 interface Candidate {
   ev: TimeEvidence;
   /** Ortszeit laut Beleg (Lesart und Zeitzone der Geräteuhr angewandt, Abweichung noch nicht). */
   local: number;
+  /** Beginn der Quelle, wenn dieser Beleg gälte (Abweichung der Geräteuhr abgezogen). */
   startMs: number;
   uncertaintyMs: number;
   correctionMs: number;
+  /** Echte Zeit oder Geräteuhr mit bekannter Abweichung. Nur solche Lagen sind ohne Bestätigung „sicher“. */
   trusted: boolean;
 }
 
+/** Schritt 1: Uhren aus den gespeicherten Angaben der Geräte. */
 function initialClocks(devices: Device[]): Map<Id, DeviceClock> {
   const clocks = new Map<Id, DeviceClock>();
   for (const d of devices) {
@@ -303,6 +340,7 @@ export function effectiveLocal(ev: TimeEvidence, device: Device | undefined, tz:
   return ev.localMs;
 }
 
+/** Belege einer Quelle in Kandidaten umrechnen; `withDisabled` nimmt abgeschaltete für den Vergleich mit. */
 function candidatesFor(
   evidence: TimeEvidence[],
   device: Device | undefined,
@@ -359,9 +397,13 @@ function followBasis(cands: Candidate[]): Candidate[] {
   });
 }
 
+/**
+ * Den Beleg wählen, der gilt: bestätigt, dann von Hand, dann vertrauenswürdig vor unabgeglichen, dann der genaueste,
+ * zuletzt nach Art (`KIND_RANK`).
+ */
 function pickBest(cands: Candidate[]): Candidate | undefined {
   return cands.toSorted((a, b) => {
-    // Bestätigt vor von Hand: eine neue Handeingabe entfernt die Bestätigung (siehe edits.ts).
+    // Bestätigt vor von Hand: eine neue Handeingabe entfernt die Bestätigung (apps/desktop/src/main/edits.ts).
     for (const k of ["checked", "manual"] as const)
       if ((a.ev.kind === k) !== (b.ev.kind === k)) return a.ev.kind === k ? -1 : 1;
     if (a.trusted !== b.trusted) return a.trusted ? -1 : 1;
@@ -472,6 +514,10 @@ function summarizeConflicts(best: Candidate, comparison: EvidenceComparison[]): 
   };
 }
 
+/**
+ * Tagebuchseiten (Scans) haben keine eigenen Zeitbelege: Sie liegen dort, wo ihre datierten Einträge notiert
+ * wurden.
+ */
 function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, placements: Map<Id, Placement>): void {
   // Rahmen auf weiteren Bildern einer Seite zählen für die Hauptquelle.
   const pageOf = new Map(input.sources.map((x) => [x.id, x.partOf ?? x.id]));
@@ -504,6 +550,10 @@ function placeDiaryPages(input: ResolveInput, diary: Map<Id, DiaryPlacement>, pl
   }
 }
 
+/**
+ * Die Zeitbestimmung eines Einsatzes (Ablauf siehe Dateikopf). Rein: gleiche Eingabe, gleiches Ergebnis, nichts
+ * wird gespeichert oder verändert.
+ */
 export function resolveTimeline(input: ResolveInput): ResolveResult {
   const { session } = input;
   const deviceById = new Map(input.devices.map((d) => [d.id, d]));
@@ -531,6 +581,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
   let candidates = new Map<Id, Candidate[]>();
   const anchorConflicts: { anchorId: Id; differenceMs: number }[] = [];
 
+  // Schritt 2: alle Quellen (außer Tagebuchseiten) mit den Uhren von jetzt neu legen.
   const placeAll = () => {
     placements = new Map();
     candidates = new Map();
@@ -620,6 +671,8 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
     }
   };
 
+  // Lage, auf die sich ein Anker stützen darf: Ihr Beleg ist vertrauenswürdig (bei Folgeaufnahmen zählt die
+  // Vorgängerdatei).
   const trustedPlacement = (sourceId: Id): Placement | undefined => {
     const p = placements.get(sourceId);
     if (!p) return undefined;
@@ -683,6 +736,8 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
       }
   };
 
+  // Schritte 3 und 4. Die Schleife endet, sobald eine Runde nichts mehr ändert; die Obergrenze ist nur eine
+  // Sicherung, falls sich Uhren gegenseitig immer wieder verschieben.
   const maxRounds = 4 * (input.anchors.length + input.devices.length) + 4;
   for (let round = 0; round <= maxRounds; round++) {
     placeAll();
@@ -859,6 +914,7 @@ export function resolveTimeline(input: ResolveInput): ResolveResult {
   };
 }
 
+// Sortiert hinter jedes echte Kurzzeichen.
 const LAST = "\uffff";
 const byCode = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -920,6 +976,7 @@ export function contextItems(
   }));
 }
 
+/** Art eines Ankers als Wort für das `detail` eines abgeleiteten Belegs. */
 function anchorLabel(kind: SyncAnchor["kind"]): string {
   switch (kind) {
     case "clap":

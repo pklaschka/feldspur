@@ -1,3 +1,7 @@
+/**
+ * Einsatztranskript als .docx (`packages/media/src/docx.ts`): Zeilenumbrüche und der Abschnitt „Kontext“. Die Datei
+ * wird entpackt und ihr XML geprüft; als Eingabe dient ein von Hand gebautes Einsatztranskript.
+ */
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vite-plus/test";
 import { sessionTranscriptDocx } from "../src/docx.ts";

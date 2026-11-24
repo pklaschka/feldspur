@@ -1,3 +1,7 @@
+/**
+ * Tagebuch abtippen: Einträge mit Notierzeit und Rahmen auf den Seiten, Seitenzahlen und Bezugszeitraum
+ * (`apps/desktop/src/main/diary.ts`), geprüft am Hauptprozess mit einer Projektdatei im Wegwerf-Ordner.
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

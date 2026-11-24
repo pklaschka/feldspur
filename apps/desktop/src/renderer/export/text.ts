@@ -1,9 +1,16 @@
-/** Texte und Pfade für den Schritt „Ausgeben“: reine Hilfen ohne Oberfläche. */
+/**
+ * Texte und Pfade für den Schritt „Ausgeben“: reine Hilfen ohne Oberfläche, genutzt von den Bausteinen in
+ * `apps/desktop/src/renderer/export/`.
+ */
 import type { ExportProgress } from "../../shared/api.ts";
 
 export const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 /** Übergeordneter Ordner eines Pfads (Windows oder sonst). */
 export const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || p;
+/**
+ * Wozu eine Datei im Ausgabeordner da ist, erkannt am Namen. Der erste Treffer gilt, deshalb stehen die genauen
+ * Namen (LIESMICH, Änderungsprotokoll) vor den allgemeinen Endungen (.html, .csv).
+ */
 export const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
   [/^LIESMICH\.html$/, "LIESMICH: was im Ordner liegt, wie zitiert wird, Tabelle für den Methodenteil"],

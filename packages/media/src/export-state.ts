@@ -7,6 +7,10 @@
  * ein Teil ab, ist die Ausgabe veraltet, und es lässt sich sagen, welcher Teil.
  *
  * Der Abdruck ist bewusst vorsichtig: Lieber einmal zu oft „Veraltet“ als eine alte Ausgabe als aktuell zeigen.
+ *
+ * Einordnung: Schritt Ausgeben und Übersicht. `apps/desktop/src/main/export.ts` rechnet den Abdruck beim Start einer
+ * Ausgabe (`exportFingerprint`), speichert ihn danach im Ausgabestand (`ExportRecord`) und vergleicht später mit
+ * `compareExport`; `packages/media/src/methods-summary.ts` nutzt denselben Vergleich für die Übersicht.
  */
 import { createHash } from "node:crypto";
 import { existsSync, statSync } from "node:fs";
@@ -40,6 +44,10 @@ export function fileStampText(path: string): string {
   }
 }
 
+/**
+ * Der Teil des Abdrucks über den Inhalt: gerechnet aus dem fertigen Einsatztranskript, nicht aus einzelnen Tabellen.
+ * Bestimmt eine neue Tabelle der Projektdatei, was ausgegeben wird, muss sie hier eingehen (Checkliste in AGENTS.md).
+ */
 function contentHash(store: ProjectStore, sessionId: Id, transcript: SessionTranscript): string {
   const levels = store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, a.speechLevelDb, a.version]);
   return sha(
@@ -57,6 +65,7 @@ function contentHash(store: ProjectStore, sessionId: Id, transcript: SessionTran
       devices: transcript.input.devices,
       persons: store.listPersons(),
       levels,
+      // Begleitprotokoll hier ohne gemessene Lautstärke gerechnet; die Pegel gehen über `levels` ein.
       protocol: protocolCsv(store, transcript),
       variables: documentVariables(transcript, baseName(transcript)),
     }),
@@ -83,13 +92,17 @@ export interface ExportDifference {
   labels?: string[];
 }
 
+/** Ergebnis von `compareExport` für die Anzeige „Aktuell“ oder „Veraltet“. */
 export interface ExportStatus {
+  /** Die letzte Ausgabe, wie sie in der Projektdatei steht. */
   record: ExportRecord;
+  /** Leer = die Ausgabe passt noch zum Projekt. */
   differences: ExportDifference[];
   /** Dateien der Ausgabe, die im Ordner nicht mehr liegen. */
   missingFiles: string[];
 }
 
+/** Wortlaut jeder Einstellung, eingeschaltet und ausgeschaltet, für den Satz „damals …, jetzt …“. */
 const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
   video: ["mit Montagevideo", "ohne Montagevideo"],
   resolve: ["mit Schnittliste für Resolve", "ohne Schnittliste für Resolve"],
@@ -140,6 +153,7 @@ export function compareExport(
     const head = settingsDiff.length === 1 ? "Einstellung anders" : "Einstellungen anders";
     differences.push({ kind: "settings", text: `${head}: ${settingsDiff.join("; ")}.` });
   }
+  // Originale: Größe und Änderungszeit je Quelle, verglichen mit dem Stand bei der Ausgabe.
   const sources = new Map<Id, Source>(store.listSources(record.sessionId).map((s) => [s.id, s]));
   const label = (id: Id) => sources.get(id)?.label ?? "?";
   const changed: Id[] = [];

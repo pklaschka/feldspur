@@ -1,4 +1,11 @@
-/** IPC-Aufrufe fürs Durchsehen und Mitschreiben: Episoden, Mitschrift, Notizen, Tagebuch und Kontext. */
+/**
+ * IPC-Aufrufe fürs Durchsehen und Mitschreiben: Episoden, Mitschrift, Notizen, Tagebuch und Kontext.
+ *
+ * Gegenstücke in der Oberfläche (`apps/desktop/src/renderer/`): Schritt „Durchsehen“ (`Review.tsx`, `review/`),
+ * Mitschreiben (`Transcriber.tsx`, `Waveform.tsx`), Arbeitsnotizen (`Notes.tsx`), „Tagebuch abtippen“
+ * (`DiaryEditor.tsx`, `PageNumbering.tsx`) und Kontext (`context/`). Die Regeln stehen in `../episodes.ts`,
+ * `../transcript.ts`, `../notes.ts`, `../diary.ts` und `../context.ts`.
+ */
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { dialog, ipcMain } from "electron";
@@ -33,6 +40,10 @@ import { buildSessionView } from "../view.ts";
 import { parentWindow, requireStore, stillOpen } from "../state.ts";
 import { undoable, undoableView } from "./undoable.ts";
 
+/**
+ * Randnotiz einer Tagebuchseite: die Notierzeit ihres ersten Eintrags. Hat die Seite noch keinen, entsteht einer
+ * über die ganze Seite (Rahmen ohne Maße). Leere Uhrzeit nimmt die Notierzeit zurück. Gibt die Einsatz-Id zurück.
+ */
 function setDiaryNote(s: ProjectStore, sourceId: string, clock: string): string {
   const src = s.getSource(sourceId);
   if (src.kind !== "diary") throw new Error("Keine Tagebuchseite");
@@ -48,6 +59,7 @@ function setDiaryNote(s: ProjectStore, sourceId: string, clock: string): string 
 }
 
 export function registerReviewIpc(): void {
+  // Episoden von Hand anpassen und Hüllkurven für die Zeitachse.
   undoableView(
     IPC.moveEpisodeEdge,
     "Episodengrenze verschoben",
@@ -66,6 +78,7 @@ export function registerReviewIpc(): void {
   });
   ipcMain.handle(IPC.envelopes, (_e, id: string) => timelineEnvelopes(requireStore(), id));
 
+  // Mitschrift und Arbeitsnotizen.
   undoable(
     IPC.addTranscriptLine,
     "Zeile angelegt",
@@ -116,6 +129,7 @@ export function registerReviewIpc(): void {
     },
   );
 
+  // Tagebuch: Randnotiz, Einträge mit Rahmen, Seitenzählung.
   undoableView(IPC.setDiaryNote, "Randnotiz eingetragen", (s, sourceId: string, clock: string) =>
     setDiaryNote(s, sourceId, clock),
   );

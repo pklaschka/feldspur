@@ -1,3 +1,4 @@
+/** Hilfs-Hook für `DiaryEditor.tsx`: misst die Fläche, in die der Scan passen soll. */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**

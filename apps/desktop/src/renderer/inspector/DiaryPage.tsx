@@ -1,9 +1,14 @@
+/**
+ * Tagebuchseite in der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`): Randnotiz und Überblick über die
+ * Einträge. Abgetippt wird im Tagebuch-Editor (`apps/desktop/src/renderer/DiaryEditor.tsx`), den „Abtippen…“ öffnet.
+ */
 import type { DiaryEntryRow, SourceRow } from "../../shared/api.ts";
 import { hm } from "../format.ts";
 import { Button, Eyebrow } from "../ui.tsx";
 import { useDraft } from "../hooks.ts";
 import { ClockInput } from "../ClockField.tsx";
 
+/** Randnotiz: die Uhrzeit am Seitenrand (Notierzeit). Aus ihr ergibt sich der Bezugszeitraum (`diaryWindow`). */
 function DiaryNote({ row, onCommit }: { row: SourceRow; onCommit: (clock: string) => void }) {
   const [text, setText] = useDraft(row.diaryNote ?? "", row.id);
   const commit = (v: string) => v !== (row.diaryNote ?? "") && onCommit(v);

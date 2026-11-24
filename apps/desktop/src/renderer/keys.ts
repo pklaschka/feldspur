@@ -1,5 +1,11 @@
+/**
+ * Tastatur: was ein Tastendruck in der Oberfläche bedeutet. Die Entscheidung steht hier als reine Funktion ohne
+ * React und DOM, damit sie sich testen lässt (`apps/desktop/test/keys.test.ts`); die Ansichten hängen nur den
+ * Listener an. Die Kürzel des Mitschreibens stehen in `transcribe.ts` und nutzen die Selektoren von hier.
+ */
 import type { KeyboardEvent } from "react";
 
+/** Läuft die App unter macOS? Nur für die Beschriftung von Kürzeln („⌘Z“ statt „Strg+Z“). */
 export const isMac = (globalThis.navigator?.platform ?? "").toLowerCase().includes("mac");
 
 /**
@@ -23,12 +29,14 @@ export interface KeyLike {
   defaultPrevented: boolean;
 }
 
+/** Wo der Tastendruck ankam: vom Element zählt nur `closest`, so kommt der Test ohne DOM aus. */
 export interface TargetLike {
   closest(selector: string): unknown;
 }
 
 /** Textfelder: dort gehören Buchstaben und Enter dem Feld. */
 export const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
+/** Knöpfe und Ähnliches: dort drückt die Leertaste das Element und ist kein getippter Buchstabe. */
 export const PRESSABLE =
   "button, a[href], summary, [role='button'], [role='radio'], [role='switch'], [role='checkbox'], [role='tab']";
 /** Aufgeklappte Auswahl oder Menü: dort gelten deren eigene Tasten (Esc schließt sie). */

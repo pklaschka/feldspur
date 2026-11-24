@@ -1,4 +1,7 @@
-/** Kleine Bausteine der Zeitachse: Zoom-Zeichen, Legende, Hover-Karte und die Ablage „Ohne Uhrzeit“. */
+/**
+ * Kleine Bausteine der Zeitachse in „Durchsehen“ (`apps/desktop/src/renderer/Review.tsx`): Zoom-Zeichen, Legende,
+ * Hover-Karte und die Ablage „Ohne Uhrzeit“.
+ */
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { SourceRow, TranscriptRow } from "../../shared/api.ts";
@@ -8,6 +11,7 @@ import { cx, Glyph } from "../ui.tsx";
 import { kindHolds, kindName, signed } from "../../shared/conflict-text.ts";
 import { startText } from "../inspector/ConflictPanel.tsx";
 
+/** Lupe mit Plus oder Minus für die Zoom-Knöpfe. */
 export function ZoomGlyph({ minus = false }: { minus?: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -18,6 +22,7 @@ export function ZoomGlyph({ minus = false }: { minus?: boolean }) {
   );
 }
 
+/** Ein Eintrag der Legende: Farbfeld (CSS-Klassen) oder fertiges Zeichen, dazu der Text. */
 export function Legend({ swatch, children }: { swatch: string | ReactNode; children: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -27,6 +32,7 @@ export function Legend({ swatch, children }: { swatch: string | ReactNode; child
   );
 }
 
+/** Karte am Mauszeiger über einem Stück der Zeitachse: Quelle, Episode, Zwischenzeit oder Tagebucheintrag. */
 export function HoverCard({
   item,
   line,
@@ -122,6 +128,7 @@ function conflictLines(r: SourceRow): string[] {
   return [c.state === "stale" ? "Entscheidung neu prüfen" : `Zeitbelege widersprechen sich: ${what}`];
 }
 
+/** Ablage „Ohne Uhrzeit“: Quellen ohne Lage, die deshalb nicht auf der Achse stehen. */
 export function Tray({
   rows,
   selected,

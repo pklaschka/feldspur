@@ -7,6 +7,12 @@
  * Dateien im Dateimanager ohne Umrechnen zuordnen kann.
  *
  * Wiederhergestellt wird nie über das Original, sondern immer in eine neue Datei („Als Kopie öffnen“).
+ *
+ * Hier stehen nur die Bausteine (Namen, Ordner, Kopieren, Prüfen). Wann gesichert wird, entscheidet der Hauptprozess:
+ * automatisch in `apps/desktop/src/main/backup.ts`, von Hand und beim Wiederherstellen in
+ * `apps/desktop/src/main/ipc/project.ts`, vor dem Aktualisieren einer älteren Datei in `ProjectStore.open`
+ * (`packages/core/src/db/store.ts`). `checkProjectFile` läuft, bevor eine vorhandene Datei geöffnet wird
+ * (`apps/desktop/src/main/state.ts`).
  */
 import {
   existsSync,
@@ -24,8 +30,9 @@ import { basename, dirname, join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { MIGRATIONS } from "./migrations.ts";
 
-/** Stand des Schemas, den diese Version schreibt, und die Kennung einer Feldspur-Projektdatei in project_meta. */
+/** Stand des Schemas, den diese Version schreibt (steht in der Datei als `PRAGMA user_version`). */
 export const SCHEMA_VERSION = MIGRATIONS.length;
+/** Kennung einer Feldspur-Projektdatei (`project_meta`, Schlüssel `format`). */
 export const FILE_FORMAT = "feldspur-project";
 
 /** Anlass einer Sicherung; steht im Dateinamen. */
@@ -38,12 +45,14 @@ export const BACKUP_KEEP: Record<BackupKind, number | null> = {
   manuell: null,
 };
 
+/** Eine gefundene Sicherung, wie die Oberfläche sie auflistet (`apps/desktop/src/renderer/Backups.tsx`). */
 export interface BackupInfo {
   path: string;
   fileName: string;
   kind: BackupKind;
   /** ISO-Zeit, aus dem Dateinamen (Ortszeit) gelesen. */
   createdAt: string;
+  /** Größe in Byte. */
   size: number;
 }
 
@@ -64,10 +73,12 @@ export function fileStamp(d: Date): string {
   );
 }
 
+/** Dateiname einer Sicherung: `<Projekt>_<Zeit>_<Anlass>.feldspur`. */
 export function backupFileName(projectPath: string, kind: BackupKind, at: Date = new Date()): string {
   return `${projectBase(projectPath)}_${fileStamp(at)}_${kind}.feldspur`;
 }
 
+// Teil des Namens nach dem Projektnamen; die optionale Zahl nach der Zeit unterscheidet Sicherungen derselben Sekunde.
 const NAME =
   /^_(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)-(\d\d)(?:-(\d+))?_(automatisch|vor-Aktualisierung|manuell)\.feldspur$/;
 

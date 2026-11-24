@@ -2,6 +2,10 @@
  * Arbeitsnotizen zu einer Datei: „ab 12:30 noch abtippen“, „B2 schwer verständlich“.
  * Mit Strecke in der Aufnahme oder für die ganze Datei. Erscheint in der Detailleiste und beim
  * Mitschreiben (dort auch als Band in der Waveform).
+ *
+ * Eingebunden in `Inspector.tsx` und `Transcriber.tsx`. Arbeitsnotizen (`SourceNoteRow`) sind Merkzettel für die
+ * eigene Arbeit und etwas anderes als Notiz-Dateien, die als Quellen eingesammelt werden. Gespeichert wird über
+ * `apps/desktop/src/main/ipc/review.ts` und `apps/desktop/src/main/notes.ts`.
  */
 import { useState } from "react";
 import type { SessionView, SourceNoteRow, SourceRow } from "../shared/api.ts";
@@ -11,10 +15,15 @@ import { useDraft } from "./hooks.ts";
 
 const api = window.feldspur;
 
+/**
+ * Führt eine Änderung aus, die die neue Ansicht des Einsatzes zurückgibt, und übernimmt diese; Fehler landen in der
+ * Fehlermeldung statt beim Aufrufer. Gebaut in `app/SessionPane.tsx`, von vielen Teilen der Oberfläche benutzt.
+ */
 export type ApplyView = (fn: () => Promise<SessionView>) => void;
 
 const AV = new Set(["audio", "video"]);
 
+/** Worauf sich eine Notiz bezieht: ganze Datei, eine Stelle oder eine Strecke (Stellen in ms ab Dateianfang). */
 function noteRange(n: Pick<SourceNoteRow, "fromMs" | "toMs">): string {
   if (n.fromMs === null) return "ganze Datei";
   if (n.toMs === null) return `bei ${positionText(n.fromMs)}`;
@@ -34,7 +43,9 @@ export function NotesPanel({
   /** Aktuelle Stelle in der Aufnahme; ohne sie lassen sich keine Strecken setzen. */
   pos?: number | null;
   apply: ApplyView;
+  /** Zur Stelle einer Notiz springen; ohne das ist die Stelle nur Text. */
   onSeek?: (ms: number) => void;
+  /** Einzeiliges Eingabefeld, für die schmale Detailleiste. */
   compact?: boolean;
 }) {
   const av = AV.has(row.kind) && pos !== undefined && pos !== null;
@@ -119,6 +130,7 @@ export function NotesPanel({
   );
 }
 
+/** Eine Notiz: abhaken, Text an Ort und Stelle ändern (speichert beim Verlassen), löschen. */
 function NoteItem({
   note,
   apply,

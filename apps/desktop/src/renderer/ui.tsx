@@ -1,4 +1,9 @@
-/** Kleine, wiederverwendbare Bausteine auf Tailwind und Radix. */
+/**
+ * Kleine, wiederverwendbare Bausteine auf Tailwind und Radix: Knöpfe, Auswahl, Schalter, Statuszeichen, Kopf eines
+ * Schritts und die Fehlerzeile. Alle Ansichten bauen darauf, damit Aussehen, Wörter und Bedienung (Tastatur,
+ * Screenreader) überall gleich sind. Hier steht kein Wissen über Einsätze oder Zeiten; Texte dazu liefert
+ * `format.ts`. Die Farben kommen aus den CSS-Variablen in `styles.css`.
+ */
 import { Collapsible, Select, Switch, ToggleGroup, Tooltip } from "radix-ui";
 import {
   createContext,
@@ -18,6 +23,7 @@ import {
 import type { SourceKind } from "@feldspur/core/model";
 import { STATUS_TEXT } from "./format.ts";
 
+/** Klassennamen zusammensetzen; alles Leere fällt weg (`cx("a", bedingung && "b")`). */
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
@@ -32,6 +38,10 @@ const VARIANT: Record<Variant, string> = {
   ghost: "rounded-lg hover:enabled:bg-sunken",
 };
 
+/**
+ * Knopf in vier Fassungen: „default“ mit Rand, „primary“ für den Hauptschritt einer Ansicht, „link“ als Textlink
+ * ohne Polster, „ghost“ ohne Rand für Symbole und Nebenaktionen.
+ */
 export function Button({
   variant = "default",
   size = "md",
@@ -56,6 +66,7 @@ export function Button({
   );
 }
 
+/** Kleines Etikett für Zählungen und Zustände („3 zu prüfen“). */
 export function Pill({
   tone = "plain",
   children,
@@ -72,6 +83,7 @@ export function Pill({
   return <span className={cx("inline-block rounded-full px-2 text-[0.8rem] whitespace-nowrap", t)}>{children}</span>;
 }
 
+/** Rundes Symbol der Quellenart in ihrer Farbe (`--k-video`, `--k-audio` …), wie die Balken der Zeitachse. */
 export function Glyph({ kind, size = "md" }: { kind: SourceKind; size?: "sm" | "md" }) {
   return (
     <span
@@ -221,6 +233,7 @@ export function CloseButton({
   );
 }
 
+// Fehlermeldungen: Es gibt genau eine, die letzte aus `guard` (`App.tsx`). Wo sie erscheint, regeln die Ebenen unten.
 type ErrorState = {
   message: string | null;
   dismiss: () => void;
@@ -369,6 +382,7 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
   return <h3 className={cx("mt-5 mb-1.5 text-[1rem] font-semibold text-ink", className)}>{children}</h3>;
 }
 
+/** Kasten mit Rand und Schatten, z. B. für den Startbildschirm und die Abschnitte in Ausgeben und Übersicht. */
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <section className={cx("rounded-xl border border-line bg-panel px-5 py-4 shadow-sm", className)}>
@@ -377,6 +391,7 @@ export function Panel({ children, className }: { children: ReactNode; className?
   );
 }
 
+/** Hervorgehobener Hinweis im Fließtext (kein Fehler). */
 export function Notice({ children }: { children: ReactNode }) {
   return <p className="my-2 rounded-lg bg-accent-soft px-3 py-1.5 text-[0.9rem]">{children}</p>;
 }
@@ -401,6 +416,7 @@ export function StatusDot({
   const label = `Zeit: ${STATUS_TEXT[status]}`;
   return <span role="img" aria-label={label} title={label} className={cls} />;
 }
+/** Textfarbe je Status, passend zum Statuspunkt. */
 export const STATUS_TEXT_CLASS = {
   ok: "text-good",
   check: "text-warn",
@@ -428,6 +444,7 @@ export function Tip({ content, children }: { content: ReactNode; children: React
   );
 }
 
+/** Muss einmal um die App liegen (`App.tsx`), damit `Tip` funktioniert. */
 export const TooltipProvider = Tooltip.Provider;
 
 /** Einzelauswahl als Knopfreihe (Radix ToggleGroup). */
@@ -552,6 +569,7 @@ export function Toggle({
   );
 }
 
+/** Genauigkeit eines Zeitbelegs oder Ankers zur Auswahl, mit der Spanne als Tooltip. */
 export const PRECISION_OPTIONS = [
   { value: "exact" as const, label: "genau", title: "± 1 Sekunde" },
   { value: "approx" as const, label: "ungefähr", title: "± 1 Minute" },

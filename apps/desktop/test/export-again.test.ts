@@ -1,3 +1,7 @@
+/**
+ * Schritt „Ausgeben“, erneut in denselben Ordner (`apps/desktop/src/main/export.ts`): Alte Dateien werden aufgeräumt,
+ * die Prüfsummenliste stimmt, und zwei Einsätze kommen sich nicht in die Quere. Braucht ffmpeg, sonst übersprungen.
+ */
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";

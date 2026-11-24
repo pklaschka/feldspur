@@ -6,6 +6,12 @@
  * Ein Pfad wird nur übernommen, wenn die Prüfsumme stimmt: Ein gleicher Name allein genügt nie.
  *
  * Prüfergebnisse sind kein Forschungsdatum und kein Zeitbeleg: Sie werden nicht in die Projektdatei geschrieben.
+ *
+ * Einordnung: Aufgerufen wird alles hier vom Hauptprozess (`apps/desktop/src/main/originals.ts`). Die schnelle
+ * Prüfung (`quickCheck`) liefert den Zustand für die Ansicht und den Schutz vor der Ausgabe, die volle
+ * (`checkSources`) läuft, wenn Forschende die Originale prüfen oder suchen lassen
+ * (`apps/desktop/src/renderer/Originals.tsx`). `findOriginals` und `verifyOriginal` dienen dem Neu-Verknüpfen,
+ * `exportVerdict` entscheidet, was eine Ausgabe sperrt.
  */
 import { stat, readdir } from "node:fs/promises";
 import { statSync } from "node:fs";
@@ -24,6 +30,7 @@ import { log } from "./log.ts";
  */
 export type FileState = "ok" | "unchecked" | "changed" | "missing" | "unreadable";
 
+/** Prüfergebnis für eine Quelle (`Source`). */
 export interface FileCheck {
   sourceId: Id;
   state: FileState;
@@ -34,7 +41,9 @@ export interface FileCheck {
 /** Was eine Prüfung über eine Datei weiß; dient als Schlüssel für schon gerechnete Prüfsummen. */
 export interface FileStamp {
   path: string;
+  /** Größe in Bytes. */
   size: number;
+  /** Änderungszeit laut Dateisystem. */
   mtimeMs: number;
 }
 
@@ -52,6 +61,7 @@ export class HashCache {
   set(stamp: FileStamp, sha256: string): void {
     this.known.set(stampKey(stamp), sha256);
   }
+  /** Bekannte Prüfsumme oder, falls noch keine da ist, die Datei jetzt lesen und das Ergebnis merken. */
   async hash(stamp: FileStamp, opts: HashOptions = {}): Promise<string> {
     const hit = this.get(stamp);
     if (hit) return hit;
@@ -82,6 +92,7 @@ function fromStat(path: string, st: { isFile(): boolean; size: number; mtimeMs: 
   return { ok: true, stamp: { path, size: st.size, mtimeMs: st.mtimeMs } };
 }
 
+/** Synchron, nur für `quickCheck` (läuft beim Aufbau der Ansicht mit). Alles andere nimmt `statLater`. */
 function statNow(path: string): Stat {
   try {
     return fromStat(path, statSync(path));
@@ -98,6 +109,10 @@ async function statLater(path: string): Promise<Stat> {
   }
 }
 
+/**
+ * Urteil aus dem, was bekannt ist, vom Billigen zum Teuren: erst da und lesbar, dann die Größe, zuletzt die
+ * Prüfsumme. Ohne `hash` bleibt eine Datei mit passender Größe „unchecked“, nie „ok“.
+ */
 function judge(src: Source, st: Stat, hash: string | undefined): FileCheck {
   if (!st.ok) return { sourceId: src.id, state: st.state, detail: st.detail };
   if (st.stamp.size !== src.sizeBytes) {
@@ -147,6 +162,7 @@ export async function checkSources(
     opts.onBytes?.(before, totalBytes, src.fileName);
     const st = await statLater(src.originalPath);
     let hash: string | undefined;
+    // Gelesen wird nur, wenn die Größe stimmt: Eine andere Größe ist schon ohne Prüfsumme „changed“.
     if (st.ok && st.stamp.size === src.sizeBytes) {
       try {
         hash = await cache.hash(st.stamp, {
@@ -178,6 +194,7 @@ export async function checkSources(
 /** Zustände, bei denen die gespeicherte Datei nicht (mehr) das Original ist. */
 export const NEEDS_RELINK: ReadonlySet<FileState> = new Set(["missing", "unreadable", "changed"]);
 
+/** Ergebnis von `verifyOriginal`; `reason` ist ein Satz für die Oberfläche. */
 export type VerifyResult = { ok: true; stamp: FileStamp } | { ok: false; reason: string };
 
 /** Ist die Datei unter path genau das Original von src? Nur dann darf der Pfad übernommen werden. */
@@ -197,6 +214,7 @@ export async function verifyOriginal(src: Source, path: string, cache?: HashCach
   return { ok: true, stamp: st.stamp };
 }
 
+/** Ergebnis von `findOriginals`. */
 export interface FindResult {
   /** Gefunden und per Prüfsumme bestätigt. */
   found: { sourceId: Id; path: string }[];
@@ -212,6 +230,7 @@ export interface FindOptions {
   cache?: HashCache;
   /** Höchstens so viele Dateien ansehen (Schutz vor dem Durchsuchen ganzer Laufwerke). */
   maxFiles?: number;
+  /** So viele Ebenen von Unterordnern (Standard 8). */
   maxDepth?: number;
   onProgress?: (scanned: number, phase: "suchen" | "prüfen", fileName: string) => void;
 }
@@ -232,6 +251,7 @@ export async function findOriginals(sources: Source[], dir: string, opts: FindOp
   let scanned = 0;
   let truncated = false;
 
+  // 1. Durchgang, ohne eine Datei zu lesen: Kandidaten gleicher Größe und gleichnamige Dateien sammeln.
   const walk = async (d: string, depth: number): Promise<void> => {
     if (truncated) return;
     let entries;
@@ -264,6 +284,8 @@ export async function findOriginals(sources: Source[], dir: string, opts: FindOp
   await walk(dir, 0);
   if (truncated) scanned = maxFiles;
 
+  // 2. Durchgang: je Quelle die Kandidaten per Prüfsumme prüfen. Eine gefundene Datei gilt nur für eine Quelle
+  // (`taken`), damit zwei Quellen mit gleichem Inhalt nicht auf dieselbe Datei zeigen.
   const found: FindResult["found"] = [];
   const rejected: FindResult["rejected"] = [];
   const taken = new Set<string>();

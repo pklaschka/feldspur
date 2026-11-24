@@ -1,4 +1,8 @@
-/** Letzte Ausgabe eines Einsatzes: Beleg-Karte, solange sie aktuell ist, sonst was sich geändert hat. */
+/**
+ * Letzte Ausgabe eines Einsatzes: Beleg-Karte, solange sie aktuell ist, sonst was sich geändert hat. Teil des
+ * Schritts „Ausgeben“ (`apps/desktop/src/renderer/ExportStep.tsx`); den Stand (`ExportStatus`) lädt `useExportStatus`
+ * (`apps/desktop/src/renderer/export/hooks.ts`), verglichen wird in `packages/media/src/export-state.ts`.
+ */
 import { useState } from "react";
 import type { ExportCard, ExportStatus } from "../../shared/api.ts";
 import { someLabels } from "../format.ts";
@@ -47,7 +51,9 @@ export function ExportResult({
   status: ExportStatus;
   /** Zahlen für die Beleg-Karte; null, solange sie lädt oder wenn die Ausgabe veraltet ist. */
   card: ExportCard | null;
+  /** Eben erst fertig geworden, nicht beim Wiederkommen. */
   fresh: boolean;
+  /** Erneut ausgeben sperren: solange eine Ausgabe läuft oder nach der Prüfung der Originale angehalten ist. */
   disabled: boolean;
   onRerun: () => void;
   onRerunElsewhere: () => void;
@@ -55,6 +61,7 @@ export function ExportResult({
   const { record, differences, missingFiles } = status;
   const stale = differences.length > 0;
   const gone = new Set(missingFiles);
+  // Eine Datei, die noch dort liegt: „Im Ordner zeigen“ markiert sie; sonst öffnet es nur den Ordner.
   const present = record.files.find((f) => !gone.has(f));
   // Der Viewer ist die .html, die nicht die LIESMICH ist; nur anbieten, wenn er noch im Ordner liegt.
   const viewerFile = record.files.find((f) => f.endsWith(".html") && !/^LIESMICH\.html$/.test(f) && !gone.has(f));

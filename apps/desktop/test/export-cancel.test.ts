@@ -1,3 +1,8 @@
+/**
+ * Schritt „Ausgeben“: Abbruch und Fehler mitten in der Ausgabe (`apps/desktop/src/main/export.ts`). Der vermerkte Stand
+ * der letzten Ausgabe darf danach nie eine halbe Ausgabe als aktuell ausweisen, und der Rechner darf wieder schlafen.
+ * Braucht ffmpeg, sonst übersprungen.
+ */
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import type { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";

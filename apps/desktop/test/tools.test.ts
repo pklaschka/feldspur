@@ -1,3 +1,7 @@
+/**
+ * Wo die App ffmpeg und ffprobe findet (`apps/desktop/src/main/tools.ts`): Umgebungsvariable vor mitgelieferten
+ * Programmen vor dem PATH.
+ */
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 import { resolveToolPaths } from "../src/main/tools.ts";

@@ -1,3 +1,9 @@
+/**
+ * Detailleiste (rechte Spalte eines Einsatzes), eingebunden von `app/SessionPane.tsx`. Zeigt je nach Auswahl die
+ * Einzelheiten einer Quelle (`SourceRow`: Lage, Status, Player oder Vorschau, Zeitbelege, Notizen, Datei), ein
+ * Kontextstück (`context/ContextPanel.tsx`) oder, ohne Auswahl, die Zusammenfassung des Einsatzes mit dem, was noch
+ * offen ist (`inspector/Summary.tsx`). Die einzelnen Abschnitte liegen in `inspector/`.
+ */
 import { formatDuration } from "@feldspur/core/time";
 import { useState, type ReactNode } from "react";
 import { mediaUrl, type ContextRow, type SessionView, type SourceRow } from "../shared/api.ts";
@@ -35,13 +41,16 @@ export function Inspector({
   actions,
 }: {
   view: SessionView;
+  /** Gewählte Quelle; null = keine (dann Kontextstück oder Zusammenfassung). */
   row: SourceRow | null;
   /** Gewähltes Kontextstück (auch ein Kontext-Eintrag ohne eigene Quelle). */
   context?: ContextRow | null;
   /** Aktueller Schritt: bestimmt, was oben steht. */
   step: Step;
   onClose: () => void;
+  /** Zu einer offenen Aufgabe springen (Schritt und ggf. Quelle). */
   onGo: (t: Todo) => void;
+  /** Alles, was die Abschnitte auslösen können; gebaut in `app/SessionPane.tsx`, Typ in `inspector/actions.ts`. */
   actions: InspectorActions;
 }) {
   return (
@@ -75,6 +84,7 @@ export function Inspector({
   );
 }
 
+/** Einzelheiten einer Quelle. Die Reihenfolge der Abschnitte hängt vom Schritt ab (siehe `checkFirst`). */
 function SourceDetails({
   row,
   view,
@@ -145,6 +155,7 @@ function SourceDetails({
   }
   if (row.follows) items.push(["Fortsetzung von", byId(row.follows)?.label ?? "?", "font-mono"]);
   if (row.followedBy) items.push(["Fortgesetzt in", byId(row.followedBy)?.label ?? "?", "font-mono"]);
+  // Eine Tagebuchseite kann aus mehreren Bildern bestehen: Hauptquelle und ihre weiteren Bilder zusammen.
   const pageIds = new Set([main?.id ?? row.id, ...(main ? main.parts : row.parts)]);
   const sa = useActions();
   const { position, seek } = usePlayback();
@@ -156,6 +167,7 @@ function SourceDetails({
       document.querySelector("[data-testid=time-form]")?.scrollIntoView({ block: "center", behavior: "smooth" }),
     );
   };
+  // Bei einem Widerspruch zwischen Zeitbelegen tritt die Entscheidung an die Stelle des gewöhnlichen Prüfens.
   const conflictShown = row.conflict.state !== "none";
   const check = conflictShown ? (
     <ConflictPanel row={row} view={view} actions={actions} onManual={openManual} />

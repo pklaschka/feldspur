@@ -1,6 +1,15 @@
 /**
  * Einsatztranskript: alles eines Einsatzes in einer Reihenfolge, mit der Stelle im Montagevideo.
  * Daraus entstehen das .docx für MAXQDA und die Einblendungen im Video.
+ *
+ * Einordnung: Drehscheibe des Schritts „Ausgeben“. `buildSessionTranscript` liest den Einsatz aus der Projektdatei,
+ * lässt `packages/core/src/resolve.ts` die Lage aller Quellen aus den Zeitbelegen berechnen und `planMontage` (core)
+ * die Montage planen, und stellt alles in eine Reihenfolge. Das Ergebnis (`SessionTranscript`) wird nie gespeichert,
+ * sondern bei jedem Bedarf neu gebaut. Darauf bauen auf: `export.ts` (alle Dateien der Ausgabe), `docx.ts`,
+ * `montage-video.ts` und `montage-preview.ts`, `fcpxml.ts`, `viewer/html.ts`, `readme.ts`, `methods-summary.ts`
+ * (Übersicht) und `export-state.ts` (ist die letzte Ausgabe noch aktuell?), alle in `packages/media/src/`.
+ *
+ * Hier entsteht auch die Montage-ID (unten: `montageId`, `textBlock`).
  */
 import { createHash } from "node:crypto";
 import {
@@ -20,24 +29,39 @@ import {
 import { sessionEpisodes } from "./analyze.ts";
 import { contextBody, contextHeadDetails, contextPieces } from "./context.ts";
 
+/**
+ * Art einer Zeile der Chronologie:
+ * - card: Zwischenzeit zwischen Episoden (Tafel) oder Leerlauf
+ * - episode: Kopf einer Episode
+ * - start: eine Ton- oder Videoaufnahme beginnt
+ * - photo: Foto
+ * - diary: Tagebucheintrag
+ * - line: Zeile einer Mitschrift (Transkript)
+ * - sync: bestätigtes Klatschen (Anker)
+ * - end: Ende der Montage
+ */
 export type SessionTranscriptKind = "card" | "episode" | "start" | "photo" | "diary" | "line" | "sync" | "end";
 
 /** Bildausschnitt für das Dokument: ganzes Foto oder Rahmen auf einer Scan-Seite. */
 export interface ImageRef {
   sourceId: Id;
+  /** Rahmen in Anteilen der Seite (0 bis 1); fehlt beim ganzen Bild. */
   region?: { page: number; x: number; y: number; w: number; h: number };
 }
 
+/** Eine Zeile der Chronologie: im Dokument ein Absatz mit Zeitmarke. */
 export interface SessionTranscriptEntry {
-  /** Stelle im Montagevideo. */
+  /** Stelle im Montagevideo, in ms ab dessen Beginn; daraus wird die Zeitmarke. */
   montageMs: number;
   kind: SessionTranscriptKind;
   /** „10:16:20“, „ca. 10:05 (notiert 10:12)“, „10:17:30–10:40:00“. */
   clock: string;
-  /** Uhrzeit als Zahl (Beginn bei Spannen), für Einblendungen. */
+  /** Uhrzeit als Zahl (Beginn bei Spannen), für Einblendungen. Ortszeit des Einsatzes in ms (`LocalMs`). */
   clockMs?: number;
+  /** Fett vor dem Text, z. B. „Foto F-003“; leer bei Mitschrift aus nur einer Aufnahme. */
   head: string;
   body: string;
+  /** Bilder unter der Zeile: das Foto selbst oder die Rahmen eines Tagebucheintrags. */
   images: ImageRef[];
   /** Mitschrift: Sprecher*in, steht auch vorn im body („B1: …“). Für den Viewer, der sie hervorhebt. */
   speaker?: string;
@@ -45,13 +69,19 @@ export interface SessionTranscriptEntry {
   contextRefs?: string[];
 }
 
+/** Kopf des Einsatztranskripts: Angaben zum Einsatz (`FieldSession`) und die Kennung dieser Fassung. */
 export interface SessionTranscriptHeader {
   title: string;
+  /** Datum des Einsatzes, „2026-09-14“. */
   date: string;
   place: string;
+  /** Namen der Personen, denen im Einsatz ein Gerät zugeordnet ist. */
   researchers: string[];
+  /** Bezeichnung des Referenzgeräts (Referenzuhr); null, wenn keins festgelegt ist. */
   reference: string | null;
+  /** Kurzzeichen der Quellen, die vorkommen: alle mit Lage auf der Zeitachse und alle, die Kontext tragen. */
   sources: string[];
+  /** Freie Felder des Einsatzes für den Quellennachweis (DOI, Projektnummer, …). */
   extra: Record<string, string>;
   /**
    * Kennung der Ausgabe in drei Blöcken, z. B. „FS-7KQ2-M9XD-3F8A“. Die ersten beiden Blöcke beschreiben die
@@ -75,6 +105,7 @@ export interface SessionTranscriptHeader {
  * Absichtlich kein SessionTranscriptEntry: Die tragen eine Stelle im Video und speisen die Einblendungen.
  */
 export interface SessionTranscriptContext {
+  /** Schlüssel des Kontextstücks; Tagebucheinträge verweisen darüber auf es (`contextRefs`). */
   key: string;
   position: number;
   /** Fett: „Kontext · Karte 2: Standplan“. Der Wortlaut „Kontext · “ am Anfang ist fest (zum Suchen in MAXQDA). */
@@ -86,8 +117,10 @@ export interface SessionTranscriptContext {
   images: ImageRef[];
 }
 
+/** Das ganze Einsatztranskript samt allem, was die übrigen Ausgaben daraus brauchen. */
 export interface SessionTranscript {
   header: SessionTranscriptHeader;
+  /** Plan der Montage aus `packages/core`: Abschnitte und die Umrechnung von Uhrzeit in Stelle im Video. */
   plan: MontagePlan;
   /** Episoden benannt (Zeilen „Episode n“, Zwischenzeiten)? Sonst nur Uhrzeit, Quellen und Leerlauf. */
   episodes: boolean;
@@ -96,9 +129,11 @@ export interface SessionTranscript {
   context: SessionTranscriptContext[];
   /** Grundlage für die Montage (Lagen, Quellen). */
   input: ResolveInput;
+  /** Berechnete Zeitachse zu `input`: Lage jeder Quelle, Uhr jedes Geräts. */
   resolved: ResolveResult;
 }
 
+/** Reihenfolge der Arten, wenn zwei Zeilen an derselben Stelle und zur selben Uhrzeit stehen. */
 const ORDER: Record<SessionTranscriptKind, number> = {
   card: 0,
   episode: 1,
@@ -131,6 +166,10 @@ export interface SessionTranscriptOptions {
   episodes?: boolean;
 }
 
+/**
+ * Baut das Einsatztranskript aus dem jetzigen Stand des Projekts. Liest nur aus der Projektdatei (und, für Notizen
+ * im Kontext, deren Originaldateien); schreibt nichts. Gleicher Stand ergibt dieselbe Montage-ID.
+ */
 export function buildSessionTranscript(
   store: ProjectStore,
   sessionId: Id,
@@ -186,6 +225,7 @@ export function buildSessionTranscript(
       continue;
     }
     const span = seg.toMs - seg.fromMs;
+    // Aufnahmen, die in dieser Zwischenzeit liefen, ohne dass dort eine Episode ist.
     const idleSources = input.sources.filter((s) => {
       const p = res.placements.get(s.id);
       return p && (s.kind === "audio" || s.kind === "video") && p.startMs < seg.toMs && p.endMs > seg.fromMs;
@@ -275,6 +315,7 @@ export function buildSessionTranscript(
     if (!dp) continue;
     const at = plan.toMontage(dp.notedAtMs, e.id);
     if (at === null) continue;
+    // Der erste Rahmen bestimmt, unter welcher Seite der Eintrag geführt wird; Teile einer Seite zählen zur Seite.
     const first = e.regions[0] ? src.get(e.regions[0].sourceId) : undefined;
     const page = first?.partOf ? src.get(first.partOf) : first;
     const text = e.mode === "full" ? e.fullText : e.mode === "short" ? e.shortText : "";
@@ -376,6 +417,7 @@ export function buildSessionTranscript(
       .map((s) => s.label),
     extra: input.session.extra,
   };
+  // Erst die Kennung der Montage, dann der Block für den Text: Das Video trägt nur die erste (`montageVideoId`).
   const montageVideoId = montageId(sessionId, plan, named, input.sources, res);
   // Bilder über die Prüfsumme der Datei, nicht über die interne Kennung der Quelle.
   const image = (i: ImageRef) => [src.get(i.sourceId)?.sha256 ?? i.sourceId, i.region ?? null];
@@ -427,7 +469,11 @@ function textBlock(content: unknown): string {
   return idChars(content, 4);
 }
 
-/** Die ersten beiden Blöcke der Montage-ID: Einsatz, Art der Montage und Lage der Quellen. */
+/**
+ * Die ersten beiden Blöcke der Montage-ID: Einsatz, Art der Montage und Lage der Quellen. Quellen gehen mit ihrer
+ * Prüfsumme ein, nicht mit ihrer internen Kennung: Dieselben Dateien an derselben Stelle ergeben im selben Einsatz
+ * dieselbe Kennung.
+ */
 function montageId(sessionId: Id, plan: MontagePlan, named: boolean, sources: Source[], res: ResolveResult): string {
   const id = idChars(
     {

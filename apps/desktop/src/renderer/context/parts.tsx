@@ -1,4 +1,8 @@
-/** Kleine Bausteine für Kontextstücke (Issue #108): Vorschaubild und Schlüssel der Auswahl. */
+/**
+ * Kleine Bausteine für Kontextstücke (Issue #108): Vorschaubild und Schlüssel der Auswahl. Ein Kontextstück
+ * (`ContextRow`) ist entweder eine ganze Quelle (Schlüssel „source:<id>“) oder ein Eintrag (Tagebuchrahmen oder
+ * Text ohne Scan, „entry:<id>“).
+ */
 import type { CSSProperties } from "react";
 import { mediaUrl, type ContextRow, type SessionView } from "../../shared/api.ts";
 import { PdfPageCanvas } from "../pdf.tsx";

@@ -1,3 +1,8 @@
+/**
+ * Zeile eines Einsatzes im Feldkalender der Übersicht (`apps/desktop/src/renderer/overview/FieldCalendar.tsx`). Die
+ * Marken der Spur (`marks`) berechnet `packages/media/src/field-calendar.ts`; dieselben Marken zeichnet auch die
+ * gespeicherte Grafik.
+ */
 import type { MouseEvent } from "react";
 import { dayStart, ofDay, type CalendarKind } from "@feldspur/media/field-calendar";
 import type { OverviewSession } from "../../shared/api.ts";

@@ -2,6 +2,10 @@
  * Dateien, die neben einer Ablagefläche landen: Chromium würde die Datei sonst öffnen (das Hauptfenster
  * blockt das Navigieren zusätzlich), und es passierte sichtbar nichts. Stattdessen zeigt der Zeiger
  * „hier nicht ablegen“, und ein Hinweis sagt, wo Dateien hingehören.
+ *
+ * `App.tsx` installiert den Wächter einmal fürs ganze Fenster und reicht den Zähler weiter; den passenden Hinweis
+ * zeigt, wer gerade zu sehen ist (Startbildschirm, leeres Projekt oder `SessionPane.tsx`). Die einzige Ablagefläche
+ * ist derzeit das Feld in `Collect.tsx`.
  */
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 

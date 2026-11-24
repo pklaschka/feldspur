@@ -1,3 +1,7 @@
+/**
+ * Zeitachse in „Durchsehen“: Ausschnitt, Zoom und Scrollen (`apps/desktop/src/renderer/review/viewport.ts`) sowie
+ * Reihenfolge und Beschriftung der Spuren (`apps/desktop/src/renderer/review/tracks.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import {
   axisRange,

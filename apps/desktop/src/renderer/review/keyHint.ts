@@ -2,6 +2,9 @@
  * Einmaliger Tastenhinweis in Durchsehen (Issue #195): Nach drei Bestätigungen mit der Maus erscheint „Schneller geht
  * es mit der Tastatur…“. Nach „Verstanden“ kommt er nie wieder, auch nicht nach einem Neustart. Gezählt wird nur,
  * bis der Hinweis einmal da war; die Zahl bleibt über Neustarts erhalten.
+ *
+ * Gezählt wird im Prüfkasten (`apps/desktop/src/renderer/inspector/CheckPanel.tsx`), gezeigt wird der Hinweis in
+ * `apps/desktop/src/renderer/Review.tsx`. Der Stand liegt im localStorage und gilt für alle Projekte.
  */
 import { useSyncExternalStore } from "react";
 import { readStoredObject, writeStored } from "../stored.ts";

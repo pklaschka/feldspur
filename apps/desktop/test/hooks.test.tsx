@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Gemeinsame Hooks der Oberfläche (`apps/desktop/src/renderer/hooks.ts`): Entwurf eines Eingabefelds (`useDraft`) und
+ * Laden zu einem Schlüssel (`useLoaded`).
+ */
 import { act } from "react";
 import { describe, expect, it } from "vite-plus/test";
 import { useDraft, useLatest, useLoaded } from "../src/renderer/hooks.ts";

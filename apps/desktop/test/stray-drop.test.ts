@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Dateien, die neben eine Ablagefläche gezogen werden (`apps/desktop/src/renderer/app/strayDrop.tsx`): Das Fenster
+ * öffnet sie nicht, sondern zeigt einen Hinweis.
+ */
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vite-plus/test";

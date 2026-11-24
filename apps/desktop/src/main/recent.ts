@@ -1,6 +1,9 @@
 /**
  * Zuletzt geöffnete Projekte: eine kleine Liste im Benutzerordner der App, neueste zuerst.
  * Dazu meldet die App jede Datei dem Betriebssystem (Dock, Sprungliste, „Zuletzt verwendet“).
+ *
+ * Die Liste liegt beim Rechner, nicht im Projekt. `state.ts` trägt jedes geöffnete Projekt ein; die Startseite der
+ * Oberfläche (`src/renderer/Recent.tsx`) liest und pflegt sie über `ipc/project.ts`.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -30,15 +33,18 @@ function write(list: Omit<RecentProject, "missing">[]): void {
   }
 }
 
+/** Die Liste für die Startseite; `missing` wird bei jedem Lesen frisch geprüft. */
 export function recentProjects(): RecentProject[] {
   return read().map((r) => ({ ...r, missing: !existsSync(r.path) }));
 }
 
+/** Projekt an den Anfang der Liste setzen (bei jedem Öffnen oder Anlegen). */
 export function rememberProject(path: string, name: string): void {
   write([{ path, name, openedAt: new Date().toISOString() }, ...read().filter((r) => r.path !== path)]);
   app.addRecentDocument(path);
 }
 
+/** Eintrag aus der Liste nehmen; die Projektdatei bleibt unberührt. Gibt die neue Liste zurück. */
 export function forgetProject(path: string): RecentProject[] {
   write(read().filter((r) => r.path !== path));
   return recentProjects();

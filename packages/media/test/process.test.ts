@@ -1,3 +1,7 @@
+/**
+ * Start von ffmpeg und ffprobe über `runTool` (`packages/media/src/process.ts`): Ausgabe, Fehler, Abbrechen und
+ * Zeitlimits.
+ */
 import { chmodSync, existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

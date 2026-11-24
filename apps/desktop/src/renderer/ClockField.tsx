@@ -2,12 +2,17 @@
  * Uhrzeit als Maskenfeld: nur Ziffern tippen, der Doppelpunkt kommt von selbst („1030“ → 10:30, mit Sekunden
  * „103045“ → 10:30:45). ↑/↓ verschieben um eine Minute, mit Umschalt um zehn. Überall, wo eine Uhrzeit eingetippt
  * wird, damit sich alle Zeitfelder gleich verhalten.
+ *
+ * Benutzt für Zeitbelege von Hand (`inspector/Evidence.tsx`) und die Notierzeit von Tagebucheinträgen
+ * (`diary/EntryCard.tsx`, `inspector/DiaryPage.tsx`). Die Maske selbst rechnet `format.ts` (`maskClockAt`,
+ * `normalizeClock`, `stepClock`); der Wert ist immer Text, keine Zahl.
  */
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { type ClockOpts, clockLength, maskClockAt, normalizeClock, stepClock } from "./format.ts";
 import { cx } from "./ui.tsx";
 import { isEnter } from "./keys.js";
 
+/** Das Eingabefeld allein, ohne Beschriftung (das zugängliche Label kommt über `ariaLabel`). */
 export function ClockInput({
   ariaLabel,
   value,
@@ -33,6 +38,7 @@ export function ClockInput({
   const opts: ClockOpts = { seconds };
   const valid = normalizeClock(value, opts) !== null;
   const input = useRef<HTMLInputElement>(null);
+  /** Wohin die Schreibmarke nach dem nächsten Rendern gehört; null = nichts zu tun. */
   const caret = useRef<number | null>(null);
   // Nach der Maske die Schreibmarke dorthin setzen, wo getippt wurde, statt ans Ende.
   useLayoutEffect(() => {

@@ -2,6 +2,12 @@
  * Migrationen der Projektdatei. Jede Stufe läuft genau einmal, gesteuert über
  * `PRAGMA user_version`. Bestehende Stufen nie ändern, nur neue anhängen:
  * Projektdateien leben jahrelang in Forschungsarchiven.
+ *
+ * Angewandt beim Öffnen in `ProjectStore.open` (`packages/core/src/db/store.ts`); die Zahl der Stufen ist
+ * `SCHEMA_VERSION` (`packages/core/src/db/backup.ts`). Dieselben Tabellen stehen für Abfragen und Typen noch einmal
+ * in `packages/core/src/db/schema.ts`. `packages/core/test/schema.test.ts` vergleicht beide Fassungen,
+ * `packages/core/test/migrations.test.ts` hält veröffentlichte Stufen per Fingerabdruck fest. Was bei einer neuen
+ * Tabelle sonst noch zu tun ist, steht in AGENTS.md („Neue Tabelle in der Projektdatei“).
  */
 export const MIGRATIONS: readonly string[] = [
   // 1: Grundmodell

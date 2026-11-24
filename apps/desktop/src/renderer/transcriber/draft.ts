@@ -1,9 +1,16 @@
-/** Reine Logik rund um die angefangene Zeile im Mitschreiben (ohne React, damit sie sich testen lässt). */
+/**
+ * Reine Logik rund um die angefangene Zeile im Mitschreiben (ohne React, damit sie sich testen lässt). Genutzt von
+ * `apps/desktop/src/renderer/Transcriber.tsx`, geprüft in `apps/desktop/test/transcriber-draft.test.ts`.
+ */
 import { splitSpeaker } from "../format.ts";
 
+/** Zeile, die angelegt werden soll, aber noch nicht gespeichert ist; `atMs` ist die Stelle in der Aufnahme. */
 export type PendingLine = { atMs: number; speaker: string; text: string };
 
-/** Die Zeile, die Enter anlegen würde; null, wenn nichts Sinnvolles im Feld steht. */
+/**
+ * Die Zeile, die Enter anlegen würde; null, wenn nichts Sinnvolles im Feld steht. `mark` ist die Stelle, an der das
+ * Tippen begann; ohne sie gilt die Wiedergabestelle `posMs`.
+ */
 export function takeDraft(draft: string, speaker: string, mark: number | null, posMs: number): PendingLine | null {
   const { speaker: sp, text } = splitSpeaker(draft);
   if (!text.trim()) return null;

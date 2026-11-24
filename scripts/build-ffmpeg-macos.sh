@@ -4,6 +4,10 @@
 # macOS-SDK; keine GPL-Teile, keine Bibliotheken aus Homebrew (--disable-autodetect).
 #
 #   scripts/build-ffmpeg-macos.sh <release-linie, z. B. 8.1> <zielordner>
+#
+# Wird von scripts/fetch-ffmpeg.mjs aufgerufen (lokal und im Paket-Workflow .github/workflows/package.yml), nicht
+# von Hand. Legt neben ffmpeg und ffprobe die Lizenz (LICENSE.txt) und einen Nachweis des Builds (BUILD.txt: Quelle,
+# SHA-256 des Quellarchivs, Konfiguration) ab; fetch-ffmpeg.mjs vergleicht diese Prüfsumme mit der dort hinterlegten.
 set -euo pipefail
 
 line="$1"
@@ -42,6 +46,7 @@ rm -rf "$out"
 mkdir -p "$out"
 cp ffmpeg ffprobe "$out/"
 cp COPYING.LGPLv2.1 "$out/LICENSE.txt"
+# Sicherung: Die Versionszeile nennt die Konfiguration. Stünde dort GPL oder nonfree, dürfte der Build nicht ins Paket.
 version="$("$out/ffmpeg" -hide_banner -version)"
 if grep -qE -- "--enable-gpl|--enable-nonfree" <<<"$version"; then
   echo "Build ist nicht LGPL" >&2

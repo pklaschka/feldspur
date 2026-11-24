@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Schritt „Abgleichen“: welche Uhren nach einer Änderung sichtbar an ihren Platz rücken (`settledMoves` in
+ * `apps/desktop/src/renderer/Sync.tsx`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import type { SessionView } from "../src/shared/api.ts";
 import { settledMoves } from "../src/renderer/Sync.tsx";

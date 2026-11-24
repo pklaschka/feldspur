@@ -9,6 +9,7 @@ import { log } from "@feldspur/media";
 import type { CitationInfo, CitationLookup } from "../shared/api.ts";
 import { pickVersionDoi, zenodoVersionUrl, type VersionDoi } from "../shared/citation.ts";
 
+/** Erscheinungsdatum der Version; setzt der Build ein (`apps/desktop/vite.config.ts`, aus CITATION.cff). */
 declare const __FELDSPUR_RELEASED__: string;
 
 /** Wie lange Feldspur auf Zenodo wartet. */
@@ -26,6 +27,7 @@ function readStored(): Stored {
   }
 }
 
+/** Version, Erscheinungsdatum und die schon gemerkte DOI; liest nur die Datei im Benutzerordner, kein Netz. */
 export function citationInfo(): CitationInfo {
   const version = app.getVersion();
   const known = readStored()[version];
@@ -36,6 +38,7 @@ export function citationInfo(): CitationInfo {
   };
 }
 
+/** Laufende Abfrage bei Zenodo, zum Abbrechen; höchstens eine. */
 let running: AbortController | null = null;
 
 /** Schlägt die DOI der laufenden Version bei Zenodo nach; nur nach Knopfdruck im Dialog. */

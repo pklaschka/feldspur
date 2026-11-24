@@ -2,6 +2,9 @@
  * Lange Dateilisten im Schritt Einsammeln (Issue #166): Ein Gerät mit vielen Dateien zeigt seine Liste in fester
  * Höhe, die in der Karte scrollt. So bleiben alle Gerätekarten gleich breit und ungefähr gleich hoch, nichts springt
  * beim Durchsehen, und die Fußzeile nennt, wie viele Dateien noch zu prüfen sind oder keine Zeit haben.
+ *
+ * Nur die Regeln, ohne React; die Karten selbst zeichnet `Collect.tsx`. Getestet in
+ * `apps/desktop/test/collect-layout.test.ts`.
  */
 
 /** Ab so vielen Dateien scrollt die Liste in der Karte; darunter wächst die Karte einfach mit. */
@@ -9,6 +12,7 @@ const SCROLL_FROM = 13;
 
 export const isScrollingList = (total: number) => total >= SCROLL_FROM;
 
+/** Stand einer Datei wie in der Ansicht des Einsatzes (`SourceRow.status`, `apps/desktop/src/shared/api.ts`). */
 export type RowStatus = "ok" | "check" | "unplaced" | "context";
 
 /** Hinweise in der Fußzeile, in dieser Reihenfolge: was noch Arbeit macht. „sicher“ und „Kontext“ nicht. */

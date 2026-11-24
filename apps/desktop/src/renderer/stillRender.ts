@@ -1,6 +1,9 @@
 /**
  * Foto oder Scan-Ausschnitt (auch PDF-Seiten) als Bild: für die Montage in der App und für die
  * Ausgabe, weil ffmpeg keine PDFs lesen kann. Ein Rahmen (relative Koordinaten) schneidet aus.
+ *
+ * Aufgerufen wird das vom Hauptprozess: `apps/desktop/src/main/export.ts` (`stillVia`) fragt während der Ausgabe
+ * über `onStillRequest` an, `App.tsx` meldet `renderImageRefJpeg` dafür an.
  */
 import type { ImageRef } from "@feldspur/media";
 import { mediaUrl } from "../shared/api.ts";

@@ -1,3 +1,7 @@
+/**
+ * Automatische Sicherung der Projektdatei (`apps/desktop/src/main/backup.ts`): wann beim Öffnen, während der Arbeit und
+ * beim Schließen gesichert wird und wie viele Sicherungen bleiben. Die Uhr stellt der Test selbst.
+ */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

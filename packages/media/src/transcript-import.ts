@@ -2,10 +2,17 @@
  * Fertige automatische Transkripte einlesen (z. B. Whisper, WhisperX, MacWhisper, noScribe):
  * SubRip (.srt), WebVTT (.vtt), Whisper-JSON (.json) und Whisper-TSV (.tsv).
  * Jede Zeile behält ihre Stelle in der Aufnahme; die Uhrzeit folgt wie bei der Mitschrift aus dem Abgleich.
+ *
+ * Einordnung: Schritt „Mitschreiben“. Der Hauptprozess lässt eine Datei wählen, liest sie und ruft
+ * `parseTranscript` auf (`apps/desktop/src/main/ipc/review.ts`). Hier wird nur Text zerlegt: kein Dateizugriff, kein
+ * Zugriff auf das Projekt.
  */
 
+/** Eine eingelesene Zeile, noch ohne Bezug zu einer Quelle. */
 export interface ImportedLine {
+  /** Beginn der Zeile in ms ab Anfang der Aufnahme. */
   atMs: number;
+  /** Sprecher*in, leer, wenn die Datei keine nennt. */
   speaker: string;
   text: string;
 }
@@ -39,6 +46,7 @@ function splitSpeaker(text: string): { speaker: string; text: string } {
   return { speaker: "", text: t };
 }
 
+/** Auszeichnungen aus Untertiteln (`<i>`, `<b>`, `<c.farbe>` …) entfernen, Leerraum zu einem Leerzeichen. */
 const clean = (s: string) =>
   s
     .replace(/<\/?(?:i|b|u|c|v)[^<>]*>/g, "")
@@ -95,6 +103,11 @@ function parseTsv(text: string): ImportedLine[] {
     });
 }
 
+/**
+ * Zerlegt den Inhalt einer Transkriptdatei in Zeilen, sortiert nach ihrer Stelle. Das Format folgt aus der Endung
+ * von `fileName`; bei unbekannter Endung gilt alles mit „-->“ als SRT/VTT. Wirft mit einer Meldung für die
+ * Oberfläche, wenn das Format unbekannt ist oder keine Zeile eine Zeitangabe hat.
+ */
 export function parseTranscript(text: string, fileName: string): ImportedLine[] {
   const ext = fileName.toLowerCase().split(".").pop();
   const body = text.replace(/^﻿/, "");
@@ -107,4 +120,5 @@ export function parseTranscript(text: string, fileName: string): ImportedLine[] 
   return lines.sort((a, b) => a.atMs - b.atMs);
 }
 
+/** Endungen für den Dateidialog. */
 export const TRANSCRIPT_EXTENSIONS = ["srt", "vtt", "json", "tsv"];

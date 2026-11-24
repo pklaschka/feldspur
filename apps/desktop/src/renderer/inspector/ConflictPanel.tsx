@@ -1,6 +1,10 @@
 /**
  * Widersprüchliche Zeitbelege: vergleichen und bewusst entscheiden, welche Zeit gilt.
  * Ein Kasten in drei Zuständen: offen, entschieden, neu prüfen (siehe Konzept zu Issue #75).
+ *
+ * Teil der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`); `startText` und `ConflictMark` nutzen auch
+ * Prüfliste und Zeitachse (`apps/desktop/src/renderer/review/`). Ob und wie stark sich Belege widersprechen, rechnet
+ * `packages/core/src/resolve.ts`; die Wörter dazu stehen in `apps/desktop/src/shared/conflict-text.ts`.
  */
 import { useId, useRef, useState } from "react";
 import { useElementWidth } from "../canvas.ts";
@@ -22,9 +26,13 @@ import { clock, hm, offsetText } from "../format.ts";
 import { Button, cx } from "../ui.tsx";
 import type { InspectorActions } from "./actions.ts";
 
+/** Zeitbeleg mit Vergleichswerten: wo die Quelle begänne, wenn er gälte, und wie weit das von der Lage abweicht. */
 type Compared = EvidenceRow & { compare: EvidenceComparison };
 
-/** Zeit eines Belegs, wie man sie spricht: minutengenaue Angaben ohne erfundene Sekunden. */
+/**
+ * Zeit eines Belegs, wie man sie spricht: minutengenaue Angaben (Unsicherheit genau 30 s, wie bei `precisionText` in
+ * `packages/core/src/resolve.ts`) ohne erfundene Sekunden.
+ */
 export const startText = (c: EvidenceComparison) => (c.uncertaintyMs === 30_000 ? hm(c.startMs) : clock(c.startMs));
 
 /** Zeichen ≠ für Widersprüche: Umriss = deutlich, gefüllt = stark, grünes ✓ = entschieden. */
@@ -322,6 +330,10 @@ function Disclosure({
   );
 }
 
+/**
+ * Der Kasten selbst: nichts ohne Widerspruch oder ohne Lage; nach einer Entscheidung die Kurzfassung (`Decided`),
+ * sonst und auf „Vergleich zeigen“ der Vergleich mit Auswahl (`Open`).
+ */
 export function ConflictPanel({
   row,
   view,
@@ -340,6 +352,7 @@ export function ConflictPanel({
   if (conflict.state === "none" || row.startMs === null) return null;
   if (conflict.state === "decided" && !showCompare)
     return <Decided row={row} list={list} onShow={() => setShowCompare(true)} actions={actions} />;
+  // Der Schlüssel setzt Auswahl und Begründung zurück, sobald sich Quelle, Lage oder Zustand ändern.
   return (
     <Open
       key={`${row.id}:${row.startMs}:${conflict.state}`}
@@ -353,6 +366,7 @@ export function ConflictPanel({
   );
 }
 
+/** Kurzfassung nach einer Entscheidung: was gilt, was widerspricht, die Begründung, und der Weg zurück. */
 function Decided({
   row,
   list,
@@ -406,6 +420,10 @@ function Decided({
   );
 }
 
+/**
+ * Vergleich mit Auswahl: offen, neu zu prüfen oder, nach einer Entscheidung, nur zum Nachlesen (dann ist `onHide`
+ * gesetzt und die Auswahl gesperrt).
+ */
 function Open({
   row,
   view,
@@ -434,6 +452,7 @@ function Open({
         Number(b.compare.verdict === "chosen") - Number(a.compare.verdict === "chosen") ||
         Math.abs(a.compare.differenceMs) - Math.abs(b.compare.differenceMs),
     );
+  // Vorauswahl: bei „neu prüfen“ der Beleg der alten Entscheidung, sonst der verwendete.
   const initial =
     (stale && options.find((o) => o.id === row.decision?.basisId)?.id) ||
     options.find((o) => o.compare.verdict === "chosen")?.id ||

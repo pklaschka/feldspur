@@ -2,6 +2,10 @@
  * Seitenzählung eines Tagebuch-Scans in der Detailleiste: erste Seitenzahl im Notizbuch und
  * ob jedes Bild eine Doppelseite zeigt. Die Zählung lässt sich über die folgenden Scans desselben
  * Geräts fortsetzen (PDFs zählen je Seite weiter).
+ *
+ * Eingebunden in die Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`) für Quellen der Art Tagebuch
+ * (`kind === "diary"`). Gespeichert wird über `setPageNumbering` (Handler in `apps/desktop/src/main/ipc/review.ts`,
+ * rückgängig als „Seitenzählung geändert“); die Rechnung fürs Weiterzählen steht in `packages/core/src/pages.ts`.
  */
 import { continuePages, pageRangeText } from "@feldspur/core/pages";
 import { useState } from "react";
@@ -15,6 +19,7 @@ import { isEnter } from "./keys.js";
 const api = window.feldspur;
 const byLabel = (a: SourceRow, b: SourceRow) => a.label.localeCompare(b.label, "de", { numeric: true });
 
+/** Seiten eines Scans fürs Weiterzählen: ein Bild zählt als eine, ebenso ein PDF, das sich nicht öffnen lässt. */
 async function pdfPages(row: SourceRow): Promise<number> {
   if (!row.isPdf) return 1;
   try {
@@ -24,6 +29,7 @@ async function pdfPages(row: SourceRow): Promise<number> {
   }
 }
 
+/** Abschnitt „Seitenzählung“ für den Scan `row`; `apply` führt die Änderung aus und übernimmt die neue Ansicht. */
 export function PageNumbering({ row, view, apply }: { row: SourceRow; view: SessionView; apply: ApplyView }) {
   const [text, setText] = useDraft(row.firstPage === null ? "" : String(row.firstPage), row.id);
   const pdfCount = usePdfPageCount(row.isPdf ? row.id : null);
@@ -31,6 +37,7 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
 
   const save = (firstPage: number | null, spread: boolean) =>
     apply(() => api.setPageNumbering([{ sourceId: row.id, firstPage, spread }]));
+  // Leeres Feld = keine Seitenzahl (null); Unbrauchbares setzt das Feld auf den gespeicherten Wert zurück.
   const commit = () => {
     const t = text.trim();
     const n = t === "" ? null : Number(t);
@@ -39,6 +46,8 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
     if (n !== row.firstPage) save(n, row.pageSpread);
   };
 
+  // Weitergezählt wird in den späteren Scans desselben Geräts, in der Reihenfolge der Kurzzeichen (T-02 nach T-01).
+  // Weitere Bilder einer Seite (`partOf`) zählen nicht eigens und bieten das Weiterzählen auch nicht an.
   const following = row.partOf
     ? []
     : view.rows
@@ -61,6 +70,7 @@ export function PageNumbering({ row, view, apply }: { row: SourceRow; view: Sess
         { firstPage: row.firstPage, pageSpread: row.pageSpread, pdfPages: counts[0]! },
         following.map((f, i) => ({ id: f.id, pdfPages: counts[i + 1]! })),
       );
+      // Die folgenden Scans übernehmen dabei auch die Doppelseiten-Einstellung dieses Scans.
       apply(() =>
         api.setPageNumbering(next.map((n) => ({ sourceId: n.id, firstPage: n.firstPage, spread: row.pageSpread }))),
       );

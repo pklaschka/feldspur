@@ -1,3 +1,8 @@
+/**
+ * Beleg-Karte im Schritt „Ausgeben“, gezeigt von `apps/desktop/src/renderer/export/ExportResult.tsx`, solange die
+ * letzte Ausgabe zum Einsatz passt. Die Zahlen (`ExportCard`) zählt der Hauptprozess (`exportCard` in
+ * `apps/desktop/src/main/export.ts`).
+ */
 import type { ReactNode } from "react";
 import type { ExportCard, ExportStatus } from "../../shared/api.ts";
 import { Button, cx, FlagMark } from "../ui.tsx";
@@ -21,9 +26,13 @@ export function ExportReceipt({
   onShowFolder,
   children,
 }: {
+  /** Vermerk der letzten Ausgabe in der Projektdatei: Ordner, Dateien, Zeitpunkt. */
   record: ExportStatus["record"];
+  /** null, solange die Zahlen laden: Dann stehen nur Dateizahl und Ordner da. */
   card: ExportCard | null;
+  /** Direkt nach der Ausgabe („Fertig.“, mit Schatten) statt beim Wiederkommen („Aktuell.“). */
   fresh: boolean;
+  /** Dateiname des Viewers (.html) im Ausgabeordner; undefined, wenn es keinen gibt oder er dort fehlt. */
   viewerFile: string | undefined;
   filesOpen: boolean;
   onToggleFiles: () => void;

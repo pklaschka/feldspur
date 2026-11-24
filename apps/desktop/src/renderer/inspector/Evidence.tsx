@@ -1,4 +1,8 @@
-/** Zeitbelege einer Quelle und Uhrzeit von Hand. */
+/**
+ * Zeitbelege einer Quelle und Uhrzeit von Hand: der Abschnitt „Zeitbelege“ der Detailleiste
+ * (`apps/desktop/src/renderer/Inspector.tsx`). Wie jeder Beleg zur verwendeten Lage steht (`compare`), rechnet
+ * `packages/core/src/resolve.ts`; hier wird nur gezeigt und ab- oder eingeschaltet.
+ */
 import { useState } from "react";
 import type { Precision, SourceRow, TimeInput } from "../../shared/api.ts";
 import { EVIDENCE_LABEL, normalizeClock } from "../format.ts";
@@ -12,6 +16,11 @@ import { formatDuration } from "@feldspur/core/time";
 import { verdictBadge, verdictHelp } from "../../shared/conflict-text.ts";
 import { startText } from "./ConflictPanel.tsx";
 
+/**
+ * Alle Zeitbelege (`TimeEvidence`) einer Quelle: welcher verwendet wird und wie die anderen dazu stehen. Abgeschaltete
+ * Belege zählen bei der Lage nicht mit; löschen lassen sich nur von Hand eingetragene (`own`), und aus Ankern
+ * abgeleitete (`derived`) haben keinen Schalter.
+ */
 export function EvidenceList({ row, actions }: { row: SourceRow; actions: InspectorActions }) {
   const decided = row.conflict.state === "decided";
   if (!row.evidence.length) {
@@ -26,6 +35,8 @@ export function EvidenceList({ row, actions }: { row: SourceRow; actions: Inspec
   // Echte Zeit gegen unabgeglichene Geräteuhr: kein Widerspruch, aber ein Angebot, die Uhr danach zu richten.
   const unsynced = row.evidence.find((e) => e.enabled && e.compare?.verdict === "unsynced");
   const deviceSide = (k: string) => k === "metadata" || k === "filename";
+  // Vorgeschlagene Abweichung der Geräteuhr (positiv = geht vor): Stammt der unabgeglichene Beleg selbst von der
+  // Geräteuhr (Metadaten, Dateiname), gilt sein Abstand zur verwendeten Lage direkt, sonst mit umgekehrtem Vorzeichen.
   const offset = unsynced?.compare
     ? deviceSide(unsynced.kind)
       ? unsynced.compare.differenceMs
@@ -125,6 +136,7 @@ export function TimeForm({
   const [precision, setPrecision] = useState<Precision>(row.status === "unplaced" && !av ? "approx" : "exact");
   const [note, setNote] = useState("");
   const [syncDevice, setSyncDevice] = useState(false);
+  // Die Geräteuhr lässt sich nur an einer Quelle richten, die selbst eine Zeit dieser Uhr hat.
   const canSync = kind === "manual" && !!row.deviceId && row.hasDeviceClock;
   if (!open) {
     return (

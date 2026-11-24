@@ -1,4 +1,7 @@
-/** Rechnen für den Feldkalender: Tage, Gruppen nach Ort, Lage und Uhrzeit auf der Achse. Ohne Oberfläche. */
+/**
+ * Rechnen für den Feldkalender: Tage, Gruppen nach Ort, Lage und Uhrzeit auf der Achse. Ohne Oberfläche; genutzt von
+ * `FieldCalendar.tsx` und `DayRow.tsx` im selben Ordner.
+ */
 import { hourLabel, type calendarAxis, type CalendarDay } from "@feldspur/media/field-calendar";
 import type { OverviewSession } from "../../shared/api.ts";
 
@@ -24,6 +27,7 @@ export function clockLabel(ms: number): string {
   return `${hourLabel(Math.floor(min / 60) * 3_600_000)}:${String(((min % 60) + 60) % 60).padStart(2, "0")}`;
 }
 
+/** Achse des Feldkalenders: Uhrzeiten als ms seit Mitternacht (`fromMs`, `toMs`) und die Striche der vollen Stunden. */
 export type Axis = ReturnType<typeof calendarAxis>;
 /** Lage auf der Achse in Prozent. */
 export const pos = (axis: Axis, ms: number) => ((ms - axis.fromMs) / (axis.toMs - axis.fromMs)) * 100;

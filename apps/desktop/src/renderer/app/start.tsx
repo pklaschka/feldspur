@@ -1,4 +1,7 @@
-/** Startbildschirm: App-Symbol und erster Einsatz. */
+/**
+ * Bausteine für `App.tsx`: App-Symbol (Startbildschirm und Kopf der Einsatzliste) und das Formular für einen neuen
+ * Einsatz (in der Einsatzliste und groß im leeren Projekt).
+ */
 import iconUrl from "../../../../../packaging/icon.svg?url";
 import { useState, type FormEvent } from "react";
 import { localDate } from "../format.ts";

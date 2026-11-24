@@ -1,4 +1,8 @@
-/** Spuren der Zeitachse: Reihenfolge, Höhe, Untertitel und Startzeit einer Quelle. */
+/**
+ * Spuren der Zeitachse in „Durchsehen“: Reihenfolge, Höhe, Untertitel und Startzeit einer Quelle. Eine Spur ist ein
+ * Gerät. Genutzt von `apps/desktop/src/renderer/Review.tsx`, `rowStart` auch von
+ * `apps/desktop/src/renderer/app/SessionPane.tsx`.
+ */
 import type { DeviceRow, SourceRow } from "../../shared/api.ts";
 import type { Track } from "../timeline.ts";
 

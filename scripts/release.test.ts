@@ -1,3 +1,7 @@
+/**
+ * Prüft die Hilfen des Release-Workflows aus `scripts/release.ts`: Reihenfolge und Prüfung der Versionen, das
+ * Changelog, den Release-Text und das Setzen der Versionen in den Dateien (in einem Wegwerf-Ordner).
+ */
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

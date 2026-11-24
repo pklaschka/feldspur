@@ -1,3 +1,7 @@
+/**
+ * Geschätzte Größe des Montagevideos im Schritt „Ausgeben“ (`apps/desktop/src/main/montage-size.ts`): Die Schätzung
+ * lernt aus den letzten Ausgaben. Der zweite Teil braucht ffmpeg, sonst übersprungen.
+ */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

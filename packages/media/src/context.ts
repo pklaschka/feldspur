@@ -1,6 +1,11 @@
 /**
  * Kontextstücke (Issue #108) für Anzeige und Ausgabe aufbereiten: Name, Fundstelle, Text, Bilder.
- * Die Reihenfolge und die Verweise rechnet die Zeitbestimmung (`ResolveResult.context`).
+ * Die Reihenfolge und die Verweise rechnet die Zeitbestimmung (`ResolveResult.context`,
+ * `packages/core/src/resolve.ts`).
+ *
+ * Einordnung: rein, ohne Projektdatei. Genutzt von `packages/media/src/session-transcript.ts` (Abschnitt „Kontext“
+ * im Einsatztranskript, also Ausgeben) und von `apps/desktop/src/main/view.ts` (Kontext-Zeilen in der Ansicht des
+ * Einsatzes). So zeigen App und Ausgabe dieselben Namen und Fundstellen.
  */
 import {
   diaryPageLabel,
@@ -17,10 +22,15 @@ import {
 import { noteText } from "./note-text.ts";
 import type { ImageRef } from "./session-transcript.ts";
 
+/** Ein Kontextstück, fertig beschriftet. Es ist entweder ein Tagebucheintrag (`entry`) oder eine ganze Quelle. */
 export interface ContextPiece {
+  /** Stelle und Verweise aus der Zeitbestimmung. */
   item: ContextItem;
+  /** Der Tagebucheintrag; null, wenn das Stück eine Quelle ist. */
   entry: DiaryEntry | null;
+  /** Die Quelle (Foto, Notiz, …); null, wenn das Stück ein Tagebucheintrag ist. */
   source: Source | null;
+  /** Art der Quelle; bei Tagebucheinträgen immer „diary“. */
   kind: SourceKind;
   /** Eigener Titel; leer = keiner. */
   title: string;
@@ -30,18 +40,23 @@ export interface ContextPiece {
   find: string;
   /** Gerät und Person wie bei den übrigen Zeilen („Tagebuch, Testperson A“). */
   who: string;
+  /** Nur die Person; leer, wenn dem Gerät keine zugeordnet ist. */
   person: string;
+  /** Wie viel Text dabei ist: Volltext, Kurzform oder nur der Scan. Quellen ohne Text gelten als „scan“. */
   mode: DiaryMode;
   /** Text ohne Vorsatz. */
   text: string;
+  /** Freie Angabe, wann das Stück entstand („am Vorabend“); leer = keine. */
   made: string;
   /** Notierzeit „13:05“; null = keine. */
   notedAt: string | null;
   /** Uhrzeiten der datierten Einträge, die hierher verweisen („10:24“). */
   mentionedAt: string[];
+  /** Bilder zum Stück: bei Fotos die Datei samt zugehörigen Teilen, bei Tagebucheinträgen die Ausschnitte. */
   images: ImageRef[];
 }
 
+/** Uhrzeit ohne Sekunden („13:05“). */
 const hm = (ms: number) => formatClock(ms).slice(0, 5);
 
 const KIND_WORD: Partial<Record<SourceKind, string>> = { photo: "Foto", note: "Notiz", gps: "GPS", other: "Datei" };
@@ -85,6 +100,7 @@ export function contextPieces(input: ResolveInput, resolved: ResolveResult, pers
         images: s.kind === "photo" ? [s, ...parts].map((x) => ({ sourceId: x.id })) : [],
       };
     }
+    // Sonst ein Tagebucheintrag. Gerät und Person kommen von der Seite, auf der sein erster Ausschnitt liegt.
     const e = entries.get(item.entryId!)!;
     const first = e.regions[0] ? src.get(e.regions[0].sourceId) : undefined;
     const page = first?.partOf ? src.get(first.partOf) : first;

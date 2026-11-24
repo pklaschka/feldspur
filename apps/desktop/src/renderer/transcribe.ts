@@ -1,4 +1,7 @@
-/** Reine Hilfen fürs Mitschreiben (ohne React), damit sie sich testen lassen. */
+/**
+ * Reine Hilfen fürs Mitschreiben (ohne React), damit sie sich testen lassen (`apps/desktop/test/transcribe.test.ts`).
+ * Die Ansicht dazu ist `Transcriber.tsx` mit den Zeilen in `transcriber/Line.tsx`.
+ */
 import { EDITABLE, POPUP, PRESSABLE, type KeyLike, type TargetLike } from "./keys.ts";
 
 /** Ausschnitt der mitlaufenden Waveform: die Wiedergabestelle steht bei einem Viertel. */
@@ -36,6 +39,7 @@ export function oneParagraph(text: string): string {
   return text.replace(/\s*[\r\n]+\s*/g, " ");
 }
 
+/** Was ein Tastendruck im Mitschreiben auslöst; „type“ heißt: Der Buchstabe gehört in die neue Zeile. */
 export type TranscriberKey =
   | "toggle"
   | "back"

@@ -1,11 +1,16 @@
 /**
  * Änderungsprotokoll als CSV: eine Zeile je geändertem Feld, wie das Begleitprotokoll mit Semikolon und BOM,
  * damit Excel und LibreOffice Umlaute richtig lesen. Ohne Electron, damit es sich direkt testen lässt.
+ *
+ * Zwei Nutzer: „Änderungsprotokoll speichern“ für das ganze Projekt (`ipc/project.ts`) und die Datei
+ * `…_Aenderungsprotokoll.csv` im Ausgabeordner eines Einsatzes (`export.ts`). Die deutschen Bezeichnungen teilt sich
+ * die Datei mit der Anzeige in der Oberfläche (`apps/desktop/src/shared/changelog.ts`).
  */
 import type { ChangeEntry, ChangeStep, History } from "@feldspur/core";
 import { excelCsv } from "@feldspur/media/csv";
 import { decisionText, fieldChanges, OP_LABEL, stepLabel, TABLE_LABEL } from "../shared/changelog.ts";
 
+/** Schritte in Tabellenzeilen (Spalten wie `HEAD`); eine Änderung ohne geändertes Feld bekommt eine Zeile ohne Feld. */
 function changeLogRows(steps: ChangeStep[]): unknown[][] {
   const rows: unknown[][] = [];
   // Älteste zuerst: so liest man ein Protokoll.
@@ -36,6 +41,7 @@ function allSteps(history: History): ChangeStep[] {
 
 const HEAD = ["Zeit (UTC)", "Schritt", "Aktion", "Bereich", "Art", "Zeile", "Feld", "vorher", "nachher"];
 
+/** Änderungsprotokoll des ganzen Projekts, älteste Schritte zuerst. */
 export function changeLogCsv(history: History): string {
   return excelCsv([HEAD, ...changeLogRows(allSteps(history))]);
 }

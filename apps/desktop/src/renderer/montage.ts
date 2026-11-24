@@ -1,4 +1,7 @@
-/** Montage in der App abspielen: Rechenhilfen ohne Oberfläche (testbar). */
+/**
+ * Montage in der App abspielen: Rechenhilfen ohne Oberfläche (testbar). Die Ansicht dazu ist `MontageView.tsx`;
+ * die Stücke (`PreviewPiece`) plant `packages/media/src/montage-preview.ts` mit demselben Plan wie das Montagevideo.
+ */
 import type { OverlayFrame } from "@feldspur/media";
 import type { PreviewMedia, PreviewPiece } from "../shared/api.ts";
 
@@ -21,7 +24,7 @@ export function previewFrame(p: PreviewPiece, montageMs: number): OverlayFrame {
   };
 }
 
-/** Stück an einer Stelle der Montage. */
+/** Index des Stücks an einer Stelle der Montage (ms ab Montagebeginn); die Stücke sind nach Beginn sortiert. */
 export function pieceAt(pieces: PreviewPiece[], montageMs: number): number {
   let lo = 0;
   let hi = pieces.length - 1;

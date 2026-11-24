@@ -1,22 +1,32 @@
 /**
  * Aus ausgelesenen Metadaten und Dateinamen Zeitbelege machen (rein, ohne I/O).
+ *
+ * Einordnung: Schritt Einsammeln. `packages/media/src/probe.ts` liest die Metadaten aus der Datei, diese Datei deutet
+ * sie, `packages/media/src/import.ts` setzt beides je Datei zusammen (`inspectFile`, `rereadSource`). Danach schärft
+ * `packages/media/src/clip-times.ts` die Belege über alle Clips eines Geräts nach. Wo eine Quelle am Ende auf der
+ * Zeitachse liegt, entscheidet erst die Zeitbestimmung im Kern (`packages/core/src/resolve.ts`).
  */
 import { localMs, isValidLocal, timeFromFilename, type SourceKind, type TimeEvidence } from "@feldspur/core";
 import type { ImageExif, MediaProbe } from "./probe.ts";
 
+/** Zeitbeleg (`TimeEvidence`) vor dem Speichern: noch ohne Kennung und ohne Quelle. */
 export type EvidenceDraft = Omit<TimeEvidence, "id" | "sourceId" | "enabled">;
 
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*(Z|[+-]\d{2}:?\d{2})?$/;
 
 export interface ParsedStamp {
-  /** Wanduhrzeit wie geschrieben. */
+  /** Wanduhrzeit wie geschrieben, in ms (als wäre sie UTC, wie `LocalMs` im Kern). */
   local: number;
   /** UTC, falls eine Zone angegeben war. */
   utc: number | null;
+  /** Zonenangabe wie geschrieben („Z“, „+02:00“, „+0200“); null = keine. */
   zone: string | null;
 }
 
-/** "2026-09-14T10:18:47.000000Z", "2026-09-14T10:15:00+0200", "2026:09:14 10:12:34" */
+/**
+ * Zeitstempel lesen: "2026-09-14T10:18:47.000000Z", "2026-09-14T10:15:00+0200", "2026:09:14 10:12:34" (EXIF).
+ * null bei unlesbarem Text, ungültigem Datum oder Platzhalter-Datum.
+ */
 export function parseStamp(text: string): ParsedStamp | null {
   const norm = text.trim().replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
   const m = ISO_RE.exec(norm);
@@ -101,6 +111,7 @@ export function evidenceFromMediaTags(probe: MediaProbe): EvidenceDraft[] {
       });
     }
   }
+  // Nur, wenn keines der Felder davor einen Beleg ergab.
   const ct = t["creation_time"];
   const ctStamp = ct ? parseStamp(ct) : null;
   if (ct && ctStamp && out.length === 0) {
@@ -142,6 +153,10 @@ export function cameraXmlStart(
   return null;
 }
 
+/**
+ * Zeitbeleg eines Fotos aus EXIF (DateTimeOriginal, mit SubSec auf 50 ms genau). Gelesen als Ortszeit der Kamera;
+ * eine Zonenangabe (OffsetTime) steht nur im Rohtext.
+ */
 export function evidenceFromExif(exif: ImageExif | null): EvidenceDraft[] {
   if (!exif?.dateTimeOriginal) return [];
   const s = parseStamp(exif.dateTimeOriginal);
@@ -161,6 +176,10 @@ export function evidenceFromExif(exif: ImageExif | null): EvidenceDraft[] {
   ];
 }
 
+/**
+ * Zeitbeleg aus einer Uhrzeit im Dateinamen (Muster in `packages/core/src/filename.ts`); leer, wenn der Name keine
+ * trägt.
+ */
 export function evidenceFromFilename(fileName: string, customPattern?: string | null): EvidenceDraft[] {
   const f = timeFromFilename(fileName, customPattern);
   if (!f) return [];

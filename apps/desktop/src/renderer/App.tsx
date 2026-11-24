@@ -1,3 +1,10 @@
+/**
+ * Wurzel der Oberfläche (Renderer), eingehängt von `apps/desktop/src/renderer/main.tsx`. Ohne Projekt zeigt sie den
+ * Startbildschirm, sonst drei Spalten: links Projektmenü, Übersicht und Liste der Einsätze (`FieldSession`), in der
+ * Mitte und rechts den gewählten Einsatz (`app/SessionPane.tsx`: Schritte und Detailleiste) oder die Übersicht.
+ * Mit dem Hauptprozess spricht sie nur über `window.feldspur` (Schnittstelle in `apps/desktop/src/shared/api.ts`,
+ * Brücke in `apps/desktop/src/preload/preload.ts`).
+ */
 import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import type { ProjectInfo } from "../shared/api.ts";
 import { ExportProvider } from "./exportState.tsx";
@@ -20,8 +27,13 @@ import { readStored, writeStored } from "./stored.ts";
 
 const api = window.feldspur;
 
+/**
+ * Führt einen IPC-Aufruf aus und fängt dessen Fehler ab: Die Meldung landet im `ErrorBanner` (`ui.tsx`), der Aufrufer
+ * bekommt `undefined` statt einer Ausnahme. Fast jede Komponente, die Daten ändert, bekommt `guard` durchgereicht.
+ */
 export type Guard = <T>(fn: () => Promise<T>) => Promise<T | undefined>;
 
+/** Hält, welches Projekt, welcher Einsatz und welche Ebene (Übersicht oder Einsatz) gerade offen sind. */
 export function App() {
   // Auf großen Bildschirmen (1080p, 1440p) bekommen Einsatzliste und Seitenleiste von Anfang an mehr Platz.
   const wide = window.innerWidth >= 2200 ? 2 : window.innerWidth >= 1700 ? 1 : 0;
@@ -33,6 +45,7 @@ export function App() {
   const [overview, setOverview] = useState(false);
   /** Schritt, in dem der nächste geöffnete Einsatz beginnt (Sprung aus der Übersicht); sonst entscheidet der Einsatz. */
   const [openStep, setOpenStep] = useState<Step | null>(null);
+  /** Zeitbereich (ms, Uhrzeit des Einsatztags), den „Durchsehen“ beim Öffnen ins Bild holt; gehört zu `openStep`. */
   const [openAt, setOpenAt] = useState<Reveal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [projectMenu, setProjectMenu] = useState(false);
@@ -89,6 +102,7 @@ export function App() {
     [],
   );
 
+  // Beim Start das Projekt übernehmen, das der Hauptprozess schon offen hat (sonst null: Startbildschirm).
   useEffect(() => {
     void api.currentProject().then((p) => {
       setProject(p);
@@ -96,6 +110,7 @@ export function App() {
     });
   }, []);
 
+  /** Ein anderes Projekt ist jetzt offen (neu, geöffnet, Sicherung als Kopie): alles auf Anfang, letzter Einsatz. */
   const adopt = (p: ProjectInfo | null | undefined) => {
     if (!p) return;
     setDeleted(null);
@@ -122,6 +137,7 @@ export function App() {
     setOpenAt(null);
     setSessionId(p.sessions.find((s) => !project?.sessions.some((o) => o.id === s.id))?.id ?? lastSession(p));
   };
+  /** „Rückgängig“ im Hinweis nach dem Löschen eines Einsatzes (`DeletedToast`, `app/history.tsx`). */
   const undoDelete = async () => {
     const gone = deleted;
     setDeleted(null);
@@ -309,6 +325,10 @@ export function App() {
   );
 }
 
+/**
+ * Die vier Schritte (Reiter) eines Einsatzes: Einsammeln (`Collect.tsx`), Abgleichen (`Sync.tsx`), Durchsehen
+ * (`Review.tsx`), Ausgeben (`ExportStep.tsx`). Mitschreiben und Tagebuch sind keine Schritte, sondern Dialoge.
+ */
 export type Step = "collect" | "sync" | "review" | "export";
 
 /** Zuletzt gewählter Einsatz eines Projekts (sonst der erste). */

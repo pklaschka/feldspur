@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+/** Formular „Neuer Einsatz“ auf der Startseite eines leeren Projekts (`apps/desktop/src/renderer/app/start.tsx`). */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vite-plus/test";

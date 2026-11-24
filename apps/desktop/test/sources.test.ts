@@ -1,3 +1,7 @@
+/**
+ * Quellen und Geräte pflegen (`apps/desktop/src/main/sources.ts`): entfernen, einem anderen Gerät zuordnen, Geräte
+ * zusammenlegen, Bilder zu einer Seite verbinden, Folgeaufnahmen erkennen. Geprüft am Hauptprozess, ohne Oberfläche.
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

@@ -1,4 +1,4 @@
-/** Fuß der Einsatzliste: laufende Version und „Zitieren…“ (Issue #163). */
+/** Fuß der Einsatzliste in `App.tsx`: laufende Version und „Zitieren…“ (Issue #163, Dialog in `CitationDialog.tsx`). */
 import { useEffect, useState } from "react";
 import { CitationDialog } from "../CitationDialog.tsx";
 

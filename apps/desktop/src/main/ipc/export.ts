@@ -1,4 +1,12 @@
-/** IPC-Aufrufe fürs Ausgeben: Vorschau, Stand, Ausgabe, Originale prüfen und wiederfinden. */
+/**
+ * IPC-Aufrufe fürs Ausgeben: Vorschau, Stand, Ausgabe, Originale prüfen und wiederfinden.
+ *
+ * Gegenstücke in der Oberfläche (`apps/desktop/src/renderer/`): Schritt „Ausgeben“ (`ExportStep.tsx`,
+ * `exportState.tsx`, `export/`), die Vorschau der Montage (`MontageView.tsx`) und die Prüfung der Originale
+ * (`Originals.tsx`). Die Ausgabe ist kein Schritt für Rückgängig: Sie ändert keine Forschungsdaten, nur den Vermerk
+ * über die letzte Ausgabe. Neu verknüpfte Originale tragen sich dagegen selbst in den Verlauf ein
+ * (`../originals.ts`). Die Arbeit der Ausgabe steckt in `../export.ts`.
+ */
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { dialog, ipcMain, shell } from "electron";
@@ -70,6 +78,7 @@ export function registerExportIpc(): void {
     return runExport(s, e.sender, sessionId, parent, { ...opts, software });
   });
   ipcMain.handle(IPC.cancelExport, (_e, sessionId: string) => cancelExport(sessionId));
+  // Originale: prüfen, in einem Ordner suchen, einzeln neu verknüpfen.
   ipcMain.handle(IPC.checkOriginals, (e, sessionId: string, video: boolean) =>
     checkOriginals(requireStore(), sessionId, {
       video,

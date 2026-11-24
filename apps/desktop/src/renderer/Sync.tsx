@@ -1,3 +1,13 @@
+/**
+ * Schritt „Uhren abgleichen“ (Abgleichen, `sync`): Für jedes Gerät (`DeviceRow`) wird festgelegt, wie weit seine Uhr
+ * von der Referenzuhr abweicht (`offsetMs`, positiv = geht vor). Drei Wege: die Abweichung von Hand eintragen,
+ * Vorschläge aus dem Abgleich der Tonspuren übernehmen (Klatschen, gleiche Geräusche) oder einen Anker
+ * (`AnchorRow`) setzen, auf Wunsch im Feinabgleich (`apps/desktop/src/renderer/FineAlign.tsx`).
+ *
+ * Eingebunden in `apps/desktop/src/renderer/app/SessionPane.tsx`; die Handler im Hauptprozess stehen in
+ * `apps/desktop/src/main/ipc/sync.ts`. Hier wird keine Lage gespeichert: Aus Abweichungen und Ankern berechnet der
+ * Hauptprozess die Lage aller Quellen neu und schickt sie als neue Ansicht (`SessionView`) zurück.
+ */
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import type { AnchorRow, DeviceRow, Precision, ProposalRow, SessionView, SourceRow } from "../shared/api.ts";
 import type { Guard } from "./App.tsx";
@@ -24,6 +34,7 @@ import { isEnter } from "./keys.js";
 
 const api = window.feldspur;
 
+/** Betrag als m:ss ohne Vorzeichen und Bruchteile, für die beiden Enden der Abweichungsleiste. */
 const mmss = (ms: number) =>
   offsetText(ms)
     .replace(/^[+−-]\s*/, "")
@@ -49,7 +60,11 @@ interface Settled {
   moves: Map<string, { fromMs: number | null; anchorId: string | null }>;
 }
 
-/** Welche Uhren sich zwischen zwei Ständen bewegt haben, und welcher neue Anker das jeweils belegt. */
+/**
+ * Welche Uhren sich zwischen zwei Ständen bewegt haben, und welcher neue Anker das jeweils belegt. Die Referenzuhr
+ * und Uhren, deren Abweichung danach unbekannt ist, zählen nicht. Exportiert für den Test
+ * `apps/desktop/test/sync-settle.test.ts`.
+ */
 export function settledMoves(before: SessionView, after: SessionView): Settled["moves"] {
   const known = new Set(before.anchors.map((a) => a.id));
   const fresh = after.anchors.filter((a) => !known.has(a.id));
@@ -66,6 +81,7 @@ export function settledMoves(before: SessionView, after: SessionView): Settled["
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/** Woher die Abweichung eines Geräts stammt (`DeviceRow.offsetBasis`), als Text neben dem Eingabefeld. */
 const BASIS_TEXT = {
   reference: "Referenz",
   manual: "von Hand",
@@ -75,6 +91,10 @@ const BASIS_TEXT = {
 } as const;
 const CELL = "border-t border-line py-3";
 
+/**
+ * Der ganze Schritt: oben die Uhren mit Abweichungsleiste und Vorschlägen (`ClockRow`), darunter die Anker
+ * (`ManualAnchors`), dazu der Dialog für den Feinabgleich.
+ */
 export function Sync({
   view,
   guard,
@@ -85,11 +105,17 @@ export function Sync({
   onSelect,
 }: {
   view: SessionView;
+  /** Führt einen IPC-Aufruf aus und zeigt Fehler an, statt sie zu werfen (`apps/desktop/src/renderer/App.tsx`). */
   guard: Guard;
+  /** Neue Ansicht des Einsatzes nach einer Änderung übernehmen. */
   onView: (v: SessionView) => void;
+  /** Dieses Gerät zur Referenzuhr machen. */
   onReference: (id: string) => void;
+  /** Abweichung eines Geräts von Hand setzen, in ms; null = wieder unbekannt. */
   onOffset: (id: string, ms: number | null) => void;
+  /** Weiter zu „Durchsehen“. */
   onNext: () => void;
+  /** Quelle wählen, damit sie in der Detailleiste rechts abgespielt werden kann. */
   onSelect: (id: string) => void;
 }) {
   const [progress, setProgress] = useState<string | null>(null);
@@ -116,6 +142,7 @@ export function Sync({
     );
   }
 
+  // Tonspuren abgleichen: läuft im Hauptprozess und meldet den Fortschritt je Datei; das Ergebnis sind Vorschläge.
   const run = async () => {
     setProgress("Startet…");
     setCancelled(false);
@@ -165,6 +192,8 @@ export function Sync({
       ...(analysis.failed ? [`${analysis.failed} nicht lesbar`] : []),
     ].join(" · ");
 
+  // Halbe Breite der Abweichungsleiste in ms: mindestens 5 Minuten, sonst die größte Abweichung (auch die der
+  // Vorschläge) mit einem Viertel Rand.
   const span = Math.max(
     5 * 60_000,
     ...view.devices.map((d) => Math.abs(d.offsetMs ?? 0) * 1.25),
@@ -284,6 +313,7 @@ export function Sync({
   );
 }
 
+/** Stand in einem Satz für den Kopf des Schritts: wie viele Uhren abgeglichen sind, wie viele Vorschläge warten. */
 function syncSummary(view: SessionView): string {
   const open = view.devices.filter((d) => !d.isReference && d.offsetMs === null).length;
   const parts = [`${view.devices.length - open} von ${view.devices.length} Uhren abgeglichen`];
@@ -292,6 +322,10 @@ function syncSummary(view: SessionView): string {
   return `${parts.join(", ")}.`;
 }
 
+/**
+ * Ein Gerät: Name, Punkt auf der Abweichungsleiste (gestrichelt: wohin ein Vorschlag die Uhr rücken würde), das
+ * Eingabefeld oder „Referenzuhr“, darunter der Beleg einer gerade gerückten Uhr und die offenen Vorschläge.
+ */
 function ClockRow({
   device,
   view,
@@ -308,7 +342,9 @@ function ClockRow({
   device: DeviceRow;
   view: SessionView;
   settled: Settled | null;
+  /** Halbe Breite der Leiste in ms (siehe `scale`). */
   span: number;
+  /** Offene Vorschläge für dieses Gerät. */
   proposals: ProposalRow[];
   /** Sammelaktion sichtbar: dann ist sie der Hauptknopf, nicht jedes einzelne „Übernehmen“. */
   bulk: boolean;
@@ -331,6 +367,7 @@ function ClockRow({
       setTyped({ token: (typed?.token ?? 0) + 1, fromMs: typedFrom.current.fromMs });
     typedFrom.current = null;
   }
+  // Ein Rücken durch einen Anker (`settled`) geht dem durch eine Eingabe von Hand vor.
   const motion = move
     ? { key: `a${settled!.token}`, fromMs: move.fromMs }
     : typed
@@ -440,6 +477,7 @@ function ClockRow({
 
 /** Das Feld zeigt ganze Sekunden; eine gemessene Abweichung (Anker) hat Bruchteile, die beim Abgleich zählen. */
 const subSecond = (ms: number | null) => ms !== null && Math.abs(ms) < 60_000 && ms % 1000 !== 0;
+/** Abweichung unter einer Minute mit Hundertstelsekunden, z. B. „+0,35 s“. */
 const preciseOffset = (ms: number) =>
   `${ms < 0 ? "−" : "+"}${(Math.abs(ms) / 1000).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`;
 
@@ -490,6 +528,10 @@ function ListenBoth({ a, b, anchor }: { a: SourceRow; b: SourceRow; anchor: Anch
   );
 }
 
+/**
+ * Eingabefeld für die Abweichung eines Geräts („+2:47“). Gesperrt, solange die Abweichung aus einem Anker oder einer
+ * angesagten Zeit stammt. Gespeichert wird bei Enter oder beim Verlassen des Felds; Esc verwirft die Eingabe.
+ */
 function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: number | null) => void }) {
   const show = (ms: number | null) => (ms === null ? "" : offsetText(ms));
   const [text, setText] = useDraft(show(device.offsetMs));
@@ -545,6 +587,10 @@ function OffsetInput({ device, onOffset }: { device: DeviceRow; onOffset: (ms: n
   );
 }
 
+/**
+ * Ein Vorschlag aus dem Abgleich der Tonspuren: ein Anker, der erst gilt, wenn er übernommen wird
+ * (`ProposalRow.anchorId`). „Fein justieren…“ öffnet den Feinabgleich und ersetzt den Vorschlag durch dessen Ergebnis.
+ */
 function Proposal({
   p,
   bulk,
@@ -588,6 +634,7 @@ function Proposal({
   );
 }
 
+/** „Eindeutig“ ab einer Konfidenz von 0,5: Nur solche Vorschläge nimmt die Sammelübernahme mit. */
 const isSure = (p: ProposalRow) => (p.confidence ?? 0) >= 0.5;
 
 /** "1:20.5" → ms; leer oder unlesbar → null. */
@@ -598,9 +645,13 @@ function safePos(text: string): number | null {
   return Math.round(parts.reduce((acc, p) => acc * 60 + p, 0) * 1000);
 }
 
+/** Wie ein Anker entstanden ist (`AnchorRow.kind`), als Beschriftung. */
 const ANCHOR_KIND = { clap: "Klatschen", "audio-correlation": "Tonspur", manual: "von Hand" } as const;
 
-/** Gleiche Stelle in zwei Aufnahmen von Hand verbinden, und gesetzte Anker verwalten. */
+/**
+ * Gleiche Stelle in zwei Aufnahmen von Hand verbinden, und gesetzte Anker verwalten. Die Stellen werden als Text
+ * („m:ss“) an den Hauptprozess gegeben, der sie liest; nur für den Feinabgleich rechnet `safePos` sie hier um.
+ */
 function ManualAnchors({
   view,
   guard,
@@ -615,6 +666,7 @@ function ManualAnchors({
   onFine: (start: FineAlignStart) => void;
 }) {
   const { position } = usePlayback();
+  // Tagebuchseiten haben keine Stelle, die sich verbinden ließe.
   const sources = view.rows
     .filter((r) => r.kind !== "diary")
     .map((r) => ({ value: r.id, label: `${r.label} · ${r.fileName}` }));
@@ -769,6 +821,8 @@ function ManualAnchors({
               disabled={!a || !b || a === b || !isAv(a) || !isAv(b)}
               title="Waveforms beider Aufnahmen übereinander legen und genau ausrichten"
               onClick={() => {
+                // Ohne eingetragene Stelle: bei der ersten Aufnahme die Wiedergabestelle (sonst der Anfang), bei der
+                // zweiten eine Schätzung (`guessB`).
                 const ra = rowOf(a);
                 const aMs = safePos(aAt) ?? (position?.sourceId === a ? position.atMs : 0);
                 const bMs = safePos(bAt) ?? guessB(ra, rowOf(b), aMs);

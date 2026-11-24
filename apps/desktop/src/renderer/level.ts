@@ -1,7 +1,9 @@
 /**
  * Lautstärke-Angleichung beim Abhören: Jedes Medien-Element läuft über einen kleinen Web-Audio-Graph
  * (Verstärkung → Kompressor → Begrenzer → Panorama) mit denselben Werten wie im
- * Montagevideo (FFmpeg, siehe @feldspur/media levelFilter). Die Datei selbst bleibt unverändert.
+ * Montagevideo (FFmpeg, siehe `levelFilter` in `packages/media/src/audio.ts`; die gemeinsamen Werte stehen in
+ * `packages/core/src/level.ts`). Die Datei selbst bleibt unverändert. Die Einstellung je Quelle (`LevelRow`) wählt
+ * man in der Detailleiste (`inspector/LevelPanel.tsx`).
  *
  * Wichtig: Ein Element lässt sich nur einmal an Web Audio hängen, und es muss mit
  * crossOrigin="anonymous" geladen sein, sonst bleibt es stumm. Deshalb tragen alle Player
@@ -20,6 +22,7 @@ interface Graph {
   pan: StereoPannerNode;
 }
 
+// Ein Audio-Kontext für die ganze Oberfläche, erst beim ersten Bedarf angelegt.
 let ctx: AudioContext | null = null;
 const graphs = new WeakMap<HTMLMediaElement, Graph>();
 

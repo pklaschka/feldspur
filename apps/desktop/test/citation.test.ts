@@ -1,3 +1,7 @@
+/**
+ * „Feldspur zitieren“: Zitat in den angebotenen Formaten und das Nachschlagen der DOI einer Version bei Zenodo
+ * (`apps/desktop/src/shared/citation.ts`). Ohne Netz, die Antworten von Zenodo sind nachgestellt.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import {
   ALL_VERSIONS_DOI,

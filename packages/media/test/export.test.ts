@@ -1,3 +1,8 @@
+/**
+ * Schritt Ausgeben von Anfang bis Ende (`packages/media/src/export.ts`): ein mit FFmpeg erzeugter Feldtag wird
+ * eingesammelt, abgeglichen und ausgegeben; geprüft werden die Dateien im Ausgabeordner. Der große Teil läuft nur,
+ * wenn ffmpeg vorhanden ist.
+ */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -4,6 +4,8 @@
 // zuverlässig: Finder ordnet die Endung dann nur einem namenlosen Ersatztyp zu und zeigt ein leeres Blatt statt
 // unseres Symbols. Deshalb meldet Feldspur einen eigenen Typ an (UTI, `UTExportedTypeDeclarations`), der die
 // Endung `.feldspur` und das Symbol trägt, und der Dokumenttyp verweist über `LSItemContentTypes` darauf.
+//
+// Genutzt beim Paketieren (`scripts/package-desktop.mjs`, Issue #165); die App selbst braucht diese Datei nicht.
 
 export const PROJECT_UTI = "app.feldspur.projekt";
 export const PROJECT_EXTENSION = "feldspur";

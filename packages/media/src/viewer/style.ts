@@ -1,4 +1,13 @@
-/** Aussehen des Viewers (Issue #122), aus dem freigegebenen Entwurf (feldspur-design/html-viewer/runde3). */
+/**
+ * Aussehen des Viewers (Issue #122), aus dem freigegebenen Entwurf (feldspur-design/html-viewer/runde3).
+ *
+ * Gehört zum Schritt „Ausgeben“: `sessionTranscriptHtml` (`packages/media/src/viewer/html.ts`) schreibt das CSS
+ * unverändert in das `<style>` der Viewer-Datei; die Klassen und IDs stehen dort im HTML-Gerüst. Zustände schaltet
+ * das Skript (`packages/media/src/viewer/runtime.ts`) über `data-`-Attribute (z. B. `data-kontext`, `data-ton`,
+ * `data-theme`) und Variablen (`--fs`, `--zx`, `--zw`, `--lab`, `--tlw`); das CSS reagiert nur darauf.
+ * Die dunklen Farben stehen zweimal (von Hand gewählt und nach Systemeinstellung) und müssen gleich bleiben.
+ * Die Kommentare im CSS sind Teil der Zeichenkette und landen mit in der ausgegebenen Datei.
+ */
 export const VIEWER_CSS = String.raw`
 /* Feldspur-Viewer (Issue #122). Farben wie apps/desktop/src/renderer/styles.css (--rail*, --k-*, --st-*),
    Ocker und Moos aus dem App-Symbol. Motiv: das App-Symbol selbst – Bahnen auf einem Blatt, die Fahne als Zeitzeiger. */

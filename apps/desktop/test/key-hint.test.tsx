@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+/** Einmaliger Tastenhinweis in „Durchsehen“ (Issue #195, `apps/desktop/src/renderer/review/keyHint.ts`). */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it } from "vite-plus/test";

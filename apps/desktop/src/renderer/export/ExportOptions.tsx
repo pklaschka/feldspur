@@ -1,10 +1,17 @@
-/** Die Schalter des Schritts „Ausgeben“: was zusätzlich in den Ordner kommt. */
+/**
+ * Die Schalter des Schritts „Ausgeben“: was zusätzlich in den Ordner kommt. Eingebunden in
+ * `apps/desktop/src/renderer/ExportStep.tsx`; die Werte hält und merkt `apps/desktop/src/renderer/export/options.ts`.
+ */
 import type { ReactNode } from "react";
 import type { SessionTranscriptPreview } from "../../shared/api.ts";
 import { aboutSize } from "../format.ts";
 import { cx, Toggle } from "../ui.tsx";
 import type { Options } from "./options.ts";
 
+/**
+ * Drei Gruppen von Schaltern: Montagevideo, Nachweise im Ordner, Schnitt. Der Viewer hält das Montagevideo fest,
+ * weil er genau dieses Video abspielt.
+ */
 export function ExportOptions({
   opts,
   set,
@@ -108,6 +115,7 @@ function OptionGroup({ title, children }: { title: string; children: ReactNode }
   );
 }
 
+/** Ein Schalter mit Beschriftung, Hinweiszeile und auf Wunsch geschätzter Größe. */
 function Option({
   checked,
   onChange,

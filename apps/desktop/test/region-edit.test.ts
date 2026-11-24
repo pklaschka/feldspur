@@ -1,3 +1,7 @@
+/**
+ * Tagebuch-Editor: Rahmen eines Eintrags mit Maus und Pfeiltasten verschieben und in der Größe ändern
+ * (`apps/desktop/src/renderer/diary/regionEdit.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { editBox, MIN_SIZE, nudgeBox, sameBox } from "../src/renderer/diary/regionEdit.ts";
 

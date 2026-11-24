@@ -5,16 +5,21 @@
  *
  * Eine Datei ohne Skript, ohne Schriften und ohne Verweise nach außen, lesbar in jedem Browser und im Druck.
  * Einsatztranskript und Montagevideo sind für sich zitierfähig; die LIESMICH beschreibt sie nur.
+ *
+ * Einordnung: Schritt „Ausgeben“. `exportSession` (`packages/media/src/export.ts`) schreibt die Datei mit den
+ * übrigen Dateien der Ausgabe; die Tabellen kommen aus `packages/media/src/methods-table.ts`.
  */
 import { materialTable, outputTable, germanDate, METHODS_HANDBOOK_URL, type MethodsTable } from "./methods-table.ts";
 import { methodsNumbers } from "./methods-summary.ts";
 import type { SessionTranscript } from "./session-transcript.ts";
 import { htmlEscape } from "./xml.ts";
 
+/** Dateiname der LIESMICH im Ausgabeordner. */
 export const README_NAME = "LIESMICH.html";
 /** Prüfsummenliste im Ordner (Issue #204). */
 export const MANIFEST_NAME = "manifest-sha256.txt";
 
+/** Was die LIESMICH außer dem Einsatztranskript wissen muss. */
 export interface ReadmeOptions {
   /** Dateien der Ausgabe im Ordner (ohne Pfad), in der Reihenfolge, in der sie geschrieben werden; fehlt die LIESMICH, wird sie angehängt. */
   files: string[];

@@ -1,4 +1,11 @@
-/** Schnellsuche (Strg/⌘+K): Mitschrift, Notizen, Tagebuch, Quellen und Episoden eines Einsatzes. */
+/**
+ * Schnellsuche (Strg/⌘+K): Mitschrift, Notizen, Tagebuch, Quellen und Episoden eines Einsatzes.
+ *
+ * Hier stehen der Dialog (`SearchDialog`) und der Sprung zur Fundstelle (`useJump`, `QuickSearch`). Gesucht wird ohne
+ * den Hauptprozess, in dem, was die Ansicht (`SessionView`) schon enthält: `apps/desktop/src/renderer/search.ts`.
+ * Eingebunden und per Tastenkürzel geöffnet in `apps/desktop/src/renderer/app/SessionPane.tsx`; denselben Sprung nutzt
+ * „Zeigen“ im Rückgängig-Hinweis (`apps/desktop/src/renderer/app/history.tsx`).
+ */
 import { formatClock } from "@feldspur/core/time";
 import { Dialog } from "radix-ui";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -9,6 +16,7 @@ import { cx } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
 import { isEnter } from "./keys.js";
 
+/** Art des Treffers, wie sie in der Trefferliste vor dem Titel steht. */
 const KIND_LABEL: Record<Hit["kind"], string> = {
   line: "Mitschrift",
   note: "Notiz",
@@ -17,7 +25,10 @@ const KIND_LABEL: Record<Hit["kind"], string> = {
   episode: "Episode",
 };
 
-/** Leere Suche: den Suchbegriff nennen (lange gekürzt), bei einer Uhrzeit sagen, dass dort nichts liegt (Issue #194). */
+/**
+ * Leere Suche: den Suchbegriff nennen (lange gekürzt), bei einer Uhrzeit sagen, dass dort nichts liegt (Issue #194).
+ * Exportiert für den Test `apps/desktop/test/schwierige-stellen.test.tsx`.
+ */
 export function nothingFound(query: string): string {
   const q = query.trim();
   if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(q)) return `Um ${q} Uhr liegt in diesem Einsatz kein Eintrag.`;
@@ -25,6 +36,10 @@ export function nothingFound(query: string): string {
   return `Nichts gefunden für „${shown}“.`;
 }
 
+/**
+ * Der Dialog allein: Eingabefeld, Trefferliste, Bedienung mit ↑↓ und Enter. Was ein Treffer auslöst, entscheidet
+ * `onPick`; der Dialog schließt danach von selbst.
+ */
 export function SearchDialog({
   view,
   open,
@@ -45,6 +60,7 @@ export function SearchDialog({
   const optionId = (i: number) => `${listId}-opt-${i}`;
   const hasQuery = query.trim() !== "";
   const list = useRef<HTMLUListElement>(null);
+  // Der Fokus bleibt im Eingabefeld (aria-activedescendant); der gewählte Treffer wird nur ins Bild gerollt.
   useEffect(() => {
     list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
   }, [active]);
@@ -170,7 +186,9 @@ export function SearchDialog({
 
 /** Wohin ein Sprung auf der Zeitachse zielt: eine Uhrzeit oder ein Bereich (Episode). */
 export interface Reveal {
+  /** Uhrzeit auf der Zeitachse in ms, wie `startMs` der Quellen (nicht die Stelle innerhalb einer Aufnahme). */
   fromMs: number;
+  /** Ende des Bereichs; fehlt es, wird nur die Uhrzeit ins Bild geholt, ohne zu zoomen. */
   toMs?: number;
 }
 
@@ -182,9 +200,13 @@ export interface Reveal {
  * - Tagebuch: Abtippen auf der Seite des Eintrags; ohne Seite die Stelle auf der Zeitachse.
  */
 export interface JumpTargets {
+  /** Quelle wählen (Detailleiste). */
   onSource: (id: string) => void;
+  /** Mitschreiben für diese Quelle öffnen; null schließt es. */
   onTranscribe: (id: string | null) => void;
+  /** Abtippen auf dieser Tagebuchseite öffnen; null schließt es. */
   onDiary: (pageId: string | null) => void;
+  /** Zum Schritt „Durchsehen“ wechseln. */
   onReview: () => void;
   onReveal: (r: Reveal) => void;
 }
@@ -219,6 +241,7 @@ export function useJump(
   };
 }
 
+/** Suchdialog mit fertigem Sprung: das, was `apps/desktop/src/renderer/app/SessionPane.tsx` einbindet. */
 export function QuickSearch({
   view,
   open,

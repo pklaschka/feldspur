@@ -1,3 +1,7 @@
+/**
+ * Stand eines Einsatzes in Worten (`apps/desktop/src/renderer/inspector/status.ts`): die offenen Punkte der
+ * Detailleiste und die Reihenfolge der Prüfliste in „Durchsehen“.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import {
   canConfirm,

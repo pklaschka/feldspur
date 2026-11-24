@@ -1,7 +1,8 @@
-/** Kleine Bausteine der Detailleiste. */
+/** Kleine Bausteine der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`). */
 import type { ReactNode } from "react";
 import { cx } from "../ui.tsx";
 
+/** Liste aus Bezeichnung und Wert; das dritte Element eines Eintrags ist eine CSS-Klasse für den Wert. */
 export function KV({ items, small }: { items: [string, ReactNode, string?][]; small?: boolean }) {
   return (
     <dl className={cx("mt-3.5 grid grid-cols-[6.5rem_1fr] gap-x-2.5 gap-y-1", small && "text-[0.85rem]")}>

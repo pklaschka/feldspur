@@ -1,12 +1,16 @@
 /**
  * Inhalt von Notizdateien (.txt, .md), damit sie als Kontext im Einsatztranskript stehen können. Gelesen wird die
  * Originaldatei (Originale werden nie verändert); ein kleiner Zwischenspeicher vermeidet erneutes Lesen.
+ *
+ * Einordnung: Aufgerufen von `packages/media/src/context.ts`, das die Kontextstücke zusammenstellt. Der Text wird
+ * nicht in die Projektdatei übernommen: Ändert sich die Notizdatei, ändert sich das nächste Einsatztranskript mit.
  */
 import { readFileSync, statSync } from "node:fs";
 import type { Source } from "@feldspur/core";
 
 /** Größer wird nichts eingelesen: Eine Notiz für den Kontext ist ein paar Seiten Text, kein Buch. */
 const MAX_BYTES = 512 * 1024;
+/** Je Pfad der zuletzt gelesene Text; `stamp` (Größe und Änderungszeit) zeigt, ob die Datei noch dieselbe ist. */
 const cache = new Map<string, { stamp: string; text: string | null }>();
 
 /** Lässt sich der Inhalt dieser Quelle als Text lesen? */
@@ -29,6 +33,7 @@ export function noteText(src: Pick<Source, "kind" | "fileName" | "originalPath">
   if (hit?.stamp === stamp) return hit.text;
   let text: string | null;
   try {
+    // BOM (etwa von Windows-Editoren) entfernen und Zeilenenden auf \n vereinheitlichen.
     text = readFileSync(src.originalPath, "utf8").replace(/^﻿/, "").replace(/\r\n?/g, "\n").trimEnd();
   } catch {
     text = null;

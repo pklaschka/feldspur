@@ -1,3 +1,7 @@
+/**
+ * Tagebuch-Editor: welche Quellen als Seiten zum Blättern zählen (Bilder, PDF-Seiten) und wie eine Seite in die Ansicht
+ * eingepasst wird (`apps/desktop/src/renderer/diary/pages.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { fitBox, navPages, sKey } from "../src/renderer/diary/pages.ts";
 import type { SourceRow } from "../src/shared/api.ts";

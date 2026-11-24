@@ -1,4 +1,7 @@
-/** Arbeitsnotizen zu Dateien anlegen, ändern, löschen. */
+/**
+ * Arbeitsnotizen zu Dateien anlegen, ändern, löschen; zur ganzen Datei oder zu einer Stelle bzw. Strecke darin.
+ * Aufgerufen aus `ipc/review.ts` (Kanäle `note:…`), bedient in `src/renderer/Notes.tsx`.
+ */
 import type { ProjectStore, SourceNote } from "@feldspur/core";
 import type { SourceNoteInput } from "../shared/api.ts";
 

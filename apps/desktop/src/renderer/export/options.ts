@@ -1,17 +1,24 @@
-/** Ausgabe-Einstellungen: welche Schalter es gibt und wie sie die Sitzung überdauern. */
+/**
+ * Ausgabe-Einstellungen: welche Schalter es gibt und wie sie die Sitzung überdauern (localStorage, über
+ * `apps/desktop/src/renderer/stored.ts`). `apps/desktop/src/renderer/ExportStep.tsx` macht daraus die Anfrage an den
+ * Hauptprozess (`ExportRequestOptions` in `apps/desktop/src/shared/api.ts`).
+ */
 import { useState } from "react";
 import { readStoredObject, writeStored } from "../stored.ts";
 
 /** Ausgabe-Einstellungen gelten für alle Einsätze und bleiben bis zur nächsten Sitzung erhalten. */
 export interface Options {
   video: boolean;
+  /** Schnittliste (FCPXML) für DaVinci Resolve. */
   resolve: boolean;
   mixAudio: boolean;
   deviceTracks: boolean;
+  /** Viewer (.html); geht nur zusammen mit `video`. */
   viewer: boolean;
   readme: boolean;
   changeLog: boolean;
   manifest: boolean;
+  /** Nach Episoden schneiden statt Echtzeit; wirkt nur, wenn der Einsatz Episoden hat (wird dort zu `realtime`). */
   byEpisodes: boolean;
 }
 const DEFAULTS: Options = {

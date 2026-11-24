@@ -1,3 +1,7 @@
+/**
+ * Lädt für die Zeitachse in „Durchsehen“ (`apps/desktop/src/renderer/Review.tsx`) die Hüllkurven der Tonspuren vom
+ * Hauptprozess (`envelopes`, Handler in `apps/desktop/src/main/ipc/review.ts`).
+ */
 import { useLoaded } from "../hooks.ts";
 import type { SessionView } from "../../shared/api.ts";
 import type { Envelope } from "../timeline.ts";

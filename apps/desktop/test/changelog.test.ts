@@ -1,3 +1,7 @@
+/**
+ * Änderungsprotokoll (.csv) im Ausgabeordner eines Einsatzes (`apps/desktop/src/main/changelog.ts`) und die deutschen
+ * Bezeichnungen der Tabellen und Schritte darin (`apps/desktop/src/shared/changelog.ts`).
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

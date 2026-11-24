@@ -1,6 +1,11 @@
 /**
  * Laufende Ausgabe, oberhalb der Reiter und Einsätze gehalten: Wer während der Ausgabe den Reiter
  * oder den Einsatz wechselt, findet Fortschritt und Ergebnis beim Zurückkommen wieder.
+ *
+ * Der Provider liegt in `App.tsx`. Gestartet und gezeigt wird im Schritt Ausgeben (`ExportStep.tsx`, `export/`);
+ * `app/SessionPane.tsx` zeigt den Fortschritt am Reiter. Die Arbeit selbst macht der Hauptprozess
+ * (`apps/desktop/src/main/ipc/export.ts`, `apps/desktop/src/main/export.ts`, darunter `packages/media/src/export.ts`)
+ * und meldet Fortschritt über `onExportProgress`. Es läuft höchstens eine Ausgabe zur selben Zeit.
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
@@ -17,8 +22,10 @@ const api = window.feldspur;
 /** Erster Schritt jeder Ausgabe, nach der Ordnerwahl. */
 export const CHECK_STEP = EXPORT_CHECK_STEP;
 
+/** Die laufende Ausgabe. */
 export interface ExportJob {
   sessionId: string;
+  /** Mit Montagevideo; ohne geht es schnell, und der Fortschritt wird anders gewichtet (`percent`). */
   video: boolean;
   progress: ExportProgress | null;
   /** Beginn des Videoschritts: Zeitpunkt und schon fertige Sekunden, für die Restzeit. */
@@ -46,6 +53,7 @@ export interface CancelledExport {
 
 interface ExportState {
   job: ExportJob | null;
+  /** Letztes Ergebnis je Einsatz-Id; `errors` ebenso die letzte Fehlermeldung, bis zum nächsten Versuch. */
   results: Record<string, ExportOutcome>;
   errors: Record<string, string>;
   /** Abgebrochene Ausgaben je Einsatz, bis zum nächsten Versuch. */
@@ -54,6 +62,7 @@ interface ExportState {
   held: Record<string, HeldExport>;
   /** Laufende Ausgabe abbrechen. */
   cancel(): void;
+  /** Ausgabe starten; tut nichts, solange eine läuft. Den Zielordner erfragt der Hauptprozess, wenn keiner mitkommt. */
   start(sessionId: string, opts: ExportRequestOptions, key?: string): void;
   /** Angehaltene Ausgabe verwerfen (Abbrechen im Hinweis). */
   dismiss(sessionId: string): void;
@@ -123,6 +132,7 @@ export function cancelledText(c: CancelledExport): string {
     : "Abgebrochen. Die Ausgabe ist nicht vollständig.";
 }
 
+/** Stand und Steuerung der Ausgabe; nur unterhalb von `ExportProvider`. */
 export function useExport(): ExportState {
   const s = useContext(Ctx);
   if (!s) throw new Error("ExportProvider fehlt");
@@ -131,7 +141,8 @@ export function useExport(): ExportState {
 
 /**
  * Fortschritt als Prozent (0–100), grob über die Schritte gewichtet. Ohne Video ist die Prüfung der Originale fast
- * die ganze Arbeit, mit Video das Montagevideo.
+ * die ganze Arbeit, mit Video das Montagevideo. Die Schrittnamen sind die, die `packages/media/src/export.ts` und
+ * `apps/desktop/src/main/export.ts` melden; ein Schritt, der hier fehlt (derzeit „Lautstärke messen“), ergibt 0.
  */
 export function percent(p: ExportProgress | null, video = true): number {
   if (!p) return 0;

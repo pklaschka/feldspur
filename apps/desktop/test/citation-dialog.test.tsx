@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Dialog „Feldspur zitieren“ (`apps/desktop/src/renderer/CitationDialog.tsx`): Er fragt erst auf Wunsch bei Zenodo nach
+ * der DOI der Version und kopiert das Zitat im gewählten Format. Die Brücke zum Hauptprozess ist nachgestellt.
+ */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";

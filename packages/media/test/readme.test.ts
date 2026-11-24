@@ -1,3 +1,7 @@
+/**
+ * LIESMICH.html und Prüfsummenliste im Ausgabeordner (`packages/media/src/readme.ts`, geschrieben von
+ * `packages/media/src/export.ts`).
+ */
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

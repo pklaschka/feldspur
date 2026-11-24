@@ -1,5 +1,8 @@
 /**
  * Schreiben für die Ausgabe: Vorabprüfung bestehender Zieldateien und verständliche Meldungen zu Schreibfehlern.
+ *
+ * Einordnung: Schritt „Ausgeben“, benutzt von `exportSession` (`packages/media/src/export.ts`). Der Fall, um den
+ * es vor allem geht: Eine frühere Ausgabe im selben Ordner ist noch in Word, Excel oder MAXQDA geöffnet.
  */
 import { open } from "node:fs/promises";
 import { basename, dirname, resolve, sep } from "node:path";

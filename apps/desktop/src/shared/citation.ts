@@ -11,9 +11,11 @@ export const ALL_VERSIONS_DOI = "10.5281/zenodo.24289969";
 /** Kennung desselben Eintrags in der Zenodo-API (`conceptrecid`). */
 const ZENODO_CONCEPT_ID = "24289969";
 const SOFTWARE_TITLE = "Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen";
+/** Lizenz der Software, wie sie im BibTeX-Eintrag und im Dialog steht. */
 export const SOFTWARE_LICENSE = "EUPL-1.2";
 const AUTHOR = { family: "Klaschka", given: "Zuri Nimca", initials: "Z. N." } as const;
 
+/** Formate, in denen der Dialog „Feldspur zitieren“ das Zitat anbietet. */
 export type CitationFormat = "apa" | "bibtex" | "doi";
 
 export const FORMAT_LABEL: Record<CitationFormat, string> = { apa: "APA", bibtex: "BibTeX", doi: "Nur DOI" };
@@ -45,6 +47,7 @@ export interface CitationPart {
   doi?: boolean;
 }
 
+/** Was ein Zitat braucht: die Version und die DOI, die genannt werden soll (der Version oder aller Versionen). */
 export interface CitationInput {
   version: string;
   /** Erscheinungsdatum der Version, `YYYY-MM-DD`. */
@@ -83,6 +86,7 @@ export function citationParts(format: CitationFormat, c: CitationInput): Citatio
   ];
 }
 
+/** Dasselbe Zitat als reiner Text: zum Kopieren und für die Zeile zur Software (`methods-table.ts`). */
 export function citationText(format: CitationFormat, c: CitationInput): string {
   return citationParts(format, c)
     .map((p) => p.text)

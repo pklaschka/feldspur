@@ -1,3 +1,7 @@
+/**
+ * Waveform für die Oberfläche: Skala der Spitzen (`packages/core/src/waveform.ts`) und Spitzen aus einer
+ * Datei lesen (`packages/media/src/waveform.ts`).
+ */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

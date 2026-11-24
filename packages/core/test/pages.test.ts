@@ -1,3 +1,7 @@
+/**
+ * Seitenzählung von Tagebuch-Scans (`packages/core/src/pages.ts`): Bezeichnungen wie „T-01 · S. 7“, Doppelseiten,
+ * PDFs, Zählung über mehrere Scans und Vorschläge für die Seitenzahl eines Rahmens.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { continuePages, diaryPageLabel, pageSide, regionPageNo, sideOrder, suggestPageNo } from "../src/pages.ts";
 

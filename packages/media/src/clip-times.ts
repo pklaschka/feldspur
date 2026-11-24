@@ -10,6 +10,10 @@
  * 2. Kamera-Timecode: Läuft der Timecode einer Kamera frei mit (Free Run), ist sein Abstand zur Kamerauhr für alle
  *    Clips gleich. Die Uhr ist nur sekundengenau, der Timecode bildgenau. Aus mehreren Clips folgt der Abstand auf
  *    Bruchteile einer Sekunde genau und damit die Lage jedes Clips.
+ *
+ * Einordnung: Schritt Einsammeln, nach dem Lesen der einzelnen Dateien (`packages/media/src/evidence.ts`). Einziger
+ * Einstieg ist `refineClipTimes`; `packages/media/src/import.ts` ruft es beim Übernehmen des Importplans
+ * (`applyImport`) und bei „Zeitbelege neu lesen“ (`applyReread`) auf. Der Rest ist für Tests exportiert.
  */
 import type { MediaProbe } from "./probe.ts";
 import type { EvidenceDraft } from "./evidence.ts";
@@ -34,6 +38,7 @@ const OVERLAP_MS = 2_000;
 /** creation_time als Ende: sekundengenau, dazu bis zu ein paar Sekunden, bis die Datei abgeschlossen war. */
 export const END_STAMP_UNCERTAINTY_MS = 3_000;
 
+/** Der Beleg aus dem allgemeinen creation_time, solange er noch als Aufnahmebeginn gelesen ist. */
 const isCreationTime = (e: EvidenceDraft) =>
   e.kind === "metadata" && e.raw.startsWith("creation_time=") && e.atMediaMs === 0;
 
@@ -99,6 +104,7 @@ export function deviceWritesEnd(cands: Pick<ImportCandidate, "evidence" | "durat
   return clips.length >= 2 && overlaps(clips, true) > 0 && overlaps(clips, false) === 0;
 }
 
+/** Denselben Stempel ans Aufnahmeende hängen: Die Uhrzeit bleibt, sie gilt nun für die letzte Stelle der Datei. */
 function asEnd(e: EvidenceDraft, durationMs: number): EvidenceDraft {
   return {
     ...e,
@@ -108,7 +114,10 @@ function asEnd(e: EvidenceDraft, durationMs: number): EvidenceDraft {
   };
 }
 
-/** "10:34:39:08" (oder mit ";" bei Drop-Frame) → Bilder seit Mitternacht. Drop-Frame wird nicht unterstützt. */
+/**
+ * "10:34:39:08" (vor den Bildern auch ".") → Bilder seit Mitternacht. Drop-Frame-Timecode (mit ";" geschrieben) wird
+ * nicht unterstützt und ergibt null.
+ */
 export function timecodeFrames(tc: string, nominalFps: number): number | null {
   const m = /^(\d{2}):(\d{2}):(\d{2})[:.](\d{2})$/.exec(tc.trim());
   if (!m) return null;
@@ -117,12 +126,19 @@ export function timecodeFrames(tc: string, nominalFps: number): number | null {
   return ((h * 60 + mi) * 60 + s) * nominalFps + f;
 }
 
+/** Ein Clip mit Kamera-Timecode und einem Uhrbeleg, gegen den er sich vergleichen lässt. */
 interface TimedClip {
+  /** Position in der Liste der Clips des Geräts. */
   index: number;
+  /** Uhrbeleg am Dateianfang (Kamerauhr, sekundengenau). */
   base: EvidenceDraft;
+  /** Timecode wie in der Datei geschrieben. */
   tc: string;
+  /** Timecode des ersten Bilds als echte Zeit seit Mitternacht des Timecodes, in ms. */
   tcMs: number;
+  /** Dauer eines Bilds in ms. */
   frameMs: number;
+  /** Bildrate als Bruch („30000/1001“), nur für den Rohtext des Belegs. */
   fps: string;
 }
 
@@ -262,6 +278,8 @@ export function refineClipTimes(cands: ImportCandidate[]): ImportCandidate[] {
         out[i] = { ...c, evidence: c.evidence.map((e) => (isCreationTime(e) ? asEnd(e, dur) : e)) };
       }
     }
+    // Nach dem Umdeuten auf das Ende rechnen: Der Timecode stützt sich nur auf Uhrbelege am Dateianfang.
+    // Die Schlüssel von `tc` sind Positionen in `idx`. Der Timecode-Beleg kommt als erster in die Liste.
     const tc = timecodeEvidence(idx.map((i) => out[i]!));
     tc.forEach((ev, j) => {
       const i = idx[j]!;

@@ -1,3 +1,7 @@
+/**
+ * Schätzung der Dateigröße des Montagevideos vor dem Ausgeben (`estimateMontageBytes` in
+ * `packages/media/src/montage-video.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { estimateMontageBytes, type Piece } from "../src/montage-video.ts";
 import type { SessionTranscript } from "../src/session-transcript.ts";

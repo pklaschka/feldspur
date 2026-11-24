@@ -44,6 +44,7 @@ export const REQUIRED = {
 export function parseList(text) {
   const names = new Set();
   for (const line of text.split("\n")) {
+    // Zeilen wie „ V....D mjpeg   Motion JPEG“: Kennbuchstaben, dann ein Name oder mehrere mit Komma (mov,mp4,m4a).
     const m = /^\s*[A-Z.|d]{1,6}\s+([\w,]+)\s/.exec(line);
     if (m) for (const n of m[1].split(",")) names.add(n);
   }

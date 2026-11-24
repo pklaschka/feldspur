@@ -1,6 +1,9 @@
 /**
  * Dialog „Sicherungen“: automatische und eigene Sicherungen des offenen Projekts, neueste oben. Jede lässt sich als
  * eigenständige Kopie öffnen; das Projekt selbst wird dabei nie überschrieben.
+ *
+ * Geöffnet aus dem Projektmenü (`Recent.tsx`), eingebunden in `App.tsx`. Angelegt und aufgeräumt werden die
+ * Sicherungen im Hauptprozess (`apps/desktop/src/main/backup.ts`, IPC in `apps/desktop/src/main/ipc/project.ts`).
  */
 import { Dialog } from "radix-ui";
 import { useEffect, useState } from "react";
@@ -13,6 +16,7 @@ const api = window.feldspur;
 
 const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
+/** Anlass einer Sicherung (`BackupInfo.kind` aus `packages/core`), wie er in der Liste steht. */
 const KIND_LABEL: Record<BackupInfo["kind"], string> = {
   automatisch: "automatisch",
   "vor-Aktualisierung": "vor Aktualisierung auf neue Version",
@@ -33,8 +37,10 @@ export function Backups({
 }) {
   const [overview, setOverview] = useState<BackupOverview | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  /** Zähler: nach „Sicherung erstellen“ erhöht, damit die Liste neu geladen wird. */
   const [reload, setReload] = useState(0);
 
+  // Bei jedem Öffnen frisch: alte Liste und Meldung vergessen, bevor neu geladen wird.
   const [wasOpen, setWasOpen] = useState(false);
   if (wasOpen !== open) {
     setWasOpen(open);
@@ -52,6 +58,7 @@ export function Backups({
     };
   }, [open, reload]);
 
+  /** Ohne Pfad fragt der Hauptprozess mit einem Dateidialog nach der Sicherung. */
   const openCopy = (path?: string) =>
     void guard(() => api.openBackupCopy(path)).then((p) => {
       if (!p) return;

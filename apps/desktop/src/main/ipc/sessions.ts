@@ -1,4 +1,12 @@
-/** IPC-Aufrufe zu Einsätzen: anlegen, ändern und löschen, Einsammeln, Quellen und Geräte ordnen. */
+/**
+ * IPC-Aufrufe zu Einsätzen (`FieldSession`): anlegen, ändern und löschen, Einsammeln, Quellen (`sources`) und Geräte
+ * ordnen.
+ *
+ * Gegenstücke in der Oberfläche (`apps/desktop/src/renderer/`): Schritt „Einsammeln“ (`Collect.tsx`, `importState.ts`),
+ * Einsatzdaten (`SessionDetails.tsx`), das Menü an einer Quelle (`SourceMenu.tsx`); fast alles läuft über
+ * `app/SessionPane.tsx`. Die eigentliche Arbeit machen `scanPaths`/`applyImport` aus `packages/media` und
+ * `../sources.ts`, `../session.ts`.
+ */
 import { basename } from "node:path";
 import { dialog, ipcMain } from "electron";
 import { applyImport, ScanCache, scanPaths, type ScanProgress } from "@feldspur/media";
@@ -41,6 +49,9 @@ export function registerSessionsIpc(): void {
   ipcMain.handle(IPC.cancelImport, (_e, sessionId: string) => {
     importing.get(sessionId)?.abort();
   });
+  // Einsammeln in zwei Teilen: erst lesen (Prüfsumme, Metadaten; dauert und lässt sich abbrechen), dann in einem Zug
+  // übernehmen. Bewusst kein `undoable`: Einsammeln ist kein Schritt für Rückgängig und leert den Verlauf
+  // (`packages/core/src/db/history.ts`); im Änderungsprotokoll steht es als „Dateien eingesammelt“.
   ipcMain.handle(IPC.importPaths, async (e, sessionId: string, paths: string[]): Promise<ImportResult> => {
     const s = requireStore();
     if (importing.has(sessionId)) throw new Error("In diesen Einsatz wird schon eingesammelt.");
@@ -110,6 +121,7 @@ export function registerSessionsIpc(): void {
     s.deleteSession(sessionId);
     return projectInfo()!;
   });
+  // Quellen und Geräte ordnen (`../sources.ts`).
   undoableView(IPC.removeSource, "Quelle entfernt", (s, sourceId: string) => removeSource(s, sourceId));
   undoableView(IPC.moveSource, "Quelle verschoben", (s, sourceId: string, target: string | { newLabel: string }) =>
     moveSource(s, sourceId, target),

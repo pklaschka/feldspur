@@ -1,3 +1,7 @@
+/**
+ * Excel-Datei ohne Fremdbibliothek (`packages/media/src/xlsx.ts`) und die Dokumentvariablen für MAXQDA
+ * (`documentVariables` in `packages/media/src/export.ts`).
+ */
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vite-plus/test";
 import { documentVariables } from "../src/export.ts";

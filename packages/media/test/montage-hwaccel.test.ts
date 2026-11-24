@@ -1,3 +1,7 @@
+/**
+ * Montagevideo, wenn die Hardware-Dekodierung versagt (`renderMontage` in `packages/media/src/montage-video.ts`): ein
+ * nachgestelltes ffmpeg scheitert, sobald Hardware-Dekodierung verlangt wird. Nicht unter Windows.
+ */
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
