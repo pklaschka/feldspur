@@ -15,6 +15,7 @@ import { DiaryEditor } from "../DiaryEditor.tsx";
 import { ExportStep } from "../ExportStep.tsx";
 import { useExport } from "../exportState.tsx";
 import { formatDay } from "../format.ts";
+import { registerImportView } from "../importState.ts";
 import { Inspector } from "../Inspector.tsx";
 import { OriginalsBanner, OriginalsDialog } from "../Originals.tsx";
 import { isMac } from "../keys.ts";
@@ -98,6 +99,11 @@ export function SessionPane({
       setStep((s) => s ?? (v.rows.length ? "review" : "collect"));
     });
   }, [sessionId, guard]);
+
+  // Das Ergebnis eines Einsammelns kommt über `importState.ts` hier an, auch wenn es endet, während ein anderer
+  // Schritt offen ist (Issue #258): Der Schritt „Einsammeln“ wird beim Wechsel abgebaut, diese Komponente nicht.
+  // Die neue Ansicht stößt auch `useHistory` an; Einsammeln leert den Verlauf, die Knöpfe müssen das zeigen.
+  useEffect(() => registerImportView(sessionId, setView), [sessionId]);
 
   if (!view || !step) return <main className="col-span-2 p-8 text-muted">Wird geladen…</main>;
 
@@ -336,7 +342,6 @@ export function SessionPane({
               <Collect
                 view={view}
                 guard={guard}
-                onView={setView}
                 selected={selected}
                 onSelect={setSelected}
                 onRename={(id, label) => update(guard(() => api.renameDevice(id, label)))}

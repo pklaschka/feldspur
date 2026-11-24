@@ -4,7 +4,8 @@
  *
  * Das Einsammeln selbst (Dateien suchen, Metadaten und Prüfsummen lesen) läuft im Hauptprozess
  * (`apps/desktop/src/main/ipc/sessions.ts`, `packages/media`); den Stand dazu hält `importState.ts` außerhalb dieser
- * Komponente, damit er einen Wechsel des Schritts übersteht. Die Originale werden nie kopiert oder verändert.
+ * Komponente, damit er einen Wechsel des Schritts übersteht; die neue Ansicht nach dem Einsammeln übernimmt
+ * `app/SessionPane.tsx`. Die Originale werden nie kopiert oder verändert.
  */
 import { isScrollingList, openStatusCounts } from "./collectLayout.ts";
 import { useEffect, useRef, useState, type DragEvent } from "react";
@@ -17,7 +18,6 @@ import {
   dismissImportNotice,
   importPercent,
   importRemainingMs,
-  registerImportView,
   startImport,
   useImport,
   type ImportJob,
@@ -32,7 +32,6 @@ const api = window.feldspur;
 export function Collect({
   view,
   guard,
-  onView,
   selected,
   onSelect,
   onRename,
@@ -43,8 +42,6 @@ export function Collect({
 }: {
   view: SessionView;
   guard: Guard;
-  /** Neue Ansicht des Einsatzes übernehmen (nach dem Einsammeln). */
-  onView: (v: SessionView) => void;
   /** Gewählte Quelle (id); ihre Einzelheiten zeigt die Detailleiste (`Inspector.tsx`). */
   selected: string | null;
   onSelect: (id: string) => void;
@@ -65,8 +62,6 @@ export function Collect({
   // Einsammeln läuft im Hintergrund weiter, auch wenn diese Ansicht kurz verschwindet; nur eins zur Zeit.
   const busy = !!imp.job;
   const notice = imp.notices[sessionId] ?? null;
-  // Das Ergebnis eines Imports kommt über `importState.ts` hier an, auch wenn die Ansicht zwischendurch weg war.
-  useEffect(() => registerImportView(sessionId, onView), [sessionId, onView]);
 
   const importPaths = (paths: string[]) => void startImport(sessionId, paths, guard);
   const onDrop = (e: DragEvent) => {
