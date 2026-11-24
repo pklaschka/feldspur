@@ -2,7 +2,7 @@
 # Titel, Autor*in, Zusammenfassung und Schlüsselwörter kommen aus dem Manuskript.
 metadata-files: [handbuch/_metadaten.yml]
 # Fester „Stand“, damit die CI-Prüfung (README passt zu README.qmd) nicht jeden Tag anschlägt. Der Release-Workflow setzt ihn.
-date: 2026-11-23
+date: 2026-11-24
 date-format: "D. MMMM YYYY"
 lang: de
 filters:

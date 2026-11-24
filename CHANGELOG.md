@@ -4,79 +4,9 @@
 zusammengeführten Pull Requests (siehe `.github/release.yml` für die Rubriken). Vorabversionen (`-rc.N` usw.)
 werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 
-## 0.4.0-rc.5 – 2026-11-23 (Vorabversion)
+## 0.4.0 – 2026-11-24
 
-<!-- Release notes generated using configuration in .github/release.yml at 5548f03f36ca59a2718ed4de8af8d0f7d3623939 -->
-
-### Behoben
-
-- Montagevideo: unruhiges Bild (Wasser, Laub) zerfällt nicht mehr in Blöcke ([#253](https://github.com/pklaschka/feldspur/pull/253), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.4...v0.4.0-rc.5
-
-## 0.4.0-rc.4 – 2026-11-23 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at a10c02f7d300db5987c8b80e91a95e0672cf0f72 -->
-
-### Behoben
-
-- Montagevideo: scheitert die Hardware-Dekodierung, rechnet der Abschnitt ohne neu ([#248](https://github.com/pklaschka/feldspur/pull/248), @pklaschka)
-
-### Hinter den Kulissen
-
-- CI: ffmpeg wie im Paket aus dem Cache statt per apt ([#246](https://github.com/pklaschka/feldspur/pull/246), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.3...v0.4.0-rc.4
-
-## 0.4.0-rc.3 – 2026-11-23 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at 07e6c93ee3a7cdedbf21a1bd95286226c81a75be -->
-
-### Behoben
-
-- Änderungsprotokoll nennt Anker und Einsammeln beim Namen, CSV ohne Formeln, Schließen während der Ausgabe bricht sauber ab ([#232](https://github.com/pklaschka/feldspur/pull/232), @pklaschka)
-- Randfälle aus dem Test von v0.4.0: Feldkalender, erneute Ausgabe, Anker und Ausgabeordner ([#239](https://github.com/pklaschka/feldspur/pull/239), @pklaschka)
-- Randfälle aus dem Test von v0.4.0: Nachträge aus der Durchsicht ([#240](https://github.com/pklaschka/feldspur/pull/240), @pklaschka)
-- Durchsehen: Der Rollbalken der Zeitachse verschiebt die Ansicht nicht mehr ([#242](https://github.com/pklaschka/feldspur/pull/242), @pklaschka)
-- Projektwechsel während eines Dialogs oder einer Rechnung: verständliche Meldung statt Fehler aus dem geschlossenen Projekt ([#245](https://github.com/pklaschka/feldspur/pull/245), @pklaschka)
-
-### Dokumentation
-
-- Handbuch gekürzt: weniger Wiederholungen, kürzere Kapitel ([#241](https://github.com/pklaschka/feldspur/pull/241), @pklaschka)
-
-### Hinter den Kulissen
-
-- Release-Bau festgezurrt: Zeitlimits, festgelegte Actions, geprüftes ffmpeg-Quellarchiv ([#233](https://github.com/pklaschka/feldspur/pull/233), @pklaschka)
-- Ausgabe-Optionen als ein Typ, Migrationen per Test eingefroren, Checklisten für neue Tabellen und IPC-Aufrufe ([#234](https://github.com/pklaschka/feldspur/pull/234), @pklaschka)
-- knip prüft ungenutzte Exporte, Dateien und Abhängigkeiten ([#235](https://github.com/pklaschka/feldspur/pull/235), @pklaschka)
-- Alte Montage-Zwischenspeicher wegräumen, kleine Duplikate zusammenführen ([#237](https://github.com/pklaschka/feldspur/pull/237), @pklaschka)
-- Labels mit Emoji, Prüfung auf Changelog-Label ([#238](https://github.com/pklaschka/feldspur/pull/238), @pklaschka)
-- main.ts, ExportStep und Overview in kleinere Teile aufgeteilt ([#243](https://github.com/pklaschka/feldspur/pull/243), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.2...v0.4.0-rc.3
-
-## 0.4.0-rc.2 – 2026-11-23 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at 2d530670200990ad859c00ca89a0c4bbf1a9be38 -->
-
-### Verbessert
-
-- Übersicht, Ausgeben und LIESMICH: klarere Texte, Uhrzeit unter dem Mauszeiger, ruhigere Anordnung ([#223](https://github.com/pklaschka/feldspur/pull/223), @pklaschka)
-
-### Dokumentation
-
-- Handbuch: Texte und Bildschirmfotos an v0.4.0 angeglichen, neues Bild der Übersicht ([#224](https://github.com/pklaschka/feldspur/pull/224), @pklaschka)
-
-### Hinter den Kulissen
-
-- Schema der Projektdatei: Drizzle an die Migrationen angleichen und per Test absichern ([#222](https://github.com/pklaschka/feldspur/pull/222), @pklaschka)
-- Handbuch-Rundgang prüft die neuen Begriffe aus Übersicht, Ausgeben und Durchsehen ([#225](https://github.com/pklaschka/feldspur/pull/225), @pklaschka)
-
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.4.0-rc.1...v0.4.0-rc.2
-
-## 0.4.0-rc.1 – 2026-11-22 (Vorabversion)
-
-<!-- Release notes generated using configuration in .github/release.yml at 024f3a1f279daf3966434b3985e6185568187c7e -->
+<!-- Release notes generated using configuration in .github/release.yml at 1398da14e523494358de2f7c00c4027a65425144 -->
 
 ### Neu
 
@@ -90,20 +20,44 @@ werden beim zugehörigen Release zu einem Abschnitt zusammengefasst.
 - Abgleichen: Die Uhr rückt beim Übernehmen sichtbar an ihren Platz, dazu „Beide anhören“ ([#210](https://github.com/pklaschka/feldspur/pull/210), @pklaschka)
 - Durchsehen: Balken mit Übergang, „Alle Stellen geprüft“ und ein einmaliger Tastenhinweis ([#211](https://github.com/pklaschka/feldspur/pull/211), @pklaschka)
 - Texte für schwierige Stellen: leere Suche und fehlende Originale ([#212](https://github.com/pklaschka/feldspur/pull/212), @pklaschka)
+- Übersicht, Ausgeben und LIESMICH: klarere Texte, Uhrzeit unter dem Mauszeiger, ruhigere Anordnung ([#223](https://github.com/pklaschka/feldspur/pull/223), @pklaschka)
 
 ### Behoben
 
 - Frische Ausgabe steht nicht mehr sofort als „Veraltet“ da ([#200](https://github.com/pklaschka/feldspur/pull/200), @pklaschka)
 - Anker geht einer von Hand eingetragenen Uhrabweichung vor ([#214](https://github.com/pklaschka/feldspur/pull/214), @pklaschka)
 - Widersprüchlicher Anker setzt beide Aufnahmen auf „prüfen“ ([#216](https://github.com/pklaschka/feldspur/pull/216), @pklaschka)
+- Änderungsprotokoll nennt Anker und Einsammeln beim Namen, CSV ohne Formeln, Schließen während der Ausgabe bricht sauber ab ([#232](https://github.com/pklaschka/feldspur/pull/232), @pklaschka)
+- Randfälle aus dem Test von v0.4.0: Feldkalender, erneute Ausgabe, Anker und Ausgabeordner ([#239](https://github.com/pklaschka/feldspur/pull/239), @pklaschka)
+- Randfälle aus dem Test von v0.4.0: Nachträge aus der Durchsicht ([#240](https://github.com/pklaschka/feldspur/pull/240), @pklaschka)
+- Durchsehen: Der Rollbalken der Zeitachse verschiebt die Ansicht nicht mehr ([#242](https://github.com/pklaschka/feldspur/pull/242), @pklaschka)
+- Projektwechsel während eines Dialogs oder einer Rechnung: verständliche Meldung statt Fehler aus dem geschlossenen Projekt ([#245](https://github.com/pklaschka/feldspur/pull/245), @pklaschka)
+- Montagevideo: scheitert die Hardware-Dekodierung, rechnet der Abschnitt ohne neu ([#248](https://github.com/pklaschka/feldspur/pull/248), @pklaschka)
+- Montagevideo: unruhiges Bild (Wasser, Laub) zerfällt nicht mehr in Blöcke ([#253](https://github.com/pklaschka/feldspur/pull/253), @pklaschka)
+
+### Dokumentation
+
+- Handbuch: Texte und Bildschirmfotos an v0.4.0 angeglichen, neues Bild der Übersicht ([#224](https://github.com/pklaschka/feldspur/pull/224), @pklaschka)
+- Handbuch gekürzt: weniger Wiederholungen, kürzere Kapitel ([#241](https://github.com/pklaschka/feldspur/pull/241), @pklaschka)
+- Begleittext: Fußnote zu den Claude-Abo-Kosten ab Version 0.1.0 ([#254](https://github.com/pklaschka/feldspur/pull/254), @pklaschka)
 
 ### Hinter den Kulissen
 
 - CI: Labels verdecken den grünen Pflicht-Check nicht mehr ([#189](https://github.com/pklaschka/feldspur/pull/189), @pklaschka)
 - Releases erst als geprüften Entwurf anlegen, dann veröffentlichen ([#185](https://github.com/pklaschka/feldspur/pull/185), @pklaschka)
 - Herkunftsnachweise (Build Attestations) für alle Release-Dateien ([#218](https://github.com/pklaschka/feldspur/pull/218), @pklaschka)
+- Schema der Projektdatei: Drizzle an die Migrationen angleichen und per Test absichern ([#222](https://github.com/pklaschka/feldspur/pull/222), @pklaschka)
+- Handbuch-Rundgang prüft die neuen Begriffe aus Übersicht, Ausgeben und Durchsehen ([#225](https://github.com/pklaschka/feldspur/pull/225), @pklaschka)
+- Release-Bau festgezurrt: Zeitlimits, festgelegte Actions, geprüftes ffmpeg-Quellarchiv ([#233](https://github.com/pklaschka/feldspur/pull/233), @pklaschka)
+- Ausgabe-Optionen als ein Typ, Migrationen per Test eingefroren, Checklisten für neue Tabellen und IPC-Aufrufe ([#234](https://github.com/pklaschka/feldspur/pull/234), @pklaschka)
+- knip prüft ungenutzte Exporte, Dateien und Abhängigkeiten ([#235](https://github.com/pklaschka/feldspur/pull/235), @pklaschka)
+- Alte Montage-Zwischenspeicher wegräumen, kleine Duplikate zusammenführen ([#237](https://github.com/pklaschka/feldspur/pull/237), @pklaschka)
+- Labels mit Emoji, Prüfung auf Changelog-Label ([#238](https://github.com/pklaschka/feldspur/pull/238), @pklaschka)
+- main.ts, ExportStep und Overview in kleinere Teile aufgeteilt ([#243](https://github.com/pklaschka/feldspur/pull/243), @pklaschka)
+- CI: ffmpeg wie im Paket aus dem Cache statt per apt ([#246](https://github.com/pklaschka/feldspur/pull/246), @pklaschka)
+- Handbuch-Rundgang prüft fehlende Ausgabe und Quelle weit weg vom Datum ([#255](https://github.com/pklaschka/feldspur/pull/255), @pklaschka)
 
-**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0...v0.4.0-rc.1
+**Alle Änderungen**: https://github.com/pklaschka/feldspur/compare/v0.3.0...v0.4.0
 
 ## 0.3.0 – 2026-11-22
 

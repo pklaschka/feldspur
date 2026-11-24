@@ -6,7 +6,7 @@
 # Feldspur<br><sub><sub><em>Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen</em></sub></sub>
 
 **Zuri Nimca Klaschka** <a href="https://orcid.org/0009-0005-9995-5687"><img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" width="16" alt="ORCID 0009-0005-9995-5687"></a><br>
-Stand: 23. November 2026
+Stand: 24. November 2026
 
 [![Handbuch](https://img.shields.io/badge/Handbuch-online-a4441f?labelColor=3a281d)](https://purl.archive.org/feldspur)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.24289969-5b5d53?labelColor=3a281d)](https://doi.org/10.5281/zenodo.24289969)
@@ -104,13 +104,13 @@ verändern, gehört zu jeder Angabe die Version oder der Stand.
 **Das Programm**, wenn Material mit Feldspur aufbereitet wurde – mit Version oder Commit:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse zusammenführen_
-> (Version 0.4.0-rc.5) \[Software\]. <https://purl.archive.org/feldspur/repo>
+> (Version 0.4.0) \[Software\]. <https://purl.archive.org/feldspur/repo>
 
 **Diesen Text**, wenn es um Begründung, Einordnung, die Entstehung mit KI oder das Handbuch geht – mit dem Stand,
 der oben auf der Seite bzw. auf dem Titelblatt des PDFs steht, z. B.:
 
 > Klaschka, Z. N. (2026). _Feldspur: Multimediale Feldaufzeichnungen auf einer gemeinsamen Zeitachse
-> zusammenführen. Begleittext und Handbuch_ (Stand: 23. November 2026). <https://purl.archive.org/feldspur>
+> zusammenführen. Begleittext und Handbuch_ (Stand: 24. November 2026). <https://purl.archive.org/feldspur>
 
 **Eine Stelle im eigenen Material**, das mit Feldspur aufbereitet wurde: aus der gesicherten Ausgabe
 (Einsatztranskript und Montagevideo), mit der ganzen Montage-ID und der Zeitmarke. Wie das geht, steht im
