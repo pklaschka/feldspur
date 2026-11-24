@@ -5,6 +5,12 @@
  *
  * Die Zeiten sind Wanduhrzeiten am Einsatzort (LocalMs). Die Achse rechnet sie auf die Uhrzeit des Tages um, damit
  * Tage mit verschiedenem Datum übereinander liegen.
+ *
+ * Einordnung: Übersicht aller Einsätze. Die Marken je Einsatz rechnet `packages/media/src/methods-summary.ts`
+ * (`calendarMarks`) im Main-Prozess. Die Oberfläche zeichnet daraus den Feldkalender
+ * (`apps/desktop/src/renderer/overview/`) und lädt dafür Achse und Beschriftung aus dieser Datei, eingebunden als
+ * `@feldspur/media/field-calendar`: Deshalb darf hier nichts stehen, was Node braucht. Dieselbe Darstellung als
+ * SVG-Datei schreibt `apps/desktop/src/main/ipc/project.ts` (`fieldCalendarSvg`).
  */
 import type { SessionTranscript } from "./session-transcript.ts";
 
@@ -18,17 +24,21 @@ export type CalendarKind = "audio" | "video" | "photo" | "diary";
 /** Eine Marke: Aufnahme (Bereich), Foto oder Tagebucheintrag (Zeitpunkt). */
 export interface CalendarMark {
   kind: CalendarKind;
+  /** Bei einem Zeitpunkt sind `fromMs` und `toMs` gleich. */
   fromMs: LocalMs;
   toMs: LocalMs;
 }
 
+/** Eine Zeile des Feldkalenders: ein Einsatz (`FieldSession`) mit seinen Marken. */
 export interface CalendarDay {
+  /** Datum des Einsatzes als „JJJJ-MM-TT“. */
   date: string;
   title: string;
   place: string;
   marks: CalendarMark[];
 }
 
+/** Arten in der Reihenfolge ihrer Spuren innerhalb einer Zeile (von oben nach unten) und der Legende. */
 export const CALENDAR_KINDS: CalendarKind[] = ["audio", "video", "photo", "diary"];
 export const CALENDAR_LABEL: Record<CalendarKind, string> = {
   audio: "Ton",

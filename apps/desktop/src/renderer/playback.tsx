@@ -1,19 +1,23 @@
 /**
  * Gemeinsamer Wiedergabestand: welche Quelle an welcher Stelle steht, und
  * Spul-Wünsche von außen (Klick auf die Zeitachse). Die Wiedergabe selbst
- * läuft im Player der Detailleiste.
+ * läuft im Player der Detailleiste (`inspector/Player.tsx`); er meldet seinen Stand hierher. So zeichnet die
+ * Zeitachse in Durchsehen den Abspielkopf, und Suche, Mitschrift und Belege können an eine Stelle spulen.
+ * Der Provider sitzt in `app/SessionPane.tsx`, der Stand gilt also je geöffnetem Einsatz.
  */
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { formatDuration } from "@feldspur/core/time";
 
 export interface Position {
   sourceId: string;
+  /** Stelle in der Aufnahme (ms ab Dateianfang), keine Uhrzeit. */
   atMs: number;
   playing: boolean;
 }
 
 interface Playback {
   position: Position | null;
+  /** Nur der Player ruft das auf: neuer Stand, oder null, wenn nichts mehr geladen ist. */
   report: (p: Position | null) => void;
   /** Letzter Spul-Wunsch; `n` zählt hoch, damit derselbe Wunsch erneut greift. */
   seekRequest: { sourceId: string; atMs: number; n: number } | null;

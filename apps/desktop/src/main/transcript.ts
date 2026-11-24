@@ -1,9 +1,16 @@
-/** Mitschrift: Zeilen zu Ton- und Videoquellen anlegen, ändern, löschen. */
+/**
+ * Mitschrift: Zeilen zu Ton- und Videoquellen anlegen, ändern, löschen. Aufgerufen aus `ipc/review.ts` (Kanäle
+ * `transcript:…`), bedient in `src/renderer/Transcriber.tsx`.
+ *
+ * Eine Zeile hängt an einer Stelle der Aufnahme (ms ab Dateibeginn), nie an einer Uhrzeit: Die Uhrzeit ergibt sich
+ * erst aus der Lage der Quelle und wandert mit, wenn sich der Abgleich ändert.
+ */
 import type { ProjectStore, TranscriptLine } from "@feldspur/core";
 import type { TranscriptPatch } from "../shared/api.ts";
 
 const AV = new Set(["audio", "video"]);
 
+/** Stelle auf die Länge der Aufnahme begrenzen. */
 function clampAt(s: ProjectStore, sourceId: string, atMs: number): number {
   if (!Number.isFinite(atMs)) throw new Error("Stelle in der Aufnahme fehlt");
   const src = s.getSource(sourceId);
@@ -11,6 +18,7 @@ function clampAt(s: ProjectStore, sourceId: string, atMs: number): number {
   return Math.min(Math.max(0, Math.round(atMs)), max);
 }
 
+/** Neue Zeile an einer Stelle der Aufnahme; Sprecher und Text ohne Leerraum am Rand. */
 export function addLine(
   s: ProjectStore,
   sourceId: string,

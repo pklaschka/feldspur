@@ -1,9 +1,14 @@
-/** Detailleiste ohne gewählte Quelle: Stand des Einsatzes und was als Nächstes zu tun ist. */
+/**
+ * Detailleiste ohne gewählte Quelle: Stand des Einsatzes und was als Nächstes zu tun ist. Gezeigt von
+ * `apps/desktop/src/renderer/Inspector.tsx`; die offenen Punkte berechnet `todos` in
+ * `apps/desktop/src/renderer/inspector/status.ts`.
+ */
 import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { STATUS_TEXT } from "../format.ts";
 import { Button, Eyebrow, STATUS_TEXT_CLASS } from "../ui.tsx";
 import { type Todo, todos } from "./status.ts";
 
+/** Offene Punkte, je mit Sprung zum passenden Schritt; auch `apps/desktop/src/renderer/ExportStep.tsx` zeigt sie so. */
 export function TodoList({ items, onGo }: { items: Todo[]; onGo: (t: Todo) => void }) {
   return (
     <ul className="grid gap-1.5">

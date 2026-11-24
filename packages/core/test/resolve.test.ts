@@ -1,3 +1,9 @@
+/**
+ * Zeitbestimmung (`packages/core/src/resolve.ts`) am erfundenen Testmarkt aus `packages/core/test/scenario.ts`:
+ * der Normalfall, Sonderfälle (Anker, Handeingaben, angesagte Uhrzeiten …), Folgeaufnahmen und Seiten aus mehreren
+ * Bildern.
+ * Widersprüche zwischen Zeitbelegen stehen in `conflicts.test.ts`, Kontext in `context.test.ts`.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { combineUncertainty, resolveTimeline } from "../src/resolve.ts";
 import { formatClock } from "../src/time.ts";

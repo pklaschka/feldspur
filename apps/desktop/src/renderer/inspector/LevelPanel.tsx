@@ -1,3 +1,8 @@
+/**
+ * Lautstärke einer Ton- oder Videoquelle in der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`). Wie die
+ * Verstärkung zustande kommt, steht in `packages/core/src/level.ts`; beim Abhören wendet sie
+ * `apps/desktop/src/renderer/level.ts` an.
+ */
 import { dbText } from "../format.ts";
 import { useState } from "react";
 import type { LevelInput, LevelRow, SourceRow } from "../../shared/api.ts";
@@ -12,6 +17,7 @@ import type { InspectorActions } from "./actions.ts";
  */
 export function LevelPanel({ row, level, actions }: { row: SourceRow; level: LevelRow; actions: InspectorActions }) {
   const [measuring, setMeasuring] = useState(false);
+  // Der Regler führt nur einen Entwurf; gespeichert wird beim Loslassen, nicht bei jedem Zwischenwert.
   const [manual, setManual] = useDraft(level.manualGainDb);
   const set = (patch: Partial<LevelInput>) =>
     actions.setLevel(row.id, { mode: level.mode, manualGainDb: manual, compress: level.compress, ...patch });

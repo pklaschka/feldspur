@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Vorschau des Einsatztranskripts im Schritt „Ausgeben“ (`apps/desktop/src/renderer/SessionTranscriptLine.tsx`):
+ * dieselben Farben und Teile je Zeile wie im ausgegebenen .docx.
+ */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { act } from "react";

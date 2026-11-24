@@ -1,3 +1,8 @@
+/**
+ * Zeitbelege je Gerät nachschärfen (`packages/media/src/clip-times.ts`): creation_time als Beginn oder Ende,
+ * Kamera-XML, Kamera-Timecode, Zeitzone der Kamera; dazu „Zeitbelege neu lesen“ (`packages/media/src/import.ts`).
+ * Arbeitet mit erfundenen Metadaten, ohne Mediendateien.
+ */
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

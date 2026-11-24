@@ -1,3 +1,8 @@
+/**
+ * Sicherungen der Projektdatei (`packages/core/src/db/backup.ts`): Dateinamen und Ordner, anlegen und ausdünnen,
+ * die Sicherung vor dem Aktualisieren einer älteren Datei, die Prüfung einer Datei vor dem Öffnen und „Als Kopie
+ * öffnen“. Arbeitet mit echten Dateien in einem temporären Ordner.
+ */
 import {
   closeSync,
   mkdtempSync,

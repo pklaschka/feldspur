@@ -1,6 +1,10 @@
 /**
  * Große Vorschau einer Quelle: Bilder (mit allen Bildern derselben Seite), PDF-Seiten,
  * Video und Audio. Bilder lassen sich zwischen „einpassen“ und „Originalgröße“ umschalten.
+ *
+ * Ein Dialog für den ganzen Einsatz, eingebunden in `apps/desktop/src/renderer/app/SessionPane.tsx`. Geöffnet wird er
+ * über „Groß ansehen…“ im Quellenmenü und in der Detailleiste (`SourceActions.preview`,
+ * `apps/desktop/src/renderer/SourceMenu.tsx`). Die Dateien selbst kommen über `mediaUrl` aus dem Hauptprozess.
  */
 import { Dialog, VisuallyHidden } from "radix-ui";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
@@ -17,6 +21,7 @@ export function Preview({
   onClose,
 }: {
   view: SessionView;
+  /** Gezeigte Quelle; null = geschlossen. */
   sourceId: string | null;
   onClose: () => void;
 }) {
@@ -31,6 +36,7 @@ export function Preview({
       group.findIndex((r) => r.id === sourceId),
     );
   const [index, setIndex] = useState(startIndex);
+  // Wechselt die Quelle, das Bild noch im selben Durchlauf neu wählen (nicht erst per Effekt ein Bild später).
   const [seen, setSeen] = useState(sourceId);
   if (seen !== sourceId) {
     setSeen(sourceId);
@@ -105,6 +111,7 @@ export function Preview({
   );
 }
 
+/** Inhalt je nach Quelle: Bild (Klick schaltet die Größe um), PDF-Seiten, Player oder der Hinweis „keine Vorschau“. */
 function Body({ row, zoom, onToggleZoom }: { row: SourceRow; zoom: "fit" | "full"; onToggleZoom: () => void }) {
   if (row.previewable) {
     return (

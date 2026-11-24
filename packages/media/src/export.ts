@@ -1,5 +1,12 @@
 /**
  * Ausgeben: Einsatztranskript (.docx), Dokumentvariablen (.xlsx), Begleitprotokoll (.csv) und Montagevideo in einen Ordner.
+ *
+ * Einordnung: letzter Schritt der App. Die Oberfläche löst die Ausgabe über IPC aus;
+ * `apps/desktop/src/main/export.ts` wählt Ordner und Einstellungen und ruft `exportSession` auf. Diese Datei legt
+ * Reihenfolge und Dateinamen fest und schreibt die Tabellen selbst; die übrigen Dateien bauen eigene Module:
+ * `packages/media/src/session-transcript.ts` (Inhalt), `docx.ts`, `montage-video.ts`, `fcpxml.ts`, `viewer/html.ts`,
+ * `readme.ts`. Was die Oberfläche zeichnen muss (Einblendungen, PDF-Seiten), kommt als Rückruf herein (`overlay`,
+ * `renderImage`).
  */
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -81,7 +88,9 @@ export interface ExportOptions {
 
 export interface ExportResult {
   dir: string;
+  /** Namen der geschriebenen Dateien, relativ zu `dir`, in der Reihenfolge des Schreibens. */
   files: string[];
+  /** Länge der Montage in ms (auch ohne Montagevideo). */
   durationMs: number;
 }
 
@@ -140,12 +149,19 @@ export function documentVariables(transcript: SessionTranscript, documentName: s
   ];
 }
 
+/**
+ * Gemeinsamer Namensanfang aller Dateien einer Ausgabe: „Feldtag_{Datum}_{Titel}“, nach Episoden geschnitten mit
+ * „_Episoden“. Ist zugleich der Dokumentname in MAXQDA (siehe `documentVariables`).
+ */
 export function baseName(transcript: SessionTranscript): string {
   const base = `Feldtag_${transcript.header.date}_${safeName(transcript.header.title)}`;
   return transcript.plan.mode === "episodes" ? `${base}_Episoden` : base;
 }
 
-/** Begleitprotokoll: Nachweis je Quelle (Semikolon, UTF-8 mit BOM für Excel). */
+/**
+ * Begleitprotokoll: Nachweis je Quelle (Semikolon, UTF-8 mit BOM für Excel). Eine Zeile je Quelle des Einsatzes,
+ * auch für solche ohne Lage auf der Zeitachse. Ohne `levels` steht bei der Lautstärke überall „unverändert“.
+ */
 export function protocolCsv(
   store: ProjectStore,
   transcript: SessionTranscript,
@@ -278,6 +294,12 @@ function outPath(outDir: string, name: string): string {
   return path;
 }
 
+/**
+ * Einen Einsatz (`FieldSession`) nach `outDir` ausgeben. Ablauf: Einsatztranskript rechnen, Zielordner prüfen (bis
+ * hierhin ist nichts geschrieben; Fehler kommen als `ExportPrecheckError`), Reste früherer Ausgaben entfernen,
+ * Standbilder, Lautstärke, Montagevideo, dann die Dokumente; LIESMICH und Prüfsummenliste zuletzt.
+ * Zwischendateien liegen in einem eigenen Ordner im Temp-Verzeichnis, der am Ende wieder verschwindet.
+ */
 export async function exportSession(
   store: ProjectStore,
   sessionId: Id,
@@ -294,6 +316,8 @@ export async function exportSession(
         : "Nichts zu exportieren: keine Quelle hat eine Uhrzeit",
     );
   const base = baseName(transcript);
+  // planned: was diese Ausgabe schreibt. possible: was eine Ausgabe mit anderen Einstellungen hier geschrieben hätte.
+  // leftover: was davon (oder von der letzten Ausgabe) diesmal nicht entsteht und deshalb entfernt wird.
   const planned = [
     ...(opts.video !== false ? [`${base}.mp4`] : []),
     ...(opts.video !== false && opts.viewer ? [`${base}.html`] : []),
@@ -366,6 +390,7 @@ export async function exportSession(
 
     const files: string[] = [];
     const media = `${base}.mp4`;
+    // Pegel nur für das Montagevideo neu messen (dekodiert ganze Dateien); ohne Video gilt, was schon gemessen ist.
     const levels = await sessionLevels(store, sessionId, {
       measureMissing: opts.video !== false,
       signal,

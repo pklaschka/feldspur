@@ -1,7 +1,11 @@
-/** Seiten der Abtipp-Ansicht und ihr Platz. Ohne React, damit es sich direkt testen lässt. */
+/**
+ * Seiten der Abtipp-Ansicht (`DiaryEditor.tsx`) und ihr Platz. Ohne React, damit es sich direkt testen lässt
+ * (`apps/desktop/test/diary-pages.test.ts`).
+ */
 import { diaryPageLabel } from "@feldspur/core/pages";
 import type { SourceRow } from "../../shared/api.ts";
 
+/** Eine Bildfläche, auf der Rahmen liegen können: ein Bild oder eine einzelne PDF-Seite. */
 export interface Surface {
   sourceId: string;
   /** PDF-Seite ab 0; bei Bildern 0. */
@@ -10,6 +14,7 @@ export interface Surface {
   /** Doppelseite: Falz in der Mitte andeuten. */
   spread: boolean;
 }
+/** Eine Seite zum Blättern: meist eine Fläche, mit angehängten weiteren Bildern (`partOf`) mehrere. */
 export interface NavPage {
   key: string;
   /** Hauptquelle der Seite. */
@@ -17,6 +22,7 @@ export interface NavPage {
   label: string;
   surfaces: Surface[];
 }
+/** Schlüssel einer Fläche („Quelle#Seite“); passt auch auf Rahmen (`Region`), um sie ihrer Fläche zuzuordnen. */
 export const sKey = (x: { sourceId: string; page?: number }) => `${x.sourceId}#${x.page ?? 0}`;
 
 /** Seiten für die Abtipp-Ansicht: Bild samt weiteren Bildern als eine Seite, PDF je Seite einzeln. */
@@ -61,6 +67,7 @@ export function navPages(rows: SourceRow[], pdfPages: Map<string, number>): NavP
   });
 }
 
+/** Größter Zoom im Editor; 1 heißt: Die Seite passt ganz in die Fläche. */
 export const ZOOM_MAX = 6;
 
 /** Platz für eine Seite bei Zoom 1: Fläche ohne Innenabstand; mehrere Bilder einer Seite teilen sich nicht die Höhe. */

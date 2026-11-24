@@ -1,7 +1,12 @@
 /**
  * Waveform als Canvas: Spiegelform um die Mittellinie, außen die Spitzen, innen der RMS-Pegel.
  * Logarithmisch (dB) zeigt leise Sprache deutlich; linear zeigt die echte Aussteuerung.
- * Wiederverwendbar: Mitschreiben zeigt einen mitlaufenden Ausschnitt, der Feinabgleich zwei Spuren.
+ * Mitschreiben (`apps/desktop/src/renderer/Transcriber.tsx`) zeigt damit einen mitlaufenden Ausschnitt. Der
+ * Feinabgleich (`apps/desktop/src/renderer/FineAlign.tsx`) zeichnet seine zwei Spuren selbst und nutzt von hier nur
+ * das Laden der Kacheln (`usePeakTiles`).
+ *
+ * Die Pegel (`Peaks`, `packages/core/src/waveform.ts`) berechnet der Hauptprozess aus der Tonspur (`waveformPeaks`,
+ * Handler in `apps/desktop/src/main/ipc/review.ts`); hier werden sie nur geholt, gemerkt und gezeichnet.
  */
 import { peakLevel, type Peaks, type WaveformScale } from "@feldspur/core/waveform";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -9,13 +14,17 @@ import { prepareCanvas, useElementWidth } from "./canvas.ts";
 
 const api = window.feldspur;
 
+/** Farbe aus dem Farbschema der Oberfläche (CSS-Variablen, siehe `TONE_VAR`). */
 export type WaveTone = "accent" | "muted" | "warn" | "bad" | "good";
 
+/** Senkrechter Strich an einer Stelle der Aufnahme. */
 export interface WaveMarker {
+  /** Stelle in ms ab Dateianfang. */
   atMs: number;
   tone?: WaveTone;
 }
 
+/** Farbig hinterlegte Strecke der Aufnahme, in ms ab Dateianfang. */
 export interface WaveBand {
   fromMs: number;
   toMs: number;
@@ -30,6 +39,7 @@ const TONE_VAR: Record<WaveTone, string> = {
   good: "--good",
 };
 
+/** Zeichnet den Bereich `fromMs`–`toMs` einer Aufnahme; die Pegel dazu liefert `usePeakTiles`. */
 export function Waveform({
   peaks,
   fromMs,
@@ -62,6 +72,7 @@ export function Waveform({
   tone?: WaveTone;
   /** Sekunden-Raster mit Beschriftung am unteren Rand. */
   ticks?: boolean;
+  /** Klick in die Waveform: die getroffene Stelle in ms ab Dateianfang. */
   onSeek?: (ms: number) => void;
   className?: string;
   style?: CSSProperties;
@@ -95,6 +106,11 @@ export function Waveform({
   );
 }
 
+/**
+ * Zeichnet von hinten nach vorn: Grund, Strecken, Pegel, Striche, Raster, Wiedergabestelle. Die Farben werden bei
+ * jedem Zeichnen aus den CSS-Variablen von `el` gelesen, damit Hell und Dunkel stimmen (deshalb kein `light-dark()`,
+ * siehe AGENTS.md).
+ */
 function draw(
   ctx: CanvasRenderingContext2D,
   el: Element,
@@ -206,6 +222,7 @@ function draw(
   }
 }
 
+/** Mögliche Abstände des Zeitrasters in ms, von 1 s bis 1 h. */
 const STEPS = [1000, 2000, 5000, 10_000, 30_000, 60_000, 120_000, 300_000, 600_000, 1_800_000, 3_600_000];
 
 function tickStep(spanMs: number, widthPx: number): number {
@@ -226,11 +243,14 @@ function tickText(ms: number, step: number): string {
 
 // ── Kacheln laden ─────────────────────────────────────────────────────────
 
+// Für alle Waveforms der App gemeinsam (Mitschreiben und Feinabgleich). Ein Eintrag ist die fertige Kachel oder
+// die noch laufende Anfrage, damit dieselbe Kachel nicht doppelt geholt wird.
 const cache = new Map<string, Peaks | Promise<Peaks | null>>();
 const tileKey = (sourceId: string, tileMs: number, buckets: number, i: number) =>
   `${sourceId}:${tileMs}:${buckets}:${i}`;
 const CACHE_MAX = 600;
 
+/** Eintragen und ans Ende stellen; über `CACHE_MAX` fällt der älteste Eintrag heraus. */
 function remember(key: string, value: Peaks | Promise<Peaks | null>): void {
   cache.delete(key);
   cache.set(key, value);
@@ -241,6 +261,10 @@ function remember(key: string, value: Peaks | Promise<Peaks | null>): void {
  * Spitzen für den Bereich [fromMs, toMs] in festen Kacheln laden und zwischenspeichern. So
  * kostet das Mitlaufen beim Abspielen nur ab und zu eine neue Kachel, nicht jede Bildwiederholung.
  * Die Kachel vor und nach dem Bereich wird vorab geholt.
+ *
+ * Zeiten in ms ab Dateianfang. `tileMs` ist die Länge einer Kachel, `bucketsPerTile` ihre Auflösung;
+ * `durationMs` begrenzt die letzte Kachel (null = Dauer unbekannt). Zurück kommen nur die schon geladenen Kacheln;
+ * trifft eine weitere ein, zeichnet die Komponente neu. Scheitert eine Anfrage, wird sie beim nächsten Mal wiederholt.
  */
 export function usePeakTiles(
   sourceId: string,

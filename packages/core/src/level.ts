@@ -5,12 +5,18 @@
  *
  * Gilt beim Abhören in der App (Web Audio) und im Montagevideo (FFmpeg) mit denselben Werten.
  * Die Originaldateien bleiben unverändert. Ohne Node, damit die Oberfläche es direkt nutzen kann.
+ *
+ * Wer es benutzt: Die Tonspur-Analyse misst den Sprachpegel (`packages/media/src/analyze.ts`), die Oberfläche hört
+ * damit ab (`apps/desktop/src/renderer/level.ts`), die Montage baut daraus die FFmpeg-Filter
+ * (`packages/media/src/audio.ts`). Die Einstellung je Quelle steht in `Source.levelMode`, `levelGainDb` und
+ * `levelCompress` (`packages/core/src/model.ts`).
  */
 
 /** Sprachpegel, auf den „automatisch“ angleicht (dBFS, Mittel über die lauten Stellen). */
 export const LEVEL_TARGET_DB = -20;
 /** Grenzen der automatischen Verstärkung: sehr leise Aufnahmen nicht ins Rauschen hochziehen. */
 export const LEVEL_MAX_BOOST_DB = 30;
+/** Gegenstück: sehr laute Aufnahmen höchstens um so viel absenken. */
 export const LEVEL_MAX_CUT_DB = -20;
 /** Grenzen für „von Hand“. */
 export const LEVEL_MANUAL_RANGE_DB = [-30, 40] as const;
@@ -35,8 +41,10 @@ export const COMPRESSOR = {
 /** Begrenzer am Ende, damit verstärkte Spitzen nicht übersteuern. */
 export const LIMIT_DB = -1;
 
+/** „auto“ = auf den gemeinsamen Sprachpegel angleichen, „manual“ = von Hand, „off“ = Ton unverändert. */
 export type LevelMode = "auto" | "manual" | "off";
 
+/** Lautstärke-Einstellung einer Quelle; dieselben drei Felder wie an `Source`. */
 export interface LevelSetting {
   levelMode: LevelMode;
   /** Nur bei „von Hand“. */
@@ -52,6 +60,7 @@ export interface LevelSetting {
  */
 export function speechLevelDb(db: ArrayLike<number>): number | null {
   const absGate = -60;
+  // Gemittelt wird die Leistung (10^(dB/10)), nicht der dB-Wert.
   let sum = 0;
   let n = 0;
   for (let i = 0; i < db.length; i++) {
@@ -82,6 +91,7 @@ export function effectiveGainDb(level: LevelSetting, measuredDb: number | null):
     const [lo, hi] = LEVEL_MANUAL_RANGE_DB;
     return Math.min(hi, Math.max(lo, level.levelGainDb));
   }
+  // Automatisch, aber noch nicht gemessen: nichts verstellen, bis die Analyse gelaufen ist.
   if (measuredDb === null) return 0;
   const g = LEVEL_TARGET_DB - measuredDb;
   return Math.round(Math.min(LEVEL_MAX_BOOST_DB, Math.max(LEVEL_MAX_CUT_DB, g)) * 10) / 10;
@@ -92,4 +102,5 @@ export function levelActive(level: LevelSetting, gainDb: number): boolean {
   return level.levelMode !== "off" && (gainDb !== 0 || level.levelCompress);
 }
 
+/** dB → Faktor für die Amplitude (+6 dB ≈ doppelt). */
 export const dbToGain = (db: number) => 10 ** (db / 20);

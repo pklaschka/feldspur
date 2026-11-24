@@ -1,3 +1,7 @@
+/**
+ * Fertige Transkripte aus Whisper und verwandten Werkzeugen einlesen
+ * (`packages/media/src/transcript-import.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { parseTranscript } from "../src/transcript-import.ts";
 

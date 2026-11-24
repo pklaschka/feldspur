@@ -1,3 +1,7 @@
+/**
+ * Schritt Einsammeln (`packages/media/src/import.ts`): Importplan eines erzeugten Feldtags und seine Übernahme ins
+ * Projekt; dazu Fortschritt, Abbrechen und zweiter Versuch bei großen Ordnern.
+ */
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";

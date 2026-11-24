@@ -1,3 +1,7 @@
+/**
+ * Typen zu `scripts/mac-document-type.mjs`, damit der Test `scripts/mac-document-type.test.ts` es typgeprüft
+ * einbinden kann.
+ */
 export const PROJECT_UTI: string;
 export const PROJECT_EXTENSION: string;
 export const PROJECT_ICON_FILE: string;

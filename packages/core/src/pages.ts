@@ -2,15 +2,25 @@
  * Seitenzählung von Tagebuch-Scans. Ein Bild (oder eine PDF-Seite) kann eine einzelne Seite oder
  * eine Doppelseite zeigen; die Seitenzahl im Notizbuch beginnt, wo man sie einträgt. Rahmen auf
  * einer Doppelseite gehören je nach Lage zur linken, rechten oder zu beiden Seiten.
+ *
+ * Gehört zum Tagebuch: Die Oberfläche zählt und beschriftet damit (`apps/desktop/src/renderer/PageNumbering.tsx`,
+ * `DiaryEditor.tsx`), der Hauptprozess und die Ausgabe schreiben dieselben Bezeichnungen in Ansicht, Quellennachweis
+ * und Einsatztranskript (`apps/desktop/src/main/view.ts`, `packages/media/src/session-transcript.ts`). Gespeichert
+ * sind nur `Source.firstPage`, `Source.pageSpread` und die Seitenzahl am Rahmen (`DiaryEntry.regions[].pageNo`);
+ * alles andere wird hier berechnet. Ohne Node.
  */
 
+/** Was die Seitenzählung von einem Tagebuch-Scan (`Source`) wissen muss. */
 export interface PagedSource {
   label: string;
   fileName: string;
+  /** Seitenzahl im Notizbuch für das (erste) Bild; null = nicht gezählt. */
   firstPage: number | null;
+  /** Ein Bild zeigt eine Doppelseite. */
   pageSpread: boolean;
 }
 
+/** Rahmen eines Tagebucheintrags auf einem Scan, soweit er für die Seite zählt (x und w relativ, 0 … 1). */
 export interface PageRegion {
   /** PDF-Seite ab 0; bei Bildern 0 oder weggelassen. */
   page?: number;
@@ -20,11 +30,13 @@ export interface PageRegion {
   pageNo?: number | null;
 }
 
+/** Hälfte einer Doppelseite, auf der ein Rahmen liegt; „both“ = er reicht deutlich über den Falz. */
 export type PageSide = "left" | "right" | "both";
 
 /** Etwas Spielraum über die Mitte hinaus: ein Rahmen darf den Falz leicht überragen. */
 const FOLD_SLACK = 0.05;
 
+/** PDF-Scans erkennt Feldspur am Dateinamen: Nur bei ihnen kann ein Scan mehrere Seiten haben. */
 export function isPdfName(fileName: string): boolean {
   return /\.pdf$/i.test(fileName);
 }
@@ -103,6 +115,7 @@ export function regionPageNo(src: PagedSource, region: PageRegion): number | nul
   return side === "right" ? pages.to : side === "left" ? pages.from : null;
 }
 
+/** Rahmen mit seinem Scan, um zwei Rahmen in Lesereihenfolge zu vergleichen (`suggestPageNo`). */
 export interface PlacedRegion {
   sourceId: string;
   page?: number;

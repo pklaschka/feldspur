@@ -1,3 +1,7 @@
+/**
+ * Ortszeit (`packages/core/src/time.ts`): lesen und schreiben, Dauern als Text und die Umrechnung zwischen UTC und
+ * der Ortszeit einer Zeitzone.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { formatClock, formatDuration, formatLocal, localMs, localToUtc, parseLocal, utcToLocal } from "../src/time.ts";
 

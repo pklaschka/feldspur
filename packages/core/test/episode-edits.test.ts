@@ -1,3 +1,7 @@
+/**
+ * Episoden von Hand anpassen (`EpisodeEdit`, gerechnet in `packages/core/src/episodes.ts`): Strecken hinzunehmen
+ * oder herausnehmen. Mit einer einzigen erfundenen Aufnahme, ohne Projektdatei.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { computeEpisodes } from "../src/episodes.ts";
 import type { Source } from "../src/model.ts";

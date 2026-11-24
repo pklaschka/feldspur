@@ -1,6 +1,12 @@
 /**
  * Tagebuch abtippen: Scan groß, Einträge als Rahmen aufziehen, daneben
  * Notierzeit, Kurzform und Volltext. Läuft als Vollbild-Dialog (Radix Dialog).
+ *
+ * Eingebunden von `app/SessionPane.tsx`; geöffnet über „Abtippen…“ in „Einsammeln“ (`Collect.tsx`) und aus der
+ * Detailleiste. Ein Eintrag (`DiaryEntryRow`) besteht aus einem oder mehreren Rahmen (`Region`) auf Scan-Seiten;
+ * seine Notierzeit ist der Zeitbeleg, mit dem er in der Chronologie landet. Aufbau der Seitenliste: `diary/pages.ts`,
+ * Zeichnen und Ziehen: `diary/PageCanvas.tsx`, Felder: `diary/EntryCard.tsx`. Jede Änderung geht sofort per IPC in
+ * die Projektdatei (`apps/desktop/src/main/ipc/review.ts`, `apps/desktop/src/main/diary.ts`).
  */
 import { suggestPageNo } from "@feldspur/core/pages";
 import { Dialog } from "radix-ui";
@@ -28,6 +34,7 @@ export function DiaryEditor({
   view: SessionView;
   /** Offene Seite (Quelle); null = Dialog geschlossen. */
   pageId: string | null;
+  /** Beim Blättern: meldet die Hauptquelle der neuen Seite nach außen. */
   onPage: (id: string) => void;
   onClose: () => void;
   guard: Guard;
@@ -66,8 +73,12 @@ export function DiaryEditor({
   }
   const page = pageId ? (pages.find((p) => p.key === navKey) ?? pages.find((p) => p.mainId === pageId) ?? null) : null;
   const [selected, setSelected] = useState<string | null>(null);
+  /** Gerade angelegter Eintrag: seine Karte nimmt den Fokus ins Feld für die Notierzeit. */
   const [fresh, setFresh] = useState<string | null>(null);
+  /** Eintrag, der eine Fortsetzung bekommt: Der nächste gezogene Rahmen gehört zu ihm statt zu einem neuen. */
   const [continuing, setContinuing] = useState<string | null>(null);
+
+  // Eine Seite (`NavPage`) kann aus mehreren Bildern bestehen; jedes Bild oder jede PDF-Seite ist eine Fläche.
 
   const onSurface = (sf: { sourceId: string; page?: number }) =>
     view.diary.filter((e) => e.regions.some((r) => sKey(r) === sKey(sf)));
@@ -162,6 +173,7 @@ export function DiaryEditor({
     });
   });
 
+  // Von Hand angemeldet statt über `onWheel`: React meldet wheel passiv an, dann wirkt `preventDefault` nicht.
   const areaRef = (el: HTMLDivElement | null) => {
     area.current = el;
     observeArea(el);
@@ -196,6 +208,7 @@ export function DiaryEditor({
     return () => window.removeEventListener("keydown", on, true);
   }, [hasPage]);
 
+  /** Ein Rahmen wurde gezogen: neuer Eintrag oder, während einer Fortsetzung, ein weiterer Rahmen desselben. */
   const draw = async (sf: Surface, region: Region) => {
     const r = { ...region, page: sf.page };
     if (contEntry) {

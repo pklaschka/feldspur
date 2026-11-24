@@ -1,3 +1,7 @@
+/**
+ * Lautstärke angleichen (`packages/core/src/level.ts`): Sprachpegel aus der Hüllkurve messen und daraus die
+ * Verstärkung je Quelle bestimmen.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { COMPRESSOR, effectiveGainDb, LEVEL_TARGET_DB, levelActive, speechLevelDb } from "../src/level.ts";
 

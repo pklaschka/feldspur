@@ -1,3 +1,7 @@
+/**
+ * Aufräumen des Zwischenspeichers für fertige Videoabschnitte (`pruneMontageCache` in
+ * `packages/media/src/montage-video.ts`).
+ */
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

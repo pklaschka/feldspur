@@ -1,3 +1,7 @@
+/**
+ * Stand einer Ausgabe über Neustarts hinweg (`packages/media/src/export-state.ts`, Issue #72): Wann gilt eine Ausgabe
+ * als veraltet, und mit welcher Begründung?
+ */
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

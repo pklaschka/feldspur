@@ -4,9 +4,13 @@
  * Eingebaute Muster decken gängige Handys, Rekorder und Messenger ab. Pro Gerät
  * kann ein eigenes Muster mit Platzhaltern hinterlegt werden:
  * YYYY MM DD hh mm ss (z. B. "REC_YYYYMMDD_hhmm").
+ *
+ * Gehört zum Einsammeln: `packages/media/src/evidence.ts` macht aus dem Ergebnis einen Zeitbeleg (`TimeEvidence`)
+ * der Art „filename“. Das eigene Muster steht am Gerät (`Device.filenamePattern`).
  */
 import { isValidLocal, localMs, type LocalMs } from "./time.ts";
 
+/** Uhrzeit, die ein Dateiname nennt, samt ihrer Genauigkeit. */
 export interface FilenameTime {
   /** Mitte des möglichen Zeitraums. */
   localMs: LocalMs;
@@ -14,6 +18,7 @@ export interface FilenameTime {
   uncertaintyMs: number;
   /** Welcher Teil des Namens getroffen wurde. */
   matched: string;
+  /** Name des Musters, das getroffen hat (eingebaut oder das eigene). */
   pattern: string;
   /** Der Name trägt UTC statt Ortszeit (Google Pixel). `localMs` ist dann die UTC-Wanduhrzeit wie geschrieben. */
   utc?: boolean;
@@ -70,6 +75,8 @@ function toResult(g: Groups, matched: string, pattern: string, utc = false): Fil
   const [Y, M, D, h, m] = [g.Y, g.M, g.D, g.h, g.m].map(Number) as [number, number, number, number, number];
   const s = g.s === undefined ? undefined : Number(g.s);
   if (!isValidLocal(Y, M, D, h, m, s ?? 0)) return null;
+  // Der Name nennt nur den Beginn einer Minute bzw. Sekunde. Als Lage gilt die Mitte dieses Zeitraums, damit die
+  // Unsicherheit nach beiden Seiten gleich ist: Minute → :30 ± 30 s, Sekunde → ,5 ± 0,5 s.
   if (s === undefined) {
     return { localMs: localMs(Y, M, D, h, m, 30), uncertaintyMs: 30_000, matched, pattern };
   }
@@ -85,6 +92,7 @@ function toResult(g: Groups, matched: string, pattern: string, utc = false): Fil
   return { localMs: localMs(Y, M, D, h, m, s, 500), uncertaintyMs: 500, matched, pattern, ...extra };
 }
 
+/** Platzhalter eines eigenen Musters und die Zifferngruppen, für die sie stehen. */
 const TOKEN: Record<string, string> = {
   YYYY: "(?<Y>\\d{4})",
   MM: "(?<M>\\d{2})",

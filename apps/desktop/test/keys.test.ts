@@ -1,3 +1,7 @@
+/**
+ * Tastenkürzel (`apps/desktop/src/renderer/keys.ts`): was als Enter zählt und welche Tasten in „Durchsehen“ was
+ * auslösen.
+ */
 import type { KeyboardEvent } from "react";
 import { describe, expect, it } from "vite-plus/test";
 import { isEnter, reviewKey } from "../src/renderer/keys.js";

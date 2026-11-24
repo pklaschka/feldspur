@@ -1,3 +1,7 @@
+/**
+ * Vorabprüfung des Ausgabeordners (`packages/media/src/write-check.ts`) bei einer gesperrten Datei. Eigene Datei,
+ * weil der Mock von `node:fs/promises` für alle Tests einer Datei gilt.
+ */
 import { describe, expect, it, vi } from "vite-plus/test";
 
 // Gesperrte Datei (Windows: Word hat sie offen) per Mock nachgestellt, damit der Test auch als root läuft.

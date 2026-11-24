@@ -1,6 +1,7 @@
 /**
  * Kontext-Zeile über der Zeitachse (Issue #108): Stücke ohne Uhrzeit in der Reihenfolge, in der sie im
- * Einsatztranskript vor der Chronologie stehen. Kein Minutenraster, keine Spur; einklappbar.
+ * Einsatztranskript vor der Chronologie stehen. Kein Minutenraster, keine Spur; einklappbar. Eingebaut in
+ * `Review.tsx` (Schritt Durchsehen); ein Klick wählt das Stück, die Einzelheiten zeigt dann `ContextPanel.tsx`.
  */
 import { useState, type KeyboardEvent } from "react";
 import type { ContextRow, SessionView } from "../../shared/api.ts";

@@ -1,3 +1,7 @@
+/**
+ * Kennwerte der Übersicht und Tabelle für den Methodenteil (`apps/desktop/src/shared/methods-table.ts`): Zeilen für
+ * Eingang und Ausgabe über mehrere Einsätze und die Fassungen zum Kopieren.
+ */
 import type { MethodsMaterialRow, MethodsSessionSummary } from "@feldspur/media";
 import { describe, expect, it } from "vite-plus/test";
 import {

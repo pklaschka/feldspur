@@ -4,7 +4,10 @@
  *
  * Seit better-sqlite3 13 nutzt die Bibliothek N-API: Dieselbe Datei läuft in Node (Tests)
  * und in Electron, ein Neubau ist nicht nötig. Die gebündelte App findet sie nur über
- * `nativeBinding` (siehe ProjectStore).
+ * `nativeBinding` (siehe ProjectStore, `packages/core/src/db/store.ts`).
+ *
+ * Aufruf: `vp run @feldspur/desktop#native` (Skript `native` in apps/desktop/package.json). Von dort nimmt
+ * `scripts/package-desktop.mjs` die Datei ins Installationspaket.
  */
 import { cpSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";

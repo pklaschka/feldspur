@@ -1,4 +1,7 @@
-/** Scan einer Seite mit Rahmen der Einträge. */
+/**
+ * Scan einer Seite mit Rahmen der Einträge: die Mitte von `DiaryEditor.tsx`. Rahmen (`Region`) sind relative
+ * Koordinaten 0 … 1 auf dem Scan, unabhängig von Zoom und Fenstergröße; die Rechnung dazu steht in `regionEdit.ts`.
+ */
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { mediaUrl, type DiaryEntryRow, type Region } from "../../shared/api.ts";
 import { loadPdf, PdfPageCanvas } from "../pdf.tsx";
@@ -21,6 +24,7 @@ const handleStyle = (h: EditMode): CSSProperties => ({
   cursor: CURSOR[h],
 });
 
+/** Kleines Bild einer Seite für die Seitenliste des Editors. */
 export function Thumb({ surface }: { surface: Surface }) {
   if (surface.isPdf) {
     return (
@@ -87,6 +91,7 @@ export function PageCanvas({
     orig: Box;
     box: Box;
   } | null>(null);
+  // `token` zählt die Änderungen: Kommt eine ältere Antwort nach einer neueren zurück, räumt sie die neuere nicht ab.
   const [pending, setPending] = useState<{ key: string; box: Box; token: number } | null>(null);
   const token = useRef(0);
   const shown = (key: string, r: Box): Box =>
@@ -265,10 +270,10 @@ export function PageCanvas({
   );
 }
 
-/** Natürliche Größe eines Scans (Bild in Pixeln, PDF-Seite in Punkten, beim PDF höchstens 900 px breit). */
 /** Schon bekannte Größen: Beim Blättern zurück steht die Seite sofort in der richtigen Größe da. */
 const naturalSizes = new Map<string, { w: number; h: number }>();
 
+/** Natürliche Größe eines Scans (Bild in Pixeln, PDF-Seite in Punkten, beim PDF höchstens 900 px breit). */
 function useNaturalSize(surface: Surface): { w: number; h: number } | null {
   const key = `${surface.sourceId}#${surface.page}`;
   const known = naturalSizes.get(key);

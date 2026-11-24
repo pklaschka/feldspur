@@ -1,3 +1,7 @@
+/**
+ * Originale prüfen, verschobene wiederfinden und die Prüfung vor der Ausgabe (`packages/media/src/integrity.ts`),
+ * mit kleinen Textdateien anstelle von Aufnahmen.
+ */
 import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";

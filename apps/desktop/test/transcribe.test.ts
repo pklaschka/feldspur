@@ -1,3 +1,7 @@
+/**
+ * Hilfen für den Schritt „Mitschreiben“ (`apps/desktop/src/renderer/transcribe.ts`): Sprecherkürzel, Zeilen teilen,
+ * Tastenkürzel, Ausschnitt der Waveform.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { leadingSpeaker, oneParagraph, splitLine, transcriberKey, waveWindow } from "../src/renderer/transcribe.ts";
 

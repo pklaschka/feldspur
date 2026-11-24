@@ -1,4 +1,8 @@
-/** Was der Schritt „Ausgeben“ vom Hauptprozess lädt: Stand der letzten Ausgabe, Vorschau, Zahlen der Beleg-Karte. */
+/**
+ * Was der Schritt „Ausgeben“ (`apps/desktop/src/renderer/ExportStep.tsx`) vom Hauptprozess lädt: Stand der letzten
+ * Ausgabe, Vorschau, Zahlen der Beleg-Karte. Die Handler stehen in `apps/desktop/src/main/ipc/export.ts`, gerechnet
+ * wird in `apps/desktop/src/main/export.ts`.
+ */
 import { useEffect, useState } from "react";
 import type {
   ExportCard,
@@ -25,6 +29,7 @@ export function useExportStatus(
   const [status, setStatus] = useState<ExportStatus | null>(null);
   useEffect(() => {
     if (busy) return;
+    // `live` verwirft Antworten, die erst eintreffen, nachdem sich Einsatz oder Einstellungen schon geändert haben.
     let live = true;
     void api.exportStatus(sessionId, settings).then(
       (st) => live && setStatus(st),
@@ -37,7 +42,10 @@ export function useExportStatus(
   return status;
 }
 
-/** Vorschau des Einsatztranskripts samt Länge der Montage; null, solange sie berechnet wird. */
+/**
+ * Vorschau des Einsatztranskripts samt Länge der Montage; null, solange sie berechnet wird. `realtime`: der ganze
+ * Einsatz in Echtzeit statt nach Episoden geschnitten.
+ */
 export function useTranscriptPreview(view: SessionView, realtime: boolean): SessionTranscriptPreview | null {
   const sessionId = view.session.id;
   const [preview, setPreview] = useState<SessionTranscriptPreview | null>(null);
@@ -64,6 +72,7 @@ export function useExportCard(
   exportedAt: string | null,
 ): ExportCard | null {
   const sessionId = view.session.id;
+  // Mit Schlüssel gemerkt: Die Karte einer früheren Ausgabe oder eines anderen Einsatzes wird nie gezeigt.
   const [loaded, setLoaded] = useState<{ key: string; card: ExportCard } | null>(null);
   const cardFor = exportedAt === null ? null : `${sessionId}\n${exportedAt}`;
   useEffect(() => {

@@ -1,3 +1,7 @@
+/**
+ * Vorschau im Schritt „Ausgeben“, neben den Schaltern: das Einsatztranskript, wie es in die .docx käme. Die Daten lädt
+ * `useTranscriptPreview` (`apps/desktop/src/renderer/export/hooks.ts`) vom Hauptprozess.
+ */
 import type { SessionTranscriptPreview } from "../../shared/api.ts";
 import { SessionTranscriptLine } from "../SessionTranscriptLine.tsx";
 import { Panel } from "../ui.tsx";

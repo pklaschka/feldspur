@@ -2,6 +2,12 @@
  * Zahlen für die „Tabelle für den Methodenteil“ (Issue #149): was in einen Einsatz hineingeflossen ist und was
  * Feldspur daraus ausgibt. Nur Gezähltes und Gemessenes, keine Bewertung. Das Begleitprotokoll bleibt der
  * vollständige Nachweis je Datei; hier steht dasselbe verdichtet, je Art und Gerät.
+ *
+ * Einordnung: Hier wird gezählt, die Texte dazu baut `packages/media/src/methods-table.ts`. `methodsSummary` ruft der
+ * Hauptprozess für die Übersicht des Projekts auf (`projectOverview` in `apps/desktop/src/main/export.ts`, angezeigt
+ * in `apps/desktop/src/renderer/overview/Metrics.tsx`); `methodsNumbers` braucht außerdem die LIESMICH der Ausgabe
+ * (`packages/media/src/readme.ts`). Grundlage ist immer ein frisch gebautes Einsatztranskript (`SessionTranscript`),
+ * gespeichert wird nichts.
  */
 import type { ExportSettings, Id, PlacementBasis, ProjectStore, Source, SourceKind } from "@feldspur/core";
 import { baseName } from "./export.ts";
@@ -29,9 +35,11 @@ export interface MethodsMaterialRow {
   correctionsMs: number[];
 }
 
+/** Kennwerte eines Einsatzes (`FieldSession`) für Übersicht und Methodenteil: Eingang, Ausgabe und ihr Stand. */
 export interface MethodsSessionSummary {
   sessionId: Id;
   title: string;
+  /** Datum des Einsatzes, „2026-09-14“. */
   date: string;
   material: MethodsMaterialRow[];
   /** Eingesammelte Dateien (Seiten eines Tagebuchs zählen einzeln, Teile einer Seite nicht). */
@@ -66,6 +74,7 @@ export interface MethodsSessionSummary {
    * nichts auszugeben.
    */
   exported: "current" | "stale" | "missing" | "none";
+  /** Zeitpunkt der letzten Ausgabe; null wie bei „none“. */
   exportedAt: string | null;
   /** Marken für den Feldkalender (Issue #205). */
   marks: CalendarMark[];
@@ -142,7 +151,10 @@ export function methodsNumbers(
   };
 }
 
-/** Zahlen eines Einsatzes für die Einstellungen `settings` (so, wie die Ausgabe sie verwenden würde). */
+/**
+ * Zahlen eines Einsatzes für die Einstellungen `settings` (so, wie die Ausgabe sie verwenden würde), dazu der
+ * Vergleich mit der letzten Ausgabe (`compareExport` in `packages/media/src/export-state.ts`).
+ */
 export function methodsSummary(store: ProjectStore, sessionId: Id, settings: ExportSettings): MethodsSessionSummary {
   const session = store.getSession(sessionId);
   const transcript = buildSessionTranscript(store, sessionId, {

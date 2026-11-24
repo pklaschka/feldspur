@@ -1,3 +1,8 @@
+/**
+ * Kontext in der Zeitbestimmung (`packages/core/src/resolve.ts`): Quellen und Tagebucheinträge, die bewusst ohne
+ * Uhrzeit vor der Chronologie stehen (Issue #108). Sie verlassen die Zeitachse, behalten ihre Reihenfolge und stören
+ * die übrigen Lagen nicht. Am erfundenen Testmarkt aus `packages/core/test/scenario.ts`.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { resolveTimeline } from "../src/resolve.ts";
 import { formatClock } from "../src/time.ts";

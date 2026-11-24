@@ -1,3 +1,7 @@
+/**
+ * Eingabe und Anzeige von Zeiten und Zahlen in der Oberfläche (`apps/desktop/src/renderer/format.ts`,
+ * `apps/desktop/src/shared/duration-digits.ts`): Uhrabweichung, Uhrzeit als Maskenfeld, Dauern, Größen, Fehlertexte.
+ */
 import { digitsDurationMs, digitsDurationText } from "../src/shared/duration-digits.ts";
 import { describe, expect, it } from "vite-plus/test";
 import {

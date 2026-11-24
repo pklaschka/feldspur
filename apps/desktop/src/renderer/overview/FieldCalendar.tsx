@@ -1,3 +1,8 @@
+/**
+ * Feldkalender der Übersicht (`apps/desktop/src/renderer/Overview.tsx`). Achse und Grafik kommen aus
+ * `packages/media/src/field-calendar.ts`; die Grafik speichert der Hauptprozess (`saveFieldCalendar` in
+ * `apps/desktop/src/main/ipc/project.ts`).
+ */
 import { useRef, useState } from "react";
 import { CALENDAR_KINDS, CALENDAR_LABEL, calendarAxis, hourLabel } from "@feldspur/media/field-calendar";
 import type { OverviewSession } from "../../shared/api.ts";

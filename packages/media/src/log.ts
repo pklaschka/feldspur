@@ -7,8 +7,12 @@
  * gepackt) selbst ein, `FELDSPUR_LOG=0` schaltet es dort ab. Ausgabe auf stderr, eine Zeile je Schritt:
  *
  *   12:04:31.207 ausgabe   schreibt Einsatztranskript …/2026-09-14_Testmarkt.docx (48 kB)
+ *
+ * Einordnung: Hilfsmodul ohne eigenen Schritt in der Oberfläche. `log` rufen die Module in `packages/media/src/`
+ * und der Hauptprozess auf (über `@feldspur/media`); eingeschaltet wird es in `apps/desktop/src/main/main.ts`.
  */
 
+/** Bereich einer Zeile (erste Spalte nach der Uhrzeit): der Arbeitsschritt, zu dem sie gehört. */
 export type LogArea =
   | "einsammeln"
   | "prüfen"
@@ -19,6 +23,7 @@ export type LogArea =
   | "originale"
   | "zitieren";
 
+/** Wohin die fertigen Zeilen gehen: sonst stderr, in Tests eine eigene Senke (`setLogSink`). */
 export type LogSink = (line: string) => void;
 
 const fromEnv = (v: string | undefined) =>

@@ -1,13 +1,15 @@
 /**
  * Schnellsuche in einem Einsatz: Mitschrift, Notizen, Tagebuch, Quellen, Episoden.
  * Alles liegt schon in der Ansicht; gesucht wird ohne Rücksicht auf Groß-/Kleinschreibung
- * und Akzente, mehrere Wörter müssen alle vorkommen.
+ * und Akzente, mehrere Wörter müssen alle vorkommen. Der Dialog dazu (Strg/⌘+K) und der Sprung zum Treffer stehen
+ * in `SearchDialog.tsx`; hier nur das Suchen selbst, getestet in `apps/desktop/test/search.test.ts`.
  */
 import { formatClock } from "@feldspur/core/time";
 import type { SessionView } from "../shared/api.ts";
 
 type HitKind = "line" | "note" | "diary" | "source" | "episode";
 
+/** Ein durchsuchbarer Eintrag und zugleich ein Treffer. */
 export interface Hit {
   kind: HitKind;
   /** Was angesprungen wird: Quelle (Zeile, Quelle), Tagebuchseite oder Episodennummer. */
@@ -16,12 +18,13 @@ export interface Hit {
   atMs?: number;
   /** Ende des Bereichs (nur Episoden): Uhrzeit. */
   endMs?: number;
-  /** Uhrzeit zum Sortieren und Anzeigen. */
+  /** Uhrzeit zum Sortieren und Anzeigen (Ortszeit, ms); null ohne Lage, solche Einträge stehen am Ende. */
   clockMs: number | null;
   title: string;
   text: string;
 }
 
+/** Vergleichsform: ohne Akzente, klein, ß als ss. */
 const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/ß/g, "ss");
 
 /** Alle durchsuchbaren Einträge eines Einsatzes, in Uhrzeit-Reihenfolge. */

@@ -1,6 +1,11 @@
 /**
  * Texte rund um Widersprüche zwischen Zeitbelegen, für Hauptprozess (Protokoll) und Oberfläche gleich.
  * Ein Zustand, ein Wort: „Widerspruch“, „deutlich“, „stark“, „Rundung“, „entschieden“.
+ *
+ * Der Hauptprozess schreibt damit den Satz einer Entscheidung und die Beschriftungen im Verlauf
+ * (`apps/desktop/src/main/edits.ts`, `main/ipc/sync.ts`), die Oberfläche die Abzeichen und Erklärungen an den
+ * Zeitbelegen (`apps/desktop/src/renderer/inspector/`, `renderer/review/`). Die Urteile selbst (`verdict`) fällt
+ * `packages/core/src/resolve.ts`.
  */
 import { formatDuration } from "@feldspur/core/time";
 import type { ConflictSeverity, EvidenceComparison } from "@feldspur/core/resolve";
@@ -14,12 +19,15 @@ const KIND_SUBJECT: Record<string, [string, string]> = {
   manual: ["Handeingabe", "gilt"],
   checked: ["Bisherige Entscheidung", "gilt"],
 };
+/** Art eines Belegs als Wort („Metadaten“); unbekannte Arten bleiben, wie sie sind. */
 export const kindName = (kind: string) => KIND_SUBJECT[kind]?.[0] ?? kind;
 /** Verb passend zur Art: „Metadaten widersprechen“, „Dateiname widerspricht“. */
 export const kindVerb = (kind: string, singular: string, plural: string) =>
   KIND_SUBJECT[kind]?.[1] === "gelten" ? plural : singular;
+/** „Metadaten gelten“, „Dateiname gilt“: der Kern des Satzes einer Entscheidung. */
 export const kindHolds = (kind: string) => (KIND_SUBJECT[kind] ? KIND_SUBJECT[kind].join(" ") : `${kind} gilt`);
 
+/** Stärke eines Widerspruchs in Worten (stark ab 5 Minuten, siehe Handbuch „Widerspruch“). */
 export const SEVERITY_TEXT: Record<ConflictSeverity, string> = { clear: "deutlich", strong: "stark" };
 
 /** Abstand mit Vorzeichen für Abzeichen („+13:23“, „−1 Tag 2:00:00“). */

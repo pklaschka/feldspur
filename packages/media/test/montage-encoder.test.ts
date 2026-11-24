@@ -1,3 +1,7 @@
+/**
+ * Wahl des Video-Encoders für das Montagevideo (`pickEncoder` in `packages/media/src/montage-video.ts`, Issue #252),
+ * mit nachgestellten Antworten von ffmpeg.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { pickEncoder } from "../src/montage-video.ts";
 

@@ -1,3 +1,7 @@
+/**
+ * Wo ffmpeg und ffprobe liegen. `main.ts` fragt das einmal beim Start und gibt es an `packages/media` weiter
+ * (`setToolPaths`); gestartet werden die Programme nur dort (`packages/media/src/process.ts`).
+ */
 import { join } from "node:path";
 import type { ToolPaths } from "@feldspur/media";
 
@@ -6,6 +10,9 @@ import type { ToolPaths } from "@feldspur/media";
  * 1. FELDSPUR_FFMPEG / FELDSPUR_FFPROBE aus der Umgebung,
  * 2. die mitgelieferten Programme im Ressourcenordner (resources/bin),
  * 3. was im PATH liegt (Entwicklung).
+ *
+ * Umgebung, Ordner und Dateiprüfung kommen als Argumente, damit sich die Reihenfolge ohne Electron testen lässt.
+ * `exe` ist die Dateiendung der Plattform („.exe“ unter Windows, sonst leer).
  */
 export function resolveToolPaths(
   env: Record<string, string | undefined>,

@@ -1,6 +1,18 @@
 /**
  * Schnittstelle zwischen Oberfläche (Renderer) und Hauptprozess.
  * Alles hier muss sich per IPC übertragen lassen (nur JSON-artige Daten).
+ *
+ * Aufbau der Datei:
+ * - Typen der Ansicht: `SessionView` ist der ganze Einsatz, wie ihn die Oberfläche zeigt. Der Hauptprozess baut sie
+ *   nach jeder Änderung neu (`apps/desktop/src/main/view.ts`); die `…Row`-Typen sind ihre Zeilen, die `…Input`- und
+ *   `…Patch`-Typen das, was die Oberfläche zurückschickt.
+ * - `FeldspurApi`: alle Aufrufe, die der Oberfläche als `window.feldspur` zur Verfügung stehen
+ *   (`apps/desktop/src/preload/preload.ts`).
+ * - `IPC`: die Kanalnamen dazu; dort steht, welche Datei unter `apps/desktop/src/main/ipc/` welchen Kanal beantwortet.
+ *
+ * Zeiten: Felder auf `…Ms` sind Millisekunden. Uhrzeiten auf der Zeitachse (`startMs`, `endMs`, `clockMs`, `fromMs`/
+ * `toMs` von Episoden, Lücken und Bezugszeiträumen) sind Ortszeit des Einsatzes (`LocalMs`,
+ * `packages/core/src/time.ts`); Stellen in einer Aufnahme (`atMs`, `atMediaMs`) zählen ab Dateibeginn.
  */
 import type {
   BackupInfo,
@@ -40,6 +52,7 @@ export interface BackupOverview {
   lastError: string | null;
 }
 
+/** Ein Eintrag der Liste „Zuletzt geöffnet“ auf der Startseite (`apps/desktop/src/main/recent.ts`). */
 export interface RecentProject {
   path: string;
   name: string;
@@ -49,6 +62,7 @@ export interface RecentProject {
   missing: boolean;
 }
 
+/** Das offene Projekt: die Datei und ihre Einsätze (`FieldSession`), aus denen die Oberfläche die Reiter baut. */
 export interface ProjectInfo {
   path: string;
   name: string;
@@ -61,8 +75,13 @@ export interface ProjectInfo {
  */
 type RowStatus = PlacementStatus | "context";
 
+/**
+ * Eine Quelle (`Source`) in der Ansicht: die Datei mit ihrer berechneten Lage auf der Zeitachse, allen Zeitbelegen
+ * (`TimeEvidence`) und allem, was Liste, Zeitachse und Seitenleiste dazu zeigen.
+ */
 export interface SourceRow {
   id: string;
+  /** Kurzzeichen, z. B. „V-01“. */
   label: string;
   kind: SourceKind;
   /** Weiteres Bild einer Seite: Id der Hauptquelle. */
@@ -78,8 +97,10 @@ export interface SourceRow {
   personName: string;
   /** „Zeit erkannt aus“ */
   basis: string;
+  /** Lage auf der Zeitachse; null = noch ohne Zeit. Berechnet, nie gespeichert. */
   startMs: number | null;
   endMs: number | null;
+  /** Angewandte Korrektur der Geräteuhr: das Negative der Abweichung des Geräts; 0 ohne Korrektur. */
   correctionMs: number;
   /** Nur Tagebuchseiten: Notierzeit "hh:mm" des ersten Eintrags. */
   diaryNote: string | null;
@@ -129,6 +150,7 @@ export interface SourceRow {
   level: LevelRow | null;
 }
 
+/** Eine bewusste Entscheidung oder Bestätigung der Lage, wie sie die Seitenleiste zeigt. */
 interface DecisionRow {
   /** Id des Belegs „geprüft“ (zum Zurücknehmen). */
   evidenceId: string;
@@ -156,6 +178,7 @@ export interface ConflictGroupRow {
   cause: ConflictCause | null;
 }
 
+/** Lautstärke-Angleichung einer Ton- oder Videoquelle: Einstellung und Messung. */
 export interface LevelRow {
   mode: LevelMode;
   /** Einstellung „von Hand“. */
@@ -168,12 +191,14 @@ export interface LevelRow {
   gainDb: number;
 }
 
+/** Einstellung der Lautstärke-Angleichung, wie sie die Oberfläche schickt (`setLevel`). */
 export interface LevelInput {
   mode: LevelMode;
   manualGainDb: number;
   compress: boolean;
 }
 
+/** Entscheidung bei widersprüchlichen Zeitbelegen (`decidePlacement`). */
 export interface DecideInput {
   sourceId: string;
   /** Beleg, der gelten soll; null = die Lage so bestätigen, wie sie steht. */
@@ -183,11 +208,16 @@ export interface DecideInput {
   reason: string;
 }
 
+/** Ein Zeitbeleg (`TimeEvidence`) einer Quelle in der Ansicht. */
 export interface EvidenceRow {
   id: string;
+  /** Art: „metadata“, „filename“, „spoken“, „anchor“, „manual“ oder „checked“ (geprüft). */
   kind: string;
+  /** Lesbare Angabe, woher die Zeit stammt. */
   detail: string;
+  /** Rohwert, wie er gelesen oder eingetragen wurde. */
   raw: string;
+  /** Auf diesem Beleg beruht die Lage. */
   chosen: boolean;
   enabled: boolean;
   /** Von Hand eingetragen (löschbar). */
@@ -213,6 +243,7 @@ export interface AnchorRow {
   b: AnchorEnd;
 }
 
+/** Eine Seite eines Ankers: Stelle `atMs` (ab Dateibeginn) in einer Quelle. */
 interface AnchorEnd {
   sourceId: string;
   atMs: number;
@@ -227,8 +258,10 @@ export interface AlignResult {
   distinctness: number;
 }
 
+/** Genauigkeit einer Handeingabe: ± 1 Sekunde, ± 1 Minute, ± 15 Minuten (`PRECISION_MS`, `main/edits.ts`). */
 export type Precision = "exact" | "approx" | "rough";
 
+/** Uhrzeit von Hand („manual“) oder angesagte Uhrzeit („spoken“) als neuer Zeitbeleg (`addTime`). */
 export interface TimeInput {
   sourceId: string;
   kind: "manual" | "spoken";
@@ -245,6 +278,7 @@ export interface TimeInput {
   syncDevice?: boolean;
 }
 
+/** Anker von Hand: Stelle `aAt` in A ist derselbe Moment wie `bAt` in B (Stellen als Text, z. B. „3:20“). */
 export interface AnchorInput {
   /** Genauigkeit in ms statt der Stufe (Feinabgleich: wenige ms). */
   uncertaintyMs?: number;
@@ -266,8 +300,10 @@ export interface Region {
   h: number;
 }
 
+/** Form eines Tagebucheintrags im Einsatztranskript: „Nur Scan“, „Kurzform“ oder „Volltext“. */
 export type DiaryMode = "scan" | "short" | "full";
 
+/** Seitenzählung eines Tagebuch-Scans (`setPageNumbering`). */
 export interface PageNumberingInput {
   sourceId: string;
   /** Seitenzahl im Notizbuch; null = nicht zählen. */
@@ -296,6 +332,7 @@ export interface SourceNoteRow {
   done: boolean;
 }
 
+/** Arbeitsnotiz anlegen oder ändern; nur gesetzte Felder werden übernommen. */
 export interface SourceNoteInput {
   fromMs?: number | null;
   toMs?: number | null;
@@ -303,12 +340,14 @@ export interface SourceNoteInput {
   done?: boolean;
 }
 
+/** Zeile der Mitschrift ändern; nur gesetzte Felder werden übernommen. */
 export interface TranscriptPatch {
   atMs?: number;
   speaker?: string;
   text?: string;
 }
 
+/** Ein Tagebucheintrag: ein oder mehrere Rahmen auf Scan-Seiten, mit Notierzeit und abgetipptem Text. */
 export interface DiaryEntryRow {
   id: string;
   /** Laufende Nummer im Einsatz, nach Seite und Lage auf der Seite. */
@@ -381,7 +420,9 @@ export interface ContextDetails {
   made?: string;
 }
 
+/** Tagebucheintrag ändern; nur gesetzte Felder werden übernommen. */
 export interface DiaryPatch {
+  /** Notierzeit als Uhrzeit („10:12“); leer = entfernen. */
   notedAt?: string;
   /** Titel als Kontextstück. */
   title?: string;
@@ -391,14 +432,18 @@ export interface DiaryPatch {
   fullText?: string;
 }
 
+/** Ein Gerät in der Ansicht: alles mit eigener Uhr, samt dem Stand ihres Abgleichs. */
 export interface DeviceRow {
   id: string;
   label: string;
   /** Vorherrschende Quellenart, für Symbol und Farbe. */
   kind: SourceKind;
   personName: string;
+  /** Referenzuhr des Einsatzes. */
   isReference: boolean;
+  /** Abweichung von der Referenzuhr; positiv = geht vor, null = unbekannt. */
   offsetMs: number | null;
+  /** Woraus die Abweichung folgt (Anker, Handeingabe …). */
   offsetBasis: OffsetBasis | "spoken";
   sourceCount: number;
   /** Trägt eine Datei des Geräts einen als UTC markierten Zeitstempel? Dann gibt es die Einstellung. */
@@ -411,6 +456,10 @@ export interface DeviceRow {
   timeZone: string | null;
 }
 
+/**
+ * Vorschlag für einen Anker aus der Tonspur-Analyse (Klatschen, gleicher Ton), noch nicht übernommen. `a` ist die
+ * Stelle in der Bezugsaufnahme (`refLabel`), `b` die in der Aufnahme, deren Gerät abgeglichen würde.
+ */
 export interface ProposalRow {
   anchorId: string;
   sourceLabel: string;
@@ -419,6 +468,7 @@ export interface ProposalRow {
   /** "Klatschen bei 0:20 ↔ A-01 bei 1:20" */
   description: string;
   note: string;
+  /** Sicherheit der Analyse; höher ist sicherer, null = keine Angabe. */
   confidence: number | null;
   /** Daraus folgende Abweichung des Geräts, z. B. "+2:47". */
   impliedOffset: string | null;
@@ -430,6 +480,7 @@ export interface ProposalRow {
   b: AnchorEnd;
 }
 
+/** Eine Episode auf der Zeitachse (Uhrzeiten in ms) mit den Kurzzeichen der Aufnahmen, die darin laufen. */
 export interface EpisodeRow {
   index: number;
   startMs: number;
@@ -437,6 +488,7 @@ export interface EpisodeRow {
   sourceLabels: string[];
 }
 
+/** Zeit zwischen zwei Episoden, mit dem, was in dieser Zeit sonst vorliegt. */
 export interface GapRow {
   startMs: number;
   endMs: number;
@@ -446,16 +498,23 @@ export interface GapRow {
   loudAtMs: number[];
 }
 
+/**
+ * Der ganze Einsatz, wie ihn die Oberfläche zeigt. Fast jeder Aufruf, der etwas ändert, antwortet mit einer frischen
+ * `SessionView` (`buildSessionView`, `apps/desktop/src/main/view.ts`); die Oberfläche ersetzt damit ihren Stand.
+ */
 export interface SessionView {
   session: FieldSession;
+  /** Alle Quellen, nach Lage auf der Zeitachse sortiert (ohne Zeit zuletzt). */
   rows: SourceRow[];
   /** Alle Geräte, auch ohne eigene Uhr (Tagebuch). */
   allDevices: DeviceRow[];
   /** Geräte mit Uhr, die abgeglichen werden müssen. */
   devices: DeviceRow[];
+  /** Noch offene Vorschläge für Anker (Schritt „Abgleichen“). */
   proposals: ProposalRow[];
   /** Gleichartige Widersprüche mehrerer Dateien eines Geräts. */
   conflictGroups: ConflictGroupRow[];
+  /** Übernommene und von Hand gesetzte Anker. */
   anchors: AnchorRow[];
   diary: DiaryEntryRow[];
   /** Kontextstücke in der Reihenfolge des Einsatztranskripts (Issue #108). */
@@ -471,13 +530,18 @@ export interface SessionView {
   gaps: GapRow[];
   /** Anzahl der Anpassungen von Hand (Grenzen verschoben, Mini-Episoden). */
   episodeEdits: number;
+  /** So viele der `avCount` Ton- und Videoquellen sind schon analysiert. */
   analyzedCount: number;
   avCount: number;
 }
 
+/** Eine fertige Ausgabe. */
 export interface ExportOutcome {
+  /** Ordner des Einsatzes im gewählten Ordner. */
   dir: string;
+  /** Geschriebene Dateien als vollständige Pfade. */
   files: string[];
+  /** Länge der Montage. */
   durationMs: number;
 }
 
@@ -495,12 +559,21 @@ interface ExportNeedsDecision {
   parent: string;
 }
 
+/** Was `exportSession` antwortet: fertig, abgebrochen oder von der Prüfung der Originale angehalten. */
 export type ExportRunResult = ExportOutcome | ExportCancelled | ExportNeedsDecision;
 
+/**
+ * Alle Schalter des Schritts „Ausgeben“ an einer Stelle. Eine neue Option kommt nur hierher (siehe AGENTS.md,
+ * „Neue Ausgabe-Option“); der Hauptprozess liest sie in `exportSettings` (`apps/desktop/src/main/export.ts`).
+ */
 export interface ExportRequestOptions {
+  /** Montagevideo schreiben; ohne bleibt es bei Einsatztranskript und Begleitprotokoll. */
   video: boolean;
+  /** Zusätzlich eine Schnittliste für DaVinci Resolve. */
   resolve: boolean;
+  /** Ton aller laufenden Geräte mischen; false = nur die Hauptquelle. */
   mixAudio: boolean;
+  /** Montage in Echtzeit; false = nach Episoden geschnitten (nur, wenn der Einsatz Episoden bildet). */
   realtime: boolean;
   /** Je Gerät eine eigene Tonspur im Montagevideo. */
   deviceTracks: boolean;
@@ -536,8 +609,10 @@ export type { ExportStatus } from "@feldspur/media";
 /** Erster Schritt jeder Ausgabe, nach der Ordnerwahl: Originale mit Prüfsumme prüfen (done/total in Bytes). */
 export const EXPORT_CHECK_STEP = "Originale prüfen";
 
+/** Fortschritt der laufenden Ausgabe (`onExportProgress`). */
 export interface ExportProgress {
   sessionId: string;
+  /** Name des Arbeitsschritts, wie er angezeigt wird (z. B. `EXPORT_CHECK_STEP`). */
   step: string;
   done: number;
   total: number;
@@ -556,9 +631,13 @@ export interface SessionTranscriptPreviewEntry {
   body: string;
 }
 
+/** Vorschau des Einsatztranskripts im Schritt „Ausgeben“ (`previewExport`), ohne dass etwas geschrieben wird. */
 export interface SessionTranscriptPreview {
+  /** Gemeinsamer Namensanfang aller Dateien der Ausgabe, zugleich Name des Ausgabeordners. */
   base: string;
+  /** Länge der Montage. */
   durationMs: number;
+  /** Anzahl der Episoden und der kurzen Tafeln für übersprungene Zwischenzeiten; beide 0 ohne Episoden. */
   episodes: number;
   cards: number;
   /** Geschätzte Größe des Montagevideos in Bytes; `deviceTracks` kommt mit „Tonspur je Gerät“ dazu. */
@@ -575,6 +654,7 @@ interface ImportCancelled {
   cancelled: { read: number; total: number };
 }
 
+/** Was `importPaths` antwortet: übernommen oder abgebrochen. */
 export type ImportResult = ImportOutcome | ImportCancelled;
 
 /** Fortschritt beim Einsammeln (siehe ScanProgress in @feldspur/media). */
@@ -582,8 +662,11 @@ export interface ImportProgress extends ScanProgress {
   sessionId: string;
 }
 
+/** Ergebnis des Einsammelns. */
 interface ImportOutcome {
+  /** Neu angelegte Quellen. */
   added: number;
+  /** Schon vorhandene Dateien (gleiche Prüfsumme), nicht noch einmal aufgenommen. */
   duplicates: number;
   /** Davon: schon vorhanden, Original fehlte, jetzt mit der neuen Datei verknüpft. */
   relinked: number;
@@ -591,8 +674,10 @@ interface ImportOutcome {
   view: SessionView;
 }
 
+/** Angaben für einen neuen Einsatz. */
 export interface NewSessionInput {
   title: string;
+  /** Kalendertag, „2026-09-14“. */
   date: string;
   place: string;
 }
@@ -638,6 +723,7 @@ export interface OriginalsSearch {
   truncated: boolean;
 }
 
+/** Fortschritt beim Prüfen oder Suchen der Originale (`onOriginalsProgress`). */
 export interface OriginalsProgress {
   sessionId: string;
   phase: "prüfen" | "suchen";
@@ -647,7 +733,9 @@ export interface OriginalsProgress {
   fileName: string;
 }
 
+/** Antwort auf Rückgängig/Wiederholen. */
 export interface HistoryResult {
+  /** Beschriftung des Schritts; null, wenn es keinen gab. */
   label: string | null;
   project: ProjectInfo;
   view: SessionView | null;
@@ -664,6 +752,7 @@ export interface CitationInfo {
   versionDoi: { doi: string; url: string; checkedAt: string } | null;
 }
 
+/** Ergebnis des Nachschlagens bei Zenodo: gefunden, Version dort (noch) nicht vorhanden, kein Netz, abgebrochen. */
 export type CitationLookup =
   | { state: "found"; versionDoi: { doi: string; url: string; checkedAt: string } }
   | { state: "missing" }
@@ -701,12 +790,23 @@ export interface ProjectOverview {
   citation: CitationInfo;
 }
 
+/**
+ * Alles, was die Oberfläche vom Hauptprozess verlangen kann; im Fenster als `window.feldspur`. Die Reihenfolge folgt
+ * grob dem Weg durch die App: Projekt, Einsatz und Einsammeln, Abgleichen, Tagebuch und Kontext, Mitschreiben,
+ * Ausgeben, Verlauf, Originale. Wo ein Aufruf beantwortet wird, steht bei `IPC` unten.
+ *
+ * Aufrufe, die Daten ändern, sind je ein Schritt für Rückgängig und antworten meist mit der neuen `SessionView`.
+ * Die `on…`-Methoden melden einen Zuhörer an und geben die Funktion zum Abmelden zurück.
+ */
 export interface FeldspurApi {
+  /** Speichern-Dialog für ein neues Projekt; null bei Abbruch. */
   newProject(): Promise<ProjectInfo | null>;
+  /** Öffnen-Dialog; null bei Abbruch. */
   openProject(): Promise<ProjectInfo | null>;
   /** Zuletzt geöffnete Projekte, neueste zuerst. */
   recentProjects(): Promise<RecentProject[]>;
   openRecent(path: string): Promise<ProjectInfo | null>;
+  /** Eintrag aus „Zuletzt geöffnet“ nehmen (die Datei bleibt); gibt die neue Liste zurück. */
   forgetRecent(path: string): Promise<RecentProject[]>;
   /** Sicherungen des offenen Projekts; null ohne Projekt. */
   backups(): Promise<BackupOverview | null>;
@@ -730,16 +830,25 @@ export interface FeldspurApi {
   copyTable(html: string, text: string): Promise<void>;
   /** Eine Adresse bei doi.org oder zenodo.org im Browser öffnen. */
   openCitationLink(url: string): Promise<void>;
+  /** Das gerade offene Projekt, null ohne; damit findet die Oberfläche beim Laden ihren Stand. */
   currentProject(): Promise<ProjectInfo | null>;
   createSession(input: NewSessionInput): Promise<ProjectInfo>;
+  /** Ansicht eines Einsatzes laden, ohne etwas zu ändern. */
   getSession(sessionId: string): Promise<SessionView>;
+  /** Dialog „Quellen hinzufügen“ (Dateien und Ordner); leer bei Abbruch. */
   pickFiles(): Promise<string[]>;
+  /**
+   * Einsammeln: Dateien und Ordner lesen (Prüfsumme, Metadaten) und als Quellen in den Einsatz aufnehmen. Die Originale
+   * bleiben, wo sie sind. Kein Schritt für Rückgängig.
+   */
   importPaths(sessionId: string, paths: string[]): Promise<ImportResult>;
   /** Laufendes Einsammeln abbrechen; es wird nichts übernommen. */
   cancelImport(sessionId: string): Promise<void>;
   onImportProgress(cb: (p: ImportProgress) => void): () => void;
+  /** Dieses Gerät zur Referenzuhr des Einsatzes machen. */
   setReference(deviceId: string): Promise<SessionView>;
   renameDevice(deviceId: string, label: string): Promise<SessionView>;
+  /** Als UTC markierte Zeitstempel des Geräts umrechnen (true) oder als Ortszeit lesen (false). */
   setDeviceUtc(deviceId: string, utc: boolean): Promise<SessionView>;
   /** Zeitzone der Geräteuhr (IANA); null = wie der Einsatz. */
   setDeviceTimeZone(deviceId: string, timeZone: string | null): Promise<SessionView>;
@@ -758,6 +867,7 @@ export interface FeldspurApi {
   removeSource(sourceId: string): Promise<SessionView>;
   /** Quelle in ein anderes Gerät verschieben; { newLabel } legt ein neues Gerät an. */
   moveSource(sourceId: string, target: string | { newLabel: string }): Promise<SessionView>;
+  /** Alle Quellen von `fromDeviceId` zu `intoDeviceId` legen; dessen Uhrabweichung gilt dann für alle. */
   mergeDevices(fromDeviceId: string, intoDeviceId: string): Promise<SessionView>;
   /** Bild als weiteren Teil einer Seite an mainId hängen; null löst es. */
   setPartOf(sourceId: string, mainId: string | null): Promise<SessionView>;
@@ -773,11 +883,13 @@ export interface FeldspurApi {
   analyze(sessionId: string): Promise<{ view: SessionView; analyzed: number; failed: string[]; cancelled?: boolean }>;
   /** Laufende Tonspur-Analyse abbrechen; schon analysierte Tonspuren bleiben gespeichert. */
   cancelAnalyze(sessionId: string): Promise<void>;
+  /** Vorschlag als Anker übernehmen; weitere Vorschläge für dasselbe Gerät erledigen sich damit. */
   confirmAnchor(anchorId: string): Promise<SessionView>;
   /** Mehrere Vorschläge in einem Schritt übernehmen, je Gerät den sichersten; gelöschte werden übersprungen. */
   confirmAnchors(sessionId: string, anchorIds: string[]): Promise<SessionView>;
   /** Vorschlag verwerfen oder Anker löschen. */
   rejectAnchor(anchorId: string): Promise<SessionView>;
+  /** Uhrzeit von Hand oder angesagte Uhrzeit als Zeitbeleg eintragen. */
   addTime(input: TimeInput): Promise<SessionView>;
   /** Unsichere Lage so bestätigen, wie sie zu sehen war (startMs = gesehene Lage). */
   confirmPlacement(sourceId: string, startMs: number): Promise<SessionView>;
@@ -785,7 +897,9 @@ export interface FeldspurApi {
   decidePlacement(input: DecideInput): Promise<SessionView>;
   /** Dieselbe Entscheidung für mehrere Quellen: je Quelle gilt ihr Beleg der Art `kind`. Ein Rückgängig-Schritt. */
   decideMany(input: { sourceIds: string[]; kind: string; reason: string }): Promise<SessionView>;
+  /** Zeitbeleg ein- oder abschalten; abgeschaltete zählen bei der Lage nicht mit. */
   setEvidenceEnabled(evidenceId: string, enabled: boolean): Promise<SessionView>;
+  /** Selbst eingetragenen Beleg löschen oder eine Entscheidung („geprüft“) zurücknehmen; gelesene nur abschaltbar. */
   removeEvidence(evidenceId: string): Promise<SessionView>;
   addAnchor(input: AnchorInput): Promise<SessionView>;
   /** Anker oder Vorschlag durch einen fein justierten Anker ersetzen. */
@@ -806,7 +920,9 @@ export interface FeldspurApi {
   setPageNumbering(items: PageNumberingInput[]): Promise<SessionView>;
   /** Neuer Tagebucheintrag mit Rahmen; gibt die Id des Eintrags mit zurück. */
   createDiaryEntry(sourceId: string, region: Region): Promise<{ view: SessionView; entryId: string }>;
+  /** Eintrag um einen Rahmen erweitern, auch auf einer weiteren Seite. */
   addDiaryRegion(entryId: string, sourceId: string, region: Region): Promise<SessionView>;
+  /** Rahmen entfernen; der letzte Rahmen nimmt den Eintrag mit. */
   removeDiaryRegion(entryId: string, index: number): Promise<SessionView>;
   /** Rahmen verschieben oder in der Größe ändern (Seite und Seitenzahl bleiben). */
   moveDiaryRegion(entryId: string, index: number, region: Region): Promise<SessionView>;
@@ -829,7 +945,6 @@ export interface FeldspurApi {
     sessionId: string,
     input: { title: string; text: string },
   ): Promise<{ view: SessionView; key: string }>;
-  /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
   /**
    * Automatisches Transkript (.srt, .vtt, .json, .tsv, z. B. Whisper) an eine Aufnahme hängen.
    * Ohne path fragt die App nach der Datei. null = abgebrochen.
@@ -838,22 +953,26 @@ export interface FeldspurApi {
     sourceId: string,
     opts: { mode: "append" | "replace"; path?: string },
   ): Promise<{ view: SessionView; count: number; dropped: number } | null>;
+  /** Neue Zeile Mitschrift; gibt die Id mit zurück. */
   addTranscriptLine(
     sourceId: string,
     line: { atMs: number; speaker: string; text: string },
   ): Promise<{ view: SessionView; lineId: string }>;
   updateTranscriptLine(lineId: string, patch: TranscriptPatch): Promise<SessionView>;
   deleteTranscriptLine(lineId: string): Promise<SessionView>;
+  /** Arbeitsnotiz zu einer Datei oder einer Stelle darin anlegen, ändern, löschen. */
+  addSourceNote(sourceId: string, note: SourceNoteInput): Promise<SessionView>;
+  updateSourceNote(noteId: string, patch: SourceNoteInput): Promise<SessionView>;
+  deleteSourceNote(noteId: string): Promise<SessionView>;
   /**
    * Waveform-Spitzen eines Ausschnitts einer Ton- oder Videoquelle (ms ab Dateianfang).
    * Dekodiert nur das Fenster; bis ca. 2 min und 4000 Fächer geht das zügig.
    */
-  addSourceNote(sourceId: string, note: SourceNoteInput): Promise<SessionView>;
-  updateSourceNote(noteId: string, patch: SourceNoteInput): Promise<SessionView>;
-  deleteSourceNote(noteId: string): Promise<SessionView>;
   waveformPeaks(sourceId: string, fromMs: number, toMs: number, buckets: number): Promise<Peaks>;
-  /** Einsatztranskript ohne Bilder und Video, wie es im Dokument stehen wird. */
-  /** realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet. */
+  /**
+   * Einsatztranskript ohne Bilder und Video, wie es im Dokument stehen wird.
+   * realtime (Standard): alles in Echtzeit; false = nach Episoden, nur wenn der Einsatz Episoden bildet.
+   */
   previewExport(sessionId: string, realtime?: boolean): Promise<SessionTranscriptPreview>;
   /** Letzte Ausgabe im Vergleich zum jetzigen Stand und den gewählten Einstellungen; null = noch nie ausgegeben. */
   exportStatus(sessionId: string, opts: ExportRequestOptions): Promise<ExportStatus | null>;
@@ -884,11 +1003,16 @@ export interface FeldspurApi {
   /** Laufende Ausgabe abbrechen; ffmpeg wird beendet, die Ausgabe gilt nicht als fertig. */
   cancelExport(sessionId: string): Promise<void>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
-  /** Die Oberfläche zeichnet die Einblendungen des Montagevideos. */
+  /**
+   * Die Oberfläche zeichnet die Einblendungen des Montagevideos. Umgekehrte Richtung: Während der Ausgabe fragt der
+   * Hauptprozess an (`askRenderer`, `apps/desktop/src/main/export.ts`), `render` liefert je Bild ein PNG.
+   */
   onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
   /** Die Oberfläche zeichnet Bildausschnitte, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG. */
   onStillRequest(render: (ref: unknown, pdf: boolean) => Promise<Uint8Array>): () => void;
+  /** Datei im Dateimanager zeigen. */
   showInFolder(path: string): Promise<void>;
+  /** Fortschritt der Tonspur-Analyse (`analyze`). */
   onProgress(cb: (p: { done: number; total: number; fileName: string }) => void): () => void;
   /**
    * Letzten Schritt rückgängig machen bzw. wiederholen. Gibt die Beschriftung des Schritts zurück (null, wenn es
@@ -906,13 +1030,15 @@ export interface FeldspurApi {
   resetEpisodes(sessionId: string): Promise<SessionView>;
   /** Hüllkurven der analysierten Tonspuren, vier Werte je Sekunde (0–250, logarithmisch). */
   envelopes(sessionId: string): Promise<Record<string, { rate: number; data: Uint8Array }>>;
+  /** Wie `undo`, für Wiederholen. */
   redo(sessionId: string | null): Promise<HistoryResult>;
+  /** Beschriftungen der Schritte, die Rückgängig und Wiederholen als Nächstes träfen; null = keiner. */
   historyState(): Promise<{ undo: string | null; redo: string | null; serial: number }>;
   /** Dauerhaftes Änderungsprotokoll des Projekts, neueste Schritte zuerst; `before` blättert weiter zurück. */
   changeLog(opts: { limit?: number; before?: number }): Promise<ChangeStep[]>;
   /** Ganzes Änderungsprotokoll als CSV speichern (Speichern-Dialog). Gibt den Pfad zurück, null bei Abbruch. */
   exportChangeLog(): Promise<string | null>;
-  /** Pfad einer per Drag & Drop abgelegten Datei. */
+  /** Pfad einer per Drag & Drop abgelegten Datei. Kein IPC: Das beantwortet die Brücke selbst (`webUtils`). */
   pathForFile(file: File): string;
   /**
    * Alle Originale eines Einsatzes prüfen: da, Größe und SHA-256 wie beim Einsammeln. video = mit Montagevideo
@@ -926,10 +1052,31 @@ export interface FeldspurApi {
   onOriginalsProgress(cb: (p: OriginalsProgress) => void): () => void;
 }
 
-/** Eigenes Protokoll, über das die Oberfläche Originalbilder anzeigen darf (nur lesend, nur Fotos/Scans). */
+/**
+ * Eigenes Protokoll, über das die Oberfläche Originale anzeigen und abspielen darf: nur lesend, nur Quellen des offenen
+ * Projekts, nur Bild-, PDF-, Ton- und Videodateien (`apps/desktop/src/main/media-response.ts`).
+ */
 export const MEDIA_SCHEME = "feldspur-media";
+/** Adresse einer Quelle für `<img>`, `<audio>`, `<video>` und pdf.js. */
 export const mediaUrl = (sourceId: string) => `${MEDIA_SCHEME}://source/${encodeURIComponent(sourceId)}`;
 
+/**
+ * Kanalnamen der IPC-Aufrufe; ein Aufruf aus `FeldspurApi` nutzt den Kanal mit demselben Schlüssel. Die Brücke
+ * (`apps/desktop/src/preload/preload.ts`) schickt auf dem Kanal, der Hauptprozess antwortet. Der Teil vor dem
+ * Doppelpunkt sagt, wo der Handler steht (Dateien unter `apps/desktop/src/main/ipc/`) und zu welchem Schritt er gehört:
+ *
+ * - `project.ts` (Projekt, Übersicht, Verlauf, Dialoge): `project:`, `backup:`, `citation:`, `clipboard:`, `history:`
+ * - `sessions.ts` (Einsatz, Einsammeln, Quellen ordnen): `session:`, `import:`, `source:`, dazu `device:rename` und
+ *   `device:merge`
+ * - `sync.ts` (Abgleichen): die übrigen `device:`, `audio:`, `anchor:`, `evidence:`, `level:` und `progress`
+ * - `review.ts` (Durchsehen, Mitschreiben, Tagebuch, Kontext): `episodes:`, `transcript:`, `waveform:`, `note:`,
+ *   `diary:`, `context:`
+ * - `export.ts` (Ausgeben, Originale): `export:`, `originals:`, `shell:`
+ *
+ * Kanäle auf `…:progress` und `progress` sind Meldungen vom Hauptprozess an die Oberfläche, keine Aufrufe.
+ * `overlay:` und `still:` sind Anfrage und Antwort beim Zeichnen für das Montagevideo (`registerOverlayBridge`,
+ * `apps/desktop/src/main/export.ts`). Die Reihenfolge der Einträge hat keine Bedeutung.
+ */
 export const IPC = {
   newProject: "project:new",
   openProject: "project:open",

@@ -1,3 +1,7 @@
+/**
+ * Einstellungen von Vite+ für das ganze Monorepo: Formatieren (`vp fmt`), Linten (`vp lint`) und Tests (`vp test`).
+ * Wie die App gebaut wird, steht getrennt in `apps/desktop/vite.config.ts`.
+ */
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({

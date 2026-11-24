@@ -1,6 +1,10 @@
 /**
  * Eine Zeile der Einsatztranskript-Vorschau, gesetzt wie im .docx: Uhrzeit grau, Überschrift fett in der Farbe
  * ihrer Art, Zwischentafeln kursiv, vor Episoden etwas Abstand.
+ *
+ * Gehört zum Schritt „Ausgeben“: `apps/desktop/src/renderer/export/TranscriptPreview.tsx` setzt daraus die Vorschau
+ * zusammen. Die Zeilen kommen schon in Teile zerlegt aus dem Hauptprozess (`previewExport`,
+ * `SessionTranscriptPreviewEntry` in `apps/desktop/src/shared/api.ts`); hier wird nur noch gesetzt.
  */
 import type { SessionTranscriptPreviewEntry } from "../shared/api.ts";
 
@@ -14,6 +18,10 @@ const HEAD_CLASS: Partial<Record<SessionTranscriptPreviewEntry["kind"], string>>
   sync: "text-st-sync",
 };
 
+/**
+ * Bei Zeilen der Mitschrift (`kind === "line"`) ist der Kopf das Kurzzeichen der Aufnahme: nicht fett und mit „·“
+ * abgesetzt. Er fehlt, wenn nur eine Aufnahme Mitschrift hat (`packages/media/src/session-transcript.ts`).
+ */
 export function SessionTranscriptLine({ entry: e }: { entry: SessionTranscriptPreviewEntry }) {
   const line = e.kind === "line";
   return (

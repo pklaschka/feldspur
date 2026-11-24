@@ -1,6 +1,10 @@
 /**
  * Tagebuch abtippen: Einträge als Rahmen auf Scan-Seiten, mit Notierzeit,
  * Kurzform und Volltext. Ein Eintrag kann über mehrere Seiten laufen.
+ *
+ * Aufgerufen aus `ipc/review.ts` (Kanäle `diary:…`), bedient in `src/renderer/DiaryEditor.tsx`. Rahmen (`Region`)
+ * sind relativ zur Seite gespeichert (0 … 1), damit sie von der Bildgröße unabhängig sind. Die Notierzeit eines
+ * Eintrags bestimmt über den Bezugszeitraum, wo er in der Chronologie steht (`packages/core/src/resolve.ts`).
  */
 import { contextKey, type DiaryEntry, type Id, type ProjectStore } from "@feldspur/core";
 import type { DiaryPatch, Region } from "../shared/api.ts";
@@ -9,6 +13,7 @@ import { parseClockNear, sessionSpan } from "./edits.ts";
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
+/** Rahmen auf die Seite begrenzen (0 … 1, nicht über den Rand hinaus); ohne gültige PDF-Seite gilt Seite 0. */
 function cleanRegion(r: Region): Required<Region> {
   const x = clamp01(r.x);
   const y = clamp01(r.y);
@@ -88,6 +93,7 @@ export function setRegionPage(s: ProjectStore, entryId: Id, index: number, pageN
   return e.sessionId;
 }
 
+/** Eintrag löschen, samt der Verweise anderer Einträge auf ihn als Kontextstück. Gibt die Einsatz-Id zurück. */
 export function deleteEntry(s: ProjectStore, entryId: Id): Id {
   const e = s.getDiaryEntry(entryId);
   s.transaction(() => {
@@ -97,6 +103,10 @@ export function deleteEntry(s: ProjectStore, entryId: Id): Id {
   return e.sessionId;
 }
 
+/**
+ * Notierzeit, Bezugszeitraum, Titel, Form und Text eines Eintrags ändern; nur gesetzte Felder. Die Notierzeit kommt
+ * als Uhrzeit ohne Datum und wird dem passenden Tag zugeordnet (`parseClockNear`). Gibt die Einsatz-Id zurück.
+ */
 export function patchEntry(s: ProjectStore, entryId: Id, patch: DiaryPatch): Id {
   const e = s.getDiaryEntry(entryId);
   const session = s.getSession(e.sessionId);

@@ -1,6 +1,11 @@
 /**
  * Laufendes Einsammeln, außerhalb der Ansicht gehalten (Issue #73): Wer während eines großen Imports den Schritt
- * wechselt, findet Fortschritt und Abbrechen beim Zurückkommen wieder. Die eigentliche Arbeit läuft im Hauptprozess.
+ * wechselt, findet Fortschritt und Abbrechen beim Zurückkommen wieder. Die eigentliche Arbeit läuft im Hauptprozess
+ * (`apps/desktop/src/main/ipc/sessions.ts`, Einlesen in `packages/media/src/import.ts`); gezeigt wird alles in
+ * `Collect.tsx`.
+ *
+ * Der Stand liegt in einer Variablen des Moduls statt in React, damit er auch gilt, während keine Ansicht ihn
+ * zeigt. Es läuft höchstens ein Einsammeln zur selben Zeit.
  */
 import { useSyncExternalStore } from "react";
 import type { ImportProgress, ImportResult, SessionView } from "../shared/api.ts";
@@ -15,6 +20,7 @@ export interface ImportJob {
   cancelling: boolean;
 }
 
+/** Meldung nach dem Einsammeln, je Einsatz, bis sie jemand schließt oder neu einsammelt. */
 type ImportNotice =
   | { kind: "done"; text: string; warnings: { fileName: string; message: string }[] }
   | { kind: "cancelled"; read: number; total: number };
@@ -54,6 +60,7 @@ api.onImportProgress((p) => {
   set({ ...state, job: { ...j, progress: p, readingFrom } });
 });
 
+/** Laufendes Einsammeln und Meldungen; zeichnet die Ansicht bei jeder Änderung neu. */
 export function useImport(): State {
   return useSyncExternalStore(subscribe, () => state);
 }
@@ -92,6 +99,8 @@ export async function startImport(
     set({ ...state, notices: { ...state.notices, [sessionId]: { kind: "cancelled", ...r.cancelled } } });
     return;
   }
+  // Nur `Collect.tsx` meldet sich an. Ist der Schritt Einsammeln dieses Einsatzes gerade nicht zu sehen, übernimmt
+  // niemand die neue Ansicht; sie kommt dann erst mit der nächsten Antwort des Hauptprozesses oder beim Neuladen.
   sinks.get(sessionId)?.(r.view);
   set({
     ...state,
@@ -99,6 +108,7 @@ export async function startImport(
   });
 }
 
+/** Abbrechen anfordern; fertig ist es erst, wenn `startImport` mit „cancelled“ zurückkommt. */
 export function cancelImport(): void {
   const j = state.job;
   if (!j || j.cancelling) return;

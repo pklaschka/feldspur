@@ -1,3 +1,8 @@
+/**
+ * Build der Desktop-App mit Vite+: die Oberfläche (Renderer, `src/renderer`) nach `out/renderer`, Haupt- und
+ * Preload-Prozess (`src/main/main.ts`, `src/preload/preload.ts`) nach `out/main`. Von dort lädt Electron beides
+ * (siehe `createWindow` in `apps/desktop/src/main/main.ts`).
+ */
 import tailwindcss from "@tailwindcss/vite";
 import { readFileSync } from "node:fs";
 import { defineConfig, type UserConfig } from "vite-plus";
@@ -16,6 +21,7 @@ if (!released) throw new Error("CITATION.cff: date-released fehlt");
 
 const shared: PackConfig = {
   outDir: "out/main",
+  // Liest `apps/desktop/src/main/citation.ts` und reicht es an den Dialog „Feldspur zitieren“ weiter.
   define: { __FELDSPUR_RELEASED__: JSON.stringify(released) },
   format: "cjs",
   platform: "node",

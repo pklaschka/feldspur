@@ -4,6 +4,11 @@
  * deckungsgleich sind. „Einrasten“ sucht die genaue Lage im Umkreis, „Anhören“ spielt beide
  * gleichzeitig, die erste links, die zweite rechts: Passt es, klingt es wie eine Aufnahme.
  * Gespeichert wird ein Anker mit Genauigkeit von wenigen Millisekunden.
+ *
+ * Dialog im Schritt „Abgleichen“, geöffnet aus `Sync.tsx` (neuer Anker oder ein vorhandener Anker/Vorschlag zum
+ * Nachschärfen). Gespeichert wird ein gewöhnlicher Anker (`SyncAnchor`) über `addAnchor`/`replaceAnchor`
+ * (`apps/desktop/src/main/ipc/sync.ts`); die Lage auf der Zeitachse ergibt sich danach wie immer aus den Belegen.
+ * „Einrasten“ rechnet im Hauptprozess (`refineAlignment`, `packages/media/src/align.ts`).
  */
 import { formatDuration } from "@feldspur/core/time";
 import { peakLevel, type Peaks, type WaveformScale } from "@feldspur/core/waveform";
@@ -18,16 +23,20 @@ import { applyLevel, LEVEL_MEDIA_PROPS, resumeAudio, setPan } from "./level.ts";
 
 const api = window.feldspur;
 
-/** Sichtbare Breite je Zoomstufe. */
+/** Sichtbare Breite je Zoomstufe, in ms. */
 const ZOOMS = [30_000, 12_000, 5_000, 2_000, 800, 300];
 /** Genauigkeit eines fein abgeglichenen Ankers. */
 const FINE_UNCERTAINTY_MS = 20;
+/** Höhe der Zeichenfläche in CSS-Pixeln: obere Hälfte Spur A, untere Spur B. */
 const LANE_H = 180;
 
+/** Womit der Dialog beginnt: zwei Aufnahmen und je eine Stelle, die ungefähr denselben Moment trifft. */
 export interface FineAlignStart {
   aSourceId: string;
+  /** Stelle in A, ms ab Dateianfang (keine Uhrzeit). */
   aAtMs: number;
   bSourceId: string;
+  /** Stelle in B, ms ab Dateianfang. */
   bAtMs: number;
   /** Diesen Anker (oder Vorschlag) beim Speichern ersetzen. */
   replaceAnchorId?: string;
@@ -56,6 +65,7 @@ export function guessB(a: SourceRow | undefined, b: SourceRow | undefined, aAtMs
   return aAtMs;
 }
 
+/** Der Dialog; offen, solange `start` gesetzt ist. Den Inhalt baut `Editor` für jedes Paar neu auf. */
 export function FineAlign({
   view,
   start,
@@ -98,6 +108,7 @@ export function FineAlign({
   );
 }
 
+/** Inhalt des Dialogs: Wahl der beiden Aufnahmen, Waveforms, Zoom, Einrasten, Anhören und Speichern. */
 function Editor({
   view,
   start,
@@ -120,11 +131,13 @@ function Editor({
   const [aAt, setAAt] = useState(start.aAtMs);
   // B relativ zu A: Stelle in B = Stelle in A + delta.
   const [delta, setDelta] = useState(start.bAtMs - start.aAtMs);
+  /** Ausgangswert von `delta`, für die Anzeige „… gegenüber vorher“. */
   const [startDelta, setStartDelta] = useState(start.bAtMs - start.aAtMs);
   const [zoom, setZoom] = useState(2);
   const [scale, setScale] = useState<WaveformScale>("log");
   const [listen, setListen] = useState<"both" | "a" | "b">("both");
   const [note, setNote] = useState(start.note ?? "");
+  /** Ergebnis von „Einrasten“: null = noch nicht versucht oder seither verschoben, "none" = nichts gefunden. */
   const [snap, setSnap] = useState<AlignResult | null | "none">(null);
   const [busy, setBusy] = useState(false);
   const span = ZOOMS[zoom]!;
@@ -154,6 +167,7 @@ function Editor({
     setSnap(null);
   };
 
+  // „Einrasten“: Der Hauptprozess sucht um die jetzige Lage herum, im halben sichtbaren Bereich, mindestens ±250 ms.
   const refine = async () => {
     setBusy(true);
     const r = await guard(() =>
@@ -166,6 +180,7 @@ function Editor({
   };
 
   const save = async () => {
+    // Die Stellen gehen als Text in Sekunden hinaus (`AnchorInput`, `apps/desktop/src/shared/api.ts`).
     const input = {
       aSourceId: aId,
       aAt: (Math.max(0, aAt) / 1000).toFixed(3),
@@ -299,6 +314,7 @@ function Editor({
   );
 }
 
+/** Kopf einer der beiden Spuren: Farbmarke wie in der Zeichnung, Auswahl der Aufnahme, aktuelle Stelle. */
 function Side({
   tone,
   title,
@@ -352,6 +368,11 @@ function columns(tiles: Peaks[], from: number, to: number, w: number, scale: Wav
 /** Anzahl Fächer je Kachel: etwa zwei je Pixel bei der sichtbaren Breite. */
 const BUCKETS = 2400;
 
+/**
+ * Zeichenfläche mit beiden Waveforms und die Bedienung daran (Ziehen, Mausrad, Pfeiltasten, Leertaste). Die Mitte
+ * ist die Ankerstelle: `aAt` in A und `aAt + delta` in B. Die Spitzen kommen kachelweise über `usePeakTiles`
+ * (`Waveform.tsx`).
+ */
 function Overlay({
   a,
   b,
@@ -387,6 +408,7 @@ function Overlay({
     if (!el || width <= 0) return;
     const ctx = prepareCanvas(el, width, LANE_H);
     if (!ctx) return;
+    // Farben aus den CSS-Variablen lesen (deshalb kein `light-dark()` in den Farben, siehe AGENTS.md).
     const cs = getComputedStyle(el);
     const v = (n: string) => cs.getPropertyValue(n).trim() || "#888";
     const w = width;
@@ -530,12 +552,16 @@ function Overlay({
  * Beide Aufnahmen gleichzeitig abspielen, die erste links, die zweite rechts, mit der
  * Lautstärke-Angleichung der Quellen. Liegen sie richtig, verschmelzen sie zu einem Klang;
  * liegen sie daneben, hört man ein Echo oder Doppelschläge.
+ *
+ * Auch von `Sync.tsx` benutzt, um einen vorhandenen Anker anzuhören. `element` muss gerendert werden (die beiden
+ * `<audio>`); `atMs` ist die laufende Stelle in A (ms ab Dateianfang), null außerhalb der Wiedergabe.
  */
 export function useDuet(a: SourceRow, b: SourceRow, listen: "both" | "a" | "b") {
   const aEl = useRef<HTMLAudioElement>(null);
   const bEl = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [atMs, setAtMs] = useState<number | null>(null);
+  /** Stelle in A (ms), an der die Wiedergabe von selbst endet. */
   const stopAt = useRef(0);
 
   useEffect(() => {
@@ -603,6 +629,7 @@ export function useDuet(a: SourceRow, b: SourceRow, listen: "both" | "a" | "b") 
   return { playing, atMs, toggle, element };
 }
 
+/** Wartet, bis das Element nach dem Spulen abspielbereit ist; nach 1,5 s geht es in jedem Fall weiter. */
 function ready(el: HTMLMediaElement): Promise<void> {
   if (!el.seeking && el.readyState >= 3) return Promise.resolve();
   return new Promise((resolve) => {

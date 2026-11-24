@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+/** Eine App-Version in ihren Teilen, zum Vergleichen. */
 export interface Version {
   major: number;
   minor: number;
@@ -25,6 +26,7 @@ export interface Version {
 const VERSION_RE = /^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/;
 const PRE_ORDER = ["alpha", "beta", "rc"];
 
+/** Zerlegt „0.2.0“, „v0.2.0“ oder „0.2.0-rc.1“; alles andere ist ein Fehler mit verständlichem Text. */
 export function parseVersion(text: string): Version {
   const m = VERSION_RE.exec(text.trim().replace(/^v/, ""));
   if (!m) throw new Error(`„${text}“ ist keine gültige Version (z. B. 0.2.0 oder 0.2.0-rc.1)`);
@@ -36,6 +38,7 @@ export function parseVersion(text: string): Version {
   };
 }
 
+/** Vorabversion (alpha, beta, rc) statt Release? */
 export const isPrerelease = (v: string): boolean => parseVersion(v).pre !== null;
 
 /** Semver-Reihenfolge: 0.2.0-alpha.1 < 0.2.0-rc.1 < 0.2.0 < 0.2.1. */
@@ -63,6 +66,7 @@ export function previousTag(tags: string[], version: string): string | null {
   return older.at(-1) ?? null;
 }
 
+/** Wirft, wenn die Version ungültig ist, ihr Tag schon existiert oder sie kleiner ist als die neueste. */
 export function checkNewVersion(tags: string[], version: string): void {
   parseVersion(version);
   const known = versionTags(tags);
@@ -140,6 +144,10 @@ export function changelogSection(changelog: string, version: string): string {
   return hit.replace(/^## .*\n/, "").trim();
 }
 
+/**
+ * Text der GitHub-Release: Hinweis (Vorabversion oder Forschungswerkzeug), die Notizen aus dem Changelog und die
+ * Tabelle der Pakete. Die Dateinamen müssen zu `artifactName` in `scripts/package-desktop.mjs` passen.
+ */
 export function releaseBody(version: string, notes: string, repo: string): string {
   const pre = isPrerelease(version);
   const intro = pre
@@ -213,6 +221,7 @@ export function bumpFiles(root: string, version: string, date: string): string[]
   return touched;
 }
 
+/** Alle Tags des Repos, die mit „v“ beginnen (braucht die vollständige Historie, nicht nur einen flachen Checkout). */
 function gitTags(root: string): string[] {
   return execFileSync("git", ["tag", "--list", "v*"], { cwd: root, encoding: "utf8" }).split("\n").filter(Boolean);
 }

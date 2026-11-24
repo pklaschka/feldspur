@@ -1,3 +1,7 @@
+/**
+ * Kennwerte der Übersicht (`apps/desktop/src/renderer/Overview.tsx`). Die Tabellen und ihre Fassungen zum Kopieren
+ * (HTML, Text, Markdown) baut `apps/desktop/src/shared/methods-table.ts`.
+ */
 import type { OverviewSession } from "../../shared/api.ts";
 import {
   materialTable,
@@ -108,6 +112,7 @@ export function Metrics({
   );
 }
 
+/** Eine Tabelle auf dem Bildschirm. Kopiert wird nicht dieses HTML, sondern die Fassung aus `methodsHtml`. */
 function TableView({ table }: { table: MethodsTable }) {
   return (
     <table className="w-full border-collapse text-[0.88rem]">

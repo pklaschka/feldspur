@@ -1,3 +1,7 @@
+/**
+ * Kontextstücke (Issue #108) im Einsatztranskript, in Dokumentvariablen, Begleitprotokoll und Fingerabdruck
+ * der Ausgabe (`packages/media/src/context.ts`, `session-transcript.ts`, `export.ts`, `export-state.ts`).
+ */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

@@ -1,3 +1,7 @@
+/**
+ * Schritt Einsammeln, reiner Teil: Zeitstempel lesen und Zeitbelege aus Metadaten bilden
+ * (`packages/media/src/evidence.ts`), Quellenart und Dateinamen-Familie (`packages/media/src/classify.ts`).
+ */
 import { formatLocal } from "@feldspur/core";
 import { describe, expect, it } from "vite-plus/test";
 import { classify, filenameFamily } from "../src/classify.ts";

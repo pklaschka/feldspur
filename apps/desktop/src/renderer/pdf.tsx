@@ -1,6 +1,8 @@
 /**
  * PDF-Scans mit pdf.js anzeigen: Seiten als Canvas, Seitenzahl für die Abtipp-Ansicht.
- * Die Datei kommt über das eigene Medien-Protokoll, nur lesend.
+ * Die Datei kommt über das eigene Medien-Protokoll, nur lesend (`mediaUrl`, `apps/desktop/src/shared/api.ts`).
+ * Genutzt beim Tagebuch (`DiaryEditor.tsx`, `diary/PageCanvas.tsx`), in Vorschau und Detailleiste, für
+ * Kontextstücke und für Standbilder der Ausgabe (`stillRender.ts`).
  */
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -12,6 +14,7 @@ GlobalWorkerOptions.workerSrc = workerUrl;
 
 const docs = new Map<string, Promise<PDFDocumentProxy>>();
 
+/** PDF einer Quelle öffnen; je Quelle nur einmal, solange die Oberfläche läuft. Ein Fehlschlag wird nicht gemerkt. */
 export function loadPdf(sourceId: string): Promise<PDFDocumentProxy> {
   let p = docs.get(sourceId);
   if (!p) {
@@ -22,7 +25,7 @@ export function loadPdf(sourceId: string): Promise<PDFDocumentProxy> {
   return p;
 }
 
-/** Seitenzahl eines PDF; null, solange es lädt oder wenn es nicht lesbar ist. */
+/** Seitenzahl eines PDF; null, solange es lädt (oder ohne Quelle), 0, wenn es nicht lesbar ist. */
 export function usePdfPageCount(sourceId: string | null): number | null {
   const n = useLoaded(sourceId, async (id) => (await loadPdf(id)).numPages);
   return n.state === "done" ? n.value : n.state === "failed" ? 0 : null;
@@ -32,8 +35,8 @@ export function usePdfPageCount(sourceId: string | null): number | null {
 const MAX_PIXELS = 16_777_216;
 
 /**
- * Eine PDF-Seite als Canvas in voller Breite des Elternelements.
- * onSize meldet das Seitenverhältnis, sobald die Seite gerendert ist.
+ * Eine PDF-Seite als Canvas in voller Breite des Elternelements, höchstens `maxWidth` CSS-Pixel scharf gerendert
+ * (kleine Werte für Vorschaubilder).
  */
 export function PdfPageCanvas({
   sourceId,

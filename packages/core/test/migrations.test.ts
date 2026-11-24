@@ -1,3 +1,8 @@
+/**
+ * Migrationen der Projektdatei (`packages/core/src/db/migrations.ts`): Veröffentlichte Stufen bleiben unverändert
+ * (Fingerabdrücke in `FROZEN`), und eine Datei aus dem ersten Stand kommt mit ihren Daten auf den heutigen. Den
+ * Vergleich mit dem Drizzle-Schema macht `packages/core/test/schema.test.ts`.
+ */
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

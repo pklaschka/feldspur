@@ -3,6 +3,11 @@
  * Montage-ID; je Videofeld Kurzzeichen, Datei und Stelle im Original; unten die laufenden
  * Tonquellen. Gezeichnet mit Canvas in der Oberfläche, weil die LGPL-Fassung von ffmpeg keine
  * Schrift setzen kann. Das Hauptfeld bleibt durchsichtig, darunter liegen die Videos.
+ *
+ * Zwei Wege führen hierher: Bei der Ausgabe fragt der Hauptprozess (`apps/desktop/src/main/export.ts`) über
+ * `onOverlayRequest` an, `App.tsx` antwortet mit `renderOverlays` (PNG je Einblendung), und ffmpeg legt die Bilder
+ * über das Video. Beim Ansehen in der App zeichnet `MontageView.tsx` mit `drawOverlay` direkt auf seine Leinwand.
+ * Maße und Felder (1280 × 720) kommen aus `packages/media/src/layout.ts`, damit beide Seiten dasselbe Raster nutzen.
  */
 import type { OverlayFrame, OverlayHeader, OverlayMedia } from "@feldspur/media";
 import { formatClock } from "@feldspur/core/time";
@@ -57,6 +62,7 @@ const pos = (ms: number) => {
 };
 const mediaText = (m: OverlayMedia) => `${m.label} · ${m.fileName} · ${pos(m.atMs)}`;
 
+/** Eine Einblendung auf eine Leinwand der Größe W × H zeichnen: `head` für die ganze Montage, `f` für den Moment. */
 export function drawOverlay(ctx: Ctx2D, head: OverlayHeader, f: OverlayFrame): void {
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "middle";
@@ -139,6 +145,7 @@ export function drawOverlay(ctx: Ctx2D, head: OverlayHeader, f: OverlayFrame): v
 }
 
 let canvas: OffscreenCanvas | null = null;
+/** Einblendungen als PNG-Dateien (mit Durchsicht), in der Reihenfolge von `frames`; für die Ausgabe. */
 export async function renderOverlays(head: OverlayHeader, frames: OverlayFrame[]): Promise<Uint8Array[]> {
   canvas ??= new OffscreenCanvas(W, H);
   const ctx = canvas.getContext("2d")!;

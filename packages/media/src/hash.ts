@@ -1,3 +1,9 @@
+/**
+ * Prüfsumme (SHA-256) einer Datei. Sie weist nach, dass eine Quelle noch dieselbe Originaldatei ist.
+ *
+ * Einordnung: gerechnet beim Einsammeln (`packages/media/src/import.ts`), beim Prüfen und Wiederfinden der Originale
+ * (`packages/media/src/integrity.ts`) und für die Prüfsummenliste der Ausgabe (`packages/media/src/export.ts`).
+ */
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 

@@ -1,10 +1,16 @@
+/**
+ * Hinweis im Schritt „Ausgeben“, wenn die Ausgabe nach der Prüfung der Originale angehalten hat (`HeldExport` in
+ * `apps/desktop/src/renderer/exportState.tsx`). Die Prüfung selbst läuft im Hauptprozess
+ * (`apps/desktop/src/main/originals.ts`).
+ */
 import type { OriginalsCheck, SessionView } from "../../shared/api.ts";
 import { FILE_STATE_TEXT } from "../Originals.tsx";
 import { Button } from "../ui.tsx";
 
 /**
- * Was die Prüfung der Originale (erster Schritt der Ausgabe, nach der Ordnerwahl) gefunden hat. Fehlt eine Datei, die die Ausgabe braucht, geht es nicht weiter;
- * Veränderungen und fehlende, aber nicht gebrauchte Dateien lassen sich bewusst übergehen.
+ * Was die Prüfung der Originale (erster Schritt der Ausgabe, nach der Ordnerwahl) gefunden hat. Fehlt eine Datei, die
+ * die Ausgabe braucht, geht es nicht weiter; Veränderungen und fehlende, aber nicht gebrauchte Dateien lassen sich
+ * bewusst übergehen.
  */
 export function PreCheckResult({
   view,

@@ -1,3 +1,7 @@
+/**
+ * Schnellsuche über einen Einsatz (`apps/desktop/src/renderer/search.ts`): Mitschrift, Tagebuch, Notizen, Dateinamen
+ * und Uhrzeiten.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { highlight, search, searchItems } from "../src/renderer/search.ts";
 import type { SessionView } from "../src/shared/api.ts";

@@ -1,6 +1,11 @@
 /**
  * Schritt „Ausgeben“: ein Ordner pro Einsatz mit Montagevideo, Einsatztranskript (.docx), Dokumentvariablen und
  * Begleitprotokoll.
+ *
+ * Eingebunden von `app/SessionPane.tsx`. Diese Datei setzt die Teile aus `export/` zusammen (Optionen, Fortschritt,
+ * Ergebnis, Vorschau des Einsatztranskripts) und entscheidet, was gerade zu sehen ist. Die laufende Ausgabe hält
+ * `exportState.tsx` oberhalb der Einsätze; gerechnet wird im Hauptprozess (`apps/desktop/src/main/export.ts`,
+ * `apps/desktop/src/main/ipc/export.ts`, `packages/media`).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SessionView } from "../shared/api.ts";
@@ -28,17 +33,21 @@ export function ExportStep({
   onOriginals,
 }: {
   view: SessionView;
+  /** Zu einer offenen Aufgabe springen (Schritt und ggf. Quelle), aus der Liste „Noch offen“. */
   onGo: (t: Todo) => void;
   onView: (v: SessionView) => void;
+  /** Dialog „Originaldateien“ (`Originals.tsx`) öffnen. */
   onOriginals: () => void;
 }) {
   const [opts, set] = useExportOptions();
   const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
+  // Echtzeit ist der Normalfall; nach Episoden geschnitten wird nur, wenn der Einsatz Episoden hat und es gewählt ist.
   const realtime = !(withEpisodes && byEpisodes);
   const ex = useExport();
   const sessionId = view.session.id;
+  // Es läuft höchstens eine Ausgabe zur Zeit: `busy` = die dieses Einsatzes, `elsewhere` = die eines anderen.
   const busy = ex.job?.sessionId === sessionId;
   const elsewhere = !!ex.job && !busy;
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
@@ -77,6 +86,7 @@ export function ExportStep({
     if (!found) return;
     ex.start(sessionId, { ...found.opts, reuseDir: false, dir: found.parent, acceptOriginals: true }, paths);
   };
+  // Veraltet: Seit der letzten Ausgabe hat sich etwas geändert, das ihr Ergebnis bestimmt.
   const stale = !!result && result.differences.length > 0;
   // Zahlen für die Beleg-Karte, nur für eine aktuelle Ausgabe (dann gleichen sie denen der Ausgabe).
   const card = useExportCard(view, settings, result && !stale ? result.record.exportedAt : null);

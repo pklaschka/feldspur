@@ -1,3 +1,7 @@
+/**
+ * Schritt Abgleichen an einem mit FFmpeg erzeugten Feldtag: Anker-Vorschläge aus Klatschern, auch bei
+ * sehr falsch gehender Uhr, und die Episoden des Tags (`packages/media/src/analyze.ts`, `packages/media/src/sync.ts`).
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

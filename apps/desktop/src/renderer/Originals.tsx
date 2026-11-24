@@ -1,6 +1,11 @@
 /**
  * Originaldateien: Hinweis, wenn welche fehlen oder verändert sind, und ein Dialog zum Prüfen und Neu-Verknüpfen
  * (Issues #70, #74). Ein neuer Pfad gilt nur, wenn die Prüfsumme zum Einsammeln passt.
+ *
+ * Hintergrund: Das Projekt speichert von jeder Quelle nur Pfad und Prüfsumme, nicht die Datei selbst. Leiste und
+ * Dialog hängen in `app/SessionPane.tsx`, die Texte nutzen auch `Inspector.tsx` und `export/PreCheckResult.tsx`.
+ * Prüfen, Suchen und Neu-Verknüpfen laufen im Hauptprozess (`apps/desktop/src/main/originals.ts`, IPC in
+ * `apps/desktop/src/main/ipc/export.ts`).
  */
 import type { FileState } from "@feldspur/media";
 import { Dialog } from "radix-ui";
@@ -11,6 +16,7 @@ import { Button, CloseButton, cx, ErrorBanner, Glyph } from "./ui.tsx";
 
 const api = window.feldspur;
 
+/** Zustand einer Originaldatei (`FileState` aus `packages/media`) in Worten. */
 export const FILE_STATE_TEXT: Record<FileState, string> = {
   ok: "unverändert",
   unchecked: "da, Prüfsumme nicht geprüft",
@@ -30,6 +36,7 @@ const FILE_STATE_CLASS: Record<FileState, string> = {
 export const needsRelink = (r: Pick<SourceRow, "file">) =>
   r.file === "missing" || r.file === "unreadable" || r.file === "changed";
 
+/** „Nicht prüfbar“ zählt wie „fehlt“: In beiden Fällen kommt Feldspur nicht an die Datei. */
 const counts = (rows: Pick<SourceRow, "file">[]) => ({
   missing: rows.filter((r) => r.file === "missing" || r.file === "unreadable").length,
   changed: rows.filter((r) => r.file === "changed").length,
@@ -92,6 +99,7 @@ function useOriginalsProgress(sessionId: string): [OriginalsProgress | null, (p:
   return [p, setP];
 }
 
+/** Fortschritt in Worten: Ordner durchsuchen (Gesamtzahl unbekannt) oder Prüfsummen rechnen. */
 function progressText(p: OriginalsProgress | null): string {
   if (!p) return "Wird vorbereitet…";
   if (p.phase === "suchen") return `${p.done} Dateien durchsucht…`;
@@ -99,6 +107,7 @@ function progressText(p: OriginalsProgress | null): string {
   return `Prüfsummen ${Math.min(p.done + 1, p.total)} von ${p.total}${p.fileName ? `: ${p.fileName}` : ""}`;
 }
 
+/** Ergebnis von „Ordner durchsuchen…“ als Satz. */
 function searchText(r: OriginalsSearch): string {
   if (!r.relinked.length && !r.stillOpen.length) return "Es fehlt nichts mehr.";
   const parts: string[] = [];
@@ -112,6 +121,10 @@ function searchText(r: OriginalsSearch): string {
   return parts.join(" ");
 }
 
+/**
+ * Dialog „Originaldateien“: alle Quellen des Einsatzes mit Zustand und Pfad, auffällige zuerst. Drei Wege: einen
+ * Ordner nach allen fehlenden durchsuchen, alle Prüfsummen neu rechnen oder für eine Datei den neuen Platz wählen.
+ */
 export function OriginalsDialog({
   view,
   open,
@@ -149,6 +162,7 @@ export function OriginalsDialog({
   };
   const checkAll = () =>
     run("check", async () => {
+      // Die Prüfung liefert nur ihr Ergebnis; den neuen Zustand der Dateien bringt erst die frisch geholte Ansicht.
       if (!(await guard(() => api.checkOriginals(sessionId, true)))) return;
       const v = await guard(() => api.getSession(sessionId));
       if (v) onView(v);

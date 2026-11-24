@@ -1,7 +1,11 @@
+/**
+ * Hilfen für alle Canvas-Zeichnungen der Oberfläche: Zeitachse in Durchsehen (`Review.tsx`, gezeichnet von
+ * `timeline.ts`), Waveform (`Waveform.tsx`) und Feinabgleich (`FineAlign.tsx`).
+ */
 import { useEffect, useState, type RefObject } from "react";
 
 /**
- * Gemeinsame Hilfen fürs Zeichnen auf Canvas.
+ * Leinwand auf Größe (CSS-Pixel) und Bildschirmdichte einstellen; gezeichnet wird danach in CSS-Pixeln.
  *
  * Wer `canvas.width` setzt, verwirft den Inhalt und lässt den Browser einen neuen Speicher anlegen, auch wenn sich
  * die Größe gar nicht ändert. Bei jedem Mausrücken oder jeder Abspielposition führte das auf macOS zu Flackern und

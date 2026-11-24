@@ -1,3 +1,11 @@
+/**
+ * Die Ansicht eines Einsatzes für die Oberfläche (`SessionView`, `apps/desktop/src/shared/api.ts`).
+ *
+ * Hier trifft sich alles: Der Einsatz wird aus der Projektdatei geladen, die Lage aller Quellen aus den Zeitbelegen
+ * berechnet (`resolveTimeline`, `packages/core/src/resolve.ts`; gespeichert wird sie nie) und für jeden Schritt der
+ * Oberfläche in fertige Zeilen übersetzt, mit deutschen Texten. Fast jeder IPC-Aufruf in `ipc/` antwortet mit dieser
+ * Ansicht, damit die Oberfläche nach einer Änderung nichts selbst nachrechnen muss. Schreibt nichts.
+ */
 import {
   diaryPageLabel,
   regionPageNo,
@@ -33,6 +41,7 @@ import type {
 
 const mmss = (ms: number) => formatDuration(ms);
 
+/** Lautstärke-Angleichung einer Ton- oder Videoquelle: Einstellung, gemessener Pegel und die Verstärkung daraus. */
 function levelRow(s: Source, levels: Map<Id, number | null>): LevelRow {
   const measured = levels.has(s.id);
   const measuredDb = levels.get(s.id) ?? null;
@@ -123,6 +132,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     for (const pid of new Set(e.regions.map((r) => pageOf(r.sourceId))))
       entriesOfPage.set(pid, [...(entriesOfPage.get(pid) ?? []), e]);
   const roleOf = (s: Source) => (s.partOf ? (sourceById.get(s.partOf)?.role ?? s.role) : s.role);
+  // Eine Zeile je Quelle. `p` fehlt, solange die Quelle keine Lage hat (ohne Zeit); dann sind die Zeitfelder null.
   const rows: SourceRow[] = input.sources.map((s) => {
     const p = res.placements.get(s.id);
     const file = files.get(s.id)!;
@@ -304,6 +314,7 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
 
   const conflictGroups = groupConflicts(input.sources, res.placements, devices);
 
+  // Bestätigte und von Hand gesetzte Anker (die Vorschläge stehen oben in `proposals`).
   const conflictBy = new Map(res.anchorConflicts.map((c) => [c.anchorId, c.differenceMs]));
   const anchors: AnchorRow[] = input.anchors
     .filter((a) => !a.proposed)

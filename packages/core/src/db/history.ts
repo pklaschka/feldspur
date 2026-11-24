@@ -9,6 +9,14 @@
  * Alles liegt im TEMP-Schema: Die Projektdatei ändert sich dadurch nicht, und nach dem Schließen ist der Verlauf weg.
  * Änderungen außerhalb eines Schritts (Einsammeln, Tonspur-Analyse) leeren den Verlauf, damit nie ein alter Schritt
  * über neuere Daten zurückgespielt wird. Zwischenspeicher-Tabellen zählen dabei nicht.
+ *
+ * Daneben schreibt dieselbe Klasse das dauerhafte Änderungsprotokoll (Tabelle `change_log`): Das liegt in der
+ * Projektdatei, bleibt also erhalten, und wird nie zurückgespielt.
+ *
+ * Wer es benutzt: `ProjectStore` legt beim Öffnen eine `History` an (`packages/core/src/db/store.ts`). Der
+ * Hauptprozess meldet jeden ändernden IPC-Aufruf über `undoable` als Schritt an
+ * (`apps/desktop/src/main/ipc/undoable.ts`); Rückgängig, Wiederholen und das Protokoll laufen über
+ * `apps/desktop/src/main/ipc/project.ts` in die Oberfläche (`apps/desktop/src/renderer/ChangeLog.tsx`).
  */
 import type Database from "better-sqlite3";
 
@@ -22,6 +30,7 @@ const LOG_TABLE = "change_log";
 /** Höchstens so viele Schritte behalten. */
 const MAX_STEPS = 100;
 
+/** Ein Schritt im Verlauf: Beschriftung und sein Bereich im Protokoll `temp.undolog` (seq von–bis). */
 interface Step {
   label: string;
   from: number;
@@ -34,7 +43,9 @@ export interface ChangeEntry {
   op: "insert" | "update" | "delete";
   /** id der Zeile, sonst ihre rowid. */
   rowKey: string;
+  /** Spalten vorher; null bei "insert". */
   before: Record<string, unknown> | null;
+  /** Spalten nachher; null bei "delete". */
   after: Record<string, unknown> | null;
 }
 
@@ -48,9 +59,11 @@ export interface ChangeStep {
   changes: ChangeEntry[];
 }
 
+/** Stand des Verlaufs für die Knöpfe „Rückgängig“ und „Wiederholen“. */
 export interface HistoryState {
   /** Beschriftung des Schritts, der als Nächstes rückgängig gemacht würde. */
   undo: string | null;
+  /** Beschriftung des Schritts, der als Nächstes wiederholt würde. */
   redo: string | null;
   /** Zählt jeden neu aufgezeichneten Schritt; so erkennt die Oberfläche, dass gerade etwas passiert ist. */
   serial: number;
@@ -62,17 +75,25 @@ export interface TouchedRow {
   row: Record<string, unknown>;
 }
 
+// Aus einem protokollierten Umkehrbefehl Tabelle und rowid zurücklesen, um die betroffene Zeile zeigen zu können
+// (`lastTouched`). Die Befehle haben genau die Form, die die Trigger unten erzeugen.
 const STMT = /^(?:DELETE FROM|UPDATE|INSERT INTO) main\."((?:[^"]|"")+)"/;
 const ROWID = /(?:rowid=(\d+)$|VALUES\((\d+),)/;
 
+// SQL-Bezeichner bzw. SQL-Zeichenkette sicher in Anführungszeichen setzen.
 const q = (name: string) => `"${name.replace(/"/g, '""')}"`;
 const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
+/**
+ * Verlauf einer geöffneten Projektdatei. Der Konstruktor legt für jede Tabelle temporäre Trigger an; neue Tabellen
+ * sind damit von selbst dabei.
+ */
 export class History {
   private undoStack: Step[] = [];
   private redoStack: Step[] = [];
   /** Letzte Protokollzeile, die zu einem bekannten Schritt gehört (oder schon geprüft ist). */
   private seen = 0;
+  /** Siehe `HistoryState.serial`. */
   private serial = 0;
   private touched: TouchedRow[] = [];
 
@@ -90,6 +111,9 @@ export class History {
     for (const t of tables) {
       if (t === LOG_TABLE) continue;
       const cols = (sqlite.prepare(`PRAGMA main.table_info(${q(t)})`).all() as { name: string }[]).map((c) => c.name);
+      // Je Tabelle drei Trigger, die den Umkehrbefehl als Text zusammensetzen: nach INSERT ein DELETE, nach UPDATE
+      // ein UPDATE mit den alten Werten, nach DELETE ein INSERT der alten Zeile. quote() schreibt die Werte so, dass
+      // SQL sie wieder lesen kann.
       const log = (sql: string) => `INSERT INTO temp.undolog(tbl, sql) VALUES (${lit(t)}, ${sql});`;
       const set = cols.map((c) => `${lit(`${q(c)}=`)}||quote(OLD.${q(c)})`).join(`||','||`);
       const values = cols.map((c) => `quote(OLD.${q(c)})`).join(`||','||`);
@@ -140,6 +164,7 @@ export class History {
     this.logging = true;
   }
 
+  /** Wahr, sobald die Trigger für das dauerhafte Protokoll angelegt sind (die Datei hat die Tabelle `change_log`). */
   private logging = false;
 
   private maxLogId(): number {
@@ -252,6 +277,7 @@ export class History {
     return step.label;
   }
 
+  /** Zuletzt rückgängig gemachten Schritt wiederholen; gibt seine Beschriftung zurück (null, wenn es keinen gibt). */
   redo(): string | null {
     this.settle();
     const step = this.redoStack.pop();
@@ -260,6 +286,7 @@ export class History {
     return step.label;
   }
 
+  /** Stand für die Oberfläche. Prüft dabei, ob Änderungen von außerhalb den Verlauf ungültig gemacht haben. */
   state(): HistoryState {
     this.settle();
     return {
@@ -274,6 +301,7 @@ export class History {
     return this.touched;
   }
 
+  /** Verlauf leeren (das dauerhafte Änderungsprotokoll bleibt). */
   clear(): void {
     this.undoStack = [];
     this.redoStack = [];
@@ -315,6 +343,7 @@ export class History {
     })();
   }
 
+  /** Eine neue Aktion nach einem Rückgängig verwirft, was sich noch wiederholen ließe. */
   private dropRedo(): void {
     for (const s of this.redoStack)
       this.sqlite.prepare("DELETE FROM temp.undolog WHERE seq BETWEEN ? AND ?").run(s.from, s.to);

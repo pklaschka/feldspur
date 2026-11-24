@@ -1,3 +1,7 @@
+/**
+ * Rechenkern der Tonspur-Analyse (`packages/media/src/audio.ts`): Leerlauf, Klatscher und Versatz zweier Aufnahmen, an
+ * von Hand gebauten Hüllkurven, ohne Dateien und ohne ffmpeg.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import {
   DB_FLOOR,

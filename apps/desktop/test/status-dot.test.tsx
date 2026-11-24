@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Statuspunkt einer Quelle (`StatusDot` in `apps/desktop/src/renderer/ui.tsx`): Jeder Status hat auch eine Bezeichnung
+ * in Worten, nicht nur eine Farbe.
+ */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vite-plus/test";

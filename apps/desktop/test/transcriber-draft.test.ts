@@ -1,3 +1,7 @@
+/**
+ * „Mitschreiben“: die angefangene Zeile, ihr Zurückholen nach einem Fehler und die Reihenfolge schnell angelegter
+ * Zeilen (`apps/desktop/src/renderer/transcriber/draft.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { createSerialQueue, restoreDraft, takeDraft } from "../src/renderer/transcriber/draft.ts";
 

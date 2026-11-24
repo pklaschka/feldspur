@@ -12,6 +12,9 @@
  *
  * Das Paket enthält keine node_modules: Haupt- und Preload-Prozess sind fertig gebündelt
  * (inkl. better-sqlite3), die native Bibliothek und FFmpeg liegen unter resources/.
+ *
+ * Läuft im Paket-Workflow (.github/workflows/package.yml), den auch der Release-Workflow aufruft. Ergebnis:
+ * apps/desktop/release/dist.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -34,6 +37,7 @@ const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const version = process.env.FELDSPUR_VERSION || rootPkg.version;
 const electronVersion = require("electron/package.json").version;
 
+// Fehlt eine Voraussetzung, bricht das Skript mit dem Befehl ab, der sie herstellt.
 const need = (p, hint) => {
   if (!existsSync(p)) throw new Error(`Fehlt: ${p}\n→ ${hint}`);
   return p;

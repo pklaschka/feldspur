@@ -2,6 +2,9 @@
  * Prüfliste unter der Zeitachse: alles, was „prüfen“ ist, nach Schweregrad sortiert und filterbar.
  * Gleichartige Widersprüche eines Geräts stehen als eine Gruppenzeile da; „Entschieden“ zeigt die
  * bewussten Entscheidungen des Einsatzes mit Begründung.
+ *
+ * Teil des Schritts „Durchsehen“ (`apps/desktop/src/renderer/Review.tsx`). Reihenfolge und Zählung kommen aus
+ * `apps/desktop/src/renderer/inspector/status.ts`, damit Liste, „Nächste →“ und der Stand des Einsatzes übereinstimmen.
  */
 import { useState } from "react";
 import type { ConflictGroupRow, SessionView, SourceRow } from "../../shared/api.ts";
@@ -13,6 +16,7 @@ import { cx, StatusDot } from "../ui.tsx";
 type Filter = "all" | "strong" | "clear" | "uncertain" | "decided";
 type Sort = "severity" | "time";
 
+/** Vermutete Ursache (`ConflictCause` aus `packages/core/src/resolve.ts`) als kurze Frage in der Gruppenzeile. */
 const CAUSE_HINT = { utc: "Lesart UTC/Ortszeit?", hours: "Zeitzone oder Sommerzeit?", clock: "Geräteuhr?" } as const;
 
 /** Die zwei Werte, um die es geht: verwendeter Beleg und der am weitesten abweichende. */
@@ -23,6 +27,7 @@ function pair(r: SourceRow): string {
   return [t(used), t(worst)].filter(Boolean).join(" · ");
 }
 
+/** Wie `rowStart` in `apps/desktop/src/renderer/review/tracks.ts`: Tagebuchseiten am Ende ihres Bezugszeitraums. */
 const rowStart = (r: SourceRow) => r.startMs ?? r.diaryWindow?.toMs ?? 0;
 
 export function CheckList({
@@ -178,6 +183,7 @@ export function CheckList({
   );
 }
 
+/** Eine Quelle in der Liste: offener Widerspruch, unsichere Lage oder (Filter „Entschieden“) eine Entscheidung. */
 function Row({
   r,
   view,
@@ -249,6 +255,7 @@ function Row({
   );
 }
 
+/** Dateien eines Geräts mit demselben Widerspruch (`ConflictGroupRow`) in einer Zeile, darunter die Dateien. */
 function GroupRow({
   g,
   rows,
@@ -264,6 +271,7 @@ function GroupRow({
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
+  // „überall“ nur, wenn jede Datei bis auf eine Minute um denselben Betrag abweicht; sonst „jeweils etwa“.
   const same = rows.every((r) => Math.abs(Math.abs(r.conflict.worstMs) - Math.abs(g.differenceMs)) <= 60_000);
   // Die ersten zwei Dateien stehen immer da, damit klar ist, worum es geht; der Rest auf Wunsch.
   const shown = expanded ? rows : rows.slice(0, 2);

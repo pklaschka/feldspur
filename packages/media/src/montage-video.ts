@@ -16,6 +16,14 @@
  * Tonspuren: Spur 1 ist immer die Mischung (oder nur die Hauptquelle) und als Standard markiert; das hören
  * MAXQDA und jeder Player. Auf Wunsch folgt je Gerät eine eigene Spur, so lang wie das Video und stumm, wo
  * das Gerät nicht läuft (Issue #122). Schnittprogramme, VLC und der Viewer können sie einzeln abspielen.
+ *
+ * Einordnung: Schritt „Ausgeben“. `exportSession` (`packages/media/src/export.ts`) ruft `renderMontage` mit dem
+ * fertigen Einsatztranskript (`SessionTranscript`) auf. Der Weg im Inneren: `planPieces` teilt die Montage in Stücke
+ * (`Piece`), `chunks` teilt lange Stücke in Abschnitte von höchstens einer Minute, jeder Abschnitt wird einzeln
+ * gerechnet und im Zwischenspeicher abgelegt, am Ende fügt ein ffmpeg-Lauf Bild, Ton und Kapitel zusammen.
+ * Den `OverlayRenderer` stellt der Hauptprozess (`overlayVia` in `apps/desktop/src/main/export.ts`); gezeichnet wird
+ * in `apps/desktop/src/renderer/overlay.ts`. `planPieces` ist zugleich die Grundlage für die Vorschau
+ * (`montage-preview.ts`), die Resolve-Schnittliste (`fcpxml.ts`) und den Viewer (`viewer/html.ts`).
  */
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, readdir, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
@@ -30,6 +38,7 @@ import { probeMedia } from "./probe.ts";
 import { PROBE_TIMEOUT_MS, runTool, STALL_MS, ToolError } from "./process.ts";
 
 const FRAME_MS = 1000 / FPS;
+/** Abtastrate des Tons im Montagevideo, in Hz. */
 const RATE = 48_000;
 
 /** Was für die ganze Montage gleich bleibt (Kopfzeile). */
@@ -52,8 +61,9 @@ export interface OverlayMedia {
 
 /** Was in einer Sekunde Montage zu sehen ist. */
 export interface OverlayFrame {
+  /** Stelle im Montagevideo, in ms ab dessen Beginn. */
   montageMs: number;
-  /** Uhrzeit an dieser Stelle; in Tafeln der Beginn der Zwischenzeit. */
+  /** Uhrzeit an dieser Stelle (Ortszeit des Einsatzes in ms, `LocalMs`); in Tafeln der Beginn der Zwischenzeit. */
   clockMs: number;
   /** episode: Episode; gap: Zwischenzeit in Echtzeit; card: kurze Tafel für eine Zwischenzeit. */
   kind: "episode" | "gap" | "card";
@@ -66,8 +76,13 @@ export interface OverlayFrame {
   sounds: OverlayMedia[];
 }
 
+/**
+ * Zeichnet die Einblendungen: je Eintrag in `frames` (einer je Sekunde) ein PNG in Bildgröße, das ffmpeg über das
+ * Bild legt. Kommt von außen, weil hier keine Schrift gesetzt werden kann (siehe Kopf der Datei).
+ */
 export type OverlayRenderer = (header: OverlayHeader, frames: OverlayFrame[]) => Promise<Buffer[]>;
 
+/** Eine Aufnahme, die in einem Stück läuft, mit der Stelle, an der das Stück in ihr beginnt. */
 export interface MediaRef {
   source: Source;
   /** Stelle in der Datei am Beginn des Stücks. */
@@ -76,12 +91,16 @@ export interface MediaRef {
   label: string;
 }
 
+/**
+ * Stück der Montage: ein Zeitraum, in dem durchgehend dieselben Aufnahmen laufen, oder eine Tafel. Innerhalb eines
+ * Stücks ändert sich der Bildaufbau nicht (welche Videos in welchem Feld, welche Tonquellen).
+ */
 export interface Piece {
-  /** Grenzen in Bildern ab Montagebeginn. */
+  /** Grenzen in Bildern ab Montagebeginn (`f1` ausschließlich). */
   f0: number;
   f1: number;
   kind: OverlayFrame["kind"];
-  /** Uhrzeit am Beginn des Stücks (außer in Tafeln läuft sie mit). */
+  /** Uhrzeit am Beginn des Stücks, Ortszeit des Einsatzes in ms (außer in Tafeln läuft sie mit). */
   clock0: number;
   title: string;
   body: string;
@@ -121,6 +140,7 @@ async function ffProgress(args: string[], onTimeMs: (ms: number) => void, signal
   });
 }
 
+/** ffmpeg ohne Fortschritt, für die kurzen Läufe (Ton je Stück, Zusammenfügen). */
 async function ff(args: string[], signal?: AbortSignal): Promise<void> {
   await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { signal });
 }
@@ -294,6 +314,7 @@ export function planPieces(transcript: SessionTranscript): Piece[] {
       const f0 = frame(toM(a));
       const f1 = frame(toM(b));
       if (f1 <= f0) continue;
+      // Zwischen zwei Schnittpunkten läuft überall dasselbe; die Mitte umgeht Randfälle genau auf der Grenze.
       const mid = (a + b) / 2;
       const running = av.filter((s) => covering(s, mid));
       const videos = running
@@ -301,6 +322,7 @@ export function planPieces(transcript: SessionTranscript): Piece[] {
         .sort((x, y) => place(x.id)!.startMs - place(y.id)!.startMs)
         .slice(0, MAX_TILES);
       const audioOnly = running.filter((s) => s.kind === "audio");
+      // Hauptquelle: die Tonaufnahme des Referenzgeräts, sonst die längste Tonaufnahme, sonst das erste Video.
       const mainAudio =
         audioOnly.find((s) => s.deviceId === refDevice) ??
         audioOnly.toSorted((x, y) => span(place(y.id)!) - span(place(x.id)!))[0] ??
@@ -361,6 +383,7 @@ export function mixTrackTitle(audioMix: "all" | "main" = "all"): string {
   return audioMix === "main" ? "Hauptquelle" : "Mischung aller Geräte";
 }
 
+/** Kopfzeile der Einblendungen; die Montage-ID in der Kurzform, wie sie im Video steht (`montageVideoId`). */
 export function overlayHeader(transcript: SessionTranscript): OverlayHeader {
   const h = transcript.header;
   return { title: h.title, date: h.date, montageId: h.montageVideoId, modeLabel: h.modeLabel };
@@ -385,13 +408,16 @@ export function frameAt(p: Piece, offsetMs: number): OverlayFrame {
   };
 }
 
+/** Eine Einblendung je angefangener Sekunde des Stücks: Feiner als sekundenweise zeigt das Video die Uhrzeit nicht. */
 function framesFor(p: Piece): OverlayFrame[] {
   const n = Math.ceil(((p.f1 - p.f0) * FRAME_MS) / 1000);
   return Array.from({ length: n }, (_, k) => frameAt(p, k * 1000));
 }
 
 export interface MontageVideoOptions {
+  /** Arbeitsordner der Ausgabe; darin legt renderMontage den Unterordner `montage` für Zwischendateien an. */
   workDir: string;
+  /** Zeichnet die Einblendungen; ohne ihn entsteht das Video ohne Text. */
   overlay?: OverlayRenderer;
   /** Fortschritt in Sekunden Montage. */
   onProgress?: (done: number, total: number) => void;
@@ -423,6 +449,7 @@ const CHUNK_FRAMES = 60 * FPS;
 /** Erhöhen, wenn sich das Aussehen ändert, damit alte Abschnitte nicht wiederverwendet werden. */
 const LOOK_VERSION = 5;
 
+/** Teilt Stücke in Abschnitte von höchstens `CHUNK_FRAMES`; Uhrzeit und Stellen in den Dateien rücken mit. */
 function chunks(pieces: Piece[]): Piece[] {
   return pieces.flatMap((p) => {
     const out: Piece[] = [];
@@ -477,6 +504,11 @@ export interface MontageResult {
   audioTracks: { title: string; deviceId?: Id }[];
 }
 
+/**
+ * Rechnet das Montagevideo nach `outFile`. Bild und Ton entstehen nebeneinander: die Bildabschnitte parallel (jeder
+ * mit einem Schlüssel aus allem, was sein Aussehen bestimmt, im Zwischenspeicher), der Ton je Spur einmal über die
+ * ganze Länge. Bei Abbruch oder Fehler bleibt keine halbe Datei in `outFile` zurück.
+ */
 export async function renderMontage(
   transcript: SessionTranscript,
   outFile: string,
@@ -495,7 +527,7 @@ export async function renderMontage(
   };
   const dir = join(opts.workDir, "montage");
   await mkdir(dir, { recursive: true });
-  // Erstes darstellbares Bild je Eintrag als Datei für ffmpeg, benannt nach Inhalt (für den Zwischenspeicher).
+  // Stücke für den Ton (ganze Länge), Abschnitte (`parts`, höchstens eine Minute) für das Bild.
   const pieces = planPieces(transcript);
   const parts = chunks(pieces);
   const header = overlayHeader(transcript);
@@ -504,7 +536,9 @@ export async function renderMontage(
   await mkdir(cacheDir, { recursive: true });
   const parallel = opts.parallel ?? Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2)));
 
+  // Dateien im Zwischenspeicher, die diese Ausgabe braucht; alles andere wird am Ende gelöscht.
   const used = new Set<string>();
+  // Kennung einer Originaldatei für die Schlüssel: Pfad, Größe, Änderungszeit (schnell, ohne die Datei zu lesen).
   const fileId = async (path: string) => {
     const st = await stat(path);
     return `${path}|${st.size}|${st.mtimeMs}`;
@@ -569,6 +603,7 @@ export async function renderMontage(
       const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
       const aOut = join(dir, `${tag}-${i}.wav`);
       const samples = Math.round(durS * RATE);
+      // Auf die Probe genau so lang wie das Bild des Stücks: zu kurzen Ton mit Stille auffüllen, zu langen kappen.
       const fit = `apad,atrim=end_sample=${samples}`;
       const src = sounds[i]!;
       if (!src.length) {

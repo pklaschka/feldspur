@@ -1,6 +1,10 @@
 /**
  * Menüs zum Pflegen von Quellen und Geräten: verschieben, zu einer Seite verbinden,
  * als Tagebuchseite oder Foto behandeln, als Folgeaufnahme markieren, aus dem Projekt nehmen, Geräte zusammenlegen.
+ *
+ * Die „⋯“-Menüs stehen in „Einsammeln“ (`apps/desktop/src/renderer/Collect.tsx`: je Quelle und je Gerät) und in der
+ * Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`). Die Menüs lösen nur aus: Was dann geschieht (IPC-Aufruf,
+ * neue Ansicht übernehmen), legt `apps/desktop/src/renderer/app/SessionPane.tsx` als `SourceActions` fest.
  */
 import { AlertDialog, DropdownMenu } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
@@ -9,20 +13,32 @@ import { Button, cx } from "./ui.tsx";
 import { useDraft } from "./hooks.ts";
 import { TIME_ZONES } from "./timeZones.ts";
 
+/**
+ * Alles, was sich an einer Quelle oder einem Gerät auslösen lässt. Über einen React-Kontext gereicht
+ * (`SourceActionsProvider`, `useActions`), damit Menüs tief in der Oberfläche keine Props durchreichen müssen.
+ */
 export interface SourceActions {
+  /** Quelle aus dem Projekt nehmen. Ohne Nachfrage, dafür mit „Rückgängig“. */
   remove(sourceId: string): void;
+  /** Quelle einem anderen Gerät zuordnen: Geräte-ID oder ein neues Gerät mit diesem Namen. */
   move(sourceId: string, target: string | { newLabel: string }): void;
+  /** `fromId` geht in `intoId` auf; danach gilt für alle Dateien die Uhr von `intoId`. */
   mergeDevices(fromId: string, intoId: string): void;
+  /** Ob Zeitstempel des Geräts (Metadaten, Dateiname) als UTC gelesen und in Ortszeit umgerechnet werden. */
   setDeviceUtc(deviceId: string, utc: boolean): void;
+  /** Zeitzone, auf die die Geräteuhr gestellt war (IANA-Name); null = wie der Einsatz. */
   setDeviceTimeZone(deviceId: string, timeZone: string | null): void;
   /** Zeitbelege des Geräts erneut aus den Originalen lesen. */
   rereadDevice(deviceId: string): void;
   /** Alle Bestätigungen („geprüft“) an den Quellen des Geräts entfernen. */
   clearDeviceChecks(deviceId: string): void;
+  /** Bild als weiteres Bild der Seite `mainId` führen; null löst es wieder. */
   setPartOf(sourceId: string, mainId: string | null): void;
   /** Bild als Tagebuchseite oder als Foto behandeln. */
   setSourceKind(sourceId: string, kind: "diary" | "photo"): void;
+  /** Als Folgeaufnahme von `prevId` markieren (setzt sie ohne Lücke fort); null hebt das auf. */
   setFollows(sourceId: string, prevId: string | null): void;
+  /** Große Vorschau öffnen (`apps/desktop/src/renderer/Preview.tsx`). */
   preview(sourceId: string): void;
   /** Mitschreiben für eine Audio- oder Videoquelle öffnen. */
   transcribe(sourceId: string): void;
@@ -33,13 +49,16 @@ export interface SourceActions {
 }
 
 const Ctx = createContext<SourceActions | null>(null);
+/** Stellt die Aktionen bereit; einmal je Einsatz in `apps/desktop/src/renderer/app/SessionPane.tsx`. */
 export const SourceActionsProvider = Ctx.Provider;
+/** Aktionen des umgebenden Einsatzes; außerhalb des Providers ein Fehler. */
 export function useActions(): SourceActions {
   const a = useContext(Ctx);
   if (!a) throw new Error("SourceActionsProvider fehlt");
   return a;
 }
 
+// Arten von Quellen (`SourceRow.kind`), nach denen sich die Menüeinträge richten: Bilder und Aufnahmen mit Dauer.
 const IMAGE = new Set(["photo", "diary"]);
 const AV = new Set(["audio", "video"]);
 
@@ -48,6 +67,7 @@ const item =
 const content = "z-50 min-w-56 max-w-80 rounded-lg border border-line bg-panel p-1 shadow-lg";
 const sep = "my-1 h-px bg-line";
 
+/** Untermenü mit „›“; lange Listen (Geräte, Seiten, Aufnahmen) rollen darin. */
 function Sub({ label, children, disabled }: { label: string; children: ReactNode; disabled?: boolean }) {
   return (
     <DropdownMenu.Sub>
@@ -64,6 +84,7 @@ function Sub({ label, children, disabled }: { label: string; children: ReactNode
   );
 }
 
+/** Quelle in einer Auswahlliste: Kurzzeichen und Dateiname. */
 const rowLabel = (r: SourceRow) => (
   <>
     <b className="font-mono text-[0.85rem]">{r.label}</b>
@@ -71,7 +92,6 @@ const rowLabel = (r: SourceRow) => (
   </>
 );
 
-/** „⋯“-Menü einer Quelle. */
 /** „Als Kontext führen“ bzw. „Zurück in die Chronologie“; bei Ton und Video ausgegraut, mit Grund. */
 function ContextItem({ row, view }: { row: SourceRow; view: SessionView }) {
   const a = useActions();
@@ -117,11 +137,18 @@ function ContextItem({ row, view }: { row: SourceRow; view: SessionView }) {
   );
 }
 
+/**
+ * „⋯“-Menü einer Quelle. Welche Einträge erscheinen, hängt von der Art ab: Bilder lassen sich zu einer Seite
+ * verbinden und zwischen Foto und Tagebuchseite umstellen, Ton und Video als Folgeaufnahme markieren.
+ */
 export function SourceMenu({ row, view, className }: { row: SourceRow; view: SessionView; className?: string }) {
   const a = useActions();
   const [naming, setNaming] = useState(false);
   const others = view.allDevices.filter((d) => d.id !== row.deviceId);
+  // Seiten, an die sich dieses Bild hängen lässt: andere Bilder, die selbst Hauptquelle sind.
   const pages = view.rows.filter((r) => r.id !== row.id && IMAGE.has(r.kind) && !r.partOf && r.partOf !== row.id);
+  // Mögliche Vorgänger einer Folgeaufnahme: Aufnahmen mit bekannter Dauer, die noch niemand fortsetzt; die
+  // desselben Geräts stehen oben.
   const takenPrev = new Set(view.rows.map((r) => r.follows).filter(Boolean));
   const prevs = view.rows
     .filter((r) => r.id !== row.id && AV.has(r.kind) && r.durationMs !== null && !takenPrev.has(r.id))
@@ -235,7 +262,11 @@ export function SourceMenu({ row, view, className }: { row: SourceRow; view: Ses
   );
 }
 
-/** Menü am Gerät: mit einem anderen Gerät zusammenlegen, UTC-Zeitstempel umstellen. */
+/**
+ * Menü am Gerät: mit einem anderen Gerät zusammenlegen, Zeitzone der Geräteuhr wählen, Zeitbelege neu lesen,
+ * Bestätigungen entfernen, UTC-Zeitstempel umstellen. Für Tagebuch und Notizen (`noClock`) gibt es nur das
+ * Zusammenlegen und, falls vorhanden, die UTC-Wahl; bleibt nichts übrig, erscheint kein Menü.
+ */
 export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionView }) {
   const a = useActions();
   const [into, setInto] = useState<DeviceRow | null>(null);
@@ -361,6 +392,7 @@ export function DeviceMenu({ device, view }: { device: DeviceRow; view: SessionV
   );
 }
 
+/** Auswahlpunkt der Radio-Einträge im Gerätemenü. */
 function Dot({ on }: { on: boolean }) {
   return (
     <span
@@ -370,6 +402,7 @@ function Dot({ on }: { on: boolean }) {
   );
 }
 
+/** Nachfrage vor einem Schritt, der mehrere Dateien betrifft (hier: Geräte zusammenlegen). */
 function Confirm({
   open,
   onOpenChange,
@@ -470,6 +503,7 @@ function ZoneDialog({
   );
 }
 
+/** Namen erfragen, hier für „Neues Gerät…“ beim Verschieben einer Quelle. */
 function NameDialog({
   open,
   onOpenChange,

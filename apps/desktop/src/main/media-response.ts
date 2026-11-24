@@ -1,6 +1,10 @@
 /**
  * Originaldateien für Vorschau und Wiedergabe ausliefern, mit Range-Anfragen,
  * damit sich Audio und Video spulen lassen. Nur lesend.
+ *
+ * Die Oberfläche darf nicht selbst auf die Festplatte greifen. Sie lädt Originale über die Adresse
+ * `feldspur-media://source/<Quellen-Id>` (`mediaUrl` in `apps/desktop/src/shared/api.ts`); `main.ts` schlägt den Pfad
+ * im offenen Projekt nach und antwortet mit `fileResponse`. Ausgeliefert werden nur die Dateitypen aus `TYPES`.
  */
 import { createReadStream, statSync } from "node:fs";
 import { Readable } from "node:stream";
@@ -31,7 +35,10 @@ export function mediaType(fileName: string): string | null {
   return (ext && TYPES[ext]) ?? null;
 }
 
-/** "bytes=100-199", "bytes=100-", "bytes=-500" → [start, end] (inklusive) oder null, wenn ungültig. */
+/**
+ * "bytes=100-199", "bytes=100-", "bytes=-500" → [start, end] (inklusive). null = keine Range-Anfrage (ganze Datei),
+ * "invalid" = nicht lesbar oder außerhalb der Datei.
+ */
 export function parseRange(header: string | null, size: number): [number, number] | null | "invalid" {
   if (!header) return null;
   const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
@@ -49,6 +56,10 @@ export function parseRange(header: string | null, size: number): [number, number
   return [start, end];
 }
 
+/**
+ * Antwort mit dem Inhalt der Datei oder dem angefragten Ausschnitt (206). 415 bei einem Dateityp, der nicht
+ * ausgeliefert wird, 416 bei einer ungültigen Range-Anfrage. `fileName` bestimmt nur den Typ.
+ */
 export function fileResponse(path: string, fileName: string, rangeHeader: string | null): Response {
   const type = mediaType(fileName);
   if (!type) return new Response("Dateityp wird nicht ausgeliefert", { status: 415 });

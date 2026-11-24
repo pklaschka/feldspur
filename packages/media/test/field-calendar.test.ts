@@ -1,3 +1,6 @@
+/**
+ * Feldkalender der Übersicht (`packages/media/src/field-calendar.ts`): Achse, Stundenbeschriftung und die SVG-Grafik.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { calendarAxis, fieldCalendarSvg, hourLabel, type CalendarDay } from "../src/field-calendar.ts";
 

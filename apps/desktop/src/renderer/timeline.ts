@@ -1,12 +1,20 @@
 /**
  * Zeichnen der Zeitachse auf Canvas. Reine Funktionen ohne React:
  * Layout (Zeilen, Elemente mit Pixelrechtecken), Treffersuche und Zeichnen.
+ *
+ * Gehört zum Schritt Durchsehen: `Review.tsx` hält Ausschnitt, Auswahl und Maus und ruft bei jeder Änderung `draw`.
+ * Von oben nach unten: Lineal mit Uhrzeiten, eine Zeile für Episoden und Zwischenzeiten, dann eine Spur je Gerät
+ * (welche Quelle in welche Spur gehört, bestimmt `review/tracks.ts`). Alle Lagen kommen fertig berechnet aus der
+ * Ansicht des Einsatzes (`SessionView`); hier wird nichts an der Zeit gerechnet, nur in Pixel übersetzt.
  */
 import type { DeviceRow, DiaryEntryRow, EpisodeRow, GapRow, SourceRow, TranscriptRow } from "../shared/api.ts";
 import { clock, hm } from "./format.ts";
 
+/** Eine Minute in ms. */
 export const MIN = 60_000;
+/** Höhe des Lineals mit den Uhrzeiten (CSS-Pixel). */
 export const RULER_H = 30;
+/** Höhe der Zeile für Episoden und Zwischenzeiten darunter. */
 export const EPISODE_H = 40;
 /** Höhe einer Spur; auf großen Bildschirmen höher (setTrackHeight), damit die Achse den Platz nutzt. */
 export let TRACK_H = 52;
@@ -21,17 +29,25 @@ export function setTrackHeight(h: number): void {
 /** Kurze Clips bleiben sichtbar und anklickbar. */
 const MIN_CLIP_W = 6;
 
+/** Eine Spur der Zeitachse: ein Gerät mit seinen Quellen. */
 export interface Track {
+  /** null: Sammelspur für Quellen ohne Gerät. */
   device: DeviceRow | null;
   rows: SourceRow[];
 }
 
+/**
+ * Was auf der Achse liegt, mit Beginn `t0` und Ende `t1` (Ortszeit, ms): Aufnahme mit Dauer („clip“), Foto oder
+ * Ähnliches ohne Dauer („point“, `t0` = `t1`), Tagebucheintrag über seinen Bezugszeitraum, Episode und
+ * Zwischenzeit („gap“).
+ */
 export type Item =
   | { type: "clip" | "point"; row: SourceRow; track: number; t0: number; t1: number }
   | { type: "diary"; row: SourceRow; track: number; t0: number; t1: number; entry: DiaryEntryRow }
   | { type: "episode"; ep: EpisodeRow; t0: number; t1: number }
   | { type: "gap"; gap: GapRow; t0: number; t1: number };
 
+/** Ausschnitt der Achse: Umrechnung zwischen Uhrzeit und Pixel. */
 export interface Scale {
   /** Zeit am linken Rand der Leinwand (ms, lokale Uhrzeit). */
   start: number;
@@ -45,6 +61,7 @@ function trackTop(i: number): number {
   return RULER_H + EPISODE_H + i * TRACK_H;
 }
 
+/** Alles Zeichenbare eines Einsatzes; Quellen ohne Zeit fehlen. Die Reihenfolge ist die Zeichenreihenfolge. */
 export function buildItems(
   tracks: Track[],
   episodes: EpisodeRow[] | null,
@@ -96,6 +113,7 @@ export function hitTest(items: Item[], s: Scale, x: number, y: number): Item | n
   return best;
 }
 
+/** Abstand der Uhrzeiten am Lineal: der kleinste runde Schritt, bei dem die Beschriftungen 64 px auseinanderliegen. */
 function tickStep(pxPerMin: number): number {
   for (const m of [1, 2, 5, 10, 15, 30, 60, 120]) if (m * pxPerMin >= 64) return m * MIN;
   return 240 * MIN;
@@ -116,6 +134,10 @@ interface Palette {
   mono: string;
 }
 
+/**
+ * Farben und Schriften der App aus den CSS-Variablen lesen (wechseln mit hellem und dunklem Modus). Deshalb dürfen
+ * die Variablen feste Farben bleiben und nicht `light-dark()` werden (siehe AGENTS.md).
+ */
 export function readPalette(el: Element): Palette {
   const cs = getComputedStyle(el);
   const v = (n: string) => cs.getPropertyValue(n).trim();
@@ -195,6 +217,7 @@ export interface DrawState {
   height: number;
   tracks: Track[];
   items: Item[];
+  /** Id der gewählten Quelle. */
   selected: string | null;
   hover: Item | null;
   /** Abspielposition (Ortszeit) oder null. */
@@ -308,6 +331,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number): str
   return lo > 0 ? `${text.slice(0, lo).trimEnd()}…` : "";
 }
 
+/** Die ganze Zeitachse neu zeichnen. Läuft bei jeder Mausbewegung und Abspielposition, legt also nichts neu an. */
 export function draw(ctx: CanvasRenderingContext2D, p: Palette, st: DrawState): void {
   const { scale: s, width: W, height: H } = st;
   const x = (t: number) => xOf(s, t);
@@ -691,6 +715,7 @@ function clipLabel(
   ctx.restore();
 }
 
+/** Rand um ein Element: gewählt in Akzentfarbe, sonst bei Status „prüfen“ gestrichelt in Warnfarbe. */
 function outline(
   ctx: CanvasRenderingContext2D,
   p: Palette,

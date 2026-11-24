@@ -19,13 +19,16 @@ let failedPath: string | null = null;
 export const importing = new Map<string, AbortController>();
 /** Einsätze, deren Tonspuren gerade analysiert werden, zum Abbrechen. */
 export const analyzing = new Map<string, AbortController>();
+/** Automatische Sicherungen des offenen Projekts; `main.ts` stößt sie regelmäßig an (`backup.ts`). */
 export const autoBackup = new AutoBackup();
 
 /** Das offene Projekt, falls eins offen ist. */
 export const currentStore = (): ProjectStore | null => store;
 
+/** Pfad des Projekts, das sich zuletzt nicht öffnen ließ; null nach dem nächsten gelungenen Öffnen. */
 export const lastFailedPath = (): string | null => failedPath;
 
+/** Das Hauptfenster; null, bevor es angelegt ist (Projektdatei als Argument beim Start). */
 export const mainWindow = (): BrowserWindow | null => win;
 
 /** Das Hauptfenster als Eltern für Dialoge. */
@@ -44,11 +47,13 @@ function nativeBinding(): string | undefined {
   return candidates.find((p) => existsSync(p));
 }
 
+/** Das offene Projekt, wie es die Oberfläche braucht: Pfad, Name und die Liste der Einsätze (Reiter). */
 export function projectInfo(): ProjectInfo | null {
   if (!store) return null;
   return { path: store.path, name: store.getMeta("name") ?? basename(store.path), sessions: store.listSessions() };
 }
 
+/** Das offene Projekt für einen IPC-Aufruf, der eins voraussetzt; sonst Fehler mit Meldung für die Oberfläche. */
 export function requireStore(): ProjectStore {
   if (!store) throw new Error("Kein Projekt geöffnet");
   return store;
@@ -76,6 +81,7 @@ export async function whileOpen<T>(s: ProjectStore, work: Promise<T>): Promise<T
   }
 }
 
+/** Optionen für alles in `packages/core`, das eine Projektdatei öffnet (auch Prüfen und Kopieren von Sicherungen). */
 export function bindingOpts(): { nativeBinding?: string } {
   const binding = nativeBinding();
   return binding ? { nativeBinding: binding } : {};

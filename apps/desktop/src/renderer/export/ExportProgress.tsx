@@ -1,3 +1,8 @@
+/**
+ * Fortschritt einer laufenden Ausgabe im Schritt „Ausgeben“. Den Stand (`ExportJob`) hält
+ * `apps/desktop/src/renderer/exportState.tsx` oberhalb der Schritte, damit er einen Wechsel des Schritts oder des
+ * Einsatzes übersteht.
+ */
 import { CHECK_STEP, percent, remainingMs, remainingText, type ExportJob } from "../exportState.tsx";
 import { Button } from "../ui.tsx";
 import { checkedText } from "./text.ts";

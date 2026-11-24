@@ -1,4 +1,11 @@
-/** Rückgängig und Wiederholen: Zustand der Knöpfe, Tastenkürzel und der Hinweis nach wichtigen Schritten. */
+/**
+ * Rückgängig und Wiederholen: Zustand der Knöpfe, Tastenkürzel und der Hinweis nach wichtigen Schritten.
+ *
+ * Der Verlauf selbst liegt in der Projektdatei (`packages/core/src/db/history.ts`) und gilt fürs ganze Projekt,
+ * nicht je Einsatz. Die Oberfläche kennt davon nur die Beschriftung des obersten Schritts in jede Richtung und
+ * einen Zähler. Die Beschriftungen vergibt der Hauptprozess beim Anmelden eines Aufrufs mit `undoable(…)`
+ * (`apps/desktop/src/main/ipc/`); `NOTIFY` und `SESSION_DELETED` müssen wörtlich dazu passen.
+ */
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { HistoryTarget, ProjectInfo, SessionView } from "../../shared/api.ts";
 import { useJump, type JumpTargets } from "../SearchDialog.tsx";
@@ -30,20 +37,24 @@ const NOTIFY = new Set([
 export const SESSION_DELETED = "Einsatz gelöscht";
 
 export interface HistoryState {
+  /** Beschriftung des Schritts, den Rückgängig zurücknähme; null: nichts da. */
   undo: string | null;
   redo: string | null;
+  /** Zählt mit jedem neuen Schritt hoch; daran erkennt `useHistory`, dass etwas dazugekommen ist. */
   serial: number;
 }
 
 /** Beschriftungen tragen oft einen Zusatz („Lage bestätigt: F-003“); gemeldet wird nach dem Teil vor dem Doppelpunkt. */
 const notifies = (label: string) => NOTIFY.has(label.split(":")[0]!);
 
+/** Hinweis unten mittig nach einem Schritt, mit Knopf zum Zurücknehmen bzw. Wiederholen. */
 export interface Toast {
   text: string;
   /** Wo der rückgängig gemachte Schritt etwas geändert hat („Zeigen“). */
   target?: HistoryTarget | null;
   /** Was der Knopf im Hinweis tut: false = rückgängig, true = wiederholen. */
   redo: boolean;
+  /** Unterscheidet Hinweise: Ein neuer Wert startet die acht Sekunden neu. */
   n: number;
   /** Nur zur Information, es gibt nichts rückgängig zu machen (kein Knopf). */
   info?: boolean;
@@ -150,6 +161,7 @@ export function useHistory(
   };
 }
 
+/** Zeigt den Hinweis aus `useHistory`; „Zeigen“ springt wie ein Suchtreffer zur geänderten Stelle (`useJump`). */
 export function UndoToast({
   view,
   toast,
@@ -260,6 +272,7 @@ export function DeletedToast({
   );
 }
 
+/** Pfeil für Rückgängig; gespiegelt für Wiederholen. */
 export function HistoryGlyph({ redo = false }: { redo?: boolean }) {
   return (
     <svg

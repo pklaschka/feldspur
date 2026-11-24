@@ -1,3 +1,7 @@
+/**
+ * Kleine Helfer für Ausgabedateien: CSV für Excel (`packages/media/src/csv.ts`) und XML-Maskierung
+ * (`packages/media/src/xml.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { excelCsv } from "../src/csv.ts";
 import { xmlEscape } from "../src/xml.ts";

@@ -1,3 +1,7 @@
+/**
+ * Testhilfe für die Ausgabe-Tests (`export-*.test.ts`, `project-switch.test.ts`): steht für das Fenster, an das der
+ * Hauptprozess Fortschritt und Aufträge schickt.
+ */
 import { EventEmitter } from "node:events";
 import type { WebContents } from "electron";
 

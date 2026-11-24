@@ -7,10 +7,22 @@
  * (Dateizugriff, WebCodecs), wird vorher geprüft.
  *
  * Die DOM-Typen gelten durch die Referenz oben für das ganze Paket; im Node-Code bitte trotzdem nicht verwenden.
+ *
+ * Einordnung: Teil des Viewers aus dem Schritt „Ausgeben“. `viewerScript` (`packages/media/src/viewer/html.ts`)
+ * bettet die Funktion ein; in der App selbst läuft sie nie. Das HTML-Gerüst mit allen IDs und die Daten (`D`,
+ * Typ `ViewerData`) kommen aus `html.ts`, das Aussehen aus `style.ts`. Aufbau unten: Hilfen, Zustand (`S`), Zeilen,
+ * Kontext, Bilder, Zeitleiste, Video, Tonspuren, Suche, Ansicht, Tasten, Start. Es gibt kein Framework: Das Skript
+ * setzt `data-`-Attribute und CSS-Variablen, den Rest erledigt das CSS.
+ * Kommentare innerhalb der Funktion können mit in der ausgegebenen HTML-Datei landen, deshalb dort sparsam bleiben.
  */
 import type { ViewerData } from "./html.ts";
 import type { Mp4AudioInfo, Mp4AudioTrack, readMp4Audio } from "./mp4-audio.ts";
 
+/**
+ * Einstieg des Viewers, einmal beim Laden der Seite aufgerufen. `readMp4` ist `readMp4Audio`
+ * (`packages/media/src/viewer/mp4-audio.ts`), als Argument übergeben, weil die Funktion nichts von außen kennen darf.
+ * Zeiten ohne Zusatz sind hier Sekunden Videozeit (wie `video.currentTime`), die Daten in `D` dagegen ms.
+ */
 export function viewerMain(readMp4: typeof readMp4Audio): void {
   // ───── Hilfen ─────
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -54,25 +66,34 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
 
   // ───── Zustand ─────
   const S = {
+    // Aktuelle Stelle in Sekunden Videozeit.
     t: 0,
     playing: false,
     rate: 1,
+    // „Text läuft mit“: Das Einsatztranskript scrollt zur aktuellen Zeile.
     follow: true,
+    // Index der aktuellen Zeile in `entries`, −1 = keine.
     cur: -1,
     q: "",
     hits: [] as { e: Entry; m: HTMLElement }[],
     hit: -1,
+    // Solo und stumm geschaltete Gerätespuren (Index in `lanes`).
     solo: new Set<number>(),
     mute: new Set<number>(),
+    // Tonspuren: nur die Mischung · Video von früher bekannt, Zugriff noch zu bestätigen · Einzelspuren frei.
     ton: "mix" as "mix" | "bekannt" | "frei",
+    // Bis dahin (performance.now) gilt Scrollen als vom Skript ausgelöst und beendet das Mitlaufen nicht.
     progUntil: 0,
     userMuted: false,
     volume: 1,
+    // Das Montagevideo liegt nicht neben der HTML-Datei oder lässt sich nicht laden.
     missing: false,
+    // Sichtbarer Ausschnitt der Zeitleiste (s) und ihre Maße in px: Breite der Beschriftung, Breite der Bahn.
     v0: 0,
     v1: DUR,
     tlLab: 0,
     tlW: 0,
+    // Von Hand gewählte Videodatei und, wo der Browser das kann, ihr Dateizugriff (zum Merken der Freigabe).
     picked: null as File | null,
     pickedHandle: null as FileSystemFileHandle | null,
     knownHandle: null as FileSystemFileHandle | null,
@@ -99,6 +120,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     };
   });
   const hiddenKinds = new Set<string>();
+  // Beginn einer Aufnahme, Sync-Hinweis und Tafel teilen sich einen Schalter („Beginn, Sync, Leerlauf“).
   const GROUP_OF: Record<string, string> = { start: "tech", sync: "tech", card: "tech" };
   const visible = (e: Entry) => !hiddenKinds.has(GROUP_OF[e.kind] ?? e.kind);
   entries.forEach((e) =>
@@ -288,6 +310,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
       );
     let s: HTMLElement | null = null;
     let m: HTMLElement | null = null;
+    // Solo- und Stumm-Knopf nur, wenn das Gerät eine eigene Tonspur im Video hat (Spur 0 ist die Mischung).
     if (lane.audio > 0) {
       s = el("button", "ms solo", "S");
       m = el("button", "ms mute", "M");
@@ -431,6 +454,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
       g.append(i, s);
     }
   }
+  /** Misst die Zeitleiste neu aus (nach Größenänderung, Vollbild, Auf- und Zuklappen) und zeichnet nach. */
   function layoutTimeline() {
     const a = tl.getBoundingClientRect();
     const b = eps.parentElement!.parentElement!.getBoundingClientRect();
@@ -551,6 +575,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     $("play").setAttribute("aria-label", on ? "Anhalten" : "Abspielen");
     $("play-ic").innerHTML = on ? '<path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/>' : '<path d="M4.5 2.5v11l9-5.5z"/>';
   }
+  // Abspielen läuft immer über das <video>; `S.playing` und die Tonwiedergabe folgen seinen Ereignissen unten.
   function setPlaying(on: boolean) {
     if (S.missing) return;
     if (on) {
@@ -588,6 +613,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     keepInView();
     requestAnimationFrame(tick);
   }
+  /** Zur Stelle `t` (s) springen; `follow` schaltet „Text läuft mit“ wieder ein. */
   function seek(t: number, follow?: boolean) {
     S.t = clamp(t);
     if (!S.missing && vid.readyState > 0) vid.currentTime = S.t;
@@ -596,6 +622,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     update();
     if (follow) setFollow(true, true);
   }
+  /** Alles nachziehen, was von der aktuellen Stelle abhängt: Uhr, Zeitzeiger, Episode, aktuelle Zeile. */
   function update() {
     $("now-clock").textContent = clock(S.t);
     $("now-vt-t").textContent = vt(S.t);
@@ -661,6 +688,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     if (on) toCurrent(!quiet);
     backState();
   }
+  /** Knopf „zurück zur aktuellen Stelle“: nur ohne Mitlaufen und wenn die aktuelle Zeile aus dem Bild ist. */
   function backState() {
     const li = S.cur >= 0 ? entries[S.cur]!.li : null;
     const b = $("back");
@@ -735,6 +763,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   }
   $("rate").addEventListener("click", () => setRate(RATES[(RATES.indexOf(S.rate) + 1) % RATES.length]!));
   function applyVolume() {
+    // Spielt der Viewer die Gerätespuren selbst, bleibt das Video stumm, sonst wäre die Mischung doppelt zu hören.
     const engineOn = engineWanted();
     vid.muted = S.userMuted || engineOn;
     vid.volume = S.volume;
@@ -815,27 +844,36 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   }
   const nativeTracks = () =>
     (vid as unknown as { audioTracks?: { length: number; [i: number]: NativeTrack } }).audioTracks;
+  // Der Browser bietet die Tonspuren des Videos selbst an (gesetzt, sobald das Video geladen ist).
   let nativeOk = false;
   const canEngine = () =>
     typeof (window as unknown as { AudioDecoder?: unknown }).AudioDecoder === "function" &&
     typeof AudioContext === "function";
 
+  /** Eigene Tonwiedergabe der Gerätespuren aus der freigegebenen Videodatei. */
   interface Engine {
     file: File;
     info: Mp4AudioInfo;
     ctx: AudioContext;
     master: GainNode;
+    /** Ein Regler je Tonspur der Datei (Index wie `info.audio`). */
     gains: GainNode[];
+    /** Entschlüsselte Blöcke, Schlüssel „Spur:Block“. */
     cache: Map<string, Promise<{ buf: AudioBuffer; start: number } | null>>;
     sources: Set<AudioBufferSourceNode>;
     scheduled: Set<string>;
+    /** Dieser Zeitpunkt der Audio-Uhr (`ctx`) entspricht dieser Videozeit (`v`); null = steht. */
     anchor: { ctx: number; v: number } | null;
+    /** Zählt bei jedem Halt hoch: Blöcke, die für einen früheren Lauf bestellt wurden, werden verworfen. */
     gen: number;
     timer: number;
   }
   let engine: Engine | null = null;
+  // Der Ton wird in Blöcken von so vielen Sekunden entschlüsselt und eingeplant.
   const BLOCK = 2;
 
+  // Die eigene Wiedergabe springt nur ein, wenn wirklich etwas solo oder stumm ist, und nur bei normalem Tempo:
+  // schneller oder langsamer kann sie nicht, dann bleibt es bei der Mischung des Videos.
   function engineWanted() {
     return S.ton === "frei" && !nativeOk && !!engine && (S.solo.size > 0 || S.mute.size > 0) && S.rate === 1;
   }
@@ -946,6 +984,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   }
   /** Tonspuren, die gerade zu hören sein sollen (Indizes im Video). */
   const wantedTracks = () => lanes.filter((l, n) => l.lane.audio > 0 && audible(n)).map((l) => l.lane.audio);
+  /** Plant die nächsten Sekunden Ton ein (alle 200 ms) und setzt neu an, wenn Bild und Ton auseinanderlaufen. */
   function pump() {
     const e = engine;
     if (!e || !e.anchor) return;
@@ -1005,6 +1044,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     e.timer = setInterval(pump, 200) as unknown as number;
   }
 
+  /** Wendet Solo und Stumm an: Knöpfe, Beschriftung, Tonspuren des Browsers oder eigene Wiedergabe. */
   function mix() {
     const solos = lanes.filter((_, n) => S.solo.has(n));
     const mutes = lanes.filter((_, n) => S.mute.has(n));
@@ -1110,6 +1150,11 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     });
   }
 
+  /**
+   * Freigabe: prüft, ob `file` das erwartete Montagevideo ist (Zahl der Tonspuren, Dauer) und ob der Browser den Ton
+   * entschlüsseln kann, und schaltet dann die Einzelspuren frei. `quiet`: ohne Meldungen im Assistenten (beim
+   * Wiedererkennen nach dem Laden). `handle` wird, wenn vorhanden, für das nächste Mal gemerkt.
+   */
   async function grant(file: File, handle: FileSystemFileHandle | null, quiet = false): Promise<boolean> {
     $("ton-wait").hidden = quiet;
     $("ton-err").hidden = true;
@@ -1229,6 +1274,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     $("empty").style.display = entries.some((e) => e.kind !== "episode" && e.kind !== "end" && visible(e))
       ? "none"
       : "block";
+    // Ungültiger Wert, damit `update` die aktuelle Zeile neu bestimmt (die Sichtbarkeit kann sich geändert haben).
     S.cur = -2;
     update();
   }
@@ -1263,6 +1309,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   $("q-prev").addEventListener("click", () => gotoHit(-1));
 
   // ───── Ansicht ─────
+  // Schaltergruppe (Schriftgröße, Zeitangabe am Rand, hell/dunkel): genau ein Knopf ist gedrückt.
   function seg3(id: string, fn: (v: string) => void) {
     $(id).addEventListener("click", (ev) => {
       const b = (ev.target as HTMLElement).closest("button");
@@ -1372,6 +1419,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   });
 
   // ───── Start ─────
+  // Eine Adresse mit „#t=Sekunden“ öffnet an dieser Stelle (der Knopf „Stelle kopieren“ setzt sie).
   const ht = /^#t=(\d+)/.exec(location.hash);
   if (ht) S.t = clamp(Number(ht[1]));
   $("now-dur").textContent = ` von ${vt(DUR)}`;

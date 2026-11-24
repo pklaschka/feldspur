@@ -1,6 +1,7 @@
 /**
  * Kasten „Kontext“ in der Detailleiste (Issue #108): Titel, Entstanden, Erwähnt in, Stelle i von n und der Weg
- * zurück in die Chronologie. Bei Text ohne Scan auch der Text selbst.
+ * zurück in die Chronologie. Bei Text ohne Scan auch der Text selbst. Eingebaut in `Inspector.tsx`; die Zeile
+ * darüber auf der Zeitachse ist `ContextStrip.tsx`. Begriff „Kontext“: `handbuch/_begriffe.qmd`.
  */
 import type { ContextRow, SessionView } from "../../shared/api.ts";
 import { clock } from "../format.ts";

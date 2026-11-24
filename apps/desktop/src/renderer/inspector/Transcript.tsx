@@ -1,4 +1,8 @@
-/** Mitschrift in der Detailleiste: Stand und Import fertiger Transkripte. */
+/**
+ * Mitschrift in der Detailleiste (`apps/desktop/src/renderer/Inspector.tsx`): Stand und Import fertiger Transkripte.
+ * Getippt wird im Schritt „Mitschreiben“ (`apps/desktop/src/renderer/Transcriber.tsx`); die Dateien liest
+ * `packages/media/src/transcript-import.ts`.
+ */
 import { DropdownMenu } from "radix-ui";
 import type { SessionView, SourceRow } from "../../shared/api.ts";
 import { positionText } from "../playback.tsx";
@@ -74,6 +78,7 @@ export function TranscriptImport({
   );
 }
 
+/** Eine Zeile zum Stand der Mitschrift dieser Quelle; nichts, solange es keine Zeile gibt. */
 export function TranscriptSummary({ view, row }: { view: SessionView; row: SourceRow }) {
   const lines = view.transcript.filter((l) => l.sourceId === row.id);
   if (!lines.length) return null;

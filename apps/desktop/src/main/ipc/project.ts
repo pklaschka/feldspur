@@ -1,6 +1,10 @@
 /**
  * IPC-Aufrufe zum Projekt: öffnen und anlegen, Rückgängig und Verlauf, Projektübersicht, Sicherungen, Zitieren,
  * Zwischenablage.
+ *
+ * Gegenstücke in der Oberfläche (`apps/desktop/src/renderer/`): Startseite und Projektwechsel (`App.tsx`,
+ * `Recent.tsx`), Rückgängig (`app/history.tsx`), Änderungsprotokoll (`ChangeLog.tsx`), Übersicht (`Overview.tsx`,
+ * `overview/`), die Dialoge „Sicherungen“ (`Backups.tsx`) und „Feldspur zitieren“ (`CitationDialog.tsx`).
  */
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
@@ -79,6 +83,7 @@ function historyTarget(rows: TouchedRow[], view: SessionView): HistoryTarget | n
 }
 
 export function registerProjectIpc(): void {
+  // Rückgängig, Wiederholen und das dauerhafte Änderungsprotokoll.
   ipcMain.handle(IPC.undo, (_e, sessionId: string | null) => historyStep(false, sessionId));
   ipcMain.handle(IPC.redo, (_e, sessionId: string | null) => historyStep(true, sessionId));
 
@@ -146,6 +151,7 @@ export function registerProjectIpc(): void {
     return r.filePath;
   });
 
+  // Sicherungen, „Feldspur zitieren“, Zwischenablage.
   ipcMain.handle(IPC.backups, () => autoBackup.overview());
   ipcMain.handle(IPC.citationInfo, () => citationInfo());
   ipcMain.handle(IPC.lookupCitationDoi, () => lookupCitationDoi());
@@ -207,6 +213,7 @@ export function registerProjectIpc(): void {
     if (resolve(dest) === resolve(src)) throw new Error("Die Kopie braucht einen anderen Namen als die Sicherung.");
     if (exportRunning()) throw new Error("Während einer Ausgabe lässt sich kein anderes Projekt öffnen.");
     copyProjectFile(src, dest, bindingOpts());
+    // `fresh`: Die Kopie ist ihr eigener Stand; eine automatische Sicherung gleich beim Öffnen wäre überflüssig.
     const info = openStore(dest, false, true);
     // Woher die Kopie stammt, steht in der Projektdatei und als Schritt im Änderungsprotokoll.
     const s = requireStore();

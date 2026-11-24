@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Einsatz löschen: die Nachfrage in den Einsatzdetails (`apps/desktop/src/renderer/SessionDetails.tsx`) und der Hinweis
+ * danach mit dem Weg zurück (`apps/desktop/src/renderer/app/history.tsx`).
+ */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";

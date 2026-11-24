@@ -1,3 +1,7 @@
+/**
+ * Zahlen je Einsatz für die Übersicht und die Tabelle zum Methodenteil (`packages/media/src/methods-summary.ts`,
+ * `packages/media/src/methods-table.ts`), samt Quellen weit weg vom Datum des Einsatzes (#226).
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

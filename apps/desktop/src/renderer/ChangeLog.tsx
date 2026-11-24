@@ -1,6 +1,10 @@
 /**
  * Änderungsprotokoll: jede gespeicherte Änderung im Projekt mit Zeit, Aktion und Werten vorher/nachher.
  * Nur zum Nachsehen; zurücknehmen geht weiter über Rückgängig. Als CSV speicherbar.
+ *
+ * Dialog aus dem Projektmenü (`Recent.tsx`), eingebunden in `App.tsx`. Die Schritte schreibt der Verlauf in
+ * `packages/core/src/db/history.ts` mit; gelesen werden sie über `apps/desktop/src/main/changelog.ts`. Die deutschen
+ * Namen für Tabellen, Felder und Werte stehen in `apps/desktop/src/shared/changelog.ts`.
  */
 import type { ChangeStep } from "@feldspur/core";
 import { Dialog } from "radix-ui";
@@ -9,6 +13,7 @@ import { FIELD_LABEL, OP_LABEL, TABLE_LABEL, fieldChanges, showValue, stepLabel 
 import { Button, CloseButton, cx } from "./ui.tsx";
 
 const api = window.feldspur;
+/** So viele Schritte je Abruf; „Ältere laden“ holt die nächsten. */
 const PAGE = 50;
 
 const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "medium" });
@@ -42,6 +47,7 @@ export function ChangeLog({ open, onOpenChange }: { open: boolean; onOpenChange:
     };
   }, [open]);
 
+  // Weiterblättern über die Schrittnummer des ältesten geladenen Eintrags, nicht über einen Seitenzähler.
   const loadOlder = async () => {
     const last = steps?.at(-1);
     if (!last) return;

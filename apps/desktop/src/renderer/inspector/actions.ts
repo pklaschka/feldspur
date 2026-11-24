@@ -1,9 +1,15 @@
-/** Was die Detailleiste in der App auslösen kann. */
+/**
+ * Was die Detailleiste in der App auslösen kann. Die Funktionen baut `apps/desktop/src/renderer/app/SessionPane.tsx`
+ * (meist ein IPC-Aufruf an den Hauptprozess, danach die neue Ansicht übernehmen) und reicht sie über
+ * `apps/desktop/src/renderer/Inspector.tsx` an die Bausteine in `inspector/` weiter.
+ */
 import type { DecideInput, LevelInput, TimeInput } from "../../shared/api.ts";
 import type { ApplyView } from "../Notes.tsx";
 
 export interface InspectorActions {
+  /** Randnotiz (Uhrzeit am Seitenrand) einer Tagebuchseite setzen. */
   diaryNote: (sourceId: string, clock: string) => void;
+  /** Uhrzeit von Hand oder angesagte Uhrzeit als Zeitbeleg eintragen; false, wenn es nicht geklappt hat. */
   addTime: (input: TimeInput) => Promise<boolean>;
   /** Unsichere Lage so bestätigen, wie sie gerade steht. */
   confirm: (sourceId: string, startMs: number) => void;
@@ -21,9 +27,13 @@ export interface InspectorActions {
   trustDeviceClock: (deviceId: string) => void;
   /** Gerät als Referenzuhr wählen. */
   setReference: (deviceId: string) => void;
+  /** Zeitbeleg ab- oder einschalten; abgeschaltete zählen bei der Lage nicht mit. */
   toggleEvidence: (evidenceId: string, enabled: boolean) => void;
+  /** Eigenen Zeitbeleg löschen; so werden auch „geprüft“ und eine Entscheidung zurückgenommen. */
   removeEvidence: (evidenceId: string) => void;
+  /** Tagebuch-Editor für diese Seite öffnen. */
   openDiary: (pageId: string) => void;
+  /** „Mitschreiben“ für diese Quelle öffnen. */
   transcribe: (sourceId: string) => void;
   /** Gibt die Zahl übernommener Zeilen zurück, null bei Abbruch oder Fehler. */
   importTranscript: (

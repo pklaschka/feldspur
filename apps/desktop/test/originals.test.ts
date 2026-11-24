@@ -1,3 +1,7 @@
+/**
+ * Originaldateien (`apps/desktop/src/main/originals.ts`): verschobene Originale wiederfinden und nur mit passender
+ * Prüfsumme neu verknüpfen, dazu die Prüfung vor der Ausgabe.
+ */
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

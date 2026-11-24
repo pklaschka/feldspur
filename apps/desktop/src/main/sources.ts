@@ -1,4 +1,11 @@
-/** Quellen und Geräte pflegen: entfernen, umhängen, Geräte zusammenlegen. */
+/**
+ * Quellen und Geräte pflegen: entfernen, umhängen, Geräte zusammenlegen, Bilder zu Seiten und Aufnahmen zu
+ * Folgeaufnahmen verbinden.
+ *
+ * Gehört zum Aufräumen nach dem Einsammeln: aufgerufen aus `ipc/sessions.ts` (Kanäle `source:…`, `device:merge`),
+ * bedient über das Menü an einer Quelle (`src/renderer/SourceMenu.tsx`). Das Gerät zählt, weil jedes Gerät eine
+ * eigene Uhr mit eigener Abweichung hat: Eine Quelle umzuhängen ändert, welche Abweichung für sie gilt.
+ */
 import { contextKey, effectiveLocal, type Device, type ProjectStore, type Source } from "@feldspur/core";
 import { dropRefsTo } from "./context.ts";
 import { deviceGuess, evidenceFromExif, evidenceFromFilename, type ImageExif } from "@feldspur/media";

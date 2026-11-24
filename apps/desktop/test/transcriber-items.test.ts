@@ -1,3 +1,7 @@
+/**
+ * „Mitschreiben“: was neben den eigenen Zeilen in der Liste steht (Ereignisse anderer Quellen, Notizen) und die Auswahl
+ * der Tonquelle (`apps/desktop/src/renderer/transcriber/items.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { eventsIn, lastAtOrBefore, noteBands, sourceOptions } from "../src/renderer/transcriber/items.ts";
 import type { SessionView, SourceNoteRow, SourceRow, TranscriptRow } from "../src/shared/api.ts";

@@ -1,3 +1,7 @@
+/**
+ * Viewer (.html) neben dem Montagevideo (`packages/media/src/viewer/html.ts`): das eingebettete Skript und die
+ * fertige Datei aus einer echten Ausgabe.
+ */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

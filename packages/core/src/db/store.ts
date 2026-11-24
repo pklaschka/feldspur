@@ -4,6 +4,14 @@
  * Läuft nur im Electron-Hauptprozess bzw. in Node, nie im Renderer.
  * Alle Eingaben werden mit den Zod-Schemas aus model.ts geprüft, bevor sie
  * gespeichert werden.
+ *
+ * Geöffnet wird die Datei in `apps/desktop/src/main/state.ts`. Von dort reichen die Module des Hauptprozesses
+ * (`apps/desktop/src/main/*.ts`, `ipc/`) und `packages/media` (Einsammeln, Tonspur-Analyse, Ausgeben) den
+ * `ProjectStore` weiter und rufen seine Methoden auf. Die Methoden sind schlicht gehalten (je Tabelle anlegen,
+ * lesen, ändern, löschen); die Fachregeln stehen bei den Aufrufern, die Tabellen in `packages/core/src/db/schema.ts`.
+ *
+ * Rückgängig: Die Methoden zeichnen selbst keine Schritte auf. Das tut der Aufrufer mit `history.record`
+ * (`packages/core/src/db/history.ts`); was daran vorbei geschrieben wird, leert den Verlauf (außer Zwischenspeicher).
  */
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
@@ -35,6 +43,7 @@ import * as schema from "./schema.ts";
 
 export { FILE_FORMAT, SCHEMA_VERSION };
 
+/** Kurzzeichen je Art der Quelle: Buchstabe und Stellenzahl der laufenden Nummer (V-01, F-001). */
 const LABEL_PREFIX: Record<SourceKind, { prefix: string; digits: number }> = {
   video: { prefix: "V", digits: 2 },
   audio: { prefix: "A", digits: 2 },
@@ -45,9 +54,11 @@ const LABEL_PREFIX: Record<SourceKind, { prefix: string; digits: number }> = {
   other: { prefix: "X", digits: 2 },
 };
 
+// Eingaben: wie das Zod-Schema vor dem Einsetzen der Standardwerte; die Id darf fehlen und wird dann vergeben.
 type In<T extends z.ZodType> = z.input<T>;
 type WithOptionalId<T> = Omit<T, "id"> & { id?: Id };
 
+/** Optionen beim Öffnen oder Anlegen einer Projektdatei. */
 export interface OpenOptions {
   /**
    * Pfad zu einer better_sqlite3.node für eine andere Laufzeit. Electron braucht
@@ -61,7 +72,12 @@ export interface OpenOptions {
   backupBeforeMigration?: boolean;
 }
 
+/**
+ * Eine geöffnete Projektdatei. Je Projekt gibt es eine Instanz; anlegen über `ProjectStore.create` oder
+ * `ProjectStore.open`, am Ende `close()`.
+ */
 export class ProjectStore {
+  /** Drizzle-Zugang zu den Tabellen aus schema.ts. */
   readonly db: BetterSQLite3Database<typeof schema>;
   /** Rückgängig/Wiederholen für Aktionen, die über `history.record` laufen. */
   readonly history: History;
@@ -109,6 +125,7 @@ export class ProjectStore {
       }
       rotateBackups(path, "vor-Aktualisierung");
     }
+    // Alle fehlenden Stufen in einer Transaktion: Scheitert eine, bleibt die Datei auf ihrem alten Stand.
     sqlite.transaction(() => {
       for (let v = version; v < SCHEMA_VERSION; v++) sqlite.exec(MIGRATIONS[v]!);
       sqlite.pragma(`user_version = ${SCHEMA_VERSION}`);
@@ -133,10 +150,15 @@ export class ProjectStore {
     return (this.sqlite.prepare("SELECT total_changes() AS n").get() as { n: number }).n;
   }
 
+  /** Mehrere Änderungen ganz oder gar nicht ausführen. */
   transaction<T>(fn: () => T): T {
     return this.sqlite.transaction(fn)();
   }
 
+  /**
+   * Angabe zur Projektdatei lesen (Tabelle `project_meta`): `name`, `format`, `created_at`, nach „Als Kopie öffnen“
+   * auch `restored_from` und `restored_at`.
+   */
   getMeta(key: string): string | undefined {
     return this.db.select().from(schema.projectMeta).where(eq(schema.projectMeta.key, key)).get()?.value;
   }
@@ -236,6 +258,7 @@ export class ProjectStore {
   addDevice(input: WithOptionalId<In<typeof Device>>): Device {
     const d = Device.parse({ ...input, id: input.id ?? randomUUID() });
     this.transaction(() => {
+      // Genau eine Referenzuhr je Einsatz: Die bisherige verliert den Status.
       if (d.isReference) this.clearReference(d.sessionId);
       this.db.insert(schema.devices).values(d).run();
     });
@@ -276,6 +299,7 @@ export class ProjectStore {
     });
   }
 
+  /** Bisherige Referenzuhr des Einsatzes zurückstufen; ihre Abweichung gilt danach als unbekannt. */
   private clearReference(sessionId: Id): void {
     this.db
       .update(schema.devices)
@@ -302,6 +326,7 @@ export class ProjectStore {
     return `${prefix}-${String(n).padStart(digits, "0")}`;
   }
 
+  /** Quelle anlegen. Ohne Angabe bekommt sie das nächste freie Kurzzeichen und den Importzeitpunkt „jetzt“. */
   addSource(
     input: WithOptionalId<Omit<In<typeof Source>, "label" | "importedAt">> & { label?: string; importedAt?: string },
   ): Source {
@@ -315,6 +340,7 @@ export class ProjectStore {
     return s;
   }
 
+  /** Dieselbe Datei (gleiche Prüfsumme) im Einsatz suchen, damit sie nicht zweimal eingesammelt wird. */
   findSourceBySha(sessionId: Id, sha256: string): Source | undefined {
     const r = this.db
       .select()
@@ -340,6 +366,7 @@ export class ProjectStore {
     return Source.parse(r);
   }
 
+  /** Nur diese Felder lassen sich nachträglich ändern; Prüfsumme, Dateiname und Größe bleiben wie eingesammelt. */
   updateSource(
     id: Id,
     patch: Partial<
@@ -406,6 +433,7 @@ export class ProjectStore {
     return e;
   }
 
+  /** Zeitbelege aller Quellen eines Einsatzes, auch abgeschaltete. */
   listEvidence(sessionId: Id): TimeEvidence[] {
     return this.db
       .select({ e: schema.evidence })
@@ -437,6 +465,7 @@ export class ProjectStore {
 
   // ── Sync-Anker ───────────────────────────────────────────────────────────
 
+  /** Anker anlegen. Die beiden Seiten `a` und `b` stehen in der Tabelle als je zwei Spalten. */
   addAnchor(input: WithOptionalId<In<typeof SyncAnchor>>): SyncAnchor {
     const a = SyncAnchor.parse({ ...input, id: input.id ?? randomUUID() });
     this.db
@@ -509,6 +538,7 @@ export class ProjectStore {
 
   // ── Tonspur-Analyse ──────────────────────────────────────────────────────
 
+  /** Analyse einer Quelle speichern (ersetzt die vorige). Zwischenspeicher: leert den Verlauf nicht. */
   saveAudioAnalysis(input: In<typeof AudioAnalysis>): AudioAnalysis {
     const a = AudioAnalysis.parse(input);
     const row = { ...a, envelope: Buffer.from(a.envelope) };
@@ -547,6 +577,7 @@ export class ProjectStore {
     this.db.delete(schema.exportRecords).where(eq(schema.exportRecords.sessionId, sessionId)).run();
   }
 
+  /** null, wenn der Einsatz nie ausgegeben wurde oder der gespeicherte Stand sich nicht mehr lesen lässt. */
   getExportRecord(sessionId: Id): ExportRecord | null {
     const r = this.db.select().from(schema.exportRecords).where(eq(schema.exportRecords.sessionId, sessionId)).get();
     if (!r) return null;
@@ -658,11 +689,13 @@ export class ProjectStore {
       .map(({ e }) => EpisodeEdit.parse(e));
   }
 
+  /** Alle Anpassungen von Hand eines Einsatzes verwerfen. */
   clearEpisodeEdits(sessionId: Id): void {
     for (const e of this.listEpisodeEdits(sessionId))
       this.db.delete(schema.episodeEdits).where(eq(schema.episodeEdits.id, e.id)).run();
   }
 
+  // ── Notizen zu Dateien (Fortsetzung) ────────────────────────────────────
   /** Notizen aller Quellen eines Einsatzes: je Quelle erst die ohne Strecke, dann nach Stelle. */
   listSourceNotes(sessionId: Id): SourceNote[] {
     return this.db
@@ -693,6 +726,7 @@ export class ProjectStore {
 
   // ── Alles für die Zeitbestimmung ────────────────────────────────────────
 
+  /** Alles, was `resolveTimeline` (`packages/core/src/resolve.ts`) für einen Einsatz braucht, auf einmal laden. */
   loadResolveInput(sessionId: Id): ResolveInput {
     return {
       session: this.getSession(sessionId),

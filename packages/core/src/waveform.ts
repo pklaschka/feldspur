@@ -1,6 +1,10 @@
 /**
  * Waveform-Darstellung ohne Node-Abhängigkeiten, damit Oberfläche und Hauptprozess dieselbe
- * Skala benutzen. Die Spitzen selbst liest `readPeaks` in @feldspur/media.
+ * Skala benutzen. Die Spitzen selbst liest `readPeaks` in @feldspur/media (`packages/media/src/waveform.ts`),
+ * der Hauptprozess reicht sie über IPC weiter (`apps/desktop/src/main/ipc/review.ts`).
+ *
+ * Gezeichnet wird in der Oberfläche unter „Mitschreiben“ und im Feinabgleich
+ * (`apps/desktop/src/renderer/Waveform.tsx`, `FineAlign.tsx`).
  */
 
 /** Spitzen eines Ausschnitts: je Fach kleinster, größter Abtastwert und RMS (Abtastwerte −1 … 1). */
@@ -16,6 +20,7 @@ export interface Peaks {
   rms: Float32Array;
 }
 
+/** Höhe der Ausschläge: „linear“ = wie gemessen, „log“ = in dB, damit Leises sichtbar bleibt. */
 export type WaveformScale = "linear" | "log";
 
 /** Untergrenze der logarithmischen Skala: leiser als das zählt als Stille. */
@@ -47,6 +52,7 @@ export function mergePeaks(p: Peaks, buckets: number): Peaks {
   for (let b = 0; b < buckets; b++) {
     const a = Math.floor((b * n) / buckets);
     const e = Math.max(a + 1, Math.floor(((b + 1) * n) / buckets));
+    // Spitzen bleiben Spitzen (kleinster und größter Wert), der RMS wird über die Leistung gemittelt.
     let lo = 0;
     let hi = 0;
     let sq = 0;

@@ -1,3 +1,6 @@
+/**
+ * Aufbau des Montagebilds (`packages/media/src/layout.ts`): wo ein bis vier gleichzeitige Videos stehen.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { LAYOUT, videoTiles } from "../src/layout.ts";
 

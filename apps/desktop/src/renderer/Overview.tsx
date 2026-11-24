@@ -4,6 +4,10 @@
  * welche Aufzeichnungen in die gewählten Feldtage hineingeflossen sind, die zweite, was Feldspur daraus ausgibt.
  *
  * Feldspur zählt und misst hier nur. Farbe kennzeichnet Zustände (Ausgabe veraltet, Uhr ohne Abgleich), nie Mengen.
+ *
+ * Gezeigt von `App.tsx` anstelle eines Einsatzes. Die Zahlen rechnet der Hauptprozess bei jedem Öffnen neu
+ * (`projectOverview`, `apps/desktop/src/main/export.ts`); die beiden Karten liegen in `overview/` (`FieldCalendar`,
+ * `Metrics`), der Text der Tabellen kommt aus `apps/desktop/src/shared/methods-table.ts`.
  */
 import { useEffect, useState } from "react";
 import type { ProjectOverview } from "../shared/api.ts";
@@ -28,6 +32,7 @@ export function Overview({
 }) {
   const [data, setData] = useState<ProjectOverview | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  /** Abgewählte Einsätze (ids): Sie zählen in Kennwerten und Grafik nicht mit. Wird nicht gespeichert. */
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
   // Meldungen der beiden Karten liegen hier, weil jede Änderung der Auswahl sie zurücknimmt.
   const [copied, setCopied] = useState<Copied>(null);
@@ -49,6 +54,7 @@ export function Overview({
   // Gewissheit im Kopf: Jeder Feldtag, aus dem sich etwas ausgeben lässt, hat eine Ausgabe, die zum Stand passt.
   const exportable = all.filter((s) => s.output.durationMs > 0);
   const allCurrent = exportable.length > 0 && exportable.every((s) => s.exported === "current");
+  // Zeile unter den Tabellen: Feldspur mit Version und DOI (DOI dieser Version, falls schon nachgeschlagen).
   const software = data
     ? softwareLine({
         version: data.citation.version,

@@ -1,6 +1,8 @@
 /**
  * Entwicklerwerkzeug: Ordner einsammeln, in ein Projekt im Speicher importieren
- * und die Tabelle aus Skizze A ausgeben.
+ * und die Tabelle aus Skizze A ausgeben. Nutzt dieselben Bausteine wie die App: `scanPaths` und `applyImport`
+ * (Einsammeln, `packages/media/src/import.ts`) und `resolveTimeline` (Lage aus Zeitbelegen,
+ * `packages/core/src/resolve.ts`). Das Projekt lebt nur im Speicher, auf der Platte ändert sich nichts.
  *
  *   pnpm probe <ordner> [--reference <dateiname>] [--anchor <a.ext>@<sek>=<b.ext>@<sek>] [--diary <datei>@<hh:mm>]
  */
@@ -26,6 +28,7 @@ if (!folders.length) {
 
 const candidates = await scanPaths(folders);
 const store = ProjectStore.open(":memory:");
+// Datum des Einsatzes: der Tag des ersten gefundenen Zeitbelegs, ohne Belege heute.
 const firstDate = candidates.flatMap((c) => c.evidence)[0]?.localMs ?? Date.now();
 const day = new Date(firstDate).toISOString().slice(0, 10);
 const session = store.addSession({ title: "Probe", date: day });

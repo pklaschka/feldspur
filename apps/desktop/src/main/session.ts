@@ -1,4 +1,7 @@
-/** Einsatzdaten nachträglich bearbeiten. */
+/**
+ * Einsatzdaten (Titel, Datum, Ort, Zeitzone …) nachträglich bearbeiten. Aufgerufen aus `ipc/sessions.ts`
+ * (`session:update`), bedient in `src/renderer/SessionDetails.tsx`. Ohne Electron, damit es sich direkt testen lässt.
+ */
 import type { ProjectStore, TimeEvidence } from "@feldspur/core";
 import type { SessionPatch } from "../shared/api.ts";
 

@@ -4,6 +4,10 @@
  *
  * Prüfergebnisse bleiben im Speicher (HashCache), nicht in der Projektdatei: Sie sind kein Forschungsdatum.
  * Ein neuer Pfad dagegen ist eine Änderung am Projekt und landet als eigener Schritt im Änderungsprotokoll.
+ *
+ * Feldspur kopiert keine Originale: Die Projektdatei merkt sich Pfad, Größe und Prüfsumme (SHA-256) jeder Quelle.
+ * Genutzt von der Ansicht (`view.ts`, Zustand je Quelle), dem Einsammeln (`ipc/sessions.ts`), der Tonspur-Analyse
+ * (`ipc/sync.ts`) und vor allem der Ausgabe (`export.ts`, `ipc/export.ts`; in der Oberfläche `Originals.tsx`).
  */
 import type { Id, ProjectStore, Source } from "@feldspur/core";
 import {
@@ -28,6 +32,7 @@ export function quickStates(sources: Source[]): Map<Id, FileCheck> {
   return new Map(sources.map((s) => [s.id, quickCheck(s, hashCache)]));
 }
 
+/** Prüfergebnisse für die Oberfläche einteilen: was die Ausgabe sperrt und was nur auffällt. */
 function summarize(sources: Source[], checks: FileCheck[], video: boolean): OriginalsCheck {
   const { blocking, warnings } = exportVerdict(sources, checks, { video });
   return { checks, blocking: blocking.map((c) => c.sourceId), warnings: warnings.map((c) => c.sourceId) };

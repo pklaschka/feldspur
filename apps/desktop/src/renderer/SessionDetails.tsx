@@ -2,6 +2,10 @@
  * Einsatzdaten bearbeiten: Titel, Datum, Ort, Zeitzone, Bezugszeitraum fürs Tagebuch
  * und freie Zusatzfelder für den Quellennachweis (z. B. DOI, Projektnummer). Von hier lässt sich der Einsatz auch
  * löschen (mit Nachfrage).
+ *
+ * Dialog zum Einsatz (`FieldSession`), eingebunden in `apps/desktop/src/renderer/app/SessionPane.tsx`. Speichern und
+ * Löschen führt SessionPane aus (`updateSession`, `deleteSession`); der Dialog sammelt nur die Eingaben als
+ * `SessionPatch`.
  */
 import { AlertDialog, Dialog } from "radix-ui";
 import { useState, type FormEvent } from "react";
@@ -12,6 +16,7 @@ import { TIME_ZONES } from "./timeZones.ts";
 const label = "grid gap-1 text-[0.9rem] font-medium";
 const hint = "text-[0.82rem] font-normal text-muted";
 
+/** Das Formular arbeitet auf einer Kopie der Einsatzdaten; erst „Speichern“ gibt sie weiter. */
 export function SessionDetails({
   view,
   open,
@@ -33,6 +38,7 @@ export function SessionDetails({
   const [place, setPlace] = useState(s.place);
   const [timeZone, setTimeZone] = useState(s.timeZone);
   const [lookback, setLookback] = useState(String(view.diaryLookbackMin));
+  // Zusatzfelder als Liste von Paaren statt als Objekt: So bleiben Reihenfolge und halb getippte Feldnamen stehen.
   const [extra, setExtra] = useState<[string, string][]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -50,6 +56,7 @@ export function SessionDetails({
     }
   }
 
+  // Ein anderes Datum verschiebt auch von Hand eingetragene Zeiten: dann erscheint der Hinweis im Formular.
   const dateMoves = date !== s.date;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -59,6 +66,7 @@ export function SessionDetails({
       place,
       timeZone,
       diaryLookbackMin: Number(lookback.replace(",", ".")),
+      // Zusatzfelder ohne Namen fallen weg.
       extra: Object.fromEntries(extra.filter(([k]) => k.trim()).map(([k, v]) => [k.trim(), v.trim()])),
     });
     if (ok) onOpenChange(false);

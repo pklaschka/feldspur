@@ -1,3 +1,7 @@
+/**
+ * Originaldateien an die Oberfläche ausliefern (`apps/desktop/src/main/media-response.ts`): erlaubte Dateitypen und
+ * Teilbereiche (Range), damit sich Ton und Video spulen lassen.
+ */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

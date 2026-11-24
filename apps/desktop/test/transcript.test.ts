@@ -1,3 +1,8 @@
+/**
+ * Mitschrift und Notizen zu Dateien im Hauptprozess (`apps/desktop/src/main/transcript.ts`,
+ * `apps/desktop/src/main/notes.ts`): Zeilen anlegen, ändern, importieren; die Uhrzeit einer Zeile ergibt sich aus ihrer
+ * Stelle in der Aufnahme und dem Abgleich.
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

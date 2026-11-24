@@ -1,4 +1,9 @@
-/** Ein Eintrag im Tagebuch: Notierzeit, Kurzform, Volltext und Seitenzahl. */
+/**
+ * Ein Eintrag im Tagebuch: Notierzeit, Kurzform, Volltext und Seitenzahl. Die Karten stehen rechts neben dem Scan
+ * in `DiaryEditor.tsx`, eine je Eintrag (`DiaryEntryRow`, mit einem oder mehreren Rahmen). Aus Notierzeit und
+ * Bezugszeitraum (`lookbackMin`, Minuten davor) ergibt sich der Balken des Eintrags auf der Zeitachse; Felder
+ * speichern beim Verlassen.
+ */
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ContextDetails, ContextRow, DiaryEntryRow, DiaryMode, DiaryPatch } from "../../shared/api.ts";
 import { hm } from "../format.ts";
@@ -97,8 +102,11 @@ export function EntryCard({
   onRole: (context: boolean) => void;
   onDetails: (d: ContextDetails) => void;
   onRefs: (refs: string[]) => void;
+  /** Liegt dieser Rahmen auf der Seite, die gerade zu sehen ist? */
   isHere: (r: { sourceId: string; page?: number }) => boolean;
+  /** Bezugszeitraum des Einsatzes in Minuten; gilt, solange der Eintrag keinen eigenen hat. */
   defaultLookback: number;
+  /** Vorgeschlagene Seitenzahl für Rahmen Nummer `index`, weitergezählt vom vorigen. */
   suggestPage: (index: number) => number | null;
   onPage: (index: number, pageNo: number | null) => void;
   active: boolean;
@@ -106,9 +114,11 @@ export function EntryCard({
   fresh: boolean;
   onFocus: () => void;
   onPatch: (p: DiaryPatch) => void;
+  /** „Fortsetzung“: Der nächste aufgezogene Rahmen (auch auf einer anderen Seite) gehört zu diesem Eintrag. */
   onContinue: () => void;
   onRemoveRegion: (index: number) => void;
   onDelete: () => void;
+  /** Zur Seite eines Rahmens blättern. */
   onGoto: (r: { sourceId: string; page?: number }) => void;
 }) {
   const [noted, setNoted] = useDraft(entry.notedAt ?? "");

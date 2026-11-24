@@ -5,11 +5,19 @@
  * Das Video zeigt nur noch, was zum Zuordnen nötig ist: oben Uhrzeit, Einsatz und Montage-ID,
  * in der Mitte die laufenden Videos (gleichzeitige nebeneinander) mit ihrer Herkunft, unten
  * die laufenden Tonquellen. Fotos und Tagebuch stehen im Einsatztranskript, nicht im Video.
+ *
+ * Einordnung: Schritt „Ausgeben“. Benutzt von `packages/media/src/montage-video.ts` (ffmpeg),
+ * `packages/media/src/fcpxml.ts` (Resolve-Schnittliste) und, über `@feldspur/media/layout`, von der Oberfläche:
+ * `apps/desktop/src/renderer/overlay.ts` (Einblendungen) und `apps/desktop/src/renderer/MontageView.tsx` (Vorschau).
+ * Wer hier Maße ändert, ändert alle vier zugleich.
  */
+/** Breite und Höhe des Montagebilds in Pixeln. */
 export const W = 1280;
 export const H = 720;
+/** Bilder je Sekunde im Montagevideo; daran hängen auch die Grenzen der Stücke (`Piece.f0`/`f1`). */
 export const FPS = 25;
 
+/** Rechteck im Montagebild, in Pixeln ab der linken oberen Ecke. */
 export interface Box {
   x: number;
   y: number;
@@ -17,7 +25,7 @@ export interface Box {
   h: number;
 }
 
-/** Bereiche im Bild. */
+/** Bereiche im Bild: Kopfzeile (`top`), Hauptfeld für die Videos (`main`), Fußzeile für den Ton (`bottom`). */
 export const LAYOUT = {
   top: { x: 0, y: 0, w: W, h: 52 },
   main: { x: 0, y: 52, w: W, h: 632 },

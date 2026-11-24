@@ -1,3 +1,8 @@
+/**
+ * Rückgängig und Wiederholen sowie das dauerhafte Änderungsprotokoll (`packages/core/src/db/history.ts`), dazu das
+ * Löschen eines Einsatzes (`deleteSession` in `packages/core/src/db/store.ts`), das sich vollständig zurückholen
+ * lassen muss. Meist mit einer Projektdatei im Speicher (`:memory:`).
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

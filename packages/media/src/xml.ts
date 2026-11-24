@@ -4,6 +4,7 @@
  */
 const ENTITY: Record<string, string> = { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" };
 
+/** Text für Elementinhalt und Attribute in XML. */
 export function xmlEscape(s: string): string {
   return (
     s

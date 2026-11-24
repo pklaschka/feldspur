@@ -2,6 +2,10 @@
  * Dauern und Stellen ohne Doppelpunkt tippen: „320“ ist 3:20, „10320“ ist 1:03:20. Die Ziffern füllen von rechts
  * Sekunden, Minuten, Stunden, je zwei Stellen. Ein oder zwei Ziffern sind Sekunden („45“ = 0:45). Gilt für die
  * Stelle in einer Aufnahme und für die Uhrabweichung, nicht für Uhrzeiten (die füllen von links, siehe maskClock).
+ *
+ * Geteilt, damit Eingabefeld und Prüfung dasselbe verstehen: Die Oberfläche nutzt es in ihren Eingabefeldern
+ * (`apps/desktop/src/renderer/format.ts`, `renderer/Sync.tsx`, `renderer/inspector/Evidence.tsx`), der Hauptprozess
+ * liest damit die Stelle (`parseMediaPos`, `apps/desktop/src/main/edits.ts`).
  */
 
 /** Nur Ziffern: Millisekunden. Anderes: undefined (dann gilt die Schreibweise mit Doppelpunkt). Unmöglich: null. */

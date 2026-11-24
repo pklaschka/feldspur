@@ -3,6 +3,11 @@
  * angefragte Fenster (Sprung per -ss vor der Eingabe), auf Mono gemischt. Gedacht für Ansichten,
  * die Ausschnitte zeigen (Mitschreiben, Feinabgleich); die Hüllkurve der ganzen Datei liefert die
  * Tonspur-Analyse (audio.ts).
+ *
+ * Einordnung: Der Hauptprozess beantwortet damit die Anfragen der Oberfläche nach einem Ausschnitt
+ * (`apps/desktop/src/main/ipc/review.ts`, gezeichnet in `apps/desktop/src/renderer/Waveform.tsx`), und
+ * `packages/media/src/align.ts` vergleicht damit zwei Ausschnitte für den Feinabgleich. Der Typ `Peaks` und die
+ * Skala zum Zeichnen liegen in `packages/core/src/waveform.ts`, damit die Oberfläche sie ohne Node nutzen kann.
  */
 import type { Peaks } from "@feldspur/core";
 import { runTool, STALL_MS } from "./process.ts";
@@ -23,6 +28,10 @@ export function peakSampleRate(windowMs: number, buckets: number): number {
   return Math.min(16_000, Math.max(lo, wanted));
 }
 
+/**
+ * Spitzen des Ausschnitts `fromMs` bis `toMs` (ms ab Dateianfang) in `buckets` Fächern. Reicht der Ausschnitt über
+ * das Dateiende hinaus, bleiben die Fächer dahinter leer (0).
+ */
 export async function readPeaks(
   path: string,
   fromMs: number,
@@ -68,6 +77,7 @@ export async function readPeaks(
       signal: opts.signal,
       idleTimeoutMs: STALL_MS,
       onStdout: (chunk) => {
+        // Ein Abtastwert ist 4 Bytes; die Stücke von ffmpeg enden nicht an dieser Grenze. Den Rest aufheben.
         const buf: Buffer = carry.length ? Buffer.concat([carry, chunk]) : chunk;
         const whole = buf.length - (buf.length % 4);
         for (let o = 0; o < whole; o += 4, i++) {

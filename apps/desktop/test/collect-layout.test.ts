@@ -1,3 +1,7 @@
+/**
+ * Schritt „Einsammeln“: ab wann die Dateiliste scrollt und was die Fußzeile über offene Dateien sagt
+ * (`apps/desktop/src/renderer/collectLayout.ts`).
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { isScrollingList, openStatusCounts } from "../src/renderer/collectLayout.ts";
 

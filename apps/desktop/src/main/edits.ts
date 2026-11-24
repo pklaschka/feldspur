@@ -2,6 +2,11 @@
  * Änderungen, die Forschende von Hand machen: Uhrzeiten eintragen, angesagte
  * Uhrzeiten markieren, Belege abschalten, Anker setzen. Ohne Electron, damit
  * sich das direkt testen lässt.
+ *
+ * Gehört zum Schritt „Abgleichen“ und zum Entscheiden von Widersprüchen: `ipc/sync.ts` meldet diese Funktionen als
+ * Schritte für Rückgängig an. Die Uhrzeit-Helfer (`parseClockNear`, `sessionSpan`) nutzt auch das Tagebuch
+ * (`diary.ts`, `ipc/review.ts`). Fast alle Funktionen geben die Einsatz-Id zurück, damit der Aufrufer die neue
+ * Ansicht bauen kann (`undoableView`).
  */
 import {
   combineUncertainty,
@@ -176,6 +181,7 @@ export function clearDeviceChecks(s: ProjectStore, deviceId: Id): Id {
   return device.sessionId;
 }
 
+/** Bestätigungen („geprüft“) einer Quelle entfernen; je Quelle gilt höchstens eine. */
 function dropChecks(s: ProjectStore, sessionId: Id, sourceId: Id): void {
   for (const e of s.listEvidence(sessionId))
     if (e.sourceId === sourceId && e.kind === "checked") s.deleteEvidence(e.id);
@@ -191,6 +197,7 @@ export function confirmPlacement(s: ProjectStore, sourceId: Id, startMs: number)
   return decidePlacement(s, { sourceId, evidenceId: null, expectedStartMs: startMs, reason: "" });
 }
 
+// Weitergereicht für `ipc/sync.ts` (Beschriftungen im Verlauf).
 export type { DecideInput };
 export { kindHolds, kindName };
 
@@ -283,6 +290,7 @@ export function removeEvidence(s: ProjectStore, evidenceId: Id): Id {
   return s.getSource(ev.sourceId).sessionId;
 }
 
+/** Zeitbeleg ein- oder abschalten: Abgeschaltete zählen bei der Lage nicht mit, bleiben aber sichtbar. */
 export function toggleEvidence(s: ProjectStore, evidenceId: Id, enabled: boolean): Id {
   const ev = s.getEvidence(evidenceId);
   s.setEvidenceEnabled(evidenceId, enabled);

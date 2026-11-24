@@ -2,6 +2,9 @@
  * Größenschätzung des Montagevideos, an diesem Rechner nachgeschärft. Wie groß die Datei wirklich wird, hängt am
  * Encoder (VideoToolbox, Media Foundation, libx264 …) und am Bild. Nach jeder Ausgabe merkt sich die App, um welchen
  * Faktor die Schätzung danebenlag, im Benutzerordner (nicht in der Projektdatei), und rechnet ihn künftig ein.
+ *
+ * Gehört zum Schritt „Ausgeben“: `export.ts` zeigt die Schätzung in der Vorschau (`montageSize`) und lernt nach
+ * jeder Ausgabe mit Video dazu (`learnMontageSize`). Die Grundschätzung kommt aus `packages/media`.
  */
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

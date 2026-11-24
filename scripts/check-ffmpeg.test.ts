@@ -1,3 +1,7 @@
+/**
+ * Prüft die ffmpeg-Prüfung aus `scripts/check-ffmpeg.mjs`: das Lesen der Listen und, wenn ein ffmpeg da ist, den
+ * Probelauf. Anlass war ein macOS-Build ohne zlib und damit ohne PNG-Decoder, an dem die Ausgabe scheiterte.
+ */
 import { execFileSync } from "node:child_process";
 import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

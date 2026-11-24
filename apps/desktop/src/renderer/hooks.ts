@@ -26,6 +26,7 @@ export function useDraft<T>(value: T, resetKey?: unknown): [T, Dispatch<SetState
   return [draft, setDraft];
 }
 
+/** Stand von `useLoaded`. `value` kann auch beim Laden oder nach einem Fehler noch den letzten Wert tragen. */
 export type Loaded<T> =
   | { state: "idle" | "loading"; value: T | undefined }
   | { state: "done"; value: T }

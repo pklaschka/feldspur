@@ -2,6 +2,12 @@
  * Tonspuren eines Einsatzes analysieren und Anker vorschlagen. Ergebnisse
  * werden in der Projektdatei zwischengespeichert; bereits analysierte Quellen
  * werden übersprungen, solange sich das Verfahren nicht geändert hat.
+ *
+ * Einordnung: Schritt Abgleichen. Der Main-Prozess startet `analyzeSession` über IPC `analyze`
+ * (`apps/desktop/src/main/ipc/sync.ts`). Die Rechenarbeit liegt in `packages/media/src/audio.ts` (Hüllkurve,
+ * Leerlauf) und `packages/media/src/sync.ts` (Anker-Vorschläge); hier wird sie mit der Projektdatei
+ * (`ProjectStore`) verbunden. Die übrigen Funktionen lesen das Gespeicherte wieder aus: Episoden und Sprachpegel
+ * für die Ansicht (`apps/desktop/src/main/view.ts`), das Einsatztranskript und die Ausgabe.
  */
 import {
   computeEpisodes,
@@ -56,11 +62,17 @@ function saveAnalysis(store: ProjectStore, sourceId: Id, env: Envelope, idle: Re
 }
 
 export interface AnalyzeResult {
+  /** Neu analysierte Quellen; aus dem Zwischenspeicher übernommene zählen nicht. */
   analyzed: number;
+  /** Quellen ohne Analyse (nicht lesbar oder über `skip` gemeldet), mit Grund für die Oberfläche. */
   failed: { sourceId: Id; fileName: string; message: string }[];
   proposals: AnchorProposal[];
 }
 
+/**
+ * Alle Ton- und Videoquellen eines Einsatzes (`FieldSession`) analysieren und daraus Anker vorschlagen. Die
+ * Vorschläge ersetzen alle bisherigen unbestätigten Vorschläge des Einsatzes; bestätigte Anker bleiben.
+ */
 export async function analyzeSession(
   store: ProjectStore,
   sessionId: Id,
@@ -79,6 +91,7 @@ export async function analyzeSession(
     if (cached && cached.version === ANALYSIS_VERSION) {
       const env = unpackEnvelope(cached.envelope, cached.envelopeRate);
       envelopes.set(s.id, env);
+      // Ältere Analysen ohne Sprachpegel: aus der gespeicherten Hüllkurve nachtragen (wie in `speechLevels`).
       if (cached.speechLevelDb === null) store.saveAudioAnalysis({ ...cached, speechLevelDb: speechLevelDb(env.db) });
       continue;
     }
@@ -110,6 +123,8 @@ export async function analyzeSession(
       kind: p.method,
       a: { sourceId: p.refSourceId, atMediaMs: p.refAtMs },
       b: { sourceId: p.sourceId, atMediaMs: p.atMs },
+      // Klatscher sind schärfer als der Vergleich ganzer Tonspuren.
+      // Vertrauen: „high“ landet in 0,5 … 1, alles andere in 0 … 0,5.
       uncertaintyMs: p.method === "clap" ? 20 : 50,
       confidence: Math.round(Math.min(1, p.confidence === "high" ? 0.5 + p.score / 2 : p.score / 2) * 100) / 100,
       note:

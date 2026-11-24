@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Rückgängig per Tastatur (`apps/desktop/src/renderer/app/history.tsx`): In einem Eingabefeld gilt das Rückgängig des
+ * Feldes, sonst das des Projekts.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { isEditable } from "../src/renderer/app/history.tsx";
 

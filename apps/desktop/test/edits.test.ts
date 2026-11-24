@@ -1,3 +1,9 @@
+/**
+ * Änderungen an einem Einsatz, wie sie die Schritte „Abgleichen“ und „Durchsehen“ auslösen
+ * (`apps/desktop/src/main/edits.ts`): Lage bestätigen, Uhrzeiten von Hand, Feinabgleich, Lautstärke, Widersprüche
+ * entscheiden, Vorschläge übernehmen. Geprüft am Hauptprozess ohne Oberfläche; die Erwartung ist meist die neue Ansicht
+ * des Einsatzes (`SessionView`).
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

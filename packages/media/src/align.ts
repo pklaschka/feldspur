@@ -3,16 +3,24 @@
  * (Waveforms übereinander ziehen); „Einrasten“ sucht dann in einem kleinen Fenster die Lage, in der
  * beide Aufnahmen am besten übereinstimmen. Auflösung 2 ms, also deutlich feiner als die Hüllkurve
  * der Tonspur-Analyse (10 ms).
+ *
+ * Einordnung: Schritt Abgleichen, beim Setzen eines Ankers (`SyncAnchor`) von Hand. Die Oberfläche
+ * (`apps/desktop/src/renderer/FineAlign.tsx`) ruft über IPC `alignRefine` den Main-Prozess
+ * (`apps/desktop/src/main/ipc/sync.ts`), der `refineAlignment` aufruft. Gelesen wird direkt aus den
+ * Originaldateien (`readPeaks`, `packages/media/src/waveform.ts`), nicht aus der gespeicherten Hüllkurve.
  */
 import { readPeaks } from "./waveform.ts";
 
 /** Fächerbreite fürs Einrasten. */
 export const ALIGN_FRAME_MS = 2;
 
+/** Ergebnis von `bestLag`. */
 export interface LagEstimate {
   /** Verschiebung von B in Fächern: B[i + lag] passt zu A[i]. */
   lag: number;
+  /** Übereinstimmung an der besten Lage (normierte Korrelation, 0 … 1). */
   score: number;
+  /** Beste Lage geteilt durch die zweitbeste, die mindestens 50 ms entfernt liegt; 99 = keine zweite. */
   distinctness: number;
 }
 
@@ -91,18 +99,22 @@ export function bestLag(aDb: Float32Array, bDb: Float32Array, maxLag: number): L
   };
 }
 
+/** Zwei grob gesetzte Stellen (ms ab Dateianfang) in den Originaldateien A und B. */
 export interface RefineInput {
   aPath: string;
   aAtMs: number;
   bPath: string;
   bAtMs: number;
-  /** So weit um bAtMs suchen. */
+  /** So weit um bAtMs suchen (ms, Standard 1500). */
   searchMs?: number;
-  /** So viel um die Stelle in A wird verglichen (je Seite). */
+  /** So viel um die Stelle in A wird verglichen (je Seite, in ms, Standard 4000). */
   windowMs?: number;
 }
 
-/** Stelle in B suchen, die am besten zur Stelle in A passt. null, wenn nichts Vergleichbares da ist. */
+/**
+ * Stelle in B suchen, die am besten zur Stelle in A passt. null, wenn nichts Vergleichbares da ist.
+ * A bleibt, wo es ist; zurück kommt die verschobene Stelle in B (ms ab Dateianfang) mit Güte wie in `LagEstimate`.
+ */
 export async function refineAlignment(
   input: RefineInput,
 ): Promise<{ bAtMs: number; score: number; distinctness: number } | null> {

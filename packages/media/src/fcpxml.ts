@@ -3,6 +3,11 @@
  * Resolve rechnet dann selbst (mit Grafikkarte). Enthalten sind Videos (gleichzeitige nebeneinander),
  * Ton je Gerät auf eigener Spur und Marker für Episoden, Tafeln, Fotos, Tagebuch und Mitschrift.
  * Die Einblendungen (Uhrzeit, Herkunft) fehlen; die Uhrzeit steht in den Markern.
+ *
+ * Einordnung: Schritt Ausgeben, nur mit der Option „Schnittliste für Resolve“. `exportSession`
+ * (`packages/media/src/export.ts`) ruft `montageFcpxml` mit denselben Stücken auf, aus denen auch das Montagevideo
+ * entsteht (`planPieces`, `packages/media/src/montage-video.ts`). Die Datei verweist auf die Originaldateien an
+ * ihrem jetzigen Ort; sie enthält selbst kein Material.
  */
 import { pathToFileURL } from "node:url";
 import { FPS, H, videoTiles, W, type Box } from "./layout.ts";
@@ -12,6 +17,7 @@ import { xmlEscape } from "./xml.ts";
 
 /** Rationale Zeit in Bildern der Sequenz. */
 const t = (frames: number) => (frames === 0 ? "0s" : `${frames}/${FPS}s`);
+/** Millisekunden → Bilder der Sequenz (gerundet). */
 const msFrames = (ms: number) => Math.round((ms * FPS) / 1000);
 /**
  * Ein Bild in ein Feld setzen: Mitte in FCPXML-Einheiten (Bildhöhe = 100, Ursprung in der Mitte,
@@ -29,8 +35,13 @@ export interface FcpxmlOptions {
   audioMix?: "all" | "main";
 }
 
+/**
+ * FCPXML-Text der Montage. Je Stück (`Piece`) ein Clip auf der Hauptspur: das erste Video oder, ohne Video, eine
+ * Lücke (`gap`). Weitere Videos liegen auf Spuren darüber (lane 1, 2, …), der Ton auf Spuren darunter (lane −1, …).
+ */
 export function montageFcpxml(transcript: SessionTranscript, pieces: Piece[], opts: FcpxmlOptions): string {
   const assets = new Map<string, { id: string; xml: string }>();
+  // Jede Originaldatei einmal unter <resources>; mehrfach gebrauchte bekommen dieselbe Kennung (r1 ist das Format).
   const asset = (path: string, name: string, kind: "av" | "audio", durationMs: number | null) => {
     const got = assets.get(path);
     if (got) return got.id;

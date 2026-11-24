@@ -1,3 +1,8 @@
+/**
+ * Projektdatei lesen und schreiben (`packages/core/src/db/store.ts`): speichern und wieder öffnen, Quellen samt
+ * Abhängigem entfernen, Kurzzeichen, Referenzuhr, Eingabeprüfung und der Umgang mit fremden oder neueren Dateien.
+ * Teils mit echten Dateien in einem temporären Ordner, teils im Speicher (`:memory:`).
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

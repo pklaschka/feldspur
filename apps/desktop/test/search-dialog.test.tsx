@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Dialog der Schnellsuche (`apps/desktop/src/renderer/SearchDialog.tsx`): Screenreader erfahren den gewählten Treffer
+ * und die Trefferzahl.
+ */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vite-plus/test";

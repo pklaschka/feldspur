@@ -1,3 +1,7 @@
+/**
+ * Uhrzeiten aus Dateinamen lesen (`packages/core/src/filename.ts`): eingebaute Muster gängiger Geräte und eigene
+ * Muster je Gerät. Gehört zum Einsammeln.
+ */
 import { describe, expect, it } from "vite-plus/test";
 import { compileFilenamePattern, timeFromFilename } from "../src/filename.ts";
 import { formatLocal } from "../src/time.ts";

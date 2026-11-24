@@ -1,7 +1,7 @@
 /**
  * Kleine Einstellungen der Oberfläche im localStorage (zuletzt gewählter Einsatz, Breiten, Schalter). Alles nur
  * Bequemlichkeit: Ohne Speicher (gesperrt, voll, beschädigt) gelten die Standardwerte, und eine Wahl gilt bis zum
- * Neustart.
+ * Neustart. In die Projektdatei gehört davon nichts: Die Einstellungen gelten für diesen Rechner, nicht fürs Projekt.
  */
 
 export function readStored(key: string): string | null {

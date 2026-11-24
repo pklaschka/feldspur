@@ -1,6 +1,10 @@
 /**
  * Dialog „Feldspur zitieren“ (Issue #163): fertige Quellenangabe für genau die laufende Version. Zunächst mit der DOI
  * für alle Versionen; die DOI dieser Version schlägt Feldspur nur auf Knopfdruck bei Zenodo nach und merkt sie sich.
+ *
+ * Geöffnet aus der Fußzeile der linken Spalte (`app/footer.tsx`). Den Text des Zitats baut
+ * `apps/desktop/src/shared/citation.ts`; nachgeschlagen und gemerkt wird im Hauptprozess
+ * (`apps/desktop/src/main/citation.ts`).
  */
 import { Dialog } from "radix-ui";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -18,7 +22,10 @@ import { Button, Choice, CloseButton, cx } from "./ui.tsx";
 
 const api = window.feldspur;
 
-/** Zustand des Hinweiskastens unter dem Zitat. */
+/**
+ * Zustand des Hinweiskastens unter dem Zitat: `idle` (noch nicht nachgeschlagen), `loading`, `found` (DOI dieser
+ * Version eingesetzt), `offline` (Zenodo nicht erreichbar), `missing` (Version dort noch nicht verzeichnet).
+ */
 export type LookupState = "idle" | "loading" | "found" | "offline" | "missing";
 
 const monthYear = (iso: string) =>
@@ -50,6 +57,7 @@ export function CitationDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     });
     return () => {
       live = false;
+      // Schließen bricht ein laufendes Nachschlagen ab.
       void api.cancelCitationLookup();
     };
   }, [open]);
@@ -67,6 +75,7 @@ export function CitationDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     else setLookup(r.state);
   };
 
+  // Solange die DOI dieser Version nicht bekannt ist, steht die für alle Versionen im Zitat.
   const doi = info?.versionDoi?.doi ?? ALL_VERSIONS_DOI;
   const input = info && { version: info.version, released: info.released, doi };
 
@@ -184,6 +193,7 @@ const TONE = {
 };
 const MARK = { warn: "bg-warn", good: "bg-good", plain: "bg-muted" };
 
+/** Hinweiskasten unter dem Zitat: sagt, welche DOI im Zitat steht, und bietet das Nachschlagen bei Zenodo an. */
 function Notice({ info, state, onLookup }: { info: CitationInfo; state: LookupState; onLookup: () => void }) {
   const v = info.version;
   const zenodoLink = (label: string, url: string) => (

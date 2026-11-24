@@ -5,6 +5,12 @@
  *
  * Für lange Mitschriften: Die Liste zeichnet Zeilen nur neu, wenn sie sich ändern (nicht bei jedem
  * Bild der Wiedergabe), Textfelder wachsen mit, und die Liste läuft der Wiedergabe nach.
+ *
+ * Ein Dialog für den ganzen Einsatz, eingebunden in `apps/desktop/src/renderer/app/SessionPane.tsx`; geöffnet wird
+ * er aus dem Quellenmenü, der Detailleiste, „Einsammeln“ und durch Treffer der Suche. Die Teile der Oberfläche
+ * liegen in `apps/desktop/src/renderer/transcriber/` (Zeile, Leiste, Entwurf), das Rechnen ohne React in
+ * `apps/desktop/src/renderer/transcribe.ts`. Zeilen der Mitschrift (`TranscriptRow`) legt der Hauptprozess an und
+ * ändert sie (Handler in `apps/desktop/src/main/ipc/review.ts`, jeweils rückgängig zu machen).
  */
 import { Dialog } from "radix-ui";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
@@ -27,17 +33,24 @@ import { isEnter } from "./keys.js";
 
 const api = window.feldspur;
 
+/** Wählbare Tempi der Wiedergabe; F7 und Umschalt+F7 gehen sie schrittweise durch. */
 const SPEEDS = ["0.5", "0.75", "1", "1.25", "1.5"] as const;
 type Speed = (typeof SPEEDS)[number];
 /** Beim Fortsetzen ein Stück zurück, damit kein Wort verloren geht. */
 const RESUME_BACK_MS = 1000;
+/** Sprungweite von F8/F9 und den Knöpfen „−5 s“/„+5 s“. */
 const JUMP_MS = 5000;
+/** Wählbare Länge des Waveform-Ausschnitts in Sekunden. */
 const SPANS = ["10", "30", "120"] as const;
 type Span = (typeof SPANS)[number];
 const SPAN_LABEL: Record<Span, string> = { "10": "10 s", "30": "30 s", "120": "2 min" };
 /** Fächer je Kachel der Waveform; eine Kachel ist so lang wie der Ausschnitt. */
 const WAVE_BUCKETS = 1600;
 
+/**
+ * Hülle des Dialogs: offen, solange `sourceId` eine Quelle nennt. Der Inhalt (`Body`) wird je Quelle neu aufgebaut
+ * (`key`), damit Stelle, Entwurf und Wiedergabe nicht von einer Aufnahme in die nächste rutschen.
+ */
 export function Transcriber({
   view,
   sourceId,
@@ -49,9 +62,12 @@ export function Transcriber({
   view: SessionView;
   /** Abgehörte Quelle; null = geschlossen. */
   sourceId: string | null;
+  /** Andere Tonquelle abhören (Auswahl im Kopf, Klick auf eine Zeile einer anderen Spur). */
   onSource: (id: string) => void;
   onClose: () => void;
+  /** Führt einen IPC-Aufruf aus und zeigt Fehler an, statt sie zu werfen (`apps/desktop/src/renderer/App.tsx`). */
   guard: Guard;
+  /** Neue Ansicht des Einsatzes nach einer Änderung übernehmen. */
   onView: (v: SessionView) => void;
 }) {
   const row = sourceId ? view.rows.find((r) => r.id === sourceId) : undefined;
@@ -93,6 +109,7 @@ export function Transcriber({
   );
 }
 
+/** Der Arbeitsplatz für eine Quelle: links Waveform, Mitschrift und neue Zeile, rechts Player und Notizen. */
 function Body({
   view,
   row,
@@ -160,6 +177,7 @@ function Body({
     () => [...new Set(view.transcript.map((l) => l.speaker).filter(Boolean))].sort(),
     [view.transcript],
   );
+  // Was gleichzeitig in anderen Quellen passiert (▪-Zeilen), samt Mitschrift gleichzeitig laufender Spuren (`other`).
   const allEvents = useMemo(() => eventsIn(view, row), [view, row]);
   const events = useMemo(() => (showOthers ? allEvents : allEvents.filter((e) => !e.other)), [allEvents, showOthers]);
   const othersCount = useMemo(() => allEvents.filter((e) => e.other).length, [allEvents]);
@@ -171,6 +189,7 @@ function Body({
       ].sort((a, b) => a.atMs - b.atMs || itemRank(a) - itemRank(b)),
     [lines, events],
   );
+  // Zeitmarke der jeweils folgenden Zeile; beim Teilen einer Zeile begrenzt sie die Zeitmarke des zweiten Teils.
   const nextAt = useMemo(() => {
     const m = new Map<string, number | null>();
     lines.forEach((l, i) => m.set(l.id, lines[i + 1]?.atMs ?? null));
@@ -287,6 +306,7 @@ function Body({
       list.current?.querySelector(`[data-line="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }),
     );
 
+  // Immer der neueste Stand, ohne dass sich `lineActions` und die Warteschlange bei jedem Rendern ändern.
   const latest = useLatest({ guard, onView, row, nextAt });
 
   /**
@@ -313,6 +333,7 @@ function Body({
       return true;
     });
   };
+  // Für Schließen und Quellenwechsel: Entwurf anlegen und warten, bis alle Zeilen beim Hauptprozess angekommen sind.
   const flush = async () => {
     void commit();
     await queue.current.idle();

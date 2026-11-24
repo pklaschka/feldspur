@@ -1,3 +1,11 @@
+/**
+ * Einstieg des Hauptprozesses (Electron): Fenster anlegen, das Protokoll für Originaldateien und alle IPC-Aufrufe
+ * anmelden (`apps/desktop/src/main/ipc/`), Projektdateien von außen annehmen (Argument, Doppelklick, „Öffnen mit“).
+ *
+ * Aufteilung der App: Der Hauptprozess hält das offene Projekt (`state.ts`) und arbeitet mit Dateien, ffmpeg und der
+ * Projektdatei (`packages/core`, `packages/media`). Die Oberfläche (`src/renderer`) läuft abgeschottet im Fenster und
+ * erreicht ihn nur über die Brücke `window.feldspur` (`src/preload/preload.ts`, Schnittstelle in `src/shared/api.ts`).
+ */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, protocol } from "electron";
@@ -19,6 +27,10 @@ function appIcon(): string | undefined {
   return candidates.find((p) => existsSync(p));
 }
 
+/**
+ * Das eine Fenster der App. Die Oberfläche läuft in der Sandbox ohne Node; beim Entwickeln kommt sie vom
+ * Vite-Server (`FELDSPUR_DEV_URL`), sonst aus `out/renderer`.
+ */
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
@@ -37,7 +49,7 @@ function createWindow(): void {
   });
   setWindow(win);
   win.maximize();
-  // Keine Navigation weg von der App, keine neuen Fenster.
+  // Schließen während einer Ausgabe: erst fragen, denn sie bricht damit ab.
   win.on("close", (e) => {
     if (!exportRunning()) return;
     const choice = dialog.showMessageBoxSync(win, {
@@ -51,6 +63,7 @@ function createWindow(): void {
     if (choice === 0) e.preventDefault();
     else abortExport();
   });
+  // Keine Navigation weg von der App, keine neuen Fenster.
   win.webContents.on("will-navigate", (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   const devUrl = process.env.FELDSPUR_DEV_URL;
@@ -62,6 +75,8 @@ setToolPaths(
   resolveToolPaths(process.env, process.resourcesPath ?? null, process.platform === "win32" ? ".exe" : "", existsSync),
 );
 
+// Muss vor `app.whenReady()` geschehen. `stream` und `supportFetchAPI`: Audio und Video lassen sich spulen, pdf.js
+// kann Scans laden (siehe `media-response.ts`).
 protocol.registerSchemesAsPrivileged([
   {
     scheme: MEDIA_SCHEME,
@@ -156,6 +171,7 @@ app.on("open-file", (e, path) => {
   e.preventDefault();
   // Während einer Ausgabe nicht das Projekt unter ihr wechseln.
   if (!path.endsWith(".feldspur") || !existsSync(path) || exportRunning()) return;
+  // Kommt das Ereignis vor dem Start, findet `whenReady` oben den Pfad wie ein Argument.
   if (!app.isReady()) {
     process.argv.push(path);
     return;

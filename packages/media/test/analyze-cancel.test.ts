@@ -1,3 +1,7 @@
+/**
+ * Abbrechen der Tonspur-Analyse und der Pegelmessung (`packages/media/src/analyze.ts`, Issue #135), an einem mit FFmpeg
+ * erzeugten Feldtag. Läuft nur, wenn ffmpeg vorhanden ist.
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

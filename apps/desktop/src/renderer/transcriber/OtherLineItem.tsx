@@ -1,3 +1,8 @@
+/**
+ * Fremde Zeile in der Liste von „Mitschreiben“ (`apps/desktop/src/renderer/Transcriber.tsx`): was in einer
+ * gleichzeitig laufenden Aufnahme schon mitgeschrieben ist. Zusammengestellt von `eventsIn` in
+ * `apps/desktop/src/renderer/transcriber/items.ts`.
+ */
 import type { OtherLine } from "./items.ts";
 import { At } from "./Line.tsx";
 
@@ -9,6 +14,7 @@ export function OtherLineItem({
   onSeek,
   onOpen,
 }: {
+  /** Stelle in dieser Aufnahme (die Stelle in der anderen steht in `line.atMs`). */
   atMs: number;
   line: OtherLine;
   startMs: number | null;

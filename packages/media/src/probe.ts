@@ -1,11 +1,17 @@
 /**
  * Metadaten aus Audio/Video lesen (ffprobe) und aus Bildern (EXIF).
+ *
+ * Einordnung: Schritt „Einsammeln“. `packages/media/src/import.ts` liest damit jede neue Datei; die Zeitbelege
+ * (`TimeEvidence`) aus Tags und EXIF bildet `packages/media/src/evidence.ts`. Hier wird nur gelesen, nichts gedeutet.
+ * Außerdem fragt `packages/media/src/montage-video.ts` über `probeMedia` nach, ob ein Video eine Tonspur hat.
  */
 import { readFile } from "node:fs/promises";
 import exifr from "exifr";
 import { PROBE_TIMEOUT_MS, runTool } from "./process.ts";
 
+/** Was ffprobe über eine Ton- oder Videodatei sagt. */
 export interface MediaProbe {
+  /** Länge laut Container; null, wenn ffprobe keine nennt. */
   durationMs: number | null;
   hasVideo: boolean;
   hasAudio: boolean;
@@ -37,6 +43,7 @@ export function parseFrameRate(text: string | undefined): { num: number; den: nu
   return num > 0 && den > 0 && num / den <= 1000 ? { num, den } : undefined;
 }
 
+/** Startet ffprobe für eine Datei. Wirft einen `ToolError`, wenn die Datei nicht lesbar oder kein Medium ist. */
 export async function probeMedia(path: string, opts: { signal?: AbortSignal } = {}): Promise<MediaProbe> {
   const stdout = await runTool(
     "ffprobe",
@@ -66,16 +73,20 @@ export async function probeMedia(path: string, opts: { signal?: AbortSignal } = 
   };
 }
 
+/** EXIF-Angaben eines Bildes, unverändert als Text; die Deutung (Zeitzone, Zeitbeleg) geschieht beim Einsammeln. */
 export interface ImageExif {
   make?: string;
   model?: string;
   /** "2026:09:14 10:12:34" wie in der Datei. */
   dateTimeOriginal?: string;
+  /** Sekundenbruchteil zur Aufnahmezeit (`SubSecTimeOriginal`), als Ziffernfolge. */
   subSec?: string;
+  /** Abstand zu UTC, den die Kamera notiert hat (`OffsetTimeOriginal`), z. B. "+02:00". */
   offsetTime?: string;
   gps?: { latitude: number; longitude: number };
 }
 
+/** EXIF eines Bildes; null, wenn die Datei nicht lesbar ist oder keine der gesuchten Angaben enthält. */
 export async function readImageExif(path: string): Promise<ImageExif | null> {
   let raw: Record<string, unknown> | undefined;
   try {

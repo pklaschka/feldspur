@@ -2,6 +2,11 @@
  * Episoden von Hand anpassen: Grenzen auf der Zeitachse ziehen, laute Stellen zur Mini-Episode machen.
  * Gespeichert wird je Aufnahme eine Strecke (ab Dateibeginn), nie eine Uhrzeit; so wandert die Anpassung mit,
  * wenn sich der Abgleich der Uhren später ändert. Ohne Electron, damit es sich direkt testen lässt.
+ *
+ * Gehört zum Schritt „Durchsehen“ (Zeitachse in `src/renderer/Review.tsx`), aufgerufen aus `ipc/review.ts` (Kanäle
+ * `episodes:…`). Die Episoden selbst werden nicht gespeichert: `sessionEpisodes` in `packages/media` bildet sie aus
+ * der Tonspur-Analyse und rechnet diese Anpassungen ein. Die Oberfläche spricht in Uhrzeiten (ms), hier wird
+ * umgerechnet.
  */
 import { resolveTimeline, type Id, type ProjectStore } from "@feldspur/core";
 

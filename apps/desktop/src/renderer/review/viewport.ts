@@ -2,6 +2,8 @@
  * Rechnen für den Ausschnitt der Zeitachse in Durchsehen: welcher Zeitraum gezeigt wird, wie weit gezoomt und
  * gescrollt werden kann und wohin ein Zoom oder Sprung den Ausschnitt schiebt. Ohne React und DOM, damit es sich
  * prüfen lässt. Zeiten in ms, Zoom in Pixeln pro Minute, Scrollposition in Pixeln.
+ *
+ * Genutzt von `apps/desktop/src/renderer/Review.tsx`, geprüft in `apps/desktop/test/review-viewport.test.ts`.
  */
 import type { SourceRow } from "../../shared/api.ts";
 import { MIN } from "../timeline.ts";
@@ -32,6 +34,7 @@ export function scrollFor(t: number, x: number, ppm: number, { t0, t1, width }: 
   return Math.min(maxScroll(t0, t1, ppm, width), Math.max(0, ((t - t0) / MIN) * ppm - x));
 }
 
+/** Zeitraum der Achse (`t0` bis `t1`, in ms) und Breite des sichtbaren Bereichs in Pixeln. */
 export interface Axis {
   t0: number;
   t1: number;

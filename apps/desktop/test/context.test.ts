@@ -1,3 +1,8 @@
+/**
+ * Kontext führen (Issue #108): Fotos, Tagebuchseiten und Texte ohne Uhrzeit als Kontextstücke, ihre Reihenfolge und der
+ * Weg zurück auf die Zeitachse (`apps/desktop/src/main/context.ts`), geprüft am Hauptprozess mit einer Projektdatei im
+ * Wegwerf-Ordner.
+ */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

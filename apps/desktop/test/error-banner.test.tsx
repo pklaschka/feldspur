@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+/**
+ * Fehlermeldungen der Oberfläche (`ErrorBanner` in `apps/desktop/src/renderer/ui.tsx`): Ein Fehler erscheint im
+ * obersten offenen Dialog und nicht auf der verdeckten Seite dahinter.
+ */
 import { Dialog } from "radix-ui";
 import { act, type ReactNode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";

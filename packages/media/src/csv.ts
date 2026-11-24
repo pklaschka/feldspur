@@ -1,6 +1,7 @@
 /**
  * CSV für Excel und LibreOffice: Semikolon, Zeilenende CRLF, UTF-8 mit BOM, damit Umlaute richtig ankommen.
- * Gemeinsam für Begleitprotokoll und Änderungsprotokoll.
+ * Gemeinsam für Begleitprotokoll (`packages/media/src/export.ts`) und Änderungsprotokoll
+ * (`apps/desktop/src/main/changelog.ts`, eingebunden als `@feldspur/media/csv`).
  */
 
 /**

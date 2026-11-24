@@ -6,18 +6,27 @@
  * 8-Stunden-Feldtag sind so knapp 3 Mio. Werte, das passt bequem in den Speicher
  * und in die Projektdatei. FFmpeg dekodiert gestreamt, die Rohdaten werden nie
  * vollständig geladen.
+ *
+ * Einordnung: Rechenkern für den Schritt Abgleichen und für die Lautstärke im Montagevideo. Bis auf
+ * `computeEnvelope` (startet ffmpeg) ist alles rein. Aufgerufen von `packages/media/src/analyze.ts` (Hüllkurve und
+ * Leerlauf je Quelle, gespeichert in der Projektdatei), `packages/media/src/sync.ts` (Versatz und Klatscher für
+ * Anker-Vorschläge) und `packages/media/src/montage-video.ts` (Filterkette der Lautstärke-Angleichung). Aus dem
+ * Leerlauf rechnet der Kern die Episoden (`packages/core/src/episodes.ts`).
  */
 import { COMPRESSOR, dbToGain, effectiveGainDb, levelActive, LIMIT_DB, type Source } from "@feldspur/core";
 import { runTool, STALL_MS } from "./process.ts";
 
 /** Werte pro Sekunde in der Hüllkurve. */
 export const ENVELOPE_RATE = 100;
+/** Abtastrate in Hz, mit der ffmpeg für die Hüllkurve dekodiert. */
 const DECODE_RATE = 8000;
 const SAMPLES_PER_FRAME = DECODE_RATE / ENVELOPE_RATE;
 /** Untergrenze in dB, damit digitale Stille nicht −∞ ergibt. */
 export const DB_FLOOR = -100;
 
+/** Lautstärke-Hüllkurve einer Aufnahme ab Dateianfang. */
 export interface Envelope {
+  /** Werte pro Sekunde (üblich: ENVELOPE_RATE). */
   rate: number;
   /** RMS-Pegel je 10 ms in dBFS (DB_FLOOR … 0). */
   db: Float32Array;
@@ -83,6 +92,7 @@ export function packEnvelope(env: Envelope): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+/** Gegenstück zu `packEnvelope`: gespeicherte Bytes (aus `AudioAnalysis.envelope`) wieder in dBFS. */
 export function unpackEnvelope(bytes: Uint8Array, rate = ENVELOPE_RATE): Envelope {
   const db = new Float32Array(bytes.length);
   for (let i = 0; i < bytes.length; i++) db[i] = (bytes[i]! / 250) * -DB_FLOOR + DB_FLOOR;
@@ -97,12 +107,14 @@ function percentile(values: Float32Array, p: number): number {
 
 // ── Leerlauf und laute Stellen ────────────────────────────────────────────
 
+/** Strecke innerhalb einer Datei, in ms ab Dateianfang (nicht Uhrzeit). */
 export interface Interval {
   startMs: number;
   endMs: number;
 }
 
 export interface LoudEvent {
+  /** Lauteste Stelle des Ereignisses, in ms ab Dateianfang. */
   atMs: number;
   /** Wie weit über dem Grundrauschen, in dB. */
   aboveFloorDb: number;
@@ -214,6 +226,7 @@ export function onsetStrength(env: Envelope): Float32Array {
   return out;
 }
 
+/** Mindestanstieg von einem Hüllkurvenwert zum nächsten (dB), ab dem `onsetStrength` ihn zählt. */
 const ONSET_GATE_DB = 4;
 
 function nextPow2(n: number): number {
@@ -363,9 +376,11 @@ export function estimateOffset(a: Envelope, b: Envelope, opts: OffsetOptions = {
 // ── Sync-Signale (Klatschen, Klappe) ─────────────────────────────────────
 
 export interface Transient {
+  /** Spitze, in ms ab Dateianfang. */
   atMs: number;
   /** Anstieg in dB innerhalb von 20 ms. */
   riseDb: number;
+  /** Pegel der Spitze in dBFS. */
   peakDb: number;
 }
 
@@ -394,6 +409,7 @@ export function detectTransients(
     for (let j = i + 1; j <= Math.min(env.db.length - 1, i + decayFrames); j++)
       minAfter = Math.min(minAfter, env.db[j]!);
     if (peak - minAfter < minDecay) continue;
+    // Höchstens ein Treffer je 300 ms.
     const last = out.at(-1);
     if (last && i * frameMs - last.atMs < 300) continue;
     out.push({ atMs: Math.round(i * frameMs), riseDb: Math.round(rise), peakDb: Math.round(peak) });
@@ -403,13 +419,16 @@ export function detectTransients(
 
 // ── Lautstärke angleichen ────────────────────────────────────────────────
 
-/** Was mit dem Ton einer Quelle geschieht (siehe @feldspur/core level.ts). */
+/** Was mit dem Ton einer Quelle geschieht (Regeln dazu in `packages/core/src/level.ts`). */
 export interface AudioLevel {
   gainDb: number;
   compress: boolean;
 }
 
-/** Verstärkung und Kompressor einer Quelle für die Montage, null = unverändert. */
+/**
+ * Verstärkung und Kompressor einer Quelle für die Montage, null = unverändert. `measuredDb` ist der gemessene
+ * Sprachpegel aus der Tonspur-Analyse (null = nicht gemessen); gebraucht wird er nur im Modus „automatisch“.
+ */
 export function audioLevelOf(
   s: Pick<Source, "levelMode" | "levelGainDb" | "levelCompress">,
   measuredDb: number | null,

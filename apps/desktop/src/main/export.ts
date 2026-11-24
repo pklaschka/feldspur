@@ -1,5 +1,12 @@
 /**
  * Ausgeben aus der App: Ordner wählen, Export anstoßen, Einblendungen von der Oberfläche zeichnen lassen.
+ *
+ * Schritt „Ausgeben“: `ipc/export.ts` nimmt die Aufrufe der Oberfläche an und ruft hierher. Diese Datei hält fest,
+ * welche Ausgabe gerade läuft (immer nur eine), und verbindet die Teile: Prüfung der Originale (`originals.ts`),
+ * Montagevideo, Einsatztranskript und Begleitprotokoll aus `packages/media` (`exportSession`) und den Vermerk über die
+ * letzte Ausgabe in der Projektdatei. Einblendungen und Standbilder aus PDF zeichnet die Oberfläche
+ * (`src/renderer/overlay.ts`, `stillRender.ts`); dafür fragt hier ausnahmsweise der Hauptprozess die Oberfläche
+ * (`askRenderer`), nicht umgekehrt.
  */
 import { join, resolve } from "node:path";
 import { app, ipcMain, powerSaveBlocker, type WebContents } from "electron";
@@ -36,7 +43,9 @@ import { checkOriginals } from "./originals.ts";
 import { sessionChangeLogCsv } from "./changelog.ts";
 import { learnMontageSize, montageSize } from "./montage-size.ts";
 
+/** So viele Einblendungen gehen in einer Anfrage an die Oberfläche. */
 const CHUNK = 60;
+/** Einsatz der laufenden Ausgabe und der Schalter zum Abbrechen; beide null, solange nichts läuft. */
 let running: string | null = null;
 let controller: AbortController | null = null;
 
@@ -49,6 +58,7 @@ export function exportRunning(): boolean {
 export function exportingSession(): string | null {
   return running;
 }
+/** Laufende Nummer, über die eine Antwort der Oberfläche zu ihrer Anfrage findet. */
 let nextId = 1;
 
 /** Fortschritt höchstens alle 100 ms senden (die Prüfsumme meldet jedes gelesene MB), Anfang und Ende immer. */
@@ -71,6 +81,11 @@ const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: unk
 const BRIDGE_TIMEOUT_MS = 120_000;
 const RENDERER_EVENTS = ["render-process-gone", "did-start-loading", "destroyed"] as const;
 
+/**
+ * Eine Anfrage an die Oberfläche schicken (`send` bekommt die Nummer) und auf ihre Antwort warten. Die Antwort trifft
+ * in `registerOverlayBridge` ein; die Gegenseite ist `onOverlayRequest`/`onStillRequest` in
+ * `apps/desktop/src/preload/preload.ts`. `what` benennt das Erwartete für die Fehlermeldung.
+ */
 function askRenderer<T>(wc: WebContents, signal: AbortSignal, what: string, send: (id: number) => void): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     if (signal.aborted) return reject(signal.reason);
@@ -120,6 +135,7 @@ function stillVia(wc: WebContents, signal: AbortSignal) {
     );
 }
 
+/** Antworten der Oberfläche auf `askRenderer` annehmen; einmal beim Start angemeldet (`ipc/export.ts`). */
 export function registerOverlayBridge(): void {
   ipcMain.on(IPC.stillReply, (_e, id: number, jpeg: Uint8Array | null) => {
     pending.get(id)?.resolve(jpeg ? Buffer.from(jpeg) : null);
@@ -152,6 +168,7 @@ function modeOf(s: ProjectStore, sessionId: string, realtime?: boolean) {
   return { mode: episodes && realtime === false ? ("episodes" as const) : ("realtime" as const), episodes };
 }
 
+/** Ablauf der Montage zum Abspielen in der App (`MontageView.tsx` in der Oberfläche); gerechnet wird kein Video. */
 export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
   return montagePreview(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime)));
 }
@@ -185,6 +202,10 @@ function exportDir(s: ProjectStore, sessionId: string, parent: string, base: str
   }
 }
 
+/**
+ * Vorschau im Schritt „Ausgeben“: das Einsatztranskript, wie es im .docx stehen wird, dazu Dauer, Episoden und die
+ * geschätzte Größe des Montagevideos (`montage-size.ts`). Liest nur.
+ */
 export function previewExport(s: ProjectStore, sessionId: string, realtime?: boolean): SessionTranscriptPreview {
   const transcript = buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime));
   return {
@@ -303,6 +324,11 @@ export function cancelExport(sessionId: string): void {
   if (running === sessionId) controller?.abort();
 }
 
+/**
+ * Eine Ausgabe von Anfang bis Ende, in den Ordner `parent` (schon gewählt, siehe `ipc/export.ts`): Originale prüfen,
+ * fehlende Sprachpegel messen, Stand festhalten, schreiben lassen, Ausgabe vermerken. Das Ergebnis sagt der Oberfläche,
+ * ob geschrieben, abgebrochen oder wegen der Prüfung angehalten wurde (`ExportRunResult`).
+ */
 export async function runExport(
   s: ProjectStore,
   wc: WebContents,

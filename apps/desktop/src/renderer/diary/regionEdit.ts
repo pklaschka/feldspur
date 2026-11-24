@@ -1,6 +1,7 @@
 /**
  * Rahmen eines Tagebucheintrags verschieben oder an Kanten und Ecken in der Größe ändern. Alles in relativen
- * Koordinaten 0 … 1 der Seite; der Rahmen bleibt auf der Seite und wird nie kleiner als MIN_SIZE.
+ * Koordinaten 0 … 1 der Seite; der Rahmen bleibt auf der Seite und wird nie kleiner als MIN_SIZE. Reine Rechnung
+ * für `PageCanvas.tsx`, getestet in `apps/desktop/test/region-edit.test.ts`.
  */
 import type { Region } from "../../shared/api.ts";
 
@@ -9,6 +10,7 @@ export type Box = Pick<Region, "x" | "y" | "w" | "h">;
 /** „move“ verschiebt den ganzen Rahmen, die Himmelsrichtungen ziehen an Kante oder Ecke. */
 export type EditMode = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
+/** Die acht Griffe, im Uhrzeigersinn ab oben links. */
 export const HANDLES: Exclude<EditMode, "move">[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 /** Kleinster Rahmen, wie beim Aufziehen (1 % der Seite). */
@@ -16,6 +18,7 @@ export const MIN_SIZE = 0.01;
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
+/** Rahmen nach einer Bewegung um `dx`, `dy` (Anteile der Seite) in der Art `mode`. */
 export function editBox(box: Box, mode: EditMode, dx: number, dy: number): Box {
   if (mode === "move") {
     return { ...box, x: clamp(box.x + dx, 0, 1 - box.w), y: clamp(box.y + dy, 0, 1 - box.h) };

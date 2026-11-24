@@ -2,10 +2,14 @@
  * Kleinste mögliche Excel-Datei (.xlsx) mit einem Tabellenblatt, ohne zusätzliche Abhängigkeit.
  * Reicht für Tabellen, die MAXQDA einliest (Dokumentvariablen). Text steht direkt in der Zelle (inlineStr),
  * Zahlen als Zahl.
+ *
+ * Einordnung: Schritt „Ausgeben“. `exportSession` (`packages/media/src/export.ts`) schreibt damit die Datei
+ * `…_Variablen.xlsx`; den Inhalt stellt dort `documentVariables` zusammen.
  */
 import { crc32, deflateRawSync } from "node:zlib";
 import { xmlEscape } from "./xml.ts";
 
+/** Inhalt einer Zelle; null und "" lassen die Zelle leer. */
 export type Cell = string | number | null;
 
 /** Spaltenname wie in Excel: 0 → A, 25 → Z, 26 → AA. */

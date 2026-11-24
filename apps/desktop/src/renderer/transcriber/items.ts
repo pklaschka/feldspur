@@ -1,8 +1,13 @@
-/** Was in der Mitschrift neben den eigenen Zeilen steht, und wo die Wiedergabe gerade ist. Ohne React, damit es sich direkt testen lässt. */
+/**
+ * Was in der Mitschrift neben den eigenen Zeilen steht, und wo die Wiedergabe gerade ist. Ohne React, damit es sich
+ * direkt testen lässt (`apps/desktop/test/transcriber-items.test.ts`). Genutzt von
+ * `apps/desktop/src/renderer/Transcriber.tsx`.
+ */
 import type { SessionView, SourceNoteRow, SourceRow, TranscriptRow } from "../../shared/api.ts";
 import { KIND_LABEL } from "../format.ts";
 import type { WaveBand } from "../Waveform.tsx";
 
+/** Was in einer anderen Quelle passiert, als Stelle (`atMs`) in dieser Aufnahme. */
 export interface Event {
   key: string;
   atMs: number;
@@ -19,6 +24,7 @@ export interface OtherLine {
   speaker: string;
   text: string;
 }
+/** Eintrag der Liste im Mitschreiben: eigene Zeile oder Ereignis aus einer anderen Quelle. */
 export type Item = { kind: "line"; atMs: number; line: TranscriptRow } | { kind: "event"; atMs: number; event: Event };
 
 /** Tonquellen: erst die Dateien desselben Geräts (dieselbe Spur), dann mit Trennlinie die übrigen. */
@@ -51,6 +57,7 @@ export function lastAtOrBefore(lines: TranscriptRow[], pos: number): TranscriptR
   return hit >= 0 ? lines[hit] : undefined;
 }
 
+/** Notizen mit Bereich als Bänder für Waveform und Übersichtsleiste; erledigte anders gefärbt als offene. */
 export function noteBands(notes: SourceNoteRow[]): WaveBand[] {
   return notes
     .filter((n) => n.fromMs !== null && n.toMs !== null)
