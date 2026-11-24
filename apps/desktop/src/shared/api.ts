@@ -609,6 +609,13 @@ export type { ExportStatus } from "@feldspur/media";
 /** Erster Schritt jeder Ausgabe, nach der Ordnerwahl: Originale mit Prüfsumme prüfen (done/total in Bytes). */
 export const EXPORT_CHECK_STEP = "Originale prüfen";
 
+/**
+ * Zweiter Schritt einer Ausgabe mit Montagevideo, nur wenn Sprachpegel fehlen (done/total in Quellen). Das Paket
+ * `media` meldet denselben Namen noch einmal vor dem Video, falls dann noch ein Pegel fehlt
+ * (`packages/media/src/export.ts`).
+ */
+export const EXPORT_LEVELS_STEP = "Lautstärke messen";
+
 /** Fortschritt der laufenden Ausgabe (`onExportProgress`). */
 export interface ExportProgress {
   sessionId: string;

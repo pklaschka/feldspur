@@ -3,14 +3,14 @@
  * `apps/desktop/src/renderer/exportState.tsx` oberhalb der Schritte, damit er einen Wechsel des Schritts oder des
  * Einsatzes übersteht.
  */
-import { CHECK_STEP, percent, remainingMs, remainingText, type ExportJob } from "../exportState.tsx";
+import { CHECK_STEP, remainingMs, remainingText, type ExportJob } from "../exportState.tsx";
 import { Button } from "../ui.tsx";
 import { checkedText } from "./text.ts";
 
 /** Laufende Ausgabe: Schritt, Rest, Fortschrittsbalken und Abbrechen. */
 export function ExportProgress({ job, onCancel }: { job: ExportJob; onCancel: () => void }) {
   const progress = job.progress;
-  const pct = percent(progress, job.video);
+  const pct = job.percent;
   return (
     <div data-testid="export-progress">
       <div className="mb-1 flex items-center gap-3 text-[0.9rem]">

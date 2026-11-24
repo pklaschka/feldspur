@@ -32,6 +32,7 @@ import {
 import { formatClock } from "@feldspur/core/time";
 import {
   EXPORT_CHECK_STEP,
+  EXPORT_LEVELS_STEP,
   IPC,
   type ExportCard,
   type OverviewSession,
@@ -371,7 +372,7 @@ export async function runExport(
         measureMissing: opts.video,
         signal: ctrl.signal,
         onProgress: (done, total) =>
-          safeSend(wc, IPC.exportProgress, { sessionId, step: "Lautstärke messen", done, total }),
+          safeSend(wc, IPC.exportProgress, { sessionId, step: EXPORT_LEVELS_STEP, done, total }),
       });
     } catch (e) {
       if (ctrl.signal.aborted) return { cancelled: true };
