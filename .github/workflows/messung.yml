@@ -50,13 +50,18 @@ jobs:
           echo "${{ github.workspace }}/apps/desktop/vendor/ffmpeg/${{ matrix.name }}" >> "$GITHUB_PATH"
       - name: Nachher (dieser Zweig)
         shell: bash
-        run: MESSUNG_ORDNER="$RUNNER_TEMP/messung" vpx scripts/messung-ausgeben.ts
+        run: |
+          for anteil in 40 15; do
+            MESSUNG_VIDEOANTEIL=$anteil MESSUNG_ORDNER="$RUNNER_TEMP/messung-$anteil" vpx scripts/messung-ausgeben.ts
+          done
       - name: Vorher (main)
         shell: bash
         run: |
           git checkout origin/main -- packages/media/src
-          MESSUNG_ORDNER="$RUNNER_TEMP/messung" vpx scripts/messung-ausgeben.ts
+          for anteil in 40 15; do
+            MESSUNG_VIDEOANTEIL=$anteil MESSUNG_ORDNER="$RUNNER_TEMP/messung-$anteil" vpx scripts/messung-ausgeben.ts
+          done
           git checkout HEAD -- packages/media/src
       - name: Einzelmessungen
         shell: bash
-        run: vpx messung/varianten.ts "$RUNNER_TEMP/messung"
+        run: vpx messung/varianten.ts "$RUNNER_TEMP/messung-40"
