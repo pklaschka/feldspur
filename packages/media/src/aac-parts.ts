@@ -89,7 +89,7 @@ async function copySamples(files: { path: string; samples: number }[], from: num
             if (!bytesRead) throw new Error(`Tonstück ist kürzer als erwartet: ${f.path}`);
             pos += bytesRead;
             if (!target.write(Buffer.from(buf.subarray(0, bytesRead))))
-              await new Promise((go) => target.once("drain", go));
+              await new Promise<void>((go) => target.once("drain", go));
           }
         } finally {
           await fh.close();
@@ -168,7 +168,7 @@ export async function encodeAacParts(o: AacPartsOptions): Promise<void> {
   const target = createWriteStream(joined);
   try {
     for (const p of pieces) {
-      if (!target.write(await readFile(p.aac))) await new Promise((go) => target.once("drain", go));
+      if (!target.write(await readFile(p.aac))) await new Promise<void>((go) => target.once("drain", go));
       await rm(p.aac, { force: true });
     }
   } finally {
