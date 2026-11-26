@@ -751,11 +751,12 @@ export async function renderMontage(
         // Sekunde, das im fertigen Video eine Sekunde lang steht (Issue #249). 24 von 25 Bildern zu kodieren, die
         // nichts Neues zeigen, kostete vorher den größten Teil der Rechenzeit dieser Abschnitte, und beim
         // Hardware-Encoder (VideoToolbox) Durchsatz, der den Abschnitten mit Video fehlte.
+        // Die Standbilder gehen dicht an dicht durch ffmpeg, als wären es 25 je Sekunde: So bekommt der Encoder
+        // dieselben Einstellungen wie in den Abschnitten mit Video. An ihre Stelle im Video rückt sie `stillTimes`.
         const still = p.videos.length === 0;
-        const rate = still ? 1 : FPS;
         const stills = Math.ceil(durS);
-        const srcDur = (Math.ceil(durS) + 1).toString();
-        const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${rate}:d=${srcDur}`];
+        const srcDur = still ? ((stills + 1) / FPS).toFixed(3) : (Math.ceil(durS) + 1).toString();
+        const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${FPS}:d=${srcDur}`];
         const filters: string[] = [];
         let last = "[0:v]";
         let input = 1;
@@ -776,7 +777,7 @@ export async function renderMontage(
           const pngs = await opts.overlay(header, frames);
           signal?.throwIfAborted();
           await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
-          args.push("-framerate", "1", "-i", join(pdir, "o%05d.png"));
+          args.push("-framerate", String(still ? FPS : 1), "-i", join(pdir, "o%05d.png"));
           filters.push(
             // Erst ins Format der Überlagerung wandeln, dann vervielfachen: sonst wandelt ffmpeg dasselbe Bild 25-mal.
             still ? `[${input}:v]null[o${input}]` : `[${input}:v]format=yuva420p,fps=${FPS}[o${input}]`,
@@ -785,10 +786,8 @@ export async function renderMontage(
           last = `[b${input}]`;
           input++;
         }
-        // Standbilder gehen dicht an dicht (als wären es 25 je Sekunde) durch den Encoder, damit er dieselben
-        // Einstellungen wie in den Abschnitten mit Video bekommt; ihre Stelle im Video setzt `stillTimes` danach.
         filters.push(
-          `${last}format=yuv420p,trim=duration=${durS.toFixed(3)}${still ? `,setpts=N/${FPS}/TB` : ""}[out]`,
+          `${last}format=yuv420p,trim=${still ? `end_frame=${stills}` : `duration=${durS.toFixed(3)}`}[out]`,
         );
         const tmp = join(pdir, "v.mp4");
         const full = [
