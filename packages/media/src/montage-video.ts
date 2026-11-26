@@ -9,6 +9,9 @@
  * LGPL-Fassung von ffmpeg nicht überall Schrift setzen kann. Ohne Renderer entsteht das Video
  * trotzdem, nur ohne Einblendungen.
  *
+ * Wo kein Video läuft, steht je Sekunde ein Bild (die Uhrzeit ändert sich nicht öfter), sonst sind es 25 je Sekunde:
+ * Die Bildrate im fertigen Video wechselt also, die Zeiten bleiben auf das Bild genau (Issue #249).
+ *
  * Das Video entsteht stückweise mit festen Parametern und wird ohne Neukodierung verbunden.
  * Der Ton wird als PCM je Stück erzeugt und am Ende einmal kodiert, damit er auf die
  * Probe genau zur Bildzeit passt.
