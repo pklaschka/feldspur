@@ -1,0 +1,62 @@
+name: Messung Ausgeben (#249)
+
+# Einmal-Workflow auf dem Messzweig: misst das Ausgeben vor (main) und nach der Änderung auf allen drei Plattformen,
+# mit dem mitgelieferten ffmpeg. Ergebnisse stehen im Job-Protokoll. Gehört nicht nach main.
+on:
+  push:
+    branches: ["claude/ausgeben-messung-yncxlm"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: messung-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FFMPEG_LINE: "8.1"
+  MESSUNG_MINUTEN: "20"
+
+jobs:
+  messung:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: linux-x64 }
+          - { os: windows-2022, name: win32-x64 }
+          - { os: macos-latest, name: darwin-arm64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        with:
+          node-version: 22
+          cache: true
+      - name: FFmpeg-Cache (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/cache/restore@v6
+        with:
+          path: apps/desktop/vendor/ffmpeg
+          key: ffmpeg-lgpl-${{ matrix.name }}-${{ env.FFMPEG_LINE }}-${{ hashFiles('scripts/build-ffmpeg-macos.sh') }}
+      - name: FFmpeg (LGPL) holen oder bauen
+        shell: bash
+        run: |
+          if [ -x "apps/desktop/vendor/ffmpeg/${{ matrix.name }}/ffmpeg" ]; then echo "aus dem Cache"; else node scripts/fetch-ffmpeg.mjs; fi
+          echo "$PWD/apps/desktop/vendor/ffmpeg/${{ matrix.name }}" >> "$GITHUB_PATH"
+      - name: Nachher (dieser Zweig)
+        shell: bash
+        run: MESSUNG_ORDNER="$RUNNER_TEMP/messung" vpx scripts/messung-ausgeben.ts
+      - name: Vorher (main)
+        shell: bash
+        run: |
+          git checkout origin/main -- packages/media/src
+          MESSUNG_ORDNER="$RUNNER_TEMP/messung" vpx scripts/messung-ausgeben.ts
+          git checkout HEAD -- packages/media/src
+      - name: Einzelmessungen
+        shell: bash
+        run: vpx messung/varianten.ts "$RUNNER_TEMP/messung"
