@@ -6,6 +6,7 @@
  *
  *   vpx scripts/messung-ausgeben.ts                 20 Minuten Montage
  *   MESSUNG_MINUTEN=60 vpx scripts/messung-ausgeben.ts
+ *   MESSUNG_VIDEOANTEIL=15 …                        Video läuft nur in 15 % der Zeit (Standard 40)
  *   MESSUNG_ORDNER=/tmp/messung …                   Material dort anlegen und behalten (zweiter Lauf geht schneller)
  *
  * Gemessen werden drei Läufe: ohne Zwischenspeicher (erste Ausgabe), unverändert noch einmal (alles aus dem
@@ -17,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { availableParallelism, cpus, platform, arch, tmpdir } from "node:os";
 import { join } from "node:path";
-import { deflateSync } from "node:zlib";
+import { crc32, deflateSync } from "node:zlib";
 import { ProjectStore } from "@feldspur/core";
 import {
   applyImport,
@@ -34,6 +35,8 @@ import {
 } from "@feldspur/media";
 
 const minutes = Number(process.env.MESSUNG_MINUTEN ?? 20);
+/** Anteil der Montage, in dem ein Video läuft, in Prozent. Der Rest ist nur Ton. */
+const videoShare = Number(process.env.MESSUNG_VIDEOANTEIL ?? 40);
 const keep = process.env.MESSUNG_ORDNER;
 const root = keep ?? mkdtempSync(join(tmpdir(), "feldspur-messung-"));
 mkdirSync(root, { recursive: true });
@@ -52,12 +55,12 @@ function sourceEncoder(): string[] {
 }
 
 /**
- * Vergleichseinsatz, Anteile der Länge L: Ton von 0 bis L; Video A von 0,1 L bis 0,4 L, Video B von 0,25 L bis 0,5 L
- * (gleichzeitig von 0,25 L bis 0,4 L); in der zweiten Hälfte nur Ton. Das entspricht grob einem Feldtag, an dem die
- * Kamera nur zeitweise läuft.
+ * Vergleichseinsatz der Länge L: Ton von 0 bis L. Die Videos liegen am Anfang, in einem Abschnitt der Länge V
+ * (V = L × Videoanteil): Video A läuft dessen erste drei Viertel, Video B ab der Mitte bis zum Ende, ein Viertel lang
+ * laufen also beide. Danach läuft nur der Ton, wie an einem Feldtag, an dem die Kamera nur zeitweise läuft.
  */
 function makeMaterial() {
-  const done = join(raw, ".fertig");
+  const done = join(raw, `.fertig-${minutes}-${videoShare}`);
   if (existsSync(done)) return;
   rmSync(raw, { recursive: true, force: true });
   mkdirSync(join(raw, "Zoom"), { recursive: true });
@@ -104,72 +107,76 @@ function makeMaterial() {
       `creation_time=${iso(from)}`,
       file,
     );
-  video(join(raw, "HandyA", "VID_A001.mp4"), 0.1 * L, 0.4 * L, 0);
-  video(join(raw, "HandyB", "VID_B001.mp4"), 0.25 * L, 0.5 * L, 120);
+  const V = Math.round((L * videoShare) / 100);
+  video(join(raw, "HandyA", "VID_A001.mp4"), 0, 0.75 * V, 0);
+  video(join(raw, "HandyB", "VID_B001.mp4"), 0.5 * V, V, 120);
   writeFileSync(done, "");
   console.error(`Material erzeugt in ${((performance.now() - started) / 1000).toFixed(1)} s`);
 }
 
-/** Kleiner PNG-Schreiber (RGBA, ohne Filter): reicht für die Einblendungen der Messung. */
-function png(rgba: Buffer): Buffer {
-  const crcTable = Array.from({ length: 256 }, (_, n) => {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    return c >>> 0;
-  });
-  const crc = (b: Buffer) => {
-    let c = 0xffffffff;
-    for (const x of b) c = crcTable[(c ^ x) & 0xff]! ^ (c >>> 8);
-    return (c ^ 0xffffffff) >>> 0;
-  };
+/** Zeilen eines PNG (RGBA, je Zeile ein Filterbyte davor): So lässt sich ein Bild ohne Umkopieren packen. */
+const ROW = W * 4 + 1;
+
+/** Rechteck in die PNG-Zeilen malen. */
+function rect(
+  rows: Buffer,
+  x0: number,
+  y0: number,
+  w: number,
+  h: number,
+  c: readonly [number, number, number, number],
+) {
+  for (let y = y0; y < Math.min(H, y0 + h); y++)
+    for (let x = x0; x < Math.min(W, x0 + w); x++) rows.set(c, y * ROW + 1 + x * 4);
+}
+
+/** Was in jeder Einblendung gleich ist: Kopf- und Fußleiste, „Schrift“ als Blöcke. */
+const BASE = (() => {
+  const rows = Buffer.alloc(ROW * H);
+  rect(rows, 0, 0, W, 52, [28, 20, 14, 240]);
+  rect(rows, 0, 684, W, 36, [28, 20, 14, 240]);
+  for (let k = 0; k < 40; k++) rect(rows, 300 + k * 22, 20, 16, 12, [201, 183, 162, 255]);
+  for (let k = 0; k < 30; k++) rect(rows, 52 + k * 30, 696, 22, 10, [245, 236, 223, 255]);
+  return rows;
+})();
+
+/**
+ * Einblendung wie in der App in Grundzügen, als PNG: Die „Ziffern“ der Uhrzeit wechseln jede Sekunde, dazu je Videofeld
+ * ein Etikett. Kostet wenige Millisekunden je Bild, etwa so viel wie das Zeichnen in der Oberfläche (dort rund 5 ms).
+ */
+function overlayPng(f: OverlayFrame): Buffer {
+  const rows = Buffer.from(BASE);
+  const digits = String(Math.floor(f.clockMs / 1000)).padStart(6, "0");
+  for (const [i, d] of [...digits].entries())
+    for (let k = 0; k < 7; k++)
+      if ((Number(d) + k * 3) % 5 < 3)
+        rect(rows, 16 + i * 20 + (k % 2) * 8, 10 + Math.floor(k / 2) * 9, 7, 7, [245, 236, 223, 255]);
+  for (const t of f.tiles.keys()) rect(rows, 10 + t * 640, 640, 420, 26, [28, 20, 14, 240]);
   const chunk = (type: string, data: Buffer) => {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const td = Buffer.concat([Buffer.from(type, "ascii"), data]);
-    const c = Buffer.alloc(4);
-    c.writeUInt32BE(crc(td));
-    return Buffer.concat([len, td, c]);
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(data.length);
+    head.write(type, 4, "ascii");
+    const tail = Buffer.alloc(4);
+    tail.writeUInt32BE(crc32(data, crc32(head.subarray(4))));
+    return Buffer.concat([head, data, tail]);
   };
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(W, 0);
   ihdr.writeUInt32BE(H, 4);
   ihdr.writeUInt8(8, 8);
   ihdr.writeUInt8(6, 9);
-  const rows = Buffer.alloc((W * 4 + 1) * H);
-  for (let y = 0; y < H; y++) rgba.copy(rows, y * (W * 4 + 1) + 1, y * W * 4, (y + 1) * W * 4);
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk("IHDR", ihdr),
-    chunk("IDAT", deflateSync(rows, { level: 6 })),
+    chunk("IDAT", deflateSync(rows, { level: 1 })),
     chunk("IEND", Buffer.alloc(0)),
   ]);
-}
-
-/** Einblendung wie in der App in Grundzügen: Kopf- und Fußleiste, „Schrift“ als Muster, das jede Sekunde wechselt. */
-function drawFrame(f: OverlayFrame): Buffer {
-  const b = Buffer.alloc(W * H * 4);
-  const rect = (x0: number, y0: number, w: number, h: number, c: [number, number, number, number]) => {
-    for (let y = y0; y < Math.min(H, y0 + h); y++)
-      for (let x = x0; x < Math.min(W, x0 + w); x++) b.set(c, (y * W + x) * 4);
-  };
-  rect(0, 0, W, 52, [28, 20, 14, 240]);
-  rect(0, 684, W, 36, [28, 20, 14, 240]);
-  // „Ziffern“: je Stelle der Uhrzeit ein Muster aus Blöcken.
-  const digits = String(Math.floor(f.clockMs / 1000)).padStart(6, "0");
-  for (const [i, d] of [...digits].entries())
-    for (let k = 0; k < 7; k++)
-      if ((Number(d) + k * 3) % 5 < 3)
-        rect(16 + i * 20 + (k % 2) * 8, 10 + Math.floor(k / 2) * 9, 7, 7, [245, 236, 223, 255]);
-  for (let k = 0; k < 40; k++) rect(300 + k * 22, 20, 16, 12, [201, 183, 162, 255]);
-  for (const [t, _m] of f.tiles.entries()) rect(10 + t * 640, 640, 420, 26, [28, 20, 14, 240]);
-  for (let k = 0; k < 30; k++) rect(52 + k * 30, 696, 22, 10, [245, 236, 223, 255]);
-  return b;
 }
 
 const overlay: OverlayRenderer = async (_head, frames) => {
   const out: Buffer[] = [];
   for (const f of frames) {
-    out.push(png(drawFrame(f)));
+    out.push(overlayPng(f));
     await new Promise((r) => setImmediate(r));
   }
   return out;
@@ -298,12 +305,15 @@ async function main() {
     encoder: enc.join(" "),
     ffmpeg: execFileSync("ffmpeg", ["-version"], { encoding: "utf8" }).split("\n")[0],
     minutes,
+    videoShare,
     runs,
   };
   writeFileSync(join(root, "messung.json"), JSON.stringify(info, null, 2));
   const s = (x: number) => `${x.toFixed(1).replace(".", ",")} s`;
   console.log(`\n## Messung Ausgeben, ${info.platform}, ${info.cores} Kerne (${info.cpu})`);
-  console.log(`Encoder: \`${info.encoder}\`, ${info.ffmpeg}, Montage ${minutes} min\n`);
+  console.log(
+    `Encoder: \`${info.encoder}\`, ${info.ffmpeg}, Montage ${minutes} min, davon ${videoShare} % mit Video\n`,
+  );
   const opt = (x: number | null) => (x === null ? "–" : s(x));
   console.log(
     "| Lauf | gesamt | Bild und Ton | davon Bild | davon Ton | Zusammenfügen | gerechnet/übernommen | Lautstärke | Prüfsummen | Größe | Bildspur |",
