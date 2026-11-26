@@ -33,7 +33,7 @@ import { formatClock, type Id, type Placement, type Source } from "@feldspur/cor
 import type { SessionTranscript } from "./session-transcript.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
-import { log } from "./log.ts";
+import { log, logSince } from "./log.ts";
 import { probeMedia } from "./probe.ts";
 import { PROBE_TIMEOUT_MS, runTool, STALL_MS, ToolError } from "./process.ts";
 
@@ -446,8 +446,8 @@ export interface MontageVideoOptions {
 
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
 const CHUNK_FRAMES = 60 * FPS;
-/** Erhöhen, wenn sich das Aussehen ändert, damit alte Abschnitte nicht wiederverwendet werden. */
-const LOOK_VERSION = 5;
+/** Erhöhen, wenn sich das Aussehen oder der Aufbau der Abschnitte ändert, damit alte nicht wiederverwendet werden. */
+const LOOK_VERSION = 6;
 
 /** Teilt Stücke in Abschnitte von höchstens `CHUNK_FRAMES`; Uhrzeit und Stellen in den Dateien rücken mit. */
 function chunks(pieces: Piece[]): Piece[] {
@@ -498,6 +498,20 @@ async function pool<T>(
   if (err) throw err.reason;
 }
 
+/**
+ * Stellt die Standbilder eines Abschnitts ohne Video an ihren Platz: Der Encoder bekommt `stills` Bilder dicht an dicht
+ * (je 1/25 s), dieser Bitstromfilter streckt die Zeiten danach auf eine Sekunde je Bild. Das letzte Bild steht nur so
+ * lange, bis der Abschnitt nach `frameCount` Bildern zu 1/25 s endet. So hat der Abschnitt genau die Länge, die er mit
+ * 25 Bildern je Sekunde hätte, und der Ton bleibt auf die Probe genau am Bild.
+ */
+function stillTimes(stills: number, frameCount: number): string[] {
+  const last = frameCount - (stills - 1) * FPS;
+  return [
+    "-bsf:v",
+    `setts=pts=PTS*${FPS}:dts=DTS*${FPS}:duration=if(lt(N\\,${stills - 1})\\,DURATION*${FPS}\\,DURATION*${last})`,
+  ];
+}
+
 /** Was im fertigen Video steckt, soweit andere Ausgaben es brauchen (der Viewer). */
 export interface MontageResult {
   /** Tonspuren in ihrer Reihenfolge; Spur 1 ist die Mischung, danach je Gerät eine. */
@@ -516,6 +530,7 @@ export async function renderMontage(
 ): Promise<MontageResult> {
   const outer = opts.signal;
   outer?.throwIfAborted();
+  const started = performance.now();
   // Scheitert ein Teil (ein Abschnitt oder der Ton), beendet `inner` alle übrigen ffmpeg-Prozesse,
   // statt sie zu Ende rechnen zu lassen (Issue #136). Gemeldet wird der erste echte Fehler.
   const inner = new AbortController();
@@ -650,8 +665,9 @@ export async function renderMontage(
     return cached;
   };
 
-  // Spur 1: Mischung oder Hauptquelle. Danach, falls gewünscht, je Gerät eine Spur. Nacheinander statt
-  // gleichzeitig: Die Bildabschnitte brauchen die Rechenleistung, der Ton ist daneben schnell fertig.
+  // Spur 1: Mischung oder Hauptquelle. Dazu, falls gewünscht, je Gerät eine Spur. Alle Spuren gleichzeitig: Jede
+  // braucht einen Kern, und der AAC-Encoder schafft nur etwa das 50- bis 150-Fache der Echtzeit. Nacheinander
+  // gerechnet, wartete eine lange Ausgabe mit mehreren Geräten am Ende auf den Ton (Issue #249).
   const devices = opts.deviceTracks ? deviceTracksOf(transcript, pieces) : [];
   const audioDone = (async () => {
     const all = await Promise.all(
@@ -660,20 +676,19 @@ export async function renderMontage(
         return p.audios.filter((_, k) => ok[k]);
       }),
     );
-    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), `${MIX_KBPS}k`);
-    const perDevice: { track: DeviceTrack; file: string }[] = [];
     const withSound = devices.filter((d) => all.some((list) => list.some((a) => a.source.deviceId === d.deviceId)));
-    if (withSound.length >= 2)
-      for (const [k, d] of withSound.entries())
-        perDevice.push({
-          track: d,
-          file: await renderTrack(
-            `g${k}`,
-            all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
-            `${DEVICE_TRACK_KBPS}k`,
-          ),
-        });
-    return { mix, perDevice };
+    const [mix, ...files] = await Promise.all([
+      renderTrack("a", await Promise.all(pieces.map(soundOf)), `${MIX_KBPS}k`),
+      ...(withSound.length >= 2 ? withSound : []).map((d, k) =>
+        renderTrack(
+          `g${k}`,
+          all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
+          `${DEVICE_TRACK_KBPS}k`,
+        ),
+      ),
+    ]);
+    log("montage", `Ton fertig nach ${logSince(started)}`);
+    return { mix: mix!, perDevice: files.map((file, k) => ({ track: withSound[k]!, file })) };
   })();
   // Scheitert der Ton, gleich alles beenden; der Fehler kommt beim Zusammenfügen bzw. im catch unten.
   audioDone.catch(fail);
@@ -730,9 +745,13 @@ export async function renderMontage(
         );
         const pdir = join(dir, `p${i}`);
         await mkdir(pdir, { recursive: true });
-        // Ohne Video ändert sich das Bild höchstens einmal je Sekunde: mit 1 Bild/s zusammensetzen,
-        // erst ganz am Ende auf 25 Bilder/s vervielfachen. Spart den größten Teil der Rechenzeit.
-        const rate = p.videos.length ? FPS : 1;
+        // Ohne Video ändert sich das Bild höchstens einmal je Sekunde (die Uhrzeit): Dann entsteht auch nur ein Bild je
+        // Sekunde, das im fertigen Video eine Sekunde lang steht (Issue #249). 24 von 25 Bildern zu kodieren, die
+        // nichts Neues zeigen, kostete vorher den größten Teil der Rechenzeit dieser Abschnitte, und beim
+        // Hardware-Encoder (VideoToolbox) Durchsatz, der den Abschnitten mit Video fehlte.
+        const still = p.videos.length === 0;
+        const rate = still ? 1 : FPS;
+        const stills = Math.ceil(durS);
         const srcDur = (Math.ceil(durS) + 1).toString();
         const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${rate}:d=${srcDur}`];
         const filters: string[] = [];
@@ -757,13 +776,18 @@ export async function renderMontage(
           await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
           args.push("-framerate", "1", "-i", join(pdir, "o%05d.png"));
           filters.push(
-            rate === 1 ? `[${input}:v]null[o${input}]` : `[${input}:v]fps=${FPS}[o${input}]`,
+            // Erst ins Format der Überlagerung wandeln, dann vervielfachen: sonst wandelt ffmpeg dasselbe Bild 25-mal.
+            still ? `[${input}:v]null[o${input}]` : `[${input}:v]format=yuva420p,fps=${FPS}[o${input}]`,
             `${last}[o${input}]overlay=0:0:eof_action=repeat[b${input}]`,
           );
           last = `[b${input}]`;
           input++;
         }
-        filters.push(`${last}format=yuv420p${rate === 1 ? `,fps=${FPS}` : ""},trim=duration=${durS.toFixed(3)}[out]`);
+        // Standbilder gehen dicht an dicht (als wären es 25 je Sekunde) durch den Encoder, damit er dieselben
+        // Einstellungen wie in den Abschnitten mit Video bekommt; ihre Stelle im Video setzt `stillTimes` danach.
+        filters.push(
+          `${last}format=yuv420p,trim=duration=${durS.toFixed(3)}${still ? `,setpts=N/${FPS}/TB` : ""}[out]`,
+        );
         const tmp = join(pdir, "v.mp4");
         const full = [
           ...args,
@@ -772,17 +796,20 @@ export async function renderMontage(
           "-map",
           "[out]",
           "-frames:v",
-          String(frameCount),
+          String(still ? stills : frameCount),
           "-r",
           String(FPS),
           ...enc,
+          // Alle zwei Sekunden ein Bild, an das Player springen können, mit und ohne Video.
           "-g",
-          String(FPS * 2),
+          String(still ? 2 : FPS * 2),
+          ...(still ? stillTimes(stills, frameCount) : []),
           "-an",
           tmp,
         ];
+        // ffmpeg meldet die Zeit vor dem Strecken der Standbilder (`stillTimes`): dort zählt jedes Bild 25-fach.
         const progress = (ms: number) => {
-          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS)));
+          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS) * (still ? FPS : 1)));
           report();
         };
         // Mehrere Abschnitte laufen gleichzeitig: Jeder merkt sich, ob er mit Hardware-Dekodierung begonnen hat.
@@ -814,8 +841,19 @@ export async function renderMontage(
       fail,
     );
 
-    await writeFile(join(dir, "v.txt"), vFiles.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
+    // Die Länge steht ausdrücklich dabei: Der nächste Abschnitt beginnt genau nach `f1 - f0` Bildern, auch wo ein
+    // Abschnitt aus Standbildern besteht oder ein Encoder die Dauer des letzten Bilds anders vermerkt.
+    await writeFile(
+      join(dir, "v.txt"),
+      vFiles
+        .map((f, i) => {
+          const durS = ((parts[i]!.f1 - parts[i]!.f0) * FRAME_MS) / 1000;
+          return `file '${f.replace(/'/g, "'\\''")}'\nduration ${durS.toFixed(3)}`;
+        })
+        .join("\n"),
+    );
     await writeFile(join(dir, "meta.txt"), chapterFile(transcript));
+    log("montage", `Abschnitte fertig nach ${logSince(started)}`);
     const audio = await audioDone;
     signal?.throwIfAborted();
     // Spur 1 trägt die Mischung und ist Standard; die Gerätespuren folgen, nicht als Standard markiert.
