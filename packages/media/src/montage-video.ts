@@ -13,7 +13,7 @@
  * Die Bildrate im fertigen Video wechselt also, die Zeiten bleiben auf das Bild genau (Issue #249).
  *
  * Das Video entsteht stückweise mit festen Parametern und wird ohne Neukodierung verbunden.
- * Der Ton wird als PCM je Stück erzeugt und am Ende einmal kodiert, damit er auf die
+ * Der Ton wird als PCM je Stück erzeugt und am Ende je Spur einmal kodiert (in Teilen gleichzeitig, `aac-parts.ts`), damit er auf die
  * Probe genau zur Bildzeit passt.
  *
  * Tonspuren: Spur 1 ist immer die Mischung (oder nur die Hauptquelle) und als Standard markiert; das hören
@@ -35,6 +35,7 @@ import { basename, join } from "node:path";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
 import type { SessionTranscript } from "./session-transcript.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
+import { encodeAacParts, limiter } from "./aac-parts.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
 import { log, logSince } from "./log.ts";
 import { probeMedia } from "./probe.ts";
@@ -591,7 +592,11 @@ export async function renderMontage(
     return wanted.filter((_, k) => ok[k]);
   };
 
-  // Ton nebenher: je Stück PCM mit exakter Länge, am Ende einmal AAC. Unverändert: aus dem Zwischenspeicher.
+  // Ton nebenher: je Stück PCM mit exakter Länge, danach AAC in Teilen gleichzeitig (`aac-parts.ts`), über alle
+  // Tonspuren zusammen höchstens so viele Teile, wie Kerne da sind (höchstens acht). Unverändert:
+  // aus dem Zwischenspeicher.
+  const audioSlot = limiter(Math.max(2, Math.min(8, availableParallelism())));
+  const RAW = ["-f", "s16le", "-c:a", "pcm_s16le"];
   // Eine Spur entsteht aus den Tonquellen je Stück (sounds[i]); mehrere Quellen werden gleich laut addiert.
   const renderTrack = async (tag: string, sounds: MediaRef[][], bitrate: string): Promise<string> => {
     const audioKey = createHash("sha1")
@@ -623,24 +628,14 @@ export async function renderMontage(
     for (const [i, p] of pieces.entries()) {
       signal?.throwIfAborted();
       const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
-      const aOut = join(dir, `${tag}-${i}.wav`);
+      const aOut = join(dir, `${tag}-${i}.pcm`);
       const samples = Math.round(durS * RATE);
       // Auf die Probe genau so lang wie das Bild des Stücks: zu kurzen Ton mit Stille auffüllen, zu langen kappen.
       const fit = `apad,atrim=end_sample=${samples}`;
       const src = sounds[i]!;
       if (!src.length) {
         await ff(
-          [
-            "-f",
-            "lavfi",
-            "-i",
-            `anullsrc=r=${RATE}:cl=stereo`,
-            "-af",
-            `atrim=end_sample=${samples}`,
-            "-c:a",
-            "pcm_s16le",
-            aOut,
-          ],
+          ["-f", "lavfi", "-i", `anullsrc=r=${RATE}:cl=stereo`, "-af", `atrim=end_sample=${samples}`, ...RAW, aOut],
           signal,
         );
       } else {
@@ -659,22 +654,20 @@ export async function renderMontage(
             ? `${src.map((_, k) => `[a${k}]`).join("")}amix=inputs=${src.length}:normalize=0:duration=longest,alimiter=limit=0.95,`
             : "[a0]";
         f.push(`${mix}aformat=sample_fmts=s16:channel_layouts=stereo,${fit}[out]`);
-        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", aOut], signal);
+        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", ...RAW, aOut], signal);
       }
       aList.push(aOut);
     }
-    const listFile = join(dir, `${tag}.txt`);
-    await writeFile(listFile, aList.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
     const m4a = join(dir, `${tag}.m4a`);
-    await ff(["-f", "concat", "-safe", "0", "-i", listFile, "-c:a", "aac", "-b:a", bitrate, m4a], signal);
+    await encodeAacParts({ pcmFiles: aList, rate: RATE, bitrate, out: m4a, dir, tag, slot: audioSlot, signal });
     await rename(m4a, cached).catch(() => copyFile(m4a, cached));
     for (const f of aList) await rm(f, { force: true });
     return cached;
   };
 
-  // Spur 1: Mischung oder Hauptquelle. Dazu, falls gewünscht, je Gerät eine Spur. Alle Spuren gleichzeitig: Jede
-  // braucht einen Kern, und der AAC-Encoder schafft nur etwa das 50- bis 150-Fache der Echtzeit. Nacheinander
-  // gerechnet, wartete eine lange Ausgabe mit mehreren Geräten am Ende auf den Ton (Issue #249).
+  // Spur 1: Mischung oder Hauptquelle. Dazu, falls gewünscht, je Gerät eine Spur. Alle Spuren gleichzeitig, und jede
+  // in Teilen: Der AAC-Encoder nutzt nur einen Kern und schafft etwa das 50- bis 110-Fache der Echtzeit. Nacheinander
+  // und am Stück gerechnet, wartete eine lange Ausgabe am Ende auf den Ton (Issue #249).
   const devices = opts.deviceTracks ? deviceTracksOf(transcript, pieces) : [];
   const audioDone = (async () => {
     const all = await Promise.all(
