@@ -436,7 +436,7 @@ export interface MontageVideoOptions {
    * Geräte Ton haben; sonst wäre die Gerätespur dasselbe wie Spur 1.
    */
   deviceTracks?: boolean;
-  /** Wie viele Abschnitte gleichzeitig; Standard: halbe Kernzahl, höchstens 4. */
+  /** Wie viele Abschnitte gleichzeitig; Standard: ein Kern bleibt frei, höchstens 4. */
   parallel?: number;
   /** Lautstärke-Angleichung je Quelle (audioLevelOf); fehlt eine Quelle, bleibt ihr Ton unverändert. */
   levels?: Map<string, AudioLevel | null>;
@@ -554,7 +554,9 @@ export async function renderMontage(
   const enc = await videoEncoder();
   const cacheDir = opts.cacheDir ?? join(dir, "abschnitte");
   await mkdir(cacheDir, { recursive: true });
-  const parallel = opts.parallel ?? Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2)));
+  // Ein Kern bleibt für die Oberfläche und den Ton frei. Mehr als vier gleichzeitig bringt nichts: Spätestens dann
+  // ist der Encoder ausgelastet (gemessen für Issue #249; mit VideoToolbox schon bei drei).
+  const parallel = opts.parallel ?? Math.max(1, Math.min(4, availableParallelism() - 1));
 
   // Dateien im Zwischenspeicher, die diese Ausgabe braucht; alles andere wird am Ende gelöscht.
   const used = new Set<string>();
