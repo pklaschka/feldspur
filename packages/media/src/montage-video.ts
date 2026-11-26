@@ -503,13 +503,15 @@ async function pool<T>(
  * (je 1/25 s), dieser Bitstromfilter streckt die Zeiten danach auf eine Sekunde je Bild. Das letzte Bild steht nur so
  * lange, bis der Abschnitt nach `frameCount` Bildern zu 1/25 s endet. So hat der Abschnitt genau die Länge, die er mit
  * 25 Bildern je Sekunde hätte, und der Ton bleibt auf die Probe genau am Bild.
+ *
+ * Die Dekodierzeit (DTS) behält ihren Abstand zur Anzeigezeit, statt mitgestreckt zu werden: libx264 schreibt sie zwei
+ * Bilder früher, und gestreckt wären das zwei Sekunden, um die die Spur am Ende zu kurz geriete. Das geht, weil diese
+ * Abschnitte keine umsortierten Bilder haben (jedes zweite Bild ist ein Schlüsselbild).
  */
 function stillTimes(stills: number, frameCount: number): string[] {
   const last = frameCount - (stills - 1) * FPS;
-  return [
-    "-bsf:v",
-    `setts=pts=PTS*${FPS}:dts=DTS*${FPS}:duration=if(lt(N\\,${stills - 1})\\,DURATION*${FPS}\\,DURATION*${last})`,
-  ];
+  const duration = `if(lt(N\\,${stills - 1})\\,DURATION*${FPS}\\,DURATION*${last})`;
+  return ["-bsf:v", `setts=pts=PTS*${FPS}:dts=PTS*${FPS}-(PTS-DTS):duration=${duration}`];
 }
 
 /** Was im fertigen Video steckt, soweit andere Ausgaben es brauchen (der Viewer). */
@@ -862,6 +864,17 @@ export async function renderMontage(
       ...audio.perDevice.map((d) => ({ file: d.file, title: d.track.title })),
     ];
     const meta = 1 + tracks.length;
+    // Endet die Montage ohne Video, steht ihr letztes Standbild bis zum Ende. Ältere ffmpeg-Fassungen (6.x) lesen die
+    // Dauer dieses einen Bilds falsch aus dem Abschnitt; hier steht sie deshalb noch einmal ausdrücklich.
+    const tail = parts.at(-1);
+    const packets = parts.reduce((n, p) => n + (p.videos.length ? p.f1 - p.f0 : Math.ceil((p.f1 - p.f0) / FPS)), 0);
+    const lastStill =
+      tail && !tail.videos.length
+        ? [
+            "-bsf:v",
+            `setts=pts=PTS:dts=DTS:duration=if(eq(N\\,${packets - 1})\\,${(tail.f1 / FPS).toFixed(3)}/TB-PTS\\,DURATION)`,
+          ]
+        : [];
     log("montage", `setzt ${vFiles.length} Abschnitte und ${tracks.length} Tonspuren zusammen: ${outFile}`);
     // Abgebrochen oder gescheitert: keine halbe Videodatei im Ausgabeordner liegen lassen.
     await ff(
@@ -892,6 +905,7 @@ export async function renderMontage(
         String(meta),
         "-c",
         "copy",
+        ...lastStill,
         "-movflags",
         "+faststart",
         outFile,
