@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           if [ -x "apps/desktop/vendor/ffmpeg/${{ matrix.name }}/ffmpeg" ]; then echo "aus dem Cache"; else node scripts/fetch-ffmpeg.mjs; fi
-          echo "$PWD/apps/desktop/vendor/ffmpeg/${{ matrix.name }}" >> "$GITHUB_PATH"
+          echo "${{ github.workspace }}/apps/desktop/vendor/ffmpeg/${{ matrix.name }}" >> "$GITHUB_PATH"
       - name: Nachher (dieser Zweig)
         shell: bash
         run: MESSUNG_ORDNER="$RUNNER_TEMP/messung" vpx scripts/messung-ausgeben.ts

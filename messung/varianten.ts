@@ -2,8 +2,8 @@
  * Einzelmessungen für Issue #249 (nur auf dem Messzweig): Wo geht die Zeit eines Abschnitts hin, je Plattform?
  * Aufruf: vpx messung/varianten.ts <Ordner mit roh/ aus messung-ausgeben.ts>
  */
-import { execFileSync, spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 import { videoEncoder } from "@feldspur/media";
@@ -21,8 +21,11 @@ function png(i: number): Buffer {
   const px = (x: number, y: number, c: number[]) => rows.set(c, y * (W * 4 + 1) + 1 + x * 4);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++)
-      if (y < 52 || y >= 684)
-        px(x, y, x > 16 + i * 14 && x < 136 + i * 14 && y > 12 && y < 40 ? [245, 236, 223, 255] : [28, 20, 14, 240]);
+      if (y < 52 || y >= 684) {
+        // „Schrift“: feine helle Striche, je Sekunde an anderer Stelle.
+        const text = y > 12 && y < 40 && x > 16 && x < 900 && (x * 7 + i * 13) % 11 < 3 && (y + ((x / 9) | 0)) % 5 < 3;
+        px(x, y, text ? [245, 236, 223, 255] : [28, 20, 14, 240]);
+      }
   const table = Array.from({ length: 256 }, (_, n) => {
     let c = n;
     for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
@@ -105,20 +108,20 @@ const sectionArgs = (hw: boolean, first: boolean) => [
   "-r",
   "25",
 ];
-const stillFC = (fps: boolean) =>
-  `[1:v]null[o1];[0:v][o1]overlay=0:0:eof_action=repeat[b1];[b1]format=yuv420p${fps ? ",fps=25" : ""},trim=duration=60.000${fps ? "" : ",setpts=N/25/TB"}[out]`;
-const stillArgs = (fps: boolean) => [
-  ...color(1, 61),
+const stillFC = (old: boolean) =>
+  `[1:v]null[o1];[0:v][o1]overlay=0:0:eof_action=repeat[b1];[b1]format=yuv420p,${old ? "fps=25,trim=duration=60.000" : "trim=end_frame=60"}[out]`;
+const stillArgs = (old: boolean) => [
+  ...(old ? color(1, 61) : ["-f", "lavfi", "-i", "color=c=0x10171b:s=1280x720:r=25:d=2.44"]),
   "-framerate",
-  "1",
+  old ? "1" : "25",
   "-i",
   O,
   "-filter_complex",
-  stillFC(fps),
+  stillFC(old),
   "-map",
   "[out]",
   "-frames:v",
-  fps ? "1500" : "60",
+  old ? "1500" : "60",
   "-r",
   "25",
 ];
@@ -169,6 +172,35 @@ if (process.platform === "darwin") {
     out("enc-speed"),
   ]);
 }
+// Bildqualität der Standbilder gegen das unkomprimierte Bild: alt (erstes und letztes Bild jeder Sekunde) und neu.
+const ref = join(work, "ref.mkv");
+const refFC = "[1:v]null[o1];[0:v][o1]overlay=0:0:eof_action=repeat[b1];[b1]format=yuv420p,trim=duration=60.000[out]";
+await run([
+  ...color(1, 61),
+  "-framerate",
+  "1",
+  "-i",
+  O,
+  "-filter_complex",
+  refFC,
+  "-map",
+  "[out]",
+  "-frames:v",
+  "60",
+  "-c:v",
+  "ffv1",
+  ref,
+]);
+function psnr(name: string, file: string, select: string) {
+  const fc = `[0:v]${select}setpts=N/TB[a];[1:v]setpts=N/TB[b];[a][b]psnr`;
+  const r = spawnSync("ffmpeg", ["-hide_banner", "-i", file, "-i", ref, "-filter_complex", fc, "-f", "null", "-"], {
+    encoding: "utf8",
+  });
+  console.log(`${name}: ${/PSNR.*/.exec(r.stderr)?.[0] ?? r.stderr.slice(-300)} (${statSync(file).size} Bytes)`);
+}
+psnr("Standbild alt, erstes Bild der Sekunde", join(work, "still-alt-0.mp4"), "select='not(mod(n,25))',");
+psnr("Standbild alt, letztes Bild der Sekunde", join(work, "still-alt-0.mp4"), "select='eq(mod(n,25),24)',");
+psnr("Standbild neu", join(work, "still-neu-0.mp4"), "");
 // Ton: AAC einer Spur, einzeln und vierfach.
 const wav = join(work, "ton.wav");
 await run(["-t", "600", "-i", join(root, "roh", "Zoom", "ZOOM0001.WAV"), "-c:a", "pcm_s16le", wav]);
