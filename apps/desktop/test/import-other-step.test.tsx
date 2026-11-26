@@ -78,7 +78,7 @@ describe("Einsammeln endet, während ein anderer Schritt offen ist", () => {
     );
     let importing!: Promise<void>;
     act(() => void (importing = startImport(session.id, ["/x/IMG_0001.jpg"], guard)));
-    expect(collectTab()).toBe("1Einsammeln");
+    expect(collectTab()).toBe("1Einsammelnläuft");
     expect(undoTitle()).toContain("Rückgängig: Einsatzdaten geändert");
 
     // Wenn: der Hauptprozess ein Foto übernommen hat (das leert den Verlauf) und die neue Ansicht liefert

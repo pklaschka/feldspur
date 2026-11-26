@@ -15,7 +15,7 @@ import { DiaryEditor } from "../DiaryEditor.tsx";
 import { ExportStep } from "../ExportStep.tsx";
 import { useExport } from "../exportState.tsx";
 import { formatDay } from "../format.ts";
-import { registerImportView } from "../importState.ts";
+import { importTabText, registerImportView, useImport } from "../importState.ts";
 import { Inspector } from "../Inspector.tsx";
 import { OriginalsBanner, OriginalsDialog } from "../Originals.tsx";
 import { isMac } from "../keys.ts";
@@ -71,6 +71,7 @@ export function SessionPane({
   const [selected, setSelected] = useState<string | null>(null);
   const [diaryPage, setDiaryPage] = useState<string | null>(null);
   const exporting = useExport();
+  const importing = useImport();
   const [searching, setSearching] = useState(false);
   const [originals, setOriginals] = useState(false);
   /** Sprungziel auf der Zeitachse (Suche); n zählt hoch, damit derselbe Sprung erneut greift. */
@@ -157,7 +158,19 @@ export function SessionPane({
   const unplaced = view.rows.filter((r) => r.status === "unplaced").length;
   const toCheck = asPlaces(checkQueue(view.rows), view.conflictGroups).length;
   const steps: { id: Step; n: number; title: string; badge: string | null; warn?: boolean }[] = [
-    { id: "collect", n: 1, title: "Einsammeln", badge: view.rows.length ? `${view.rows.length}` : null },
+    {
+      id: "collect",
+      n: 1,
+      title: "Einsammeln",
+      // Während des Einsammelns der Fortschritt wie bei „Ausgeben“, damit er in jedem Schritt zu sehen ist (Issue
+      // #258); die Zahl der Quellen ändert sich bis zum Ende ohnehin nicht.
+      badge:
+        importing.job?.sessionId === view.session.id
+          ? importTabText(importing.job.progress)
+          : view.rows.length
+            ? `${view.rows.length}`
+            : null,
+    },
     {
       id: "sync",
       n: 2,
