@@ -15,12 +15,26 @@ const RATE = 48_000;
 /** Teile von 300 Blöcken (6,4 s) statt zwei Minuten, damit der Test mit wenig Ton mehrere Nähte hat. */
 const PART_BLOCKS = 300;
 
-/** Zeiten und Größen aller AAC-Blöcke einer Datei, je Zeile "Beginn,Dauer,Größe". */
+/**
+ * Zeiten und Größen aller AAC-Blöcke einer Datei, je Zeile "Beginn,Dauer,Größe". Beim letzten Block fehlt die Dauer:
+ * Je nach ffmpeg-Fassung endet er am Stück kodiert mit dem Ton oder erst mit dem vollen Block; die Länge der Spur
+ * prüft `duration`.
+ */
 function packets(file: string): string[] {
-  return execFileSync("ffprobe", ["-v", "error", "-show_entries", "packet=pts,duration,size", "-of", "csv=p=0", file])
+  const lines = execFileSync("ffprobe", [
+    "-v",
+    "error",
+    "-show_entries",
+    "packet=pts,duration,size",
+    "-of",
+    "csv=p=0",
+    file,
+  ])
     .toString()
     .trim()
-    .split("\n");
+    .split(/\r?\n/);
+  const last = lines.pop()!.split(",");
+  return [...lines, `${last[0]},,${last[2]}`];
 }
 
 /** Dauer der Tonspur in Sekunden, wie Player sie lesen. */
