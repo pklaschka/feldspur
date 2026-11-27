@@ -929,14 +929,18 @@ export async function renderMontage(
     ];
     const meta = 1 + tracks.length;
     // Endet die Montage ohne Video, steht ihr letztes Standbild bis zum Ende. Ältere ffmpeg-Fassungen (6.x) lesen die
-    // Dauer dieses einen Bilds falsch aus dem Abschnitt; hier steht sie deshalb noch einmal ausdrücklich.
+    // Dauer dieses einen Bilds falsch aus dem Abschnitt; hier steht sie deshalb noch einmal ausdrücklich. Gerechnet über
+    // die Dekodierzeit: Der MP4-Muxer nimmt als Spurlänge letzte DTS plus Dauer, weniger erste DTS. libx264 mancher
+    // Fassungen (etwa aus Homebrew und choco) legt die DTS ein Bild vor die PTS, ein Abschnitt aus nur einem Standbild
+    // aber nicht; beginnt die Montage so, geriete die Bildspur mit PTS gerechnet ein Bild zu kurz. Wo DTS und PTS
+    // überall gleich sind (das ffmpeg der App), ändert sich nichts.
     const tail = parts.at(-1);
     const packets = parts.reduce((n, p) => n + (p.videos.length ? p.f1 - p.f0 : Math.ceil((p.f1 - p.f0) / fps)), 0);
     const lastStill =
       tail && !tail.videos.length
         ? [
             "-bsf:v",
-            `setts=pts=PTS:dts=DTS:duration=if(eq(N\\,${packets - 1})\\,${(tail.f1 / fps).toFixed(6)}/TB-PTS\\,DURATION)`,
+            `setts=pts=PTS:dts=DTS:duration=if(eq(N\\,${packets - 1})\\,${(tail.f1 / fps).toFixed(6)}/TB-DTS+STARTDTS\\,DURATION)`,
           ]
         : [];
     log("montage", `setzt ${vFiles.length} Abschnitte und ${tracks.length} Tonspuren zusammen: ${outFile}`);

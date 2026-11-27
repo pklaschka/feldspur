@@ -116,9 +116,9 @@ describe.skipIf(!hasFfmpeg())("Montagevideo in anderer Auflösung und Bildrate",
           expect(got.frames[n + k]!).toBeCloseTo(p.f0 / bilder + k * (p.videos.length ? 1 / bilder : 1), 2);
         n += expected[i]!;
       }
-      // Dann: Bild und Ton enden zusammen, mit der Montage, bis auf höchstens ein Bild (wie in montage-standbild.test.ts:
-      // je nach ffmpeg-Fassung meldet ffprobe eine der Spuren um ein Bild anders, etwa das ffmpeg aus choco unter Windows)
-      expect(Math.abs(got.video - got.audio)).toBeLessThan(1 / bilder + 0.01);
+      // Dann: Bild und Ton enden zusammen, mit der Montage, mit jeder ffmpeg-Fassung (auch wo libx264 die DTS ein Bild
+      // vor die PTS legt und der erste Abschnitt nur ein Standbild hat)
+      expect(Math.abs(got.video - got.audio)).toBeLessThan(0.02);
       expect(got.video).toBeCloseTo(pieces.at(-1)!.f1 / bilder, 2);
     },
   );
