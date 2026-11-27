@@ -14,6 +14,7 @@ export const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || 
 export const FILE_ROLE: [RegExp, string][] = [
   [/^Originale[\\/]/, "Kopien der Originale, nach Gerät; jede Kopie gegen ihre Prüfsumme nachgelesen"],
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
+  [/^[^\\/]+\.feldspur$/, "Projektdatei zum Stand der Ausgabe; öffnen und „Originale suchen“ im Ordner Originale"],
   [/^LIESMICH\.html$/, "LIESMICH: was im Ordner liegt, wie zitiert wird, Tabelle für den Methodenteil"],
   [/^manifest-sha256\.txt$/, "Prüfsummenliste: SHA-256 jeder Datei im Ordner"],
   [/^ro-crate-metadata\.json$/, "Metadaten (RO-Crate): Angaben zum Datensatz maschinenlesbar, für Archive"],

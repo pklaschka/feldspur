@@ -3,7 +3,16 @@
  * `packages/media/src/originals-copy.ts`, eingebunden in `packages/media/src/export.ts`).
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectStore, type Device, type Source } from "@feldspur/core";
@@ -19,7 +28,7 @@ import {
   verifyFolder,
 } from "../src/originals-copy.ts";
 import { MANIFEST_NAME, README_NAME, RO_CRATE_NAME } from "../src/dataset.ts";
-import { exportSession } from "../src/export.ts";
+import { exportSession, projectFileName } from "../src/export.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { hasFfmpeg, makePhoto } from "./fixtures.ts";
 
@@ -205,6 +214,16 @@ describe.skipIf(!hasFfmpeg())("Ausgabe mit Originalen", () => {
     const ids = crate["@graph"].map((e) => e["@id"]);
     expect(ids).toContain("Originale/");
     for (const c of copies) expect(ids).toContain(c);
+    // Und: die Projektdatei liegt als Kopie daneben, lässt sich öffnen und nennt die LIESMICH
+    const project = projectFileName(store);
+    expect(project).toBe("Projekt.feldspur");
+    expect(r.files).toContain(project);
+    // Geöffnet wird eine Kopie davon: Öffnen schreibt in die Datei, die Prüfung unten soll sie unverändert sehen.
+    copyFileSync(join(out, project), join(dir, "geoeffnet.feldspur"));
+    const copy = ProjectStore.open(join(dir, "geoeffnet.feldspur"));
+    expect(copy.listSessions().map((x) => x.title)).toEqual(["Testmarkt"]);
+    copy.close();
+    expect(readme).toContain(`<dt>${project}</dt><dd>Projektdatei:`);
     // Und: die Prüfsummenliste deckt sie ab, „Ordner prüfen“ findet alles unverändert
     const check = await verifyFolder(out);
     expect(check).toMatchObject({ listed: r.files.length - 1, missing: [], changed: [], extra: [] });
@@ -216,5 +235,6 @@ describe.skipIf(!hasFfmpeg())("Ausgabe mit Originalen", () => {
     const second = await exportSession(store, sessionId, out, { video: false, previousFiles: first.files });
     expect(second.files.some((f) => f.startsWith("Originale/"))).toBe(false);
     expect(existsSync(join(out, "Originale"))).toBe(false);
+    expect(existsSync(join(out, projectFileName(store)))).toBe(false);
   });
 });

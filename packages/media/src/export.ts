@@ -334,6 +334,14 @@ function outPath(outDir: string, name: string): string {
  * Standbilder, Lautstärke, Montagevideo, dann die Dokumente; LIESMICH und Prüfsummenliste zuletzt.
  * Zwischendateien liegen in einem eigenen Ordner im Temp-Verzeichnis, der am Ende wieder verschwindet.
  */
+/**
+ * Name der Kopie der Projektdatei im Ausgabeordner: der Projektname mit Endung `.feldspur`. Sie enthält Pfade des
+ * eigenen Rechners; geöffnet findet „Originale suchen“ die Kopien unter `Originale/` über ihre Prüfsumme.
+ */
+export function projectFileName(store: ProjectStore): string {
+  return `${safeName(store.getMeta("name") || "Projekt")}.feldspur`;
+}
+
 export async function exportSession(
   store: ProjectStore,
   sessionId: Id,
@@ -354,6 +362,8 @@ export async function exportSession(
   // leftover: was davon (oder von der letzten Ausgabe) diesmal nicht entsteht und deshalb entfernt wird.
   // Kopien der Originale (Issue #208): alle Quellen des Einsatzes, wie im Begleitprotokoll.
   const copies = opts.originals ? planOriginals(transcript.input.sources, transcript.input.devices) : [];
+  // Mit den Originalen auch die Projektdatei (Zuri 27.11.2026): Rohmaterial und Arbeitsstand liegen dann beisammen.
+  const project = opts.originals ? projectFileName(store) : null;
   const planned = [
     ...copies.map((c) => c.path),
     ...(opts.video !== false ? [`${base}.mp4`] : []),
@@ -363,6 +373,7 @@ export async function exportSession(
     `${base}_Variablen.xlsx`,
     `${base}_Begleitprotokoll.csv`,
     ...(opts.changeLog !== undefined ? [`${base}_Aenderungsprotokoll.csv`] : []),
+    ...(project ? [project] : []),
     ...(opts.readme ? [README_NAME] : []),
     ...(opts.roCrate ? [RO_CRATE_NAME] : []),
     ...(opts.manifest ? [MANIFEST_NAME] : []),
@@ -520,6 +531,12 @@ export async function exportSession(
     if (opts.changeLog !== undefined) {
       await writeOut(outPath(outDir, `${base}_Aenderungsprotokoll.csv`), opts.changeLog, "Änderungsprotokoll");
       files.push(`${base}_Aenderungsprotokoll.csv`);
+    }
+    if (project) {
+      // Eine in sich stimmige Kopie, auch während das Projekt offen ist (VACUUM INTO), mit dem Stand beim Ausgeben.
+      store.backupTo(outPath(outDir, project));
+      log("ausgabe", `Projektdatei kopiert: ${project}`);
+      files.push(project);
     }
     // LIESMICH und Metadaten beschreiben dieselbe Ausgabe aus einem Datenobjekt (Issue #206). Beide stehen nach allen
     // Inhalten, damit sie jede Datei der Ausgabe nennen, auch sich selbst und die Prüfsummenliste.

@@ -188,6 +188,10 @@ const FILE_ROLE: [RegExp, string][] = [
     "Metadaten (RO-Crate): dieselbe Beschreibung maschinenlesbar, für Archive und Repositorien",
   ],
   [/^Originale\//, "Kopie einer Originaldatei, Kurzzeichen wie im Begleitprotokoll"],
+  [
+    /^[^/]+\.feldspur$/,
+    "Projektdatei: Arbeitsstand in Feldspur zum Zeitpunkt der Ausgabe; enthält Pfade des Rechners, auf dem sie entstand",
+  ],
   [/_Resolve\.fcpxml$/, "Schnittliste für DaVinci Resolve: dieselbe Montage ohne Einblendungen"],
   [/\.docx$/, "Einsatztranskript: Mitschrift, Tagebuch und Fotos in zeitlicher Folge, mit Zeitmarken zum Video"],
 ];

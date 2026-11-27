@@ -614,8 +614,8 @@ await kapitel("ausgeben", async () => {
 
   await ablauf("Originale mitgeben und den Ausgabeordner prüfen", async () => {
     // Dann: gibt es den Schalter für die Originale, ohne Vorauswahl
-    const schalter = page.getByRole("switch", { name: /^Originale \(Kopien, nach Gerät\)/ });
-    await siehe("Originale (Kopien, nach Gerät)", schalter);
+    const schalter = page.getByRole("switch", { name: /^Originale und Projektdatei \(Kopien\)/ });
+    await siehe("Originale und Projektdatei (Kopien)", schalter);
     if ((await schalter.getAttribute("aria-checked")) === "true") throw new Error("Originale sind vorgewählt");
     // Wenn: „Ordner prüfen…“ gewählt und im Dialog der vorgeschlagene Ordner übernommen wird
     await app.evaluate(({ dialog }) => {

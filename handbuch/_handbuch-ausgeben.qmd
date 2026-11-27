@@ -94,8 +94,9 @@ Optionen:
   (@sec-aenderungsprotokoll-ausgabe) und **Prüfsummenliste** (@sec-pruefsummenliste), alle drei Standard.
 - **Metadaten (RO-Crate, .json)** (@sec-ro-crate), nur auf Wunsch: die Angaben zum Datensatz maschinenlesbar, für ein
   Archiv oder Repositorium.
-- **Originale (Kopien, nach Gerät)** (@sec-originale-ausgabe), nur auf Wunsch: Kopien aller Originaldateien im
-  Unterordner `Originale`, damit Rohmaterial und Ausgabe beisammenliegen.
+- **Originale und Projektdatei (Kopien)** (@sec-originale-ausgabe), nur auf Wunsch: Kopien aller Originaldateien im
+  Unterordner `Originale` und eine Kopie der Projektdatei, damit Rohmaterial, Arbeitsstand und Ausgabe
+  beisammenliegen.
 
 Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
@@ -263,9 +264,9 @@ ausgegeben hat. Das Format ist das von `sha256sum`: Im Ordner prüft `sha256sum 
 (@sec-ordner-pruefen). Die Prüfsummen der Originaldateien stehen weiter im Begleitprotokoll; liegen Kopien im Ordner,
 führt die Liste auch sie.
 
-### Originale im Ordner {#sec-originale-ausgabe}
+### Originale und Projektdatei im Ordner {#sec-originale-ausgabe}
 
-Mit **Originale (Kopien, nach Gerät)** legt Feldspur jede Originaldatei des Einsatzes in den Ordner, im Unterordner
+Mit **Originale und Projektdatei (Kopien)** legt Feldspur jede Originaldatei des Einsatzes in den Ordner, im Unterordner
 `Originale` und darin je Gerät ein Ordner, etwa `Originale/Handkamera/V1_C0001.MP4`. Vor dem Dateinamen steht das
 Kurzzeichen aus dem Begleitprotokoll; so stoßen zwei `C0001.MP4` von verschiedenen Karten nicht zusammen. Neben dem
 Schalter steht, wie viel Platz das braucht. Reicht der Platz im gewählten Ordner nicht, sagt Feldspur das, bevor es
@@ -278,9 +279,16 @@ vielen Gigabyte spart das viel Zeit. Ob sie noch stimmen, zeigt **Ordner prüfen
 ohne seine Kopie aus, und die LIESMICH nennt es.
 
 In der LIESMICH, in den Metadaten und in der Prüfsummenliste stehen die Kopien mit. Die Dateiliste in Feldspur fasst
-sie zu einem Eintrag `Originale/` zusammen. Bedenke vor dem Weitergeben: Mit den Originalen liegt das ganze
-Rohmaterial im Ordner, mit allen Gesichtern, Stimmen und Namen. Die Projektdatei kopiert Feldspur nicht mit, denn sie
-enthält Pfade deines Rechners.
+sie zu einem Eintrag `Originale/` zusammen. 
+
+Neben die Originale legt Feldspur eine Kopie der Projektdatei, benannt nach dem Projekt, etwa `Wochenmarkt.feldspur`.
+Sie hält den Arbeitsstand beim Ausgeben fest, mit allen Einsätzen des Projekts. Öffnest du sie auf einem anderen
+Rechner, fehlen dort die Originale an den alten Orten. Mit **Originale suchen…** und **Ordner durchsuchen…** im Ordner
+`Originale` findet Feldspur die Kopien über ihre Prüfsumme wieder (@sec-originale). Öffne dazu eine Kopie der Datei, nicht die im Ausgabeordner: Feldspur
+schreibt beim Arbeiten in die Projektdatei, und **Ordner prüfen…** meldete sie dann als verändert.
+
+Bedenke vor dem Weitergeben: Mit den Originalen liegt das ganze Rohmaterial im Ordner, mit allen Gesichtern, Stimmen
+und Namen. Die Projektdatei enthält dazu die Pfade deines Rechners, also etwa deinen Benutzernamen und Ordnernamen.
 
 ### Ordner prüfen {#sec-ordner-pruefen}
 

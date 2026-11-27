@@ -123,9 +123,9 @@ export function ExportOptions({
         <Option
           checked={originals}
           onChange={(v) => set({ originals: v })}
-          label="Originale (Kopien, nach Gerät)"
+          label="Originale und Projektdatei (Kopien)"
           size={originalsBytes ? aboutSize(originalsBytes) : undefined}
-          hint="Legt jede Originaldatei in den Unterordner Originale und prüft die Kopie gegen ihre Prüfsumme. Dann liegt alles beisammen, auch Gesichter, Stimmen und Namen."
+          hint="Legt jede Originaldatei nach Gerät in den Unterordner Originale, prüft jede Kopie gegen ihre Prüfsumme und legt die Projektdatei dazu. Dann liegt alles beisammen, auch Gesichter, Stimmen, Namen und die Pfade deines Rechners."
         />
       </OptionGroup>
       <OptionGroup title="Für den Schnitt">

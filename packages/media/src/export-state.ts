@@ -122,7 +122,7 @@ const SETTING_TEXT: Record<Switch, [on: string, off: string]> = {
   changeLog: ["mit Änderungsprotokoll", "ohne Änderungsprotokoll"],
   manifest: ["mit Prüfsummenliste", "ohne Prüfsummenliste"],
   roCrate: ["mit Metadaten (RO-Crate)", "ohne Metadaten (RO-Crate)"],
-  originals: ["mit Kopien der Originale", "ohne Kopien der Originale"],
+  originals: ["mit Originalen und Projektdatei", "ohne Originale und Projektdatei"],
 };
 
 /** Die Einstellungen, die sich unterscheiden, als „damals …, jetzt …“. */
