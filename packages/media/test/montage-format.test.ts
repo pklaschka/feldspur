@@ -116,9 +116,9 @@ describe.skipIf(!hasFfmpeg())("Montagevideo in anderer Auflösung und Bildrate",
           expect(got.frames[n + k]!).toBeCloseTo(p.f0 / bilder + k * (p.videos.length ? 1 / bilder : 1), 2);
         n += expected[i]!;
       }
-      // Dann: Bild und Ton enden zusammen, mit der Montage (ffprobe vor 7.0 nennt die Bildspur ein Bild zu kurz, weil
-      // es die Dauer des letzten Standbilds nicht liest; geprüft wird mit dem ffmpeg der App wie in der CI)
-      expect(Math.abs(got.video - got.audio)).toBeLessThan(0.02);
+      // Dann: Bild und Ton enden zusammen, mit der Montage, bis auf höchstens ein Bild (wie in montage-standbild.test.ts:
+      // je nach ffmpeg-Fassung meldet ffprobe eine der Spuren um ein Bild anders, etwa das ffmpeg aus choco unter Windows)
+      expect(Math.abs(got.video - got.audio)).toBeLessThan(1 / bilder + 0.01);
       expect(got.video).toBeCloseTo(pieces.at(-1)!.f1 / bilder, 2);
     },
   );
