@@ -9,8 +9,11 @@
  * LGPL-Fassung von ffmpeg nicht überall Schrift setzen kann. Ohne Renderer entsteht das Video
  * trotzdem, nur ohne Einblendungen.
  *
+ * Wo kein Video läuft, steht je Sekunde ein Bild (die Uhrzeit ändert sich nicht öfter), sonst sind es 25 je Sekunde:
+ * Die Bildrate im fertigen Video wechselt also, die Zeiten bleiben auf das Bild genau (Issue #249).
+ *
  * Das Video entsteht stückweise mit festen Parametern und wird ohne Neukodierung verbunden.
- * Der Ton wird als PCM je Stück erzeugt und am Ende einmal kodiert, damit er auf die
+ * Der Ton wird als PCM je Stück erzeugt und am Ende je Spur einmal kodiert (in Teilen gleichzeitig, `aac-parts.ts`), damit er auf die
  * Probe genau zur Bildzeit passt.
  *
  * Tonspuren: Spur 1 ist immer die Mischung (oder nur die Hauptquelle) und als Standard markiert; das hören
@@ -32,8 +35,9 @@ import { basename, join } from "node:path";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
 import type { SessionTranscript } from "./session-transcript.ts";
 import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
+import { encodeAacParts, limiter } from "./aac-parts.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
-import { log } from "./log.ts";
+import { log, logSince } from "./log.ts";
 import { probeMedia } from "./probe.ts";
 import { PROBE_TIMEOUT_MS, runTool, STALL_MS, ToolError } from "./process.ts";
 
@@ -433,7 +437,7 @@ export interface MontageVideoOptions {
    * Geräte Ton haben; sonst wäre die Gerätespur dasselbe wie Spur 1.
    */
   deviceTracks?: boolean;
-  /** Wie viele Abschnitte gleichzeitig; Standard: halbe Kernzahl, höchstens 4. */
+  /** Wie viele Abschnitte gleichzeitig; Standard: ein Kern bleibt frei, höchstens 4. */
   parallel?: number;
   /** Lautstärke-Angleichung je Quelle (audioLevelOf); fehlt eine Quelle, bleibt ihr Ton unverändert. */
   levels?: Map<string, AudioLevel | null>;
@@ -446,8 +450,8 @@ export interface MontageVideoOptions {
 
 /** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
 const CHUNK_FRAMES = 60 * FPS;
-/** Erhöhen, wenn sich das Aussehen ändert, damit alte Abschnitte nicht wiederverwendet werden. */
-const LOOK_VERSION = 5;
+/** Erhöhen, wenn sich das Aussehen oder der Aufbau der Abschnitte ändert, damit alte nicht wiederverwendet werden. */
+const LOOK_VERSION = 6;
 
 /** Teilt Stücke in Abschnitte von höchstens `CHUNK_FRAMES`; Uhrzeit und Stellen in den Dateien rücken mit. */
 function chunks(pieces: Piece[]): Piece[] {
@@ -498,6 +502,22 @@ async function pool<T>(
   if (err) throw err.reason;
 }
 
+/**
+ * Stellt die Standbilder eines Abschnitts ohne Video an ihren Platz: Der Encoder bekommt `stills` Bilder dicht an dicht
+ * (je 1/25 s), dieser Bitstromfilter streckt die Zeiten danach auf eine Sekunde je Bild. Das letzte Bild steht nur so
+ * lange, bis der Abschnitt nach `frameCount` Bildern zu 1/25 s endet. So hat der Abschnitt genau die Länge, die er mit
+ * 25 Bildern je Sekunde hätte, und der Ton bleibt auf die Probe genau am Bild.
+ *
+ * Die Dekodierzeit (DTS) behält ihren Abstand zur Anzeigezeit, statt mitgestreckt zu werden: libx264 schreibt sie zwei
+ * Bilder früher, und gestreckt wären das zwei Sekunden, um die die Spur am Ende zu kurz geriete. Das geht, weil diese
+ * Abschnitte keine umsortierten Bilder haben (jedes zweite Bild ist ein Schlüsselbild).
+ */
+function stillTimes(stills: number, frameCount: number): string[] {
+  const last = frameCount - (stills - 1) * FPS;
+  const duration = `if(lt(N\\,${stills - 1})\\,DURATION*${FPS}\\,DURATION*${last})`;
+  return ["-bsf:v", `setts=pts=PTS*${FPS}:dts=PTS*${FPS}-(PTS-DTS):duration=${duration}`];
+}
+
 /** Was im fertigen Video steckt, soweit andere Ausgaben es brauchen (der Viewer). */
 export interface MontageResult {
   /** Tonspuren in ihrer Reihenfolge; Spur 1 ist die Mischung, danach je Gerät eine. */
@@ -516,6 +536,7 @@ export async function renderMontage(
 ): Promise<MontageResult> {
   const outer = opts.signal;
   outer?.throwIfAborted();
+  const started = performance.now();
   // Scheitert ein Teil (ein Abschnitt oder der Ton), beendet `inner` alle übrigen ffmpeg-Prozesse,
   // statt sie zu Ende rechnen zu lassen (Issue #136). Gemeldet wird der erste echte Fehler.
   const inner = new AbortController();
@@ -534,7 +555,9 @@ export async function renderMontage(
   const enc = await videoEncoder();
   const cacheDir = opts.cacheDir ?? join(dir, "abschnitte");
   await mkdir(cacheDir, { recursive: true });
-  const parallel = opts.parallel ?? Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2)));
+  // Ein Kern bleibt für die Oberfläche und den Ton frei. Mehr als vier gleichzeitig bringt nichts: Spätestens dann
+  // ist der Encoder ausgelastet (gemessen für Issue #249; mit VideoToolbox schon bei drei).
+  const parallel = opts.parallel ?? Math.max(1, Math.min(4, availableParallelism() - 1));
 
   // Dateien im Zwischenspeicher, die diese Ausgabe braucht; alles andere wird am Ende gelöscht.
   const used = new Set<string>();
@@ -569,7 +592,11 @@ export async function renderMontage(
     return wanted.filter((_, k) => ok[k]);
   };
 
-  // Ton nebenher: je Stück PCM mit exakter Länge, am Ende einmal AAC. Unverändert: aus dem Zwischenspeicher.
+  // Ton nebenher: je Stück PCM mit exakter Länge, danach AAC in Teilen gleichzeitig (`aac-parts.ts`), über alle
+  // Tonspuren zusammen höchstens so viele Teile, wie Kerne da sind (höchstens acht). Unverändert:
+  // aus dem Zwischenspeicher.
+  const audioSlot = limiter(Math.max(2, Math.min(8, availableParallelism())));
+  const RAW = ["-f", "s16le", "-c:a", "pcm_s16le"];
   // Eine Spur entsteht aus den Tonquellen je Stück (sounds[i]); mehrere Quellen werden gleich laut addiert.
   const renderTrack = async (tag: string, sounds: MediaRef[][], bitrate: string): Promise<string> => {
     const audioKey = createHash("sha1")
@@ -601,24 +628,14 @@ export async function renderMontage(
     for (const [i, p] of pieces.entries()) {
       signal?.throwIfAborted();
       const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
-      const aOut = join(dir, `${tag}-${i}.wav`);
+      const aOut = join(dir, `${tag}-${i}.pcm`);
       const samples = Math.round(durS * RATE);
       // Auf die Probe genau so lang wie das Bild des Stücks: zu kurzen Ton mit Stille auffüllen, zu langen kappen.
       const fit = `apad,atrim=end_sample=${samples}`;
       const src = sounds[i]!;
       if (!src.length) {
         await ff(
-          [
-            "-f",
-            "lavfi",
-            "-i",
-            `anullsrc=r=${RATE}:cl=stereo`,
-            "-af",
-            `atrim=end_sample=${samples}`,
-            "-c:a",
-            "pcm_s16le",
-            aOut,
-          ],
+          ["-f", "lavfi", "-i", `anullsrc=r=${RATE}:cl=stereo`, "-af", `atrim=end_sample=${samples}`, ...RAW, aOut],
           signal,
         );
       } else {
@@ -637,21 +654,20 @@ export async function renderMontage(
             ? `${src.map((_, k) => `[a${k}]`).join("")}amix=inputs=${src.length}:normalize=0:duration=longest,alimiter=limit=0.95,`
             : "[a0]";
         f.push(`${mix}aformat=sample_fmts=s16:channel_layouts=stereo,${fit}[out]`);
-        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", aOut], signal);
+        await ff([...args, "-filter_complex", f.join(";"), "-map", "[out]", ...RAW, aOut], signal);
       }
       aList.push(aOut);
     }
-    const listFile = join(dir, `${tag}.txt`);
-    await writeFile(listFile, aList.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
     const m4a = join(dir, `${tag}.m4a`);
-    await ff(["-f", "concat", "-safe", "0", "-i", listFile, "-c:a", "aac", "-b:a", bitrate, m4a], signal);
+    await encodeAacParts({ pcmFiles: aList, rate: RATE, bitrate, out: m4a, dir, tag, slot: audioSlot, signal });
     await rename(m4a, cached).catch(() => copyFile(m4a, cached));
     for (const f of aList) await rm(f, { force: true });
     return cached;
   };
 
-  // Spur 1: Mischung oder Hauptquelle. Danach, falls gewünscht, je Gerät eine Spur. Nacheinander statt
-  // gleichzeitig: Die Bildabschnitte brauchen die Rechenleistung, der Ton ist daneben schnell fertig.
+  // Spur 1: Mischung oder Hauptquelle. Dazu, falls gewünscht, je Gerät eine Spur. Alle Spuren gleichzeitig, und jede
+  // in Teilen: Der AAC-Encoder nutzt nur einen Kern und schafft etwa das 50- bis 110-Fache der Echtzeit. Nacheinander
+  // und am Stück gerechnet, wartete eine lange Ausgabe am Ende auf den Ton (Issue #249).
   const devices = opts.deviceTracks ? deviceTracksOf(transcript, pieces) : [];
   const audioDone = (async () => {
     const all = await Promise.all(
@@ -660,20 +676,19 @@ export async function renderMontage(
         return p.audios.filter((_, k) => ok[k]);
       }),
     );
-    const mix = await renderTrack("a", await Promise.all(pieces.map(soundOf)), `${MIX_KBPS}k`);
-    const perDevice: { track: DeviceTrack; file: string }[] = [];
     const withSound = devices.filter((d) => all.some((list) => list.some((a) => a.source.deviceId === d.deviceId)));
-    if (withSound.length >= 2)
-      for (const [k, d] of withSound.entries())
-        perDevice.push({
-          track: d,
-          file: await renderTrack(
-            `g${k}`,
-            all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
-            `${DEVICE_TRACK_KBPS}k`,
-          ),
-        });
-    return { mix, perDevice };
+    const [mix, ...files] = await Promise.all([
+      renderTrack("a", await Promise.all(pieces.map(soundOf)), `${MIX_KBPS}k`),
+      ...(withSound.length >= 2 ? withSound : []).map((d, k) =>
+        renderTrack(
+          `g${k}`,
+          all.map((list) => list.filter((a) => a.source.deviceId === d.deviceId)),
+          `${DEVICE_TRACK_KBPS}k`,
+        ),
+      ),
+    ]);
+    log("montage", `Ton fertig nach ${logSince(started)}`);
+    return { mix: mix!, perDevice: files.map((file, k) => ({ track: withSound[k]!, file })) };
   })();
   // Scheitert der Ton, gleich alles beenden; der Fehler kommt beim Zusammenfügen bzw. im catch unten.
   audioDone.catch(fail);
@@ -730,11 +745,16 @@ export async function renderMontage(
         );
         const pdir = join(dir, `p${i}`);
         await mkdir(pdir, { recursive: true });
-        // Ohne Video ändert sich das Bild höchstens einmal je Sekunde: mit 1 Bild/s zusammensetzen,
-        // erst ganz am Ende auf 25 Bilder/s vervielfachen. Spart den größten Teil der Rechenzeit.
-        const rate = p.videos.length ? FPS : 1;
-        const srcDur = (Math.ceil(durS) + 1).toString();
-        const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${rate}:d=${srcDur}`];
+        // Ohne Video ändert sich das Bild höchstens einmal je Sekunde (die Uhrzeit): Dann entsteht auch nur ein Bild je
+        // Sekunde, das im fertigen Video eine Sekunde lang steht (Issue #249). 24 von 25 Bildern zu kodieren, die
+        // nichts Neues zeigen, kostete vorher den größten Teil der Rechenzeit dieser Abschnitte, und beim
+        // Hardware-Encoder (VideoToolbox) Durchsatz, der den Abschnitten mit Video fehlte.
+        // Die Standbilder gehen dicht an dicht durch ffmpeg, als wären es 25 je Sekunde: So bekommt der Encoder
+        // dieselben Einstellungen wie in den Abschnitten mit Video. An ihre Stelle im Video rückt sie `stillTimes`.
+        const still = p.videos.length === 0;
+        const stills = Math.ceil(durS);
+        const srcDur = still ? ((stills + 1) / FPS).toFixed(3) : (Math.ceil(durS) + 1).toString();
+        const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${FPS}:d=${srcDur}`];
         const filters: string[] = [];
         let last = "[0:v]";
         let input = 1;
@@ -755,15 +775,18 @@ export async function renderMontage(
           const pngs = await opts.overlay(header, frames);
           signal?.throwIfAborted();
           await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
-          args.push("-framerate", "1", "-i", join(pdir, "o%05d.png"));
+          args.push("-framerate", String(still ? FPS : 1), "-i", join(pdir, "o%05d.png"));
           filters.push(
-            rate === 1 ? `[${input}:v]null[o${input}]` : `[${input}:v]fps=${FPS}[o${input}]`,
+            // Erst ins Format der Überlagerung wandeln, dann vervielfachen: sonst wandelt ffmpeg dasselbe Bild 25-mal.
+            still ? `[${input}:v]null[o${input}]` : `[${input}:v]format=yuva420p,fps=${FPS}[o${input}]`,
             `${last}[o${input}]overlay=0:0:eof_action=repeat[b${input}]`,
           );
           last = `[b${input}]`;
           input++;
         }
-        filters.push(`${last}format=yuv420p${rate === 1 ? `,fps=${FPS}` : ""},trim=duration=${durS.toFixed(3)}[out]`);
+        filters.push(
+          `${last}format=yuv420p,trim=${still ? `end_frame=${stills}` : `duration=${durS.toFixed(3)}`}[out]`,
+        );
         const tmp = join(pdir, "v.mp4");
         const full = [
           ...args,
@@ -772,17 +795,20 @@ export async function renderMontage(
           "-map",
           "[out]",
           "-frames:v",
-          String(frameCount),
+          String(still ? stills : frameCount),
           "-r",
           String(FPS),
           ...enc,
+          // Alle zwei Sekunden ein Bild, an das Player springen können, mit und ohne Video.
           "-g",
-          String(FPS * 2),
+          String(still ? 2 : FPS * 2),
+          ...(still ? stillTimes(stills, frameCount) : []),
           "-an",
           tmp,
         ];
+        // ffmpeg meldet die Zeit vor dem Strecken der Standbilder (`stillTimes`): dort zählt jedes Bild 25-fach.
         const progress = (ms: number) => {
-          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS)));
+          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS) * (still ? FPS : 1)));
           report();
         };
         // Mehrere Abschnitte laufen gleichzeitig: Jeder merkt sich, ob er mit Hardware-Dekodierung begonnen hat.
@@ -814,8 +840,19 @@ export async function renderMontage(
       fail,
     );
 
-    await writeFile(join(dir, "v.txt"), vFiles.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
+    // Die Länge steht ausdrücklich dabei: Der nächste Abschnitt beginnt genau nach `f1 - f0` Bildern, auch wo ein
+    // Abschnitt aus Standbildern besteht oder ein Encoder die Dauer des letzten Bilds anders vermerkt.
+    await writeFile(
+      join(dir, "v.txt"),
+      vFiles
+        .map((f, i) => {
+          const durS = ((parts[i]!.f1 - parts[i]!.f0) * FRAME_MS) / 1000;
+          return `file '${f.replace(/'/g, "'\\''")}'\nduration ${durS.toFixed(3)}`;
+        })
+        .join("\n"),
+    );
     await writeFile(join(dir, "meta.txt"), chapterFile(transcript));
+    log("montage", `Abschnitte fertig nach ${logSince(started)}`);
     const audio = await audioDone;
     signal?.throwIfAborted();
     // Spur 1 trägt die Mischung und ist Standard; die Gerätespuren folgen, nicht als Standard markiert.
@@ -824,6 +861,17 @@ export async function renderMontage(
       ...audio.perDevice.map((d) => ({ file: d.file, title: d.track.title })),
     ];
     const meta = 1 + tracks.length;
+    // Endet die Montage ohne Video, steht ihr letztes Standbild bis zum Ende. Ältere ffmpeg-Fassungen (6.x) lesen die
+    // Dauer dieses einen Bilds falsch aus dem Abschnitt; hier steht sie deshalb noch einmal ausdrücklich.
+    const tail = parts.at(-1);
+    const packets = parts.reduce((n, p) => n + (p.videos.length ? p.f1 - p.f0 : Math.ceil((p.f1 - p.f0) / FPS)), 0);
+    const lastStill =
+      tail && !tail.videos.length
+        ? [
+            "-bsf:v",
+            `setts=pts=PTS:dts=DTS:duration=if(eq(N\\,${packets - 1})\\,${(tail.f1 / FPS).toFixed(3)}/TB-PTS\\,DURATION)`,
+          ]
+        : [];
     log("montage", `setzt ${vFiles.length} Abschnitte und ${tracks.length} Tonspuren zusammen: ${outFile}`);
     // Abgebrochen oder gescheitert: keine halbe Videodatei im Ausgabeordner liegen lassen.
     await ff(
@@ -854,6 +902,7 @@ export async function renderMontage(
         String(meta),
         "-c",
         "copy",
+        ...lastStill,
         "-movflags",
         "+faststart",
         outFile,
