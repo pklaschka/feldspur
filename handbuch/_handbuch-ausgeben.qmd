@@ -4,7 +4,7 @@ Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Eins
 heißt nach Datum und Titel, etwa `Feldtag_2026-09-14_Wochenmarkt`; gibt es dort schon einen gleichnamigen Ordner eines
 anderen Einsatzes, hängt Feldspur eine Nummer an. Einsatztranskript, Dokumentvariablen und Begleitprotokoll sind immer
 dabei. Was dazukommt, wählst du mit Schaltern in drei Gruppen: **Montagevideo** (Video, Ton und Viewer), **Nachweise
-im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste) und **Für den Schnitt** (Schnittliste). Ist vorher noch
+im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste, Metadaten) und **Für den Schnitt** (Schnittliste). Ist vorher noch
 etwas offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen
 Links dorthin.
 
@@ -92,6 +92,8 @@ Optionen:
   solange er gewählt ist.
 - **LIESMICH mit Tabelle für den Methodenteil** (@sec-liesmich), **Änderungsprotokoll**
   (@sec-aenderungsprotokoll-ausgabe) und **Prüfsummenliste** (@sec-pruefsummenliste), alle drei Standard.
+- **Metadaten (RO-Crate, .json)** (@sec-ro-crate), nur auf Wunsch: die Angaben zum Datensatz maschinenlesbar, für ein
+  Archiv oder Repositorium.
 
 Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
@@ -234,6 +236,7 @@ Die Datei `LIESMICH.html` ist für Menschen gedacht, die den Ordner später öff
 Jahren. Sie lässt sich in jedem Browser lesen und drucken. Darin steht:
 
 - welcher Einsatz das ist, mit der ganzen Montage-ID,
+- die Angaben zum Datensatz, soweit du welche eingetragen hast (@sec-datensatz-angaben),
 - was im Ordner liegt und wozu jede Datei dient,
 - wie Einsatztranskript, Zeitmarken und Montagevideo zusammengehören,
 - wie aus dieser Ausgabe zitiert wird (@sec-stelle-zitieren),
@@ -256,6 +259,50 @@ Montagevideo und LIESMICH. Damit lässt sich später zeigen, dass der Ordner noc
 ausgegeben hat. Das Format ist das von `sha256sum`: Im Ordner prüft `sha256sum -c manifest-sha256.txt` jede Datei
 (unter macOS `shasum -a 256 -c manifest-sha256.txt`). Die Prüfsummen der Originaldateien stehen weiter im
 Begleitprotokoll.
+
+### Angaben zum Datensatz {#sec-datensatz-angaben}
+
+Unten in der **Übersicht** trägst du einmal fürs Projekt ein, was ein Archiv oder spätere Leser\*innen über das
+Material wissen sollte: **Titel des Datensatzes**, **Urheber\*innen**, **Mitwirkende**, **Beschreibung**, **Schlagworte**, **Lizenz**,
+**Zugang** und **Gehört zu** (etwa das Forschungsprojekt mit seiner DOI). Alles ist freiwillig. Personen stehen je
+Zeile, eine ORCID iD darf dahinter stehen; Schlagworte trennst du mit Komma. **Speichern** übernimmt die Angaben, und
+wie jede Änderung lässt sich das rückgängig machen.
+
+Jede Ausgabe des Projekts nennt diese Angaben in der LIESMICH und, wenn gewählt, in den Metadaten. Soll ein Einsatz
+etwas anderes sagen, etwa einen eigenen Titel oder einen engeren Zugang, trägst du es in seinen **Einsatzdaten** unter
+**Angaben zum Datensatz für diesen Einsatz** ein. Ein Eintrag dort ersetzt das ganze Feld nur für diesen Einsatz;
+leere Felder gelten wie im Projekt, das Projekt steht grau darin.
+
+Feldspur gibt nichts vor, was nach „offen“ klingt. Beim **Zugang** stehen Vorschläge zur Auswahl, aber keiner ist
+vorbelegt. Feldmaterial enthält oft Gesichter, Stimmen und Namen; ob und für wen es zugänglich ist, entscheidest du.
+Vorbelegt sind nur zwei Felder, und nur, solange sie leer sind: Ohne Titel heißt der Datensatz nach Einsatz und
+Datum, ohne **Urheber\*innen** gelten die Forschenden an den Geräten des Einsatzes. Ändern sich die Angaben, steht
+eine frühere Ausgabe als veraltet da.
+
+### Metadaten (ro-crate-metadata.json) {#sec-ro-crate}
+
+Mit **Metadaten (RO-Crate, .json)** schreibt Feldspur `ro-crate-metadata.json` in den Ordner. Die Datei beschreibt
+dieselbe Ausgabe wie die LIESMICH, aber für Programme: im Format [RO-Crate 1.2](https://w3id.org/ro/crate/1.2), das
+viele Repositorien und Archive lesen. Sie entsteht nach der LIESMICH und vor der Prüfsummenliste, die sie mit prüft.
+
+RO-Crate lässt sich beliebig genau ausfüllen. Feldspur schreibt bewusst nur ein kleines Profil (Fassung 1.0):
+
+| Was | Typ in RO-Crate | Inhalt |
+|:---|:---|:-------|
+| Der Ordner | `Dataset` | Angaben zum Datensatz, Datum der Ausgabe, Zeitraum, Ort, Montage-ID |
+| Jede Datei im Ordner | `File` | Name, Zweck, Format, Größe |
+| Jede Quelle | `File` mit `#quelle-…` | Dateiname, Kurzzeichen, SHA-256, Uhrzeit; liegt nicht im Ordner |
+| Jedes Gerät | `IndividualProduct` | Name des Geräts |
+| Jede Aufnahme | `CreateAction` | welches Gerät, wer, wann, welche Quellen |
+| Die Ausgabe | `CreateAction` | Feldspur mit Version, aus welchen Quellen welche Dateien wurden |
+| Personen | `Person` | Name, mit ORCID iD als Kennung, falls angegeben |
+
+: Das Profil der Metadaten {#tbl-ro-crate-profil}
+
+Uhrzeiten stehen in UTC. Pfade deines Rechners stehen nicht darin, auch nicht die der Originale; die stehen nur im
+Begleitprotokoll. Die Prüfsummen der Quellen stammen aus dem Einsammeln, so lässt sich ein Original später
+wiederfinden und prüfen. Lizenzen wie **CC BY 4.0** erkennt Feldspur und verweist auf ihre Adresse, andere bleiben als
+Text stehen. Die Datei trägt das Profil unter der Adresse dieses Abschnitts.
 
 ### In MAXQDA
 

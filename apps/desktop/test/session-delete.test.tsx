@@ -21,9 +21,11 @@ const view = {
     place: "",
     timeZone: "Europe/Berlin",
     extra: {},
+    dataset: {},
   },
   diaryLookbackMin: 15,
   rows: [{ id: "a1" }, { id: "v1" }],
+  projectDataset: {},
 } as unknown as SessionView;
 
 const button = (text: string) =>

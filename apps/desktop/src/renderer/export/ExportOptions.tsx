@@ -31,7 +31,7 @@ export function ExportOptions({
   /** Geschätzte Größe des Videos; null, solange die Montage berechnet wird oder leer ist. */
   videoBytes: SessionTranscriptPreview["videoBytes"] | null;
 }) {
-  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, byEpisodes } = opts;
+  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, roCrate, byEpisodes } = opts;
   return (
     <>
       <OptionGroup title="Montagevideo">
@@ -98,6 +98,12 @@ export function ExportOptions({
           onChange={(v) => set({ manifest: v })}
           label="Prüfsummenliste (manifest-sha256.txt)"
           hint="SHA-256 jeder Datei im Ordner. Damit lässt sich später zeigen, dass nichts verändert wurde."
+        />
+        <Option
+          checked={roCrate}
+          onChange={(v) => set({ roCrate: v })}
+          label="Metadaten (RO-Crate, .json)"
+          hint="Die Angaben zum Datensatz aus der Übersicht maschinenlesbar, mit Geräten, Zeiten und Prüfsummen. Für Archive und Repositorien."
         />
       </OptionGroup>
       <OptionGroup title="Für den Schnitt">

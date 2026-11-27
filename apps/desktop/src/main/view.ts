@@ -21,7 +21,7 @@ import {
   type Source,
   effectiveGainDb,
 } from "@feldspur/core";
-import { contextPieces, sessionEpisodes, speechLevels } from "@feldspur/media";
+import { contextPieces, projectDataset, sessionEpisodes, speechLevels } from "@feldspur/media";
 import { quickStates } from "./originals.ts";
 import { projectFormat } from "./montage-format.ts";
 import type {
@@ -465,5 +465,6 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     analyzedCount: analyses.length,
     avCount,
     montageFormat: projectFormat(store),
+    projectDataset: projectDataset(store),
   };
 }

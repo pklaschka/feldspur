@@ -1,6 +1,6 @@
 /**
- * Einsatzdaten bearbeiten: Titel, Datum, Ort, Zeitzone, Bezugszeitraum fürs Tagebuch
- * und freie Zusatzfelder für den Quellennachweis (z. B. DOI, Projektnummer). Von hier lässt sich der Einsatz auch
+ * Einsatzdaten bearbeiten: Titel, Datum, Ort, Zeitzone, Bezugszeitraum fürs Tagebuch, freie Zusatzfelder für den
+ * Quellennachweis (z. B. DOI, Projektnummer) und Angaben zum Datensatz, die nur für diesen Einsatz gelten (Issue #206). Von hier lässt sich der Einsatz auch
  * löschen (mit Nachfrage).
  *
  * Dialog zum Einsatz (`FieldSession`), eingebunden in `apps/desktop/src/renderer/app/SessionPane.tsx`. Speichern und
@@ -9,7 +9,10 @@
  */
 import { AlertDialog, Dialog } from "radix-ui";
 import { useState, type FormEvent } from "react";
+import type { DatasetInfo } from "@feldspur/core/model";
+import { cleanDataset } from "@feldspur/media/dataset";
 import type { SessionPatch, SessionView } from "../shared/api.ts";
+import { DatasetFields } from "./dataset/DatasetFields.tsx";
 import { Button, CloseButton, ErrorBanner } from "./ui.tsx";
 import { TIME_ZONES } from "./timeZones.ts";
 
@@ -40,6 +43,7 @@ export function SessionDetails({
   const [lookback, setLookback] = useState(String(view.diaryLookbackMin));
   // Zusatzfelder als Liste von Paaren statt als Objekt: So bleiben Reihenfolge und halb getippte Feldnamen stehen.
   const [extra, setExtra] = useState<[string, string][]>([]);
+  const [dataset, setDataset] = useState<DatasetInfo>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Beim Öffnen mit den gespeicherten Angaben beginnen; spätere Änderungen von außen nicht ins Formular holen.
@@ -53,6 +57,7 @@ export function SessionDetails({
       setTimeZone(s.timeZone);
       setLookback(String(view.diaryLookbackMin));
       setExtra(Object.entries(s.extra));
+      setDataset(s.dataset);
     }
   }
 
@@ -68,6 +73,7 @@ export function SessionDetails({
       diaryLookbackMin: Number(lookback.replace(",", ".")),
       // Zusatzfelder ohne Namen fallen weg.
       extra: Object.fromEntries(extra.filter(([k]) => k.trim()).map(([k, v]) => [k.trim(), v.trim()])),
+      dataset: cleanDataset(dataset),
     });
     if (ok) onOpenChange(false);
   };
@@ -164,6 +170,16 @@ export function SessionDetails({
                 </Button>
               </div>
             </fieldset>
+            <details className="group" open={Object.keys(cleanDataset(s.dataset)).length > 0}>
+              <summary className="cursor-pointer text-[0.9rem] font-medium">
+                Angaben zum Datensatz für diesen Einsatz
+              </summary>
+              <p className={`${hint} mt-1 mb-3`}>
+                Leere Felder gelten wie in der Übersicht des Projekts (grau). Ein Eintrag hier ersetzt das ganze Feld
+                nur für diesen Einsatz, in LIESMICH und Metadaten.
+              </p>
+              <DatasetFields value={dataset} onChange={setDataset} columns={1} placeholder={view.projectDataset} />
+            </details>
             <div className="mt-1 flex justify-end gap-2">
               <Button
                 type="button"

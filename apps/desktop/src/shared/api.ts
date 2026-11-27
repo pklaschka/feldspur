@@ -20,6 +20,7 @@ import type {
   ConflictCause,
   ConflictSeverity,
   ConflictSummary,
+  DatasetInfo,
   EvidenceComparison,
   FieldSession,
   LevelMode,
@@ -539,6 +540,11 @@ export interface SessionView {
    * Rückgängig über dieselbe neue Ansicht in den Schritt „Ausgeben“ kommen.
    */
   montageFormat: MontageFormat;
+  /**
+   * Angaben zum Datensatz für das ganze Projekt (Issue #206). Die Einsatzdaten zeigen sie als Vorgabe unter den Feldern,
+   * die der Einsatz überschreiben kann.
+   */
+  projectDataset: DatasetInfo;
 }
 
 /** Eine fertige Ausgabe. */
@@ -591,6 +597,8 @@ export interface ExportRequestOptions {
   changeLog: boolean;
   /** Prüfsummenliste aller Dateien (manifest-sha256.txt). */
   manifest: boolean;
+  /** Metadaten als RO-Crate (ro-crate-metadata.json, Issue #206). Fehlt die Angabe, gilt aus. */
+  roCrate: boolean;
   /** Bildhöhe des Montagevideos in Pixeln (360, 540, 720, 1080); fehlt sie, gilt die des Projekts. */
   videoHeight: number;
   /** Bilder je Sekunde im Montagevideo (10, 15, 25, 30); fehlt die Angabe, gilt die des Projekts. */
@@ -710,6 +718,8 @@ export interface SessionPatch {
   episodes?: boolean;
   /** Zusatzfelder für den Quellennachweis, z. B. { DOI: "10.…" }. Ersetzt alle bisherigen. */
   extra?: Record<string, string>;
+  /** Angaben zum Datensatz nur für diesen Einsatz (Issue #206); leere Felder gelten wie im Projekt. Ersetzt alle. */
+  dataset?: DatasetInfo;
 }
 
 /** Wo ein rückgängig gemachter Schritt etwas geändert hat, damit „Zeigen“ dorthin springen kann. */
@@ -805,6 +815,10 @@ export interface OverviewSession extends MethodsSessionSummary {
 export interface ProjectOverview {
   sessions: OverviewSession[];
   citation: CitationInfo;
+  /** Angaben zum Datensatz für das ganze Projekt (Issue #206). */
+  dataset: DatasetInfo;
+  /** Forschende an den Geräten aller Einsätze: die Vorbelegung für „Urheber*innen“, solange dort nichts steht. */
+  researchers: string[];
 }
 
 /**
@@ -1005,6 +1019,11 @@ export interface FeldspurApi {
    * vorliegt. Beschreibt den Stand im Projekt.
    */
   projectOverview(): Promise<ProjectOverview>;
+  /**
+   * Angaben zum Datensatz für das ganze Projekt speichern (Issue #206); ein Schritt für Rückgängig. Leere Felder fallen
+   * weg. Antwort: die gespeicherten Angaben.
+   */
+  setProjectDataset(dataset: DatasetInfo): Promise<DatasetInfo>;
   /** Feldkalender der gewählten Tage als SVG-Grafik speichern (Dialog); Pfad oder null bei Abbruch. */
   saveFieldCalendar(days: CalendarDay[]): Promise<string | null>;
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
@@ -1193,6 +1212,7 @@ export const IPC = {
   exportCard: "export:card",
   openExportFile: "export:open-file",
   projectOverview: "project:overview",
+  setProjectDataset: "project:set-dataset",
   saveFieldCalendar: "project:save-field-calendar",
   montagePreview: "export:montage",
   setMontageFormat: "export:set-format",

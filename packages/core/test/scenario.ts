@@ -23,6 +23,7 @@ export function testmarkt() {
     date: "2026-09-14",
     place: "Testmarkt",
     timeZone: "Europe/Berlin",
+    dataset: {},
     diaryLookbackMs: 15 * 60_000,
     extra: {},
     episodes: false,

@@ -9,7 +9,8 @@
     "./csv": "./src/csv.ts",
     "./layout": "./src/layout.ts",
     "./methods-table": "./src/methods-table.ts",
-    "./field-calendar": "./src/field-calendar.ts"
+    "./field-calendar": "./src/field-calendar.ts",
+    "./dataset": "./src/dataset.ts"
   },
   "dependencies": {
     "@feldspur/core": "workspace:*",

@@ -63,12 +63,17 @@ afterEach(() => {
 });
 
 /** Übersicht mit erfundener App-Schnittstelle zeigen. */
-async function openOverview(sessions: OverviewSession[]) {
+async function openOverview(sessions: OverviewSession[], researchers: string[] = []) {
   const api = {
     projectOverview: vi.fn(async () => ({
       sessions,
       citation: { version: "0.4.0", released: "2026-12-01", versionDoi: null },
+      dataset: {},
+      researchers,
     })),
+    setProjectDataset: vi.fn(async (d: Record<string, string | undefined>) =>
+      Object.fromEntries(Object.entries(d).filter(([, v]) => v?.trim())),
+    ),
     copyText: vi.fn(async (_text: string) => {}),
     copyTable: vi.fn(async (_html: string, _text: string) => {}),
     openCitationLink: vi.fn(async (_url: string) => {}),
@@ -310,5 +315,27 @@ describe("Übersicht des Projekts", () => {
       "# Ohne Ort1 Einsatz",
       "Testmarkt 2",
     ]);
+  });
+
+  it("speichert die Angaben zum Datensatz erst mit „Speichern“ und schlägt die Forschenden als Urheber*innen vor", async () => {
+    const { api } = await openOverview([einsatz(1)], ["Mara Beispiel"]);
+    const card = document.querySelector("[data-testid=dataset-card]")!;
+    const field = (key: string) => card.querySelector<HTMLInputElement>(`[data-field=${key}]`)!;
+    // Angenommen: noch nichts eingetragen; vorbelegt sind nur Platzhalter, Zugang hat keine Vorgabe
+    expect(field("creators").placeholder).toBe("Mara Beispiel");
+    expect(field("access").value).toBe("");
+    expect(button("Speichern")!.disabled).toBe(true);
+    // Wenn: ein Titel getippt wird, dann lässt er sich speichern
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(field("title"), "Marktstudie");
+      field("title").dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(button("Speichern")!.disabled).toBe(false);
+    await act(async () => button("Speichern")!.click());
+    // Dann: geht er an den Hauptprozess, und die Karte meldet „Gespeichert“
+    expect(api.setProjectDataset).toHaveBeenCalledWith({ title: "Marktstudie" });
+    expect(card.textContent).toContain("Gespeichert");
+    expect(button("Speichern")!.disabled).toBe(true);
   });
 });

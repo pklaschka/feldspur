@@ -43,6 +43,9 @@ export const sessions = sqliteTable("sessions", {
     .notNull()
     .default(sql`'{}'`),
   episodes: bool("episodes").notNull().default(false),
+  dataset: json<Record<string, string>>("dataset")
+    .notNull()
+    .default(sql`'{}'`),
 });
 
 export const persons = sqliteTable("persons", {

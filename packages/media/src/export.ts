@@ -9,10 +9,18 @@
  * `renderImage`).
  */
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
-import { formatClock, formatDuration, type Id, type MontageMode, type ProjectStore, type Source } from "@feldspur/core";
+import {
+  formatClock,
+  formatDuration,
+  type DatasetInfo,
+  type Id,
+  type MontageMode,
+  type ProjectStore,
+  type Source,
+} from "@feldspur/core";
 import { levelText, sessionLevels } from "./analyze.ts";
 import { unpackEnvelope, type AudioLevel } from "./audio.ts";
 import { sessionTranscriptDocx } from "./docx.ts";
@@ -28,7 +36,9 @@ import {
 } from "./session-transcript.ts";
 import { canRenderStill, jpegSize, renderStill, type Still } from "./stills.ts";
 import { excelCsv } from "./csv.ts";
-import { exportReadmeHtml, MANIFEST_NAME, README_NAME } from "./readme.ts";
+import { exportReadmeHtml } from "./readme.ts";
+import { describeExport, MANIFEST_NAME, README_NAME, RO_CRATE_NAME } from "./dataset.ts";
+import { roCrateJson } from "./ro-crate.ts";
 import { sha256File } from "./hash.ts";
 import { log, logSince, logSize } from "./log.ts";
 import { sessionTranscriptHtml } from "./viewer/html.ts";
@@ -77,6 +87,14 @@ export interface ExportOptions {
   changeLog?: string;
   /** Prüfsummenliste aller Dateien der Ausgabe als letzte Datei (Issue #204). */
   manifest?: boolean;
+  /** Metadaten als RO-Crate (`ro-crate-metadata.json`, Issue #206), nach der LIESMICH. */
+  roCrate?: boolean;
+  /** Angaben zum Datensatz, schon aus Projekt und Einsatz zusammengeführt (`mergeDataset`); für LIESMICH und Metadaten. */
+  dataset?: DatasetInfo;
+  /** Feldspur mit Version und Adresse für die Metadaten; die App liefert sie. */
+  softwareRef?: { version: string; url: string };
+  /** Zeitpunkt der Ausgabe (ISO 8601) für die Metadaten; Standard: jetzt. */
+  exportedAt?: string;
   /**
    * Bilder, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG liefern. In der App zeichnet
    * die Oberfläche sie mit pdf.js; ohne diese Hilfe fehlen solche Ausschnitte.
@@ -330,6 +348,7 @@ export async function exportSession(
     `${base}_Begleitprotokoll.csv`,
     ...(opts.changeLog !== undefined ? [`${base}_Aenderungsprotokoll.csv`] : []),
     ...(opts.readme ? [README_NAME] : []),
+    ...(opts.roCrate ? [RO_CRATE_NAME] : []),
     ...(opts.manifest ? [MANIFEST_NAME] : []),
   ];
   const possible = [
@@ -338,13 +357,14 @@ export async function exportSession(
     `${base}_Resolve.fcpxml`,
     `${base}_Aenderungsprotokoll.csv`,
     README_NAME,
+    RO_CRATE_NAME,
     MANIFEST_NAME,
   ];
   const leftover = [...new Set([...(opts.previousFiles ?? []), ...possible])].filter((f) => !planned.includes(f));
   const started = performance.now();
   log(
     "ausgabe",
-    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, LIESMICH ${opts.readme ? "ja" : "nein"}, Änderungsprotokoll ${opts.changeLog !== undefined ? "ja" : "nein"}, Prüfsummen ${opts.manifest ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
+    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, LIESMICH ${opts.readme ? "ja" : "nein"}, Metadaten ${opts.roCrate ? "ja" : "nein"}, Änderungsprotokoll ${opts.changeLog !== undefined ? "ja" : "nein"}, Prüfsummen ${opts.manifest ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
   );
   try {
     await mkdir(outDir, { recursive: true });
@@ -465,16 +485,41 @@ export async function exportSession(
       await writeOut(outPath(outDir, `${base}_Aenderungsprotokoll.csv`), opts.changeLog, "Änderungsprotokoll");
       files.push(`${base}_Aenderungsprotokoll.csv`);
     }
+    // LIESMICH und Metadaten beschreiben dieselbe Ausgabe aus einem Datenobjekt (Issue #206). Beide stehen nach allen
+    // Inhalten, damit sie jede Datei der Ausgabe nennen, auch sich selbst und die Prüfsummenliste.
+    const description = describeExport(transcript, {
+      dataset: opts.dataset,
+      persons: store.listPersons(),
+      files: [...files, ...(opts.readme ? [README_NAME] : []), ...(opts.manifest ? [MANIFEST_NAME] : [])],
+      format: opts.format,
+    });
     if (opts.readme) {
-      // Nach allen Inhalten, damit die LIESMICH jede Datei der Ausgabe nennt, auch sich selbst und die Prüfsummenliste.
       const html = exportReadmeHtml(transcript, {
-        files: [...files, README_NAME, ...(opts.manifest ? [MANIFEST_NAME] : [])],
+        files: [
+          ...files,
+          README_NAME,
+          ...(opts.roCrate ? [RO_CRATE_NAME] : []),
+          ...(opts.manifest ? [MANIFEST_NAME] : []),
+        ],
         video: opts.video !== false,
         format: opts.format,
         software: opts.software,
+        description,
       });
       await writeOut(outPath(outDir, README_NAME), html, "LIESMICH");
       files.push(README_NAME);
+    }
+    if (opts.roCrate) {
+      // Größen der schon geschriebenen Dateien; die Prüfsummenliste entsteht erst danach und steht ohne Größe da.
+      const sizes = new Map<string, number>();
+      for (const f of files) sizes.set(f, (await stat(outPath(outDir, f))).size);
+      const json = roCrateJson(description, {
+        exportedAt: opts.exportedAt ?? new Date().toISOString(),
+        sizes,
+        software: opts.softwareRef,
+      });
+      await writeOut(outPath(outDir, RO_CRATE_NAME), json, "Metadaten");
+      files.push(RO_CRATE_NAME);
     }
     if (opts.manifest) {
       // Ganz zuletzt: Prüfsummen aller anderen Dateien, im Format von sha256sum (prüfbar mit `sha256sum -c`).

@@ -19,11 +19,13 @@ import {
   fileStamp,
   type TouchedRow,
 } from "@feldspur/core";
-import { fieldCalendarSvg, type CalendarDay } from "@feldspur/media";
+import { fieldCalendarSvg, projectDataset, setProjectDataset, type CalendarDay } from "@feldspur/media";
+import type { DatasetInfo, ProjectStore } from "@feldspur/core";
 import { IPC, type HistoryResult, type HistoryTarget, type SessionView } from "../../shared/api.ts";
 import { changeLogCsv } from "../changelog.ts";
 import { exportRunning, projectOverview } from "../export.ts";
 import { buildSessionView } from "../view.ts";
+import { undoable } from "./undoable.ts";
 import { forgetProject, recentProjects } from "../recent.ts";
 import { cancelCitationLookup, citationInfo, lookupCitationDoi } from "../citation.ts";
 import { isCitationLink } from "../../shared/citation.ts";
@@ -134,10 +136,19 @@ export function registerProjectIpc(): void {
   });
   ipcMain.handle(IPC.forgetRecent, (_e, path: string) => forgetProject(path));
 
-  ipcMain.handle(IPC.projectOverview, () => ({
-    sessions: projectOverview(requireStore()),
-    citation: citationInfo(),
-  }));
+  ipcMain.handle(IPC.projectOverview, () => {
+    const s = requireStore();
+    return {
+      sessions: projectOverview(s),
+      citation: citationInfo(),
+      dataset: projectDataset(s),
+      researchers: projectResearchers(s),
+    };
+  });
+  // Gelten fürs ganze Projekt und stehen in der Projektdatei: ein Schritt für Rückgängig (Issue #206).
+  undoable(IPC.setProjectDataset, "Angaben zum Datensatz geändert", (_e, dataset: DatasetInfo) =>
+    setProjectDataset(requireStore(), dataset),
+  );
   ipcMain.handle(IPC.saveFieldCalendar, async (_e, days: CalendarDay[]) => {
     if (!Array.isArray(days) || !days.length) return null;
     const info = projectInfo()!;
@@ -229,4 +240,10 @@ export function registerProjectIpc(): void {
     mkdirSync(dir, { recursive: true });
     await shell.openPath(dir);
   });
+}
+
+/** Forschende an den Geräten aller Einsätze, in der Reihenfolge der Personen: Vorbelegung für „Urheber*innen“. */
+function projectResearchers(s: ProjectStore): string[] {
+  const used = new Set(s.listSessions().flatMap((x) => s.listDevices(x.id).map((d) => d.personId)));
+  return s.listPersons().flatMap((p) => (used.has(p.id) ? [p.name] : []));
 }

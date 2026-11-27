@@ -689,6 +689,48 @@ await kapitel("ausgeben", async () => {
     await siehe("Video freigeben…", viewer.getByRole("button", { name: "Video freigeben…" }));
     page = haupt;
   });
+
+  await ablauf("Angaben zum Datensatz eintragen und Metadaten wählen", async () => {
+    // Wenn: in der Übersicht ein Titel für den Datensatz eingetragen und gespeichert wird
+    await knopf("Übersicht").click();
+    const karte = page.getByTestId("dataset-card");
+    await siehe("Angaben zum Datensatz", karte.getByRole("heading", { name: "Angaben zum Datensatz" }), {
+      handbuch: "### Angaben zum Datensatz",
+    });
+    for (const feld of ["Titel des Datensatzes", "Mitwirkende", "Beschreibung", "Schlagworte", "Lizenz", "Zugang"])
+      await siehe(feld, karte.getByLabel(new RegExp(`^${esc(feld)}`)));
+    await siehe("Urheber*innen", karte.getByLabel(/^Urheber\*innen/), { handbuch: "**Urheber\\*innen**" });
+    await siehe("Gehört zu", karte.getByLabel(/^Gehört zu/));
+    await karte.getByLabel(/^Titel des Datensatzes/).fill("Marktstudie");
+    await siehe("Speichern", karte.getByRole("button", { name: "Speichern" }));
+    await karte.getByRole("button", { name: "Speichern" }).click();
+    // Dann: meldet die Karte „Gespeichert“, und der Zugang bleibt ohne Vorgabe
+    await karte.getByText("Gespeichert").waitFor();
+    if (await karte.getByLabel(/^Zugang/).inputValue()) throw new Error("Zugang ist vorbelegt");
+    // Wenn: der Einsatz geöffnet wird, dann zeigen seine Einsatzdaten den Titel des Projekts als Vorgabe
+    await page.getByTestId("overview-days").getByRole("button").first().click();
+    await knopf("Einsatzdaten bearbeiten…").click();
+    const details = page.getByTestId("session-details");
+    await siehe(
+      "Angaben zum Datensatz für diesen Einsatz",
+      details.getByText("Angaben zum Datensatz für diesen Einsatz"),
+    );
+    await details.getByText("Angaben zum Datensatz für diesen Einsatz").click();
+    const vorgabe = await details.getByLabel(/^Titel des Datensatzes/).getAttribute("placeholder");
+    if (vorgabe !== "Marktstudie") throw new Error(`Vorgabe im Einsatz: ${vorgabe}`);
+    await schliessen();
+    // Wenn: im Schritt Ausgeben nachgesehen wird, dann gibt es den Schalter für die Metadaten, ohne Vorauswahl
+    await page.getByRole("tab", { name: /Ausgeben/ }).click();
+    const schalter = page.getByRole("switch", { name: "Metadaten (RO-Crate, .json)" });
+    await siehe("Metadaten (RO-Crate, .json)", schalter);
+    if ((await schalter.getAttribute("aria-checked")) === "true") throw new Error("Metadaten sind vorgewählt");
+    // Zum Schluss: Titel wieder leeren, damit die Ausgabe für die nächsten Kapitel aktuell bleibt
+    await knopf("Übersicht").click();
+    await karte.getByLabel(/^Titel des Datensatzes/).fill("");
+    await karte.getByRole("button", { name: "Speichern" }).click();
+    await karte.getByText("Gespeichert").waitFor();
+    await page.getByTestId("overview-days").getByRole("button").first().click();
+  });
 });
 
 await kapitel("einsammeln", async () => {

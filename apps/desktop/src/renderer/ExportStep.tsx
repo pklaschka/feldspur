@@ -40,7 +40,7 @@ export function ExportStep({
   onOriginals: () => void;
 }) {
   const [opts, set] = useExportOptions();
-  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, byEpisodes } = opts;
+  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, roCrate, byEpisodes } = opts;
   const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
   // Echtzeit ist der Normalfall; nach Episoden geschnitten wird nur, wenn der Einsatz Episoden hat und es gewählt ist.
@@ -66,11 +66,25 @@ export function ExportStep({
       readme,
       changeLog,
       manifest,
+      roCrate,
       realtime,
       videoHeight,
       videoFps,
     }),
-    [video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, realtime, videoHeight, videoFps],
+    [
+      video,
+      resolve,
+      mixAudio,
+      deviceTracks,
+      viewer,
+      readme,
+      changeLog,
+      manifest,
+      roCrate,
+      realtime,
+      videoHeight,
+      videoFps,
+    ],
   );
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const status = useExportStatus(view, settings, busy, justDone);

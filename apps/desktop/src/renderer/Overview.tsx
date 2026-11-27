@@ -5,6 +5,8 @@
  *
  * Feldspur zählt und misst hier nur. Farbe kennzeichnet Zustände (Ausgabe veraltet, Uhr ohne Abgleich), nie Mengen.
  *
+ * Darunter die Angaben zum Datensatz (Issue #206, `overview/DatasetCard.tsx`), die jede Ausgabe nennt.
+ *
  * Gezeigt von `App.tsx` anstelle eines Einsatzes. Die Zahlen rechnet der Hauptprozess bei jedem Öffnen neu
  * (`projectOverview`, `apps/desktop/src/main/export.ts`); die beiden Karten liegen in `overview/` (`FieldCalendar`,
  * `Metrics`), der Text der Tabellen kommt aus `apps/desktop/src/shared/methods-table.ts`.
@@ -17,6 +19,7 @@ import type { Step } from "./App.tsx";
 import { ErrorBanner, Panel } from "./ui.tsx";
 import { FieldCalendar } from "./overview/FieldCalendar.tsx";
 import { Metrics, type Copied } from "./overview/Metrics.tsx";
+import { DatasetCard } from "./overview/DatasetCard.tsx";
 import { spanText } from "./overview/text.ts";
 
 const api = window.feldspur;
@@ -119,6 +122,13 @@ export function Overview({
             />
             <Metrics total={all.length} chosen={chosen} software={software} copied={copied} onCopied={setCopied} />
           </>
+        )}
+        {data && (
+          <DatasetCard
+            saved={data.dataset}
+            researchers={data.researchers}
+            onSaved={(dataset) => setData({ ...data, dataset })}
+          />
         )}
       </div>
     </main>

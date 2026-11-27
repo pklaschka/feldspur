@@ -17,6 +17,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ExportFingerprint, ExportRecord, ExportSettings, Id, ProjectStore, Source } from "@feldspur/core";
 import { baseName, documentVariables, protocolCsv } from "./export.ts";
+import { sessionDataset } from "./dataset.ts";
 import { formatText, montageFormat } from "./layout.ts";
 import { buildSessionTranscript, entryText, type SessionTranscript } from "./session-transcript.ts";
 
@@ -51,6 +52,8 @@ export function fileStampText(path: string): string {
  */
 function contentHash(store: ProjectStore, sessionId: Id, transcript: SessionTranscript): string {
   const levels = store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, a.speechLevelDb, a.version]);
+  // Angaben zum Datensatz (Issue #206) nur, wenn welche eingetragen sind: So bleibt der Abdruck sonst wie vorher.
+  const dataset = sessionDataset(store, sessionId);
   return sha(
     stable({
       base: baseName(transcript),
@@ -69,6 +72,7 @@ function contentHash(store: ProjectStore, sessionId: Id, transcript: SessionTran
       // Begleitprotokoll hier ohne gemessene Lautstärke gerechnet; die Pegel gehen über `levels` ein.
       protocol: protocolCsv(store, transcript),
       variables: documentVariables(transcript, baseName(transcript)),
+      ...(Object.keys(dataset).length ? { dataset } : {}),
     }),
   );
 }
@@ -117,6 +121,7 @@ const SETTING_TEXT: Record<Switch, [on: string, off: string]> = {
   readme: ["mit LIESMICH", "ohne LIESMICH"],
   changeLog: ["mit Änderungsprotokoll", "ohne Änderungsprotokoll"],
   manifest: ["mit Prüfsummenliste", "ohne Prüfsummenliste"],
+  roCrate: ["mit Metadaten (RO-Crate)", "ohne Metadaten (RO-Crate)"],
 };
 
 /** Die Einstellungen, die sich unterscheiden, als „damals …, jetzt …“. */
