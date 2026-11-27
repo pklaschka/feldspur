@@ -17,6 +17,7 @@ import { levelText, sessionLevels } from "./analyze.ts";
 import { unpackEnvelope, type AudioLevel } from "./audio.ts";
 import { sessionTranscriptDocx } from "./docx.ts";
 import { montageFcpxml } from "./fcpxml.ts";
+import { DEFAULT_FORMAT, type MontageFormat } from "./layout.ts";
 import { planPieces, renderMontage, type MontageResult, type OverlayRenderer } from "./montage-video.ts";
 import {
   buildSessionTranscript,
@@ -61,6 +62,8 @@ export interface ExportOptions {
   audioMix?: "all" | "main";
   /** Nach der Mischung je Gerät eine eigene Tonspur ins Montagevideo (ab zwei Geräten mit Ton). */
   deviceTracks?: boolean;
+  /** Auflösung und Bildrate des Montagevideos (Issue #250); gilt auch für Schnittliste und Viewer. */
+  format?: MontageFormat;
   /** Viewer (.html) neben dem Montagevideo: Einsatztranskript synchron zum Video im Browser (nur mit Video). */
   viewer?: boolean;
   /** LIESMICH.html in den Ordner: was darin liegt, wie man zitiert, Tabelle für den Methodenteil (Issues #130, #149). */
@@ -406,6 +409,7 @@ export async function exportSession(
         cacheDir: opts.cacheDir,
         audioMix: opts.audioMix,
         deviceTracks: opts.deviceTracks,
+        format: opts.format,
         levels,
         signal,
         onProgress: (done, total) => opts.onProgress?.("Montagevideo", done, total),
@@ -414,7 +418,12 @@ export async function exportSession(
     }
 
     if (opts.resolve) {
-      const xml = montageFcpxml(transcript, planPieces(transcript), { projectName: base, audioMix: opts.audioMix });
+      const format = opts.format ?? DEFAULT_FORMAT;
+      const xml = montageFcpxml(transcript, planPieces(transcript, format.fps), {
+        projectName: base,
+        audioMix: opts.audioMix,
+        format,
+      });
       await writeOut(outPath(outDir, `${base}_Resolve.fcpxml`), xml, "Schnittliste");
       files.push(`${base}_Resolve.fcpxml`);
     }
@@ -431,6 +440,7 @@ export async function exportSession(
         stills,
         contextStills,
         audioTracks: montage.audioTracks,
+        fps: opts.format?.fps,
         // Wellenform der Gerätespuren aus der Tonspur-Analyse; ohne Analyse bleibt die Aufnahme ein glatter Balken.
         envelopes: new Map(
           store.listAudioAnalyses(sessionId).map((a) => [a.sourceId, unpackEnvelope(a.envelope, a.envelopeRate)]),
@@ -460,6 +470,7 @@ export async function exportSession(
       const html = exportReadmeHtml(transcript, {
         files: [...files, README_NAME, ...(opts.manifest ? [MANIFEST_NAME] : [])],
         video: opts.video !== false,
+        format: opts.format,
         software: opts.software,
       });
       await writeOut(outPath(outDir, README_NAME), html, "LIESMICH");

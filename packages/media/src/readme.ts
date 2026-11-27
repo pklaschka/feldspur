@@ -9,6 +9,7 @@
  * Einordnung: Schritt „Ausgeben“. `exportSession` (`packages/media/src/export.ts`) schreibt die Datei mit den
  * übrigen Dateien der Ausgabe; die Tabellen kommen aus `packages/media/src/methods-table.ts`.
  */
+import { DEFAULT_FORMAT, formatText, type MontageFormat } from "./layout.ts";
 import { materialTable, outputTable, germanDate, METHODS_HANDBOOK_URL, type MethodsTable } from "./methods-table.ts";
 import { methodsNumbers } from "./methods-summary.ts";
 import type { SessionTranscript } from "./session-transcript.ts";
@@ -25,6 +26,8 @@ export interface ReadmeOptions {
   files: string[];
   /** Wird das Montagevideo mit ausgegeben? */
   video: boolean;
+  /** Auflösung und Bildrate des Montagevideos; stehen hinter seinem Dateinamen. Standard 1280 × 720, 25 Bilder/s. */
+  format?: MontageFormat;
   /** Zeile zur Software mit Version und DOI; die App liefert sie, ohne sie entfällt der Absatz. */
   software?: string;
 }
@@ -102,8 +105,12 @@ export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOpti
   const tables = [materialTable([numbers]), outputTable([numbers])];
   const title = `${h.title} · ${germanDate(h.date)}`;
   const files = opts.files.includes(README_NAME) ? opts.files : [...opts.files, README_NAME];
-  const role = (f: string) =>
-    f === README_NAME ? "LIESMICH: diese Datei" : (FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? "");
+  const role = (f: string) => {
+    if (f === README_NAME) return "LIESMICH: diese Datei";
+    const text = FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? "";
+    // Am Video steht, in welchem Format es gerechnet ist (Issue #250): Das ändert nicht, was es zeigt, nur wie fein.
+    return f.endsWith(".mp4") ? `${text} (${formatText(opts.format ?? DEFAULT_FORMAT)})` : text;
+  };
   return `<!doctype html>
 <html lang="de">
 <head>

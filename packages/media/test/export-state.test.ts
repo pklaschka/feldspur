@@ -21,6 +21,8 @@ const SETTINGS: ExportSettings = {
   readme: true,
   changeLog: true,
   manifest: true,
+  videoHeight: 720,
+  videoFps: 25,
 };
 
 describe("Einstellungen im Vergleich", () => {
@@ -40,6 +42,25 @@ describe("Einstellungen im Vergleich", () => {
       "damals ohne Tonspuren je Gerät, jetzt mit einer Tonspur je Gerät",
     ]);
     expect(settingsDifference(older as ExportSettings, { ...SETTINGS, deviceTracks: false })).toEqual([]);
+  });
+
+  it("nennt eine andere Auflösung oder Bildrate des Videos mit beiden Formaten", () => {
+    expect(settingsDifference(SETTINGS, { ...SETTINGS, videoHeight: 360, videoFps: 10 })).toEqual([
+      "damals 1280 × 720, 25 Bilder/s, jetzt 640 × 360, 10 Bilder/s",
+    ]);
+  });
+
+  it("liest eine Ausgabe von vor der Wahl des Formats als 1280 × 720 bei 25 Bildern/s", () => {
+    const { videoHeight: _h, videoFps: _f, ...older } = SETTINGS;
+    expect(settingsDifference(older as ExportSettings, SETTINGS)).toEqual([]);
+    expect(settingsDifference(older as ExportSettings, { ...SETTINGS, videoFps: 30 })).toEqual([
+      "damals 1280 × 720, 25 Bilder/s, jetzt 1280 × 720, 30 Bilder/s",
+    ]);
+  });
+
+  it("vergleicht das Format nur, wenn damals und jetzt ein Video dabei ist", () => {
+    const without = { ...SETTINGS, video: false };
+    expect(settingsDifference(without, { ...without, videoHeight: 1080 })).toEqual([]);
   });
 });
 

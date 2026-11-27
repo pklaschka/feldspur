@@ -23,6 +23,7 @@ import {
 } from "@feldspur/core";
 import { contextPieces, sessionEpisodes, speechLevels } from "@feldspur/media";
 import { quickStates } from "./originals.ts";
+import { projectFormat } from "./montage-format.ts";
 import type {
   AnchorRow,
   ConflictGroupRow,
@@ -463,5 +464,6 @@ export function buildSessionView(store: ProjectStore, sessionId: string): Sessio
     episodeEdits: input.session.episodes ? store.listEpisodeEdits(sessionId).length : 0,
     analyzedCount: analyses.length,
     avCount,
+    montageFormat: projectFormat(store),
   };
 }

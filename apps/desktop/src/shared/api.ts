@@ -34,6 +34,7 @@ import type {
   FileCheck,
   FileState,
   MethodsSessionSummary,
+  MontageFormat,
   MontagePreview,
   SessionTranscriptKind,
   ScanProgress,
@@ -533,6 +534,11 @@ export interface SessionView {
   /** So viele der `avCount` Ton- und Videoquellen sind schon analysiert. */
   analyzedCount: number;
   avCount: number;
+  /**
+   * Auflösung und Bildrate des Montagevideos (Issue #250). Gilt für das ganze Projekt, steht hier, damit Ändern und
+   * Rückgängig über dieselbe neue Ansicht in den Schritt „Ausgeben“ kommen.
+   */
+  montageFormat: MontageFormat;
 }
 
 /** Eine fertige Ausgabe. */
@@ -585,6 +591,10 @@ export interface ExportRequestOptions {
   changeLog: boolean;
   /** Prüfsummenliste aller Dateien (manifest-sha256.txt). */
   manifest: boolean;
+  /** Bildhöhe des Montagevideos in Pixeln (360, 540, 720, 1080); fehlt sie, gilt die des Projekts. */
+  videoHeight: number;
+  /** Bilder je Sekunde im Montagevideo (10, 15, 25, 30); fehlt die Angabe, gilt die des Projekts. */
+  videoFps: number;
   /** Ohne Ordnerdialog in den Ordner der letzten Ausgabe. */
   reuseDir?: boolean;
   /** Ohne Ordnerdialog in diesen Ordner (z. B. nach „Trotzdem ausgeben“). */
@@ -1000,6 +1010,11 @@ export interface FeldspurApi {
   /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
   montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
   /**
+   * Auflösung und Bildrate des Montagevideos für das ganze Projekt wählen (Issue #250); ein Schritt für Rückgängig.
+   * Antwort: die neue Ansicht von `sessionId` (mit `montageFormat`).
+   */
+  setMontageFormat(sessionId: string, format: MontageFormat): Promise<SessionView>;
+  /**
    * Montagevideo, Einsatztranskript und Begleitprotokoll schreiben. Ohne dir fragt die App nach einem
    * Ordner; darin entsteht ein Unterordner je Einsatz. null = kein Ordner gewählt; { cancelled } = mit
    * cancelExport abgebrochen. Mit reuseDir ohne Dialog in den Ordner der letzten Ausgabe, falls er noch
@@ -1014,7 +1029,9 @@ export interface FeldspurApi {
    * Die Oberfläche zeichnet die Einblendungen des Montagevideos. Umgekehrte Richtung: Während der Ausgabe fragt der
    * Hauptprozess an (`askRenderer`, `apps/desktop/src/main/export.ts`), `render` liefert je Bild ein PNG.
    */
-  onOverlayRequest(render: (timeline: unknown, frames: unknown[]) => Promise<Uint8Array[]>): () => void;
+  onOverlayRequest(
+    render: (timeline: unknown, frames: unknown[], format: unknown) => Promise<Uint8Array[]>,
+  ): () => void;
   /** Die Oberfläche zeichnet Bildausschnitte, die ffmpeg nicht lesen kann (PDF-Seiten), als JPEG. */
   onStillRequest(render: (ref: unknown, pdf: boolean) => Promise<Uint8Array>): () => void;
   /** Datei im Dateimanager zeigen. */
@@ -1178,6 +1195,7 @@ export const IPC = {
   projectOverview: "project:overview",
   saveFieldCalendar: "project:save-field-calendar",
   montagePreview: "export:montage",
+  setMontageFormat: "export:set-format",
   exportSession: "export:run",
   cancelExport: "export:cancel",
   exportProgress: "export:progress",

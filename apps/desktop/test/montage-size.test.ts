@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectStore } from "@feldspur/core";
-import { applyImport, scanPaths } from "@feldspur/media";
+import { applyImport, DEFAULT_FORMAT, scanPaths } from "@feldspur/media";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { hasFfmpeg, makeSyncVideo } from "../../../packages/media/test/fixtures.ts";
 import { fakePowerSaveBlocker } from "./power-blocker.ts";
@@ -52,7 +52,7 @@ describe.skipIf(!hasFfmpeg())("Größenschätzung nach einer Ausgabe", () => {
     // Wenn: das ausgegebene Video 1,7-mal so groß ist wie geschätzt
     const mp4 = join(dir, "Montage.mp4");
     writeFileSync(mp4, Buffer.alloc(Math.round(before * 1.7)));
-    learnMontageSize(store, sessionId, { mode: "realtime", episodes: false }, mp4, true);
+    learnMontageSize(store, sessionId, { mode: "realtime", episodes: false }, mp4, true, DEFAULT_FORMAT);
     // Dann: ein Faktor ist gemerkt, und die nächste Schätzung trifft die echte Größe
     expect(JSON.parse(readFileSync(join(userData, "groessenschaetzung.json"), "utf8")).ratios).toHaveLength(1);
     expect(previewExport(store, sessionId).videoBytes.video / statSync(mp4).size).toBeCloseTo(1, 3);

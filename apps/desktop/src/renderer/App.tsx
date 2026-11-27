@@ -90,8 +90,12 @@ export function App() {
   // Einblendungen fürs Montagevideo zeichnet die Oberfläche (Schrift kann die LGPL-Fassung von ffmpeg nicht).
   useEffect(
     () =>
-      api.onOverlayRequest((tl, frames) =>
-        renderOverlays(tl as Parameters<typeof renderOverlays>[0], frames as Parameters<typeof renderOverlays>[1]),
+      api.onOverlayRequest((tl, frames, format) =>
+        renderOverlays(
+          tl as Parameters<typeof renderOverlays>[0],
+          frames as Parameters<typeof renderOverlays>[1],
+          format as Parameters<typeof renderOverlays>[2],
+        ),
       ),
     [],
   );

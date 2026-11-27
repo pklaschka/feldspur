@@ -15,7 +15,7 @@
  */
 import { formatClock, type Id, type MontagePlan } from "@feldspur/core";
 import type { Envelope } from "../audio.ts";
-import { FPS } from "../layout.ts";
+import { DEFAULT_FORMAT } from "../layout.ts";
 import { deviceTracksOf, planPieces } from "../montage-video.ts";
 import {
   timestamp,
@@ -47,6 +47,8 @@ export interface ViewerOptions {
   audioTracks?: { title: string; deviceId?: Id }[];
   /** Hüllkurven der Aufnahmen (Tonspur-Analyse), je Quelle. Daraus die Wellenform in den Gerätespuren. */
   envelopes?: Map<Id, Envelope>;
+  /** Bilder je Sekunde des Montagevideos (Issue #250); die Gerätespuren folgen denselben Bildgrenzen. */
+  fps?: number;
 }
 
 /**
@@ -177,12 +179,13 @@ function waveOf(env: Envelope, fromMs: number, durMs: number, boostDb = 0): { w:
 function lanesOf(
   transcript: SessionTranscript,
   audioTracks: { title: string; deviceId?: Id }[],
-  envelopes?: Map<Id, Envelope>,
+  envelopes: Map<Id, Envelope> | undefined,
+  fps: number,
 ): ViewerData["lanes"] {
   // Dieselben Stücke und Bildnummern, aus denen `packages/media/src/montage-video.ts` das Video baut: So liegen
   // die Balken genau dort, wo die Aufnahme im Video zu hören ist.
-  const pieces = planPieces(transcript);
-  const frameMs = 1000 / FPS;
+  const pieces = planPieces(transcript, fps);
+  const frameMs = 1000 / fps;
   const clips = new Map<Id, { label: string; file: string; f0: number; f1: number; source: Id; fromMs: number }[]>();
   const boosts = new Map<Id, number>();
   const wave = (c: { source: Id; fromMs: number; f0: number; f1: number }) => {
@@ -238,7 +241,7 @@ function lanesOf(
  */
 export function viewerData(
   transcript: SessionTranscript,
-  opts: Pick<ViewerOptions, "mediaFileName" | "audioTracks" | "envelopes">,
+  opts: Pick<ViewerOptions, "mediaFileName" | "audioTracks" | "envelopes" | "fps">,
 ): ViewerData {
   const { plan, header } = transcript;
   const audioTracks = opts.audioTracks ?? [{ title: "Ton" }];
@@ -259,7 +262,7 @@ export function viewerData(
       c1: Math.round(s.toMs),
     })),
     audio: audioTracks.map((t) => t.title),
-    lanes: lanesOf(transcript, audioTracks, opts.envelopes),
+    lanes: lanesOf(transcript, audioTracks, opts.envelopes, opts.fps ?? DEFAULT_FORMAT.fps),
   };
 }
 

@@ -17,6 +17,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ExportFingerprint, ExportRecord, ExportSettings, Id, ProjectStore, Source } from "@feldspur/core";
 import { baseName, documentVariables, protocolCsv } from "./export.ts";
+import { formatText, montageFormat } from "./layout.ts";
 import { buildSessionTranscript, entryText, type SessionTranscript } from "./session-transcript.ts";
 
 /** Verfahren des Fingerabdrucks. Erhöhen, wenn sich ändert, was in eine Ausgabe eingeht. */
@@ -102,8 +103,11 @@ export interface ExportStatus {
   missingFiles: string[];
 }
 
+/** Die Schalter unter den Einstellungen (alle außer dem Format des Videos). */
+type Switch = Exclude<keyof ExportSettings, "videoHeight" | "videoFps">;
+
 /** Wortlaut jeder Einstellung, eingeschaltet und ausgeschaltet, für den Satz „damals …, jetzt …“. */
-const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
+const SETTING_TEXT: Record<Switch, [on: string, off: string]> = {
   video: ["mit Montagevideo", "ohne Montagevideo"],
   resolve: ["mit Schnittliste für Resolve", "ohne Schnittliste für Resolve"],
   mixAudio: ["Ton aller Geräte gemischt", "nur Ton der Hauptquelle"],
@@ -117,12 +121,17 @@ const SETTING_TEXT: Record<keyof ExportSettings, [on: string, off: string]> = {
 
 /** Die Einstellungen, die sich unterscheiden, als „damals …, jetzt …“. */
 export function settingsDifference(was: ExportSettings, now: ExportSettings): string[] {
-  return (
-    (Object.keys(SETTING_TEXT) as (keyof ExportSettings)[])
-      // Fehlt eine Einstellung in einer älteren Ausgabe, galt sie als aus.
-      .filter((k) => !!was[k] !== !!now[k])
-      .map((k) => `damals ${SETTING_TEXT[k][was[k] ? 0 : 1]}, jetzt ${SETTING_TEXT[k][now[k] ? 0 : 1]}`)
-  );
+  const out = (Object.keys(SETTING_TEXT) as Switch[])
+    // Fehlt eine Einstellung in einer älteren Ausgabe, galt sie als aus.
+    .filter((k) => !!was[k] !== !!now[k])
+    .map((k) => `damals ${SETTING_TEXT[k][was[k] ? 0 : 1]}, jetzt ${SETTING_TEXT[k][now[k] ? 0 : 1]}`);
+  // Das Format zählt nur, wenn damals und jetzt ein Video dabei ist; sonst sagt das schon der Schalter `video`.
+  // Ältere Ausgaben kannten es nicht: Sie waren 1280 × 720 bei 25 Bildern/s.
+  const formatOf = (x: ExportSettings) => montageFormat({ height: x.videoHeight ?? 720, fps: x.videoFps ?? 25 });
+  const [a, b] = [formatOf(was), formatOf(now)];
+  if (was.video && now.video && (a.height !== b.height || a.fps !== b.fps))
+    out.push(`damals ${formatText(a)}, jetzt ${formatText(b)}`);
+  return out;
 }
 
 /**

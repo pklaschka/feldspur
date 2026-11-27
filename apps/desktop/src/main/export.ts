@@ -21,6 +21,8 @@ import {
   exportSession,
   methodsSummary,
   type ImageRef,
+  montageFormat,
+  type MontageFormat,
   montagePreview,
   type MontagePreview,
   sessionLevels,
@@ -43,6 +45,7 @@ import {
 import { checkOriginals } from "./originals.ts";
 import { sessionChangeLogCsv } from "./changelog.ts";
 import { learnMontageSize, montageSize } from "./montage-size.ts";
+import { projectFormat } from "./montage-format.ts";
 
 /** So viele Einblendungen gehen in einer Anfrage an die Oberfläche. */
 const CHUNK = 60;
@@ -151,14 +154,18 @@ export function registerOverlayBridge(): void {
 
 /** Lässt die Oberfläche die Einblendungen zeichnen, in Häppchen, damit die IPC-Nachrichten klein bleiben. */
 function overlayVia(wc: WebContents, signal: AbortSignal): OverlayRenderer {
-  const ask = (tl: OverlayHeader, frames: OverlayFrame[]) =>
-    askRenderer<Buffer[]>(wc, signal, "die Einblendungen", (id) => wc.send(IPC.overlayRequest, id, tl, frames));
-  return async (tl, frames) => {
+  const ask = (tl: OverlayHeader, frames: OverlayFrame[], format: MontageFormat) =>
+    askRenderer<Buffer[]>(wc, signal, "die Einblendungen", (id) => wc.send(IPC.overlayRequest, id, tl, frames, format));
+  return async (tl, frames, format) => {
     const out: Buffer[] = [];
-    for (let i = 0; i < frames.length; i += CHUNK) out.push(...(await ask(tl, frames.slice(i, i + CHUNK))));
+    for (let i = 0; i < frames.length; i += CHUNK) out.push(...(await ask(tl, frames.slice(i, i + CHUNK), format)));
     return out;
   };
 }
+
+/** Das Format, das eine Ausgabe mit diesen Einstellungen rechnet. */
+const formatOf = (settings: ExportSettings): MontageFormat =>
+  montageFormat({ height: settings.videoHeight, fps: settings.videoFps });
 
 /**
  * Echtzeit ist der Standard. Nach Episoden geschnitten wird nur, wenn der Einsatz Episoden bildet
@@ -171,7 +178,7 @@ function modeOf(s: ProjectStore, sessionId: string, realtime?: boolean) {
 
 /** Ablauf der Montage zum Abspielen in der App (`MontageView.tsx` in der Oberfläche); gerechnet wird kein Video. */
 export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
-  return montagePreview(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime)));
+  return montagePreview(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime)), projectFormat(s));
 }
 
 /**
@@ -214,7 +221,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
     durationMs: transcript.plan.durationMs,
     episodes: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "episode").length : 0,
     cards: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "card").length : 0,
-    videoBytes: montageSize(transcript),
+    videoBytes: montageSize(transcript, projectFormat(s)),
     lines: transcript.entries.map(entryText),
     entries: transcript.entries.map((e) => ({
       kind: e.kind,
@@ -229,6 +236,11 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
 
 /** Einstellungen so, wie sie das Ergebnis bestimmen (Episodenschnitt nur, wenn der Einsatz Episoden bildet). */
 export function exportSettings(s: ProjectStore, sessionId: string, opts: ExportChoices): ExportSettings {
+  // Ohne Angabe gilt das Format, das für das Projekt gewählt ist.
+  const format = montageFormat({
+    height: opts.videoHeight ?? projectFormat(s).height,
+    fps: opts.videoFps ?? projectFormat(s).fps,
+  });
   return {
     video: opts.video,
     resolve: opts.resolve === true,
@@ -241,6 +253,8 @@ export function exportSettings(s: ProjectStore, sessionId: string, opts: ExportC
     readme: opts.readme !== false,
     changeLog: opts.changeLog !== false,
     manifest: opts.manifest !== false,
+    videoHeight: format.height,
+    videoFps: format.fps,
   };
 }
 
@@ -401,6 +415,7 @@ export async function runExport(
       audioMix: opts.mixAudio === false ? "main" : "all",
       deviceTracks: opts.deviceTracks !== false,
       viewer: opts.viewer !== false,
+      format: formatOf(settings),
       readme: settings.readme,
       software: opts.software,
       // Stand beim Start, wie der Fingerabdruck.
@@ -443,6 +458,7 @@ export async function runExport(
         modeOf(s, sessionId, opts.realtime),
         join(r.dir, mp4),
         opts.deviceTracks !== false,
+        formatOf(settings),
       );
     return { dir: r.dir, files: r.files.map((f) => join(r.dir, f)), durationMs: r.durationMs };
   } finally {

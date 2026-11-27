@@ -24,16 +24,16 @@ import {
   applyImport,
   buildSessionTranscript,
   exportSession,
-  H,
   scanPaths,
   setLogEnabled,
   setLogSink,
   videoEncoder,
-  W,
+  montageLayout,
   type OverlayFrame,
   type OverlayRenderer,
 } from "@feldspur/media";
 
+const { w: W, h: H } = montageLayout();
 const minutes = Number(process.env.MESSUNG_MINUTEN ?? 20);
 /** Anteil der Montage, in dem ein Video läuft, in Prozent. Der Rest ist nur Ton. */
 const videoShare = Number(process.env.MESSUNG_VIDEOANTEIL ?? 40);

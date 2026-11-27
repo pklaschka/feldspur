@@ -282,6 +282,34 @@ describe.skipIf(!hasFfmpeg())("Export eines erzeugten Feldtags", () => {
     // Keine Standbilder mehr: Fotos und Scans stehen im Einsatztranskript.
     expect(xml).not.toMatch(/\.jpg"/);
   });
+
+  it.each`
+    hoehe   | bilder | format
+    ${720}  | ${25}  | ${'<format id="r1" name="FFVideoFormat720p25" frameDuration="1/25s" width="1280" height="720"/>'}
+    ${1080} | ${30}  | ${'<format id="r1" name="FFVideoFormat1080p30" frameDuration="1/30s" width="1920" height="1080"/>'}
+    ${360}  | ${10}  | ${'<format id="r1" frameDuration="1/10s" width="640" height="360"/>'}
+  `(
+    "Schnittliste in $hoehe p mit $bilder Bildern/s: Sequenz im selben Format, Zeiten in diesen Bildern",
+    async ({ hoehe, bilder, format }: { hoehe: number; bilder: number; format: string }) => {
+      const out = join(dir, `resolve-${hoehe}`);
+      const r = await exportSession(store, sessionId, out, {
+        video: false,
+        resolve: true,
+        format: { height: hoehe, fps: bilder },
+      });
+      const xml = readFileSync(
+        join(
+          out,
+          r.files.find((f) => f.endsWith(".fcpxml"))!,
+        ),
+        "utf8",
+      );
+      expect(xml).toContain(format);
+      const spine = [...xml.matchAll(/^ {8}<(?:asset-clip|gap) [^>]*duration="([^"]+)"/gm)];
+      const total = spine.reduce((n, [, len]) => n + (len === "0s" ? 0 : Number(len!.replace(`/${bilder}s`, ""))), 0);
+      expect(total).toBe(Math.round((r.durationMs * bilder) / 1000));
+    },
+  );
   // So steht es im Handbuch (Abschnitt „Montage-ID“): Blöcke 1 und 2 hängen am Zeitgefüge, Block 3 am Text.
   it("Montage-ID: Text ändert nur den dritten Block, Lage und Quellen auch die ersten beiden", () => {
     const header = (mode?: "episodes") => buildSessionTranscript(store, sessionId, { mode }).header;

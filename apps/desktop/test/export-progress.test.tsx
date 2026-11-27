@@ -38,6 +38,8 @@ const withVideo: ExportRequestOptions = {
   readme: true,
   changeLog: true,
   manifest: true,
+  videoHeight: 720,
+  videoFps: 25,
 };
 
 /** Eine Ausgabe mit Montagevideo starten; `shown` meldet einen Stand und liefert die danach gezeigten Prozent. */

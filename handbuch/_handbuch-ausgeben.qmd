@@ -69,6 +69,13 @@ Optionen:
 - **Montagevideo mit ausgeben** (Standard): Ist der Schalter aus, entstehen nur Einsatztranskript, Dokumentvariablen
   und Begleitprotokoll. Dahinter steht, wie groß das Video ungefähr wird, etwa „ca. 2,1 GB“; mit jeder Ausgabe wird
   die Schätzung genauer.
+- **Auflösung** und **Bilder je Sekunde**: Standard ist 720p (1280 × 720 Pixel) mit 25 Bildern je Sekunde. Mit
+  360p oder 540p und 10 oder 15 Bildern je Sekunde geht die Ausgabe schneller, und das Video wird kleiner; 1080p
+  mit 30 Bildern zeigt mehr Einzelheiten und braucht länger. Uhrzeit, Herkunft und Montage-ID bleiben in jeder
+  Auflösung lesbar. Wenige Bilder je Sekunde ruckeln bei schnellen Bewegungen, etwa wenn du Tierverhalten im Video
+  codierst. Die Wahl gilt für alle Einsätze des Projekts und steht in der Projektdatei. Die Montage-ID ändert sie
+  nicht, denn das Video zeigt dasselbe, nur feiner oder gröber; die LIESMICH nennt Auflösung und Bildrate hinter dem
+  Video. Eine frühere Ausgabe in einem anderen Format gilt danach als veraltet, mit dem Grund „andere Einstellungen“.
 - Standardmäßig läuft das Video **in Echtzeit** am Stück: Videozeit gleich Uhrzeit ab Beginn.
 - **Nach Episoden schneiden** (nur wenn unter "Durchsehen" Episoden eingeschaltet sind): Episoden in voller Länge,
   Zeit dazwischen als kurze Tafel. Das Video wird kürzer, die Videozeit entspricht dann aber nicht mehr der Uhrzeit.

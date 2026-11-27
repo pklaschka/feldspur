@@ -8,9 +8,9 @@
  * `packages/media/src/layout.ts`, die Einblendungen zeichnet `overlay.ts`, beides wie beim gerechneten Video.
  */
 import { formatClock, formatDuration } from "@feldspur/core/time";
-import { H, LAYOUT, MAX_TILES, videoTiles, W } from "@feldspur/media/layout";
+import { MAX_TILES, montageLayout, videoTiles } from "@feldspur/media/layout";
 import { Dialog } from "radix-ui";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useLoaded } from "./hooks.ts";
 import { mediaUrl, type LevelRow, type MontagePreview, type PreviewPiece } from "../shared/api.ts";
 import { applyLevel, LEVEL_MEDIA_PROPS } from "./level.ts";
@@ -79,6 +79,9 @@ export function MontageView({
  */
 function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, LevelRow | null> }) {
   const { pieces, durationMs, header } = plan;
+  // Derselbe Aufbau wie im Video, in der für das Projekt gewählten Auflösung (Issue #250).
+  const layout = useMemo(() => montageLayout(plan.format), [plan.format]);
+  const { w: W, h: H } = layout;
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   /** Die Uhr in voller Auflösung; `t` zieht beim Abspielen nur etwa zehnmal je Sekunde nach. */
@@ -111,7 +114,7 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
     const ro = new ResizeObserver(() => setScale(Math.min(el.clientWidth / W, el.clientHeight / H)));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [W, H]);
 
   // Uhr der Montage: läuft beim Abspielen in Echtzeit; Bild und Ton folgen ihr.
   useEffect(() => {
@@ -166,8 +169,8 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
   const second = Math.floor((t - piece.fromMs) / 1000);
   useEffect(() => {
     const ctx = overlay.current?.getContext("2d");
-    if (ctx) drawOverlay(ctx, header, previewFrame(piece, piece.fromMs + second * 1000));
-  }, [piece, second, header]);
+    if (ctx) drawOverlay(ctx, header, previewFrame(piece, piece.fromMs + second * 1000), layout);
+  }, [piece, second, header, layout]);
 
   const onKey = useEffectEvent((e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement && e.target.type !== "range") return;
@@ -187,7 +190,7 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
     return () => window.removeEventListener("keydown", on);
   }, []);
 
-  const tiles = videoTiles(piece.videos.length);
+  const tiles = videoTiles(piece.videos.length, layout);
   const clock = previewFrame(piece, t).clockMs;
 
   return (
@@ -199,7 +202,7 @@ function Player({ plan, levels }: { plan: MontagePreview; levels?: Map<string, L
         >
           {/* Feste Zahl von Elementen, die wiederverwendet werden: Welche Quelle wo läuft, setzt `follow`. */}
           {Array.from({ length: MAX_TILES }, (_, k) => {
-            const b = tiles[k] ?? LAYOUT.main;
+            const b = tiles[k] ?? layout.main;
             return (
               <video
                 key={k}

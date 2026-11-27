@@ -546,6 +546,8 @@ await kapitel("ausgeben", async () => {
       "LIESMICH mit Tabelle für den Methodenteil",
       page.getByRole("switch", { name: /^LIESMICH mit Tabelle für den Methodenteil/ }),
     );
+    for (const s of ["Auflösung", "Bilder je Sekunde"])
+      await siehe(s, page.getByTestId("video-format").getByText(s, { exact: true }));
     for (const g of ["Montagevideo", "Nachweise im Ordner", "Für den Schnitt"])
       await siehe(g, page.getByRole("heading", { name: g, exact: true }), { hinweis: "Gruppe der Schalter" });
     await siehe("Änderungsprotokoll", page.getByRole("switch", { name: /^Änderungsprotokoll/ }));

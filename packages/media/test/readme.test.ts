@@ -72,6 +72,13 @@ describe.skipIf(!hasFfmpeg())("LIESMICH im Ausgabeordner", () => {
     expect(text).toContain(satz);
   });
 
+  it("nennt hinter dem Montagevideo Auflösung und Bildrate", () => {
+    const text = (format?: { height: number; fps: number }) =>
+      exportReadmeHtml(transcript(), { files: ["Feldtag.mp4", "Feldtag.docx"], video: true, format });
+    expect(text()).toMatch(/<dt>Feldtag\.mp4<\/dt><dd>Montagevideo:[^<]*\(1280 × 720, 25 Bilder\/s\)<\/dd>/);
+    expect(text({ height: 360, fps: 10 })).toContain("(640 × 360, 10 Bilder/s)</dd>");
+  });
+
   it("nennt die Software nur, wenn die App sie mitgibt", () => {
     expect(html(false, "Zusammengeführt mit Feldspur, Version 0.4.0")).toContain(
       "<p>Zusammengeführt mit Feldspur, Version 0.4.0</p>",

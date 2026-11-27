@@ -26,6 +26,8 @@ const SETTINGS: ExportSettings = {
   readme: true,
   changeLog: true,
   manifest: true,
+  videoHeight: 720,
+  videoFps: 25,
 };
 
 describe.skipIf(!hasFfmpeg())("Zahlen für die Tabelle zum Methodenteil", () => {
