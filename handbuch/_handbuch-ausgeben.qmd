@@ -44,7 +44,7 @@ unverändert, läuft die Ausgabe durch. Sonst hält sie an, bevor etwas geschrie
 
 Das **Einsatztranskript** ist das Dokument für MAXQDA. Jede Zeile beginnt mit einer Zeitmarke im Format
 `#hh:mm:ss-z#`, die auf die passende Stelle im Montagevideo zeigt, und nennt die Uhrzeit dahinter. Dazu kommen
-Mitschrift, Fotos und Ausschnitte aus den Tagebuchseiten. Im Kopf stehen die Einsatzdaten und die **Montage-ID**.
+Mitschrift, Fotos und Ausschnitte aus den Tagebuchseiten. Im Kopf stehen die Einsatzdaten, die Angaben zum Datensatz (@sec-datensatz-angaben) und die **Montage-ID**.
 
 Gibt es Kontext (@sec-kontext), steht er vor der ersten Zeitmarke in einem Abschnitt **Kontext**, jedes Stück mit
 Titel, Fundstelle, Bild und Text. Die Zeitmarken beginnen danach unter **Chronologie**. Ohne Zeitmarke verknüpft
@@ -124,7 +124,7 @@ besteht aus zwei Teilen:
 
 In die **Montage** gehen der Einsatz (seine interne Kennung, nicht Titel oder Datum), die Art und Länge der Montage
 und jede Quelle auf der Zeitachse ein, mit der Prüfsumme ihrer Originaldatei und ihrem Beginn auf die Millisekunde.
-In den **Text** geht ein, was im Einsatztranskript steht: der Kopf, jede Zeile mit ihrer Zeitmarke, die
+In den **Text** geht ein, was im Einsatztranskript steht: der Kopf (auch die Angaben zum Datensatz), jede Zeile mit ihrer Zeitmarke, die
 Bildausschnitte und der Kontext.
 
 Im **Montagevideo** stehen oben rechts nur die ersten beiden Blöcke, also `FS-7KQ2-M9XD`. Das Video enthält keinen
@@ -301,7 +301,7 @@ Material wissen sollte: **Titel des Datensatzes**, **Urheber\*innen**, **Mitwirk
 Zeile, eine ORCID iD darf dahinter stehen; Schlagworte trennst du mit Komma. **Speichern** übernimmt die Angaben, und
 wie jede Änderung lässt sich das rückgängig machen.
 
-Jede Ausgabe des Projekts nennt diese Angaben in der LIESMICH und, wenn gewählt, in den Metadaten. Soll ein Einsatz
+Jede Ausgabe des Projekts nennt diese Angaben im Kopf von Einsatztranskript und Viewer, in der LIESMICH und, wenn gewählt, in den Metadaten. Weil sie im Kopf stehen, ändert eine geänderte Angabe den dritten Block der Montage-ID (@sec-montage-id); das Video bleibt gültig. Soll ein Einsatz
 etwas anderes sagen, etwa einen eigenen Titel oder einen engeren Zugang, trägst du es in seinen **Einsatzdaten** unter
 **Angaben zum Datensatz für diesen Einsatz** ein. Ein Eintrag dort ersetzt das ganze Feld nur für diesen Einsatz;
 leere Felder gelten wie im Projekt, das Projekt steht grau darin.

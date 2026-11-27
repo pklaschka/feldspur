@@ -46,6 +46,25 @@ export function cleanDataset(d: DatasetInfo | null | undefined): DatasetInfo {
   return out;
 }
 
+/**
+ * Angaben als Zeilen für den Kopf des Einsatztranskripts und des Viewers: „Titel des Datensatzes“ (neben dem Titel des
+ * Einsatzes), Personen und Schlagworte in einer Zeile, Absätze der Beschreibung mit Leerzeichen verbunden.
+ */
+export function datasetLines(d: DatasetInfo): [string, string][] {
+  const clean = cleanDataset(d);
+  return DATASET_FIELDS.flatMap(({ key, label }) => {
+    const v = clean[key];
+    if (!v) return [];
+    const people = key === "creators" || key === "contributors";
+    const text = people
+      ? parsePeople(v)
+          .map((p) => (p.orcid ? `${p.name} (ORCID ${p.orcid})` : p.name))
+          .join("; ")
+      : v.replace(/\s*\n\s*/g, " ");
+    return [[key === "title" ? "Titel des Datensatzes" : label, text]];
+  });
+}
+
 /** Schlüssel in `project_meta`, unter dem die Angaben des Projekts als JSON stehen. */
 const PROJECT_KEY = "dataset";
 
