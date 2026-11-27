@@ -28,6 +28,8 @@ import { applyImport, scanPaths } from "../src/import.ts";
 import { exportReadmeHtml } from "../src/readme.ts";
 import { PROFILE_URL } from "../src/ro-crate.ts";
 import { buildSessionTranscript } from "../src/session-transcript.ts";
+import { sessionTranscriptHtml } from "../src/viewer/html.ts";
+import { unzip } from "./xlsx.test.ts";
 import { hasFfmpeg, makePhoto } from "./fixtures.ts";
 
 describe("Angaben zum Datensatz", () => {
@@ -231,5 +233,37 @@ describe.skipIf(!hasFfmpeg())("Angaben in LIESMICH und Metadaten", () => {
     setProjectDataset(store, { title: "Marktstudie" });
     expect(exportFingerprint(store, sessionId, settings).content).not.toBe(before);
     setProjectDataset(store, {});
+  });
+
+  it("steht im Kopf von Einsatztranskript und Viewer und geht in den dritten Block der Montage-ID ein", async () => {
+    // Angenommen: ohne Angaben
+    const id = transcript().header.montageId;
+    expect(transcript().header.dataset).toBeUndefined();
+    // Wenn: Titel, zwei Urheber*innen (eine mit ORCID) und eine Beschreibung über zwei Zeilen eingetragen werden
+    setProjectDataset(store, {
+      title: "Marktstudie",
+      creators: "Mara Beispiel 0000-0002-1825-0097\nTom Muster",
+      description: "Erste Zeile.\nZweite Zeile.",
+    });
+    const t = transcript();
+    // Dann: stehen sie je Feld in einer Zeile, und nur der Textblock der ID ändert sich
+    expect(t.header.dataset).toEqual([
+      ["Titel des Datensatzes", "Marktstudie"],
+      ["Urheber*innen", "Mara Beispiel (ORCID 0000-0002-1825-0097); Tom Muster"],
+      ["Beschreibung", "Erste Zeile. Zweite Zeile."],
+    ]);
+    expect(t.header.montageId).not.toBe(id);
+    expect(t.header.montageVideoId).toBe(id.slice(0, 12));
+    const out = join(dir, "kopf");
+    const r = await exportSession(store, sessionId, out, { video: false });
+    const docx = r.files.find((f) => f.endsWith(".docx"))!;
+    const xml = unzip(readFileSync(join(out, docx)))["word/document.xml"]!;
+    expect(xml).toContain("Titel des Datensatzes: Marktstudie");
+    expect(sessionTranscriptHtml(t, { mediaFileName: "Feldtag.mp4", stills: new Map() } as never)).toContain(
+      "Titel des Datensatzes: Marktstudie",
+    );
+    // Wenn: die Angaben wieder gelöscht werden, dann ist die ID wie vorher
+    setProjectDataset(store, {});
+    expect(transcript().header.montageId).toBe(id);
   });
 });

@@ -28,6 +28,7 @@ import {
 } from "@feldspur/core";
 import { sessionEpisodes } from "./analyze.ts";
 import { contextBody, contextHeadDetails, contextPieces } from "./context.ts";
+import { datasetLines, sessionDataset } from "./dataset.ts";
 
 /**
  * Art einer Zeile der Chronologie:
@@ -96,6 +97,11 @@ export interface SessionTranscriptHeader {
   montageVideoId: string;
   /** „Episoden“ oder „Echtzeit“. */
   modeLabel: string;
+  /**
+   * Angaben zum Datensatz (Issue #206), soweit eingetragen: Projekt, darüber der Einsatz. Je Feld Beschriftung und
+   * Wert in einer Zeile. Fehlt, wenn nichts eingetragen ist; dann bleiben Kopf und Montage-ID wie vorher.
+   */
+  dataset?: [string, string][];
   /** Anzahl der Kontextstücke; fehlt, wenn es keine gibt (dann bleibt alles wie vor Issue #108). */
   contextCount?: number;
 }
@@ -406,6 +412,7 @@ export function buildSessionTranscript(
     ...new Set(input.devices.flatMap((d) => (d.personId && persons.get(d.personId) ? [persons.get(d.personId)!] : []))),
   ];
   const ref = input.devices.find((d) => d.isReference);
+  const dataset = datasetLines(sessionDataset(store, sessionId));
   const stated = {
     title: input.session.title,
     date: input.session.date,
@@ -416,6 +423,7 @@ export function buildSessionTranscript(
       .filter((s) => !s.partOf && (res.placements.has(s.id) || isContextSource(s.id)))
       .map((s) => s.label),
     extra: input.session.extra,
+    ...(dataset.length ? { dataset } : {}),
   };
   // Erst die Kennung der Montage, dann der Block für den Text: Das Video trägt nur die erste (`montageVideoId`).
   const montageVideoId = montageId(sessionId, plan, named, input.sources, res);

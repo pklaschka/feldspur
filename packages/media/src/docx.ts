@@ -164,6 +164,7 @@ export async function sessionTranscriptDocx(transcript: SessionTranscript, opts:
     ...Object.entries(h.extra)
       .filter(([, v]) => v.trim())
       .map(([k, v]) => `${k}: ${v}`),
+    ...(h.dataset ?? []).map(([k, v]) => `${k}: ${v}`),
     contextHeaderLine(h.contextCount),
     "Zeitmarken = Stelle im Montagevideo; die Uhrzeit steht jeweils dahinter.",
   ].filter(Boolean);
