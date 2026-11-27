@@ -20,6 +20,7 @@ export function ExportOptions({
   onFormat,
   withEpisodes,
   videoBytes,
+  originalsBytes,
 }: {
   opts: Options;
   set: (patch: Partial<Options>) => void;
@@ -30,8 +31,22 @@ export function ExportOptions({
   withEpisodes: boolean;
   /** Geschätzte Größe des Videos; null, solange die Montage berechnet wird oder leer ist. */
   videoBytes: SessionTranscriptPreview["videoBytes"] | null;
+  /** Größe aller Originale des Einsatzes; null, solange unbekannt. */
+  originalsBytes: number | null;
 }) {
-  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, roCrate, byEpisodes } = opts;
+  const {
+    video,
+    resolve,
+    mixAudio,
+    deviceTracks,
+    viewer,
+    readme,
+    changeLog,
+    manifest,
+    roCrate,
+    originals,
+    byEpisodes,
+  } = opts;
   return (
     <>
       <OptionGroup title="Montagevideo">
@@ -104,6 +119,13 @@ export function ExportOptions({
           onChange={(v) => set({ roCrate: v })}
           label="Metadaten (RO-Crate, .json)"
           hint="Die Angaben zum Datensatz aus der Übersicht maschinenlesbar, mit Geräten, Zeiten und Prüfsummen. Für Archive und Repositorien."
+        />
+        <Option
+          checked={originals}
+          onChange={(v) => set({ originals: v })}
+          label="Originale (Kopien, nach Gerät)"
+          size={originalsBytes ? aboutSize(originalsBytes) : undefined}
+          hint="Legt jede Originaldatei in den Unterordner Originale und prüft die Kopie gegen ihre Prüfsumme. Dann liegt alles beisammen, auch Gesichter, Stimmen und Namen."
         />
       </OptionGroup>
       <OptionGroup title="Für den Schnitt">

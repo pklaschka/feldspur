@@ -42,4 +42,5 @@ export * from "./methods-table.ts";
 export * from "./readme.ts";
 export * from "./dataset.ts";
 export * from "./ro-crate.ts";
+export * from "./originals-copy.ts";
 export * from "./field-calendar.ts";

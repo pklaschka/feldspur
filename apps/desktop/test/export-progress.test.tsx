@@ -39,6 +39,7 @@ const withVideo: ExportRequestOptions = {
   changeLog: true,
   manifest: true,
   roCrate: false,
+  originals: false,
   videoHeight: 720,
   videoFps: 25,
 };
@@ -102,5 +103,19 @@ describe("Fortschritt der Ausgabe", () => {
     expect(shown).toEqual(shown.toSorted((a, b) => a - b));
     expect(shown[2]).toBe(8);
     expect(shown.at(-1)).toBe(100);
+  });
+
+  it.each`
+    video
+    ${true}
+    ${false}
+  `("mit Originalen (Video $video): Prüfen bis 5 %, Kopieren bis 35 %, der Rest danach bis 100 %", ({ video }) => {
+    const at = (step: string, done: number) => percent({ sessionId: "e1", step, done, total: 2 }, video, true);
+    expect(at(EXPORT_CHECK_STEP, 2)).toBe(5);
+    expect(at("Originale kopieren", 0)).toBe(5);
+    expect(at("Originale kopieren", 1)).toBe(20);
+    expect(at("Originale kopieren", 2)).toBe(35);
+    expect(at("Einsatztranskript", 0)).toBeGreaterThan(35);
+    expect(at("Fertig", 1)).toBe(100);
   });
 });

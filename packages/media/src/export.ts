@@ -39,6 +39,14 @@ import { excelCsv } from "./csv.ts";
 import { exportReadmeHtml } from "./readme.ts";
 import { describeExport, MANIFEST_NAME, README_NAME, RO_CRATE_NAME } from "./dataset.ts";
 import { roCrateJson } from "./ro-crate.ts";
+import {
+  copyOriginals,
+  ensureSpace,
+  ORIGINALS_DIR,
+  planOriginals,
+  pruneOriginalsDir,
+  type CopyResult,
+} from "./originals-copy.ts";
 import { sha256File } from "./hash.ts";
 import { log, logSince, logSize } from "./log.ts";
 import { sessionTranscriptHtml } from "./viewer/html.ts";
@@ -91,6 +99,11 @@ export interface ExportOptions {
   roCrate?: boolean;
   /** Angaben zum Datensatz, schon aus Projekt und Einsatz zusammengeführt (`mergeDataset`); für LIESMICH und Metadaten. */
   dataset?: DatasetInfo;
+  /**
+   * Kopien der Originale nach `Originale/<Gerät>/` (Issue #208), jede gegen ihre Prüfsumme geprüft. Vorher wird der
+   * Platz geprüft; reicht er nicht, bricht die Ausgabe mit `ExportPrecheckError` ab, bevor sie etwas schreibt.
+   */
+  originals?: boolean;
   /** Feldspur mit Version und Adresse für die Metadaten; die App liefert sie. */
   softwareRef?: { version: string; url: string };
   /** Zeitpunkt der Ausgabe (ISO 8601) für die Metadaten; Standard: jetzt. */
@@ -339,7 +352,10 @@ export async function exportSession(
   const base = baseName(transcript);
   // planned: was diese Ausgabe schreibt. possible: was eine Ausgabe mit anderen Einstellungen hier geschrieben hätte.
   // leftover: was davon (oder von der letzten Ausgabe) diesmal nicht entsteht und deshalb entfernt wird.
+  // Kopien der Originale (Issue #208): alle Quellen des Einsatzes, wie im Begleitprotokoll.
+  const copies = opts.originals ? planOriginals(transcript.input.sources, transcript.input.devices) : [];
   const planned = [
+    ...copies.map((c) => c.path),
     ...(opts.video !== false ? [`${base}.mp4`] : []),
     ...(opts.video !== false && opts.viewer ? [`${base}.html`] : []),
     ...(opts.resolve ? [`${base}_Resolve.fcpxml`] : []),
@@ -360,16 +376,25 @@ export async function exportSession(
     RO_CRATE_NAME,
     MANIFEST_NAME,
   ];
-  const leftover = [...new Set([...(opts.previousFiles ?? []), ...possible])].filter((f) => !planned.includes(f));
+  const plannedSet = new Set(planned);
+  const leftover = [...new Set([...(opts.previousFiles ?? []), ...possible])].filter((f) => !plannedSet.has(f));
   const started = performance.now();
   log(
     "ausgabe",
-    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, LIESMICH ${opts.readme ? "ja" : "nein"}, Metadaten ${opts.roCrate ? "ja" : "nein"}, Änderungsprotokoll ${opts.changeLog !== undefined ? "ja" : "nein"}, Prüfsummen ${opts.manifest ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
+    `beginnt ${base} nach ${outDir} (Montagevideo ${opts.video !== false ? "ja" : "nein"}, Viewer ${opts.viewer ? "ja" : "nein"}, Originale ${opts.originals ? `ja (${copies.length})` : "nein"}, LIESMICH ${opts.readme ? "ja" : "nein"}, Metadaten ${opts.roCrate ? "ja" : "nein"}, Änderungsprotokoll ${opts.changeLog !== undefined ? "ja" : "nein"}, Prüfsummen ${opts.manifest ? "ja" : "nein"}, Schnittliste ${opts.resolve ? "ja" : "nein"}, ${transcript.entries.length} Einträge, ${formatDuration(transcript.plan.durationMs)})`,
   );
   try {
     await mkdir(outDir, { recursive: true });
     // Gesperrte oder schreibgeschützte Dateien (z. B. noch in Word offen) sofort melden, nicht erst nach dem Video.
     await ensureWritable([...planned, ...leftover].map((name) => outPath(outDir, name)));
+    if (copies.length) {
+      // Platz nur für Kopien, die nicht schon aus der letzten Ausgabe daliegen.
+      const previous = new Set(opts.previousFiles ?? []);
+      const needed = copies
+        .filter((c) => !(previous.has(c.path) && existsSync(outPath(outDir, c.path))))
+        .reduce((n, c) => n + c.source.sizeBytes, 0);
+      await ensureSpace(outDir, needed);
+    }
   } catch (e) {
     // Noch nichts geschrieben: eigene Klasse, damit die App den Stand einer früheren Ausgabe behält.
     const friendly = friendlyWriteError(e, outDir);
@@ -385,6 +410,17 @@ export async function exportSession(
       if (!existsSync(path)) continue;
       await rm(path, { force: true });
       log("ausgabe", `entfernt ${f} aus einer früheren Ausgabe (diesmal nicht dabei)`);
+    }
+    if (opts.previousFiles?.some((f) => f.startsWith(`${ORIGINALS_DIR}/`))) await pruneOriginalsDir(outDir);
+    // Originale zuerst: Das dauert am längsten, und LIESMICH, Metadaten und Prüfsummenliste müssen die Kopien kennen.
+    let copied: CopyResult = { files: [], kept: [], missing: [] };
+    if (copies.length) {
+      for (const c of copies) outPath(outDir, c.path);
+      copied = await copyOriginals(outDir, copies, {
+        previousFiles: opts.previousFiles,
+        signal,
+        onProgress: (done, total) => opts.onProgress?.("Originale kopieren", done, total),
+      });
     }
     const sources = new Map(transcript.input.sources.map((s) => [s.id, s]));
     const withImages = transcript.entries.filter((e) => e.images.length);
@@ -411,7 +447,7 @@ export async function exportSession(
       contextStills.set(c, list);
     }
 
-    const files: string[] = [];
+    const files: string[] = [...copied.files];
     const media = `${base}.mp4`;
     // Pegel nur für das Montagevideo neu messen (dekodiert ganze Dateien); ohne Video gilt, was schon gemessen ist.
     // Die App misst schon vor den Standbildern (`apps/desktop/src/main/export.ts`); hier bleibt nur, was dabei nicht
@@ -487,7 +523,11 @@ export async function exportSession(
     }
     // LIESMICH und Metadaten beschreiben dieselbe Ausgabe aus einem Datenobjekt (Issue #206). Beide stehen nach allen
     // Inhalten, damit sie jede Datei der Ausgabe nennen, auch sich selbst und die Prüfsummenliste.
+    const copyOf = new Map(
+      copies.filter((c) => copied.files.includes(c.path)).map((c) => [c.source.id, c.path] as const),
+    );
     const description = describeExport(transcript, {
+      copies: copyOf,
       dataset: opts.dataset,
       persons: store.listPersons(),
       files: [...files, ...(opts.readme ? [README_NAME] : []), ...(opts.manifest ? [MANIFEST_NAME] : [])],
@@ -505,6 +545,7 @@ export async function exportSession(
         format: opts.format,
         software: opts.software,
         description,
+        missingOriginals: copied.missing.map((x) => x.label),
       });
       await writeOut(outPath(outDir, README_NAME), html, "LIESMICH");
       files.push(README_NAME);
@@ -524,9 +565,11 @@ export async function exportSession(
     if (opts.manifest) {
       // Ganz zuletzt: Prüfsummen aller anderen Dateien, im Format von sha256sum (prüfbar mit `sha256sum -c`).
       const lines: string[] = [];
+      // Kopien der Originale sind beim Kopieren schon gegen ihre Prüfsumme geprüft: nicht ein zweites Mal lesen.
+      const known = new Map(copies.map((c) => [c.path, c.source.sha256]));
       for (const [i, f] of files.entries()) {
         opts.onProgress?.("Prüfsummen", i, files.length);
-        lines.push(`${await sha256File(outPath(outDir, f), { signal })}  ${f}`);
+        lines.push(`${known.get(f) ?? (await sha256File(outPath(outDir, f), { signal }))}  ${f}`);
       }
       await writeOut(outPath(outDir, MANIFEST_NAME), lines.join("\n") + "\n", "Prüfsummenliste");
       files.push(MANIFEST_NAME);

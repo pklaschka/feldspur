@@ -612,6 +612,29 @@ await kapitel("ausgeben", async () => {
     await siehe("Aktuell", page.getByText("Aktuell.", { exact: true }));
   });
 
+  await ablauf("Originale mitgeben und den Ausgabeordner prüfen", async () => {
+    // Dann: gibt es den Schalter für die Originale, ohne Vorauswahl
+    const schalter = page.getByRole("switch", { name: /^Originale \(Kopien, nach Gerät\)/ });
+    await siehe("Originale (Kopien, nach Gerät)", schalter);
+    if ((await schalter.getAttribute("aria-checked")) === "true") throw new Error("Originale sind vorgewählt");
+    // Wenn: „Ordner prüfen…“ gewählt und im Dialog der vorgeschlagene Ordner übernommen wird
+    await app.evaluate(({ dialog }) => {
+      dialog.showOpenDialog = (async (_w: unknown, o: { defaultPath?: string }) => ({
+        canceled: false,
+        filePaths: [o.defaultPath ?? ""],
+      })) as unknown as typeof dialog.showOpenDialog;
+    });
+    await siehe("Ordner prüfen…", knopf("Ordner prüfen…"));
+    await knopf("Ordner prüfen…").click();
+    // Dann: ist die gerade geschriebene Ausgabe unverändert
+    const ergebnis = page.getByTestId("folder-check-result");
+    await ergebnis.waitFor({ timeout: 60_000 });
+    await siehe("alle … Dateien unverändert", ergebnis.getByText(/alle \d+ Dateien unverändert\.$/), {
+      handbuch: "„alle … Dateien unverändert“",
+    });
+    if ((await ergebnis.getAttribute("data-state")) !== "ok") throw new Error("Ausgabeordner nicht unverändert");
+  });
+
   await ablauf("Die Übersicht mit den Kennwerten für den Methodenteil öffnen", async () => {
     // Wenn: die Übersicht in der linken Leiste gewählt wird
     await siehe("Übersicht");

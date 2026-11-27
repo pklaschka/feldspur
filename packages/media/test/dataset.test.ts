@@ -220,6 +220,7 @@ describe.skipIf(!hasFfmpeg())("Angaben in LIESMICH und Metadaten", () => {
       changeLog: false,
       manifest: false,
       roCrate: false,
+      originals: false,
       videoHeight: 720,
       videoFps: 25,
     };

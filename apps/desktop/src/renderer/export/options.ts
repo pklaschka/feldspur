@@ -20,6 +20,8 @@ export interface Options {
   manifest: boolean;
   /** Metadaten als RO-Crate (ro-crate-metadata.json); auf Wunsch, daher aus. */
   roCrate: boolean;
+  /** Kopien der Originale unter Originale/; Standard aus, weil sie schnell viele Gigabyte groß sind. */
+  originals: boolean;
   /** Nach Episoden schneiden statt Echtzeit; wirkt nur, wenn der Einsatz Episoden hat (wird dort zu `realtime`). */
   byEpisodes: boolean;
 }
@@ -33,6 +35,7 @@ const DEFAULTS: Options = {
   changeLog: true,
   manifest: true,
   roCrate: false,
+  originals: false,
   byEpisodes: false,
 };
 const KEY = "feldspur.export-options";

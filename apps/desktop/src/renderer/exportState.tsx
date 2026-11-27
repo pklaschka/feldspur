@@ -22,12 +22,16 @@ const api = window.feldspur;
 
 /** Erster Schritt jeder Ausgabe, nach der Ordnerwahl. */
 export const CHECK_STEP = EXPORT_CHECK_STEP;
+/** Schritt der Ausgabe, der die Originale kopiert und prüft (done/total in Bytes, Issue #208). */
+export const ORIGINALS_STEP = "Originale kopieren";
 
 /** Die laufende Ausgabe. */
 export interface ExportJob {
   sessionId: string;
   /** Mit Montagevideo; ohne geht es schnell, und der Fortschritt wird anders gewichtet (`percent`). */
   video: boolean;
+  /** Mit Kopien der Originale (Issue #208): Das Kopieren bekommt dann einen eigenen Teil des Balkens. */
+  originals?: boolean;
   progress: ExportProgress | null;
   /**
    * Gezeigter Anteil (0–100): `percent` des letzten Stands, aber nie kleiner als schon gezeigt. Ein Schritt, der
@@ -88,14 +92,22 @@ export function ExportProvider({ children }: { children: ReactNode }) {
         setJob((j) => {
           if (!j || j.sessionId !== p.sessionId) return j;
           const videoFrom = p.step === "Montagevideo" ? (j.videoFrom ?? { at: Date.now(), done: p.done }) : j.videoFrom;
-          return { ...j, progress: p, percent: Math.max(j.percent, percent(p, j.video)), videoFrom };
+          return { ...j, progress: p, percent: Math.max(j.percent, percent(p, j.video, j.originals)), videoFrom };
         }),
       ),
     [],
   );
   const start = (sessionId: string, opts: ExportRequestOptions, key?: string) => {
     if (job) return;
-    setJob({ sessionId, video: opts.video, progress: null, percent: 0, videoFrom: null, cancelling: false });
+    setJob({
+      sessionId,
+      video: opts.video,
+      originals: opts.originals === true,
+      progress: null,
+      percent: 0,
+      videoFrom: null,
+      cancelling: false,
+    });
     setErrors((x) => without(x, sessionId));
     setCancelled((x) => without(x, sessionId));
     setHeld((x) => without(x, sessionId));
@@ -151,7 +163,7 @@ export function useExport(): ExportState {
  * `packages/media/src/export.ts` und `apps/desktop/src/main/export.ts` melden; ein Schritt, der hier fehlt, ergibt 0.
  * Angezeigt wird `ExportJob.percent`, das nie hinter einen schon gezeigten Wert zurückfällt.
  */
-export function percent(p: ExportProgress | null, video = true): number {
+export function percent(p: ExportProgress | null, video = true, originals = false): number {
   if (!p) return 0;
   const frac = p.total ? p.done / p.total : 0;
   const steps: [string, number, number][] = video
@@ -171,7 +183,13 @@ export function percent(p: ExportProgress | null, video = true): number {
         ["Fertig", 100, 100],
       ];
   const s = steps.find(([name]) => name === p.step);
-  return s ? Math.round(s[1] + (s[2] - s[1]) * frac) : 0;
+  const base = s ? s[1] + (s[2] - s[1]) * frac : 0;
+  if (!originals) return Math.round(base);
+  // Mit Originalen: Prüfen 0–5 %, Kopieren 5–35 %, alles Übrige rückt in 35–100 %.
+  const checkEnd = steps[0]![2];
+  if (p.step === ORIGINALS_STEP) return Math.round(5 + 30 * frac);
+  if (p.step === CHECK_STEP) return Math.round(5 * frac);
+  return s ? Math.round(35 + ((base - checkEnd) * 65) / (100 - checkEnd)) : 0;
 }
 
 /** Geschätzte Restzeit des Videos in ms, sobald genug gerechnet ist (mind. 10 s Laufzeit). */

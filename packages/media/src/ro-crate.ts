@@ -7,7 +7,7 @@
  * - Jede Datei der Ausgabe ist ein `File` mit Zweck, Format und Größe.
  * - Jede Quelle ist ein `File` mit eigener Kennung `#quelle-…`: Sie liegt nicht im Ordner, trägt aber Dateiname,
  *   Kurzzeichen und SHA-256, damit sich das Original wiederfinden und prüfen lässt. Pfade des eigenen Rechners stehen
- *   nicht darin.
+ *   nicht darin. Sind die Originale mitkopiert (Issue #208), ist die Kennung der Pfad der Kopie unter `Originale/`.
  * - Je Gerät eine Aufnahme (`CreateAction`): welches Gerät (`IndividualProduct`), wer (`Person`), wann, welche Quellen.
  * - Eine Ausgabe (`CreateAction`) mit Feldspur (`SoftwareApplication`): aus welchen Quellen welche Dateien wurden.
  *
@@ -141,29 +141,34 @@ export function roCrateJson(d: ExportDescription, opts: RoCrateOptions): string 
   });
 
   // Dateien der Ausgabe (im Ordner) und Quellen (nicht im Ordner, mit eigener Kennung).
-  const outputs = d.files.map((f) => {
-    const size = opts.sizes.get(f.name);
-    const type = mediaType(f.name);
-    return add({
-      "@id": encodeURI(f.name),
-      "@type": "File",
-      name: f.name,
-      ...(f.role ? { description: f.role } : {}),
-      ...(type ? { encodingFormat: type } : {}),
-      ...(size !== undefined ? { contentSize: String(size) } : {}),
+  // Kopien der Originale (Issue #208) sind keine Ergebnisse der Ausgabe, sondern die Quellen selbst: siehe unten.
+  const outputs = d.files
+    .filter((f) => !f.name.startsWith("Originale/"))
+    .map((f) => {
+      const size = opts.sizes.get(f.name);
+      const type = mediaType(f.name);
+      return add({
+        "@id": encodeURI(f.name),
+        "@type": "File",
+        name: f.name,
+        ...(f.role ? { description: f.role } : {}),
+        ...(type ? { encodingFormat: type } : {}),
+        ...(size !== undefined ? { contentSize: String(size) } : {}),
+      });
     });
-  });
   const sourceRef = new Map(
     d.sources.map((x) => {
       const type = mediaType(x.fileName);
       return [
         x.id,
         add({
-          "@id": `#quelle-${slug(x.label)}`,
+          // Mitkopiert liegt die Quelle im Ordner und ist ein echter Teil des Datensatzes, sonst nur beschrieben.
+          "@id": x.copy ? encodeURI(x.copy) : `#quelle-${slug(x.label)}`,
           "@type": "File",
           name: x.fileName,
           identifier: x.label,
-          description: `${KIND_TEXT[x.kind] ?? "Datei"} ${x.label}, Originaldatei (nicht in diesem Ordner)`,
+          description: `${KIND_TEXT[x.kind] ?? "Datei"} ${x.label}, ${x.copy ? "Kopie der Originaldatei" : "Originaldatei (nicht in diesem Ordner)"}`,
+          ...(x.copy ? { contentSize: String(x.sizeBytes) } : {}),
           ...(type ? { encodingFormat: type } : {}),
           sha256: x.sha256,
           ...(x.start ? { dateCreated: x.start } : {}),
@@ -171,7 +176,19 @@ export function roCrateJson(d: ExportDescription, opts: RoCrateOptions): string 
       ];
     }),
   );
-  root.hasPart = [...outputs, ...sourceRef.values()];
+  const copied = d.sources.filter((x) => x.copy).map((x) => sourceRef.get(x.id)!);
+  const originalsDir = copied.length
+    ? [
+        add({
+          "@id": "Originale/",
+          "@type": "Dataset",
+          name: "Originale",
+          description: "Kopien der Originaldateien, je Gerät ein Ordner",
+          hasPart: copied,
+        }),
+      ]
+    : [];
+  root.hasPart = [...outputs, ...originalsDir, ...sourceRef.values()];
 
   // Aufnahme je Gerät: Gerät, Person, Zeitraum und die Quellen, die es geliefert hat.
   for (const dev of d.devices) {

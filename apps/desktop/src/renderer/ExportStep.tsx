@@ -40,7 +40,19 @@ export function ExportStep({
   onOriginals: () => void;
 }) {
   const [opts, set] = useExportOptions();
-  const { video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, roCrate, byEpisodes } = opts;
+  const {
+    video,
+    resolve,
+    mixAudio,
+    deviceTracks,
+    viewer,
+    readme,
+    changeLog,
+    manifest,
+    roCrate,
+    originals,
+    byEpisodes,
+  } = opts;
   const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
   // Echtzeit ist der Normalfall; nach Episoden geschnitten wird nur, wenn der Einsatz Episoden hat und es gewählt ist.
@@ -67,6 +79,7 @@ export function ExportStep({
       changeLog,
       manifest,
       roCrate,
+      originals,
       realtime,
       videoHeight,
       videoFps,
@@ -81,6 +94,7 @@ export function ExportStep({
       changeLog,
       manifest,
       roCrate,
+      originals,
       realtime,
       videoHeight,
       videoFps,
@@ -229,6 +243,7 @@ export function ExportStep({
               onFormat={(f) => void api.setMontageFormat(sessionId, f).then(onView, () => {})}
               withEpisodes={withEpisodes}
               videoBytes={preview && !empty ? preview.videoBytes : null}
+              originalsBytes={preview ? preview.originalsBytes : null}
             />
             {view.context.length > 0 && <ContextCard view={view} onView={onView} />}
             {open.length > 0 && !empty && (

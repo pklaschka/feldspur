@@ -168,6 +168,7 @@ const FILE_ROLE: [RegExp, string][] = [
     /^ro-crate-metadata\.json$/,
     "Metadaten (RO-Crate): dieselbe Beschreibung maschinenlesbar, für Archive und Repositorien",
   ],
+  [/^Originale\//, "Kopie einer Originaldatei, Kurzzeichen wie im Begleitprotokoll"],
   [/_Resolve\.fcpxml$/, "Schnittliste für DaVinci Resolve: dieselbe Montage ohne Einblendungen"],
   [/\.docx$/, "Einsatztranskript: Mitschrift, Tagebuch und Fotos in zeitlicher Folge, mit Zeitmarken zum Video"],
 ];
@@ -190,6 +191,9 @@ export interface DescribedSource {
   /** Beginn und Ende auf der Zeitachse als UTC (ISO 8601); null ohne Lage, Ende nur bei Strecken. */
   start: string | null;
   end: string | null;
+  sizeBytes: number;
+  /** Pfad der Kopie im Ausgabeordner (`Originale/…`, Issue #208); null, wenn das Original nicht mitkopiert ist. */
+  copy: string | null;
 }
 
 /** Ein Gerät mit den Quellen, die von ihm stammen. */
@@ -236,6 +240,8 @@ export interface DescribeOptions {
   /** Dateien der Ausgabe im Ordner, in der Reihenfolge des Schreibens. */
   files: string[];
   format?: MontageFormat;
+  /** Kopien der Originale im Ordner je Quelle (Issue #208). */
+  copies?: ReadonlyMap<Id, string>;
 }
 
 const germanDate = (iso: string) => iso.split("-").reverse().join(".");
@@ -253,10 +259,11 @@ export function describeExport(transcript: SessionTranscript, opts: DescribeOpti
     const p = deviceId ? devices.get(deviceId)?.personId : null;
     return p ? (persons.get(p) ?? null) : null;
   };
-  // Nur Quellen, die in diese Ausgabe eingehen: auf der Zeitachse oder als Kontext, ohne Teile einer Seite.
+  // Quellen, die in diese Ausgabe eingehen: auf der Zeitachse oder als Kontext, ohne Teile einer Seite.
   const inExport = new Set(h.sources);
   const sources: DescribedSource[] = input.sources
-    .filter((s) => inExport.has(s.label))
+    // Mitkopierte Originale gehören dazu, auch Seiten einer Tagebuchseite oder Quellen ohne Lage.
+    .filter((s) => inExport.has(s.label) || opts.copies?.has(s.id))
     .map((s) => {
       const p = resolved.placements.get(s.id);
       return {
@@ -269,6 +276,8 @@ export function describeExport(transcript: SessionTranscript, opts: DescribeOpti
         person: personOf(s.deviceId),
         start: p ? iso(p.startMs) : null,
         end: p && p.endMs !== p.startMs ? iso(p.endMs) : null,
+        sizeBytes: s.sizeBytes,
+        copy: opts.copies?.get(s.id) ?? null,
       };
     });
   const used = new Set(sources.map((s) => s.id));

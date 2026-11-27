@@ -8,7 +8,8 @@ import type { ExportCard, ExportStatus } from "../../shared/api.ts";
 import { someLabels } from "../format.ts";
 import { Button } from "../ui.tsx";
 import { ExportReceipt } from "./ExportReceipt.tsx";
-import { FILE_ROLE, fileName, files, inDir, parentDir, when } from "./text.ts";
+import { FolderCheckButton } from "./FolderCheck.tsx";
+import { FILE_ROLE, fileName, files, inDir, isCopy, parentDir, when } from "./text.ts";
 
 const api = window.feldspur;
 
@@ -69,6 +70,9 @@ export function ExportResult({
   const showFolder = () => void api.showInFolder(present ? inDir(record.dir, present) : record.dir);
   // Liegt keine der Dateien mehr dort, ist meist der ganze Ordner verschoben: ein Satz statt lauter Streichungen.
   const allGone = record.files.length > 0 && missingFiles.length === record.files.length;
+  // Kopien der Originale (Issue #208) als ein Eintrag „Originale/“ statt hunderter Zeilen.
+  const copies = record.files.filter(isCopy);
+  const goneCopies = copies.filter((f) => gone.has(f)).length;
   const fileList = allGone ? (
     <p className="mt-3 text-[0.9rem]" id={`export-files-${record.sessionId}`} data-testid="export-files">
       <span className="font-medium text-bad">
@@ -81,13 +85,25 @@ export function ExportResult({
     </p>
   ) : (
     <ul className="mt-3 grid gap-1.5" id={`export-files-${record.sessionId}`} data-testid="export-files">
-      {record.files.map((f) => (
-        <li key={f} className="text-[0.9rem]">
-          <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
-          {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
-          <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
+      {record.files
+        .filter((f) => !isCopy(f))
+        .map((f) => (
+          <li key={f} className="text-[0.9rem]">
+            <span className={`font-medium break-all ${gone.has(f) ? "text-muted line-through" : ""}`}>{f}</span>
+            {gone.has(f) && <span className="ml-2 text-[0.85rem] text-bad">fehlt im Ordner</span>}
+            <span className="block text-[0.85rem] text-muted">{FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? ""}</span>
+          </li>
+        ))}
+      {copies.length > 0 && (
+        <li className="text-[0.9rem]" data-testid="export-files-originals">
+          <span className="font-medium">Originale/</span>
+          <span className="ml-2 text-[0.85rem] text-muted">{files(copies.length)}</span>
+          {goneCopies > 0 && <span className="ml-2 text-[0.85rem] text-bad">{goneCopies} fehlen im Ordner</span>}
+          <span className="block text-[0.85rem] text-muted">
+            {FILE_ROLE.find(([re]) => re.test("Originale/"))?.[1] ?? ""}
+          </span>
         </li>
-      ))}
+      )}
     </ul>
   );
   const missingNotice = missingFiles.length > 0 && (
@@ -124,6 +140,7 @@ export function ExportResult({
               Geändertes neu.
             </p>
           )}
+          <FolderCheckButton dir={record.dir} />
         </ExportReceipt>
       </div>
     );
@@ -180,6 +197,7 @@ export function ExportResult({
           {listOpen && fileList}
         </>
       )}
+      <FolderCheckButton dir={record.dir} />
     </div>
   );
 }
