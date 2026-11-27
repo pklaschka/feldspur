@@ -413,6 +413,10 @@ export const ExportSettings = z.object({
   changeLog: z.boolean().default(false),
   /** Prüfsummenliste manifest-sha256.txt (Issue #204). Ältere Ausgaben kannten sie nicht: aus. */
   manifest: z.boolean().default(false),
+  /** Bildhöhe des Montagevideos in Pixeln (Issue #250). Ältere Ausgaben waren immer 1280 × 720. */
+  videoHeight: z.number().int().default(720),
+  /** Bilder je Sekunde im Montagevideo (Issue #250). Ältere Ausgaben hatten immer 25. */
+  videoFps: z.number().int().default(25),
 });
 export type ExportSettings = z.infer<typeof ExportSettings>;
 

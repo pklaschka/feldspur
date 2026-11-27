@@ -2,14 +2,14 @@
  * Montagevideo: nur, was zum Zuordnen nötig ist. Episoden in voller Länge mit kurzen Tafeln
  * für übersprungene Zwischenzeiten, oder alles in Echtzeit.
  *
- * Aufbau (1280×720, 25 fps): oben Uhrzeit, Einsatz und Montage-ID; in der Mitte die laufenden
+ * Aufbau (Standard 1280×720, 25 fps; wählbar, `MontageFormat`): oben Uhrzeit, Einsatz und Montage-ID; in der Mitte die laufenden
  * Videos (gleichzeitige nebeneinander) mit Kurzzeichen, Datei und Stelle im Original; unten die
  * laufenden Tonquellen. Fotos und Tagebuch stehen im Einsatztranskript, nicht im Video.
  * Text zeichnet ein OverlayRenderer (in der App: die Oberfläche per Canvas), weil die
  * LGPL-Fassung von ffmpeg nicht überall Schrift setzen kann. Ohne Renderer entsteht das Video
  * trotzdem, nur ohne Einblendungen.
  *
- * Wo kein Video läuft, steht je Sekunde ein Bild (die Uhrzeit ändert sich nicht öfter), sonst sind es 25 je Sekunde:
+ * Wo kein Video läuft, steht je Sekunde ein Bild (die Uhrzeit ändert sich nicht öfter), sonst so viele, wie das Format vorgibt:
  * Die Bildrate im fertigen Video wechselt also, die Zeiten bleiben auf das Bild genau (Issue #249).
  *
  * Das Video entsteht stückweise mit festen Parametern und wird ohne Neukodierung verbunden.
@@ -34,14 +34,23 @@ import { availableParallelism } from "node:os";
 import { basename, join } from "node:path";
 import { formatClock, type Id, type Placement, type Source } from "@feldspur/core";
 import type { SessionTranscript } from "./session-transcript.ts";
-import { FPS, H, MAX_TILES, videoTiles, W } from "./layout.ts";
+import {
+  DEFAULT_FORMAT,
+  isDefaultFormat,
+  MAX_TILES,
+  montageLayout,
+  videoTiles,
+  widthOf,
+  type MontageFormat,
+} from "./layout.ts";
 import { encodeAacParts, limiter } from "./aac-parts.ts";
 import { levelFilter, type AudioLevel } from "./audio.ts";
 import { log, logSince } from "./log.ts";
 import { probeMedia } from "./probe.ts";
 import { PROBE_TIMEOUT_MS, runTool, STALL_MS, ToolError } from "./process.ts";
 
-const FRAME_MS = 1000 / FPS;
+/** Dauer eines Bilds in ms bei `fps` Bildern je Sekunde. */
+const frameMs = (fps: number) => 1000 / fps;
 /** Abtastrate des Tons im Montagevideo, in Hz. */
 const RATE = 48_000;
 
@@ -84,7 +93,12 @@ export interface OverlayFrame {
  * Zeichnet die Einblendungen: je Eintrag in `frames` (einer je Sekunde) ein PNG in Bildgröße, das ffmpeg über das
  * Bild legt. Kommt von außen, weil hier keine Schrift gesetzt werden kann (siehe Kopf der Datei).
  */
-export type OverlayRenderer = (header: OverlayHeader, frames: OverlayFrame[]) => Promise<Buffer[]>;
+export type OverlayRenderer = (
+  header: OverlayHeader,
+  frames: OverlayFrame[],
+  /** Format des Montagevideos: Größe der PNGs und Aufbau des Bilds (`montageLayout`). */
+  format: MontageFormat,
+) => Promise<Buffer[]>;
 
 /** Eine Aufnahme, die in einem Stück läuft, mit der Stelle, an der das Stück in ihr beginnt. */
 export interface MediaRef {
@@ -151,7 +165,7 @@ async function ff(args: string[], signal?: AbortSignal): Promise<void> {
 
 /**
  * Bild mit laufendem Video, kbit/s, für die Größenschätzung: ein mittlerer Wert. Die Encoder rechnen auf Qualität,
- * nicht auf eine Bitrate (siehe `ENCODERS`); ruhiges Bild liegt darunter, unruhiges darüber. Den Rest gleicht der
+ * nicht auf eine Bitrate (siehe `encoders`); ruhiges Bild liegt darunter, unruhiges darüber. Den Rest gleicht der
  * gelernte Faktor in der App aus.
  */
 const VIDEO_KBPS = 3000;
@@ -166,6 +180,17 @@ const DEVICE_TRACK_KBPS = 128;
 const STILL_KBPS = 600;
 
 /**
+ * Wie viel Bild ein Format gegenüber 1280 × 720 bei 25 Bildern/s braucht (Issue #250), für die Größenschätzung und
+ * die Obergrenze der Bitrate: linear mit der Zahl der Pixel, mit der Wurzel der Bildrate. Weniger Bilder je Sekunde
+ * sparen weniger als ihr Anteil, weil sich zwischen zwei Bildern mehr ändert. Ohne Video (`still`) steht ohnehin nur
+ * ein Bild je Sekunde, dort zählen nur die Pixel.
+ */
+function pictureScale(f: MontageFormat, still = false): number {
+  const pixels = (widthOf(f.height) * f.height) / (widthOf(DEFAULT_FORMAT.height) * DEFAULT_FORMAT.height);
+  return still ? pixels : pixels * Math.sqrt(f.fps / DEFAULT_FORMAT.fps);
+}
+
+/**
  * Ungefähre Größe des Montagevideos in Bytes, Stück für Stück: volle Bildbitrate nur, wo ein Video läuft, sonst
  * kaum etwas; Ton nur, wo eine Tonquelle läuft (Stille kostet in AAC fast nichts). `video` ist das Video mit
  * Tonspur 1, `deviceTracks` kommt mit einer Spur je Gerät dazu (erst ab zwei Geräten mit Ton). Eine Schätzung; je
@@ -173,14 +198,17 @@ const STILL_KBPS = 600;
  */
 export function estimateMontageBytes(
   transcript: SessionTranscript,
-  pieces: Piece[] = planPieces(transcript),
+  format: MontageFormat = DEFAULT_FORMAT,
+  pieces: Piece[] = planPieces(transcript, format.fps),
 ): { video: number; deviceTracks: number } {
-  const bytes = (kbps: number, frames: number) => ((kbps * 1000) / 8) * (frames / FPS);
+  const bytes = (kbps: number, frames: number) => ((kbps * 1000) / 8) * (frames / format.fps);
+  const videoKbps = VIDEO_KBPS * pictureScale(format);
+  const stillKbps = STILL_KBPS * pictureScale(format, true);
   let video = 0;
   const perDevice = new Map<Id, number>();
   for (const p of pieces) {
     const frames = p.f1 - p.f0;
-    video += bytes(p.videos.length ? VIDEO_KBPS : STILL_KBPS, frames);
+    video += bytes(p.videos.length ? videoKbps : stillKbps, frames);
     if (p.audios.length) video += bytes(MIX_KBPS, frames);
     for (const id of new Set(p.audios.map((a) => a.source.deviceId).filter((d): d is Id => !!d)))
       perDevice.set(id, (perDevice.get(id) ?? 0) + bytes(DEVICE_TRACK_KBPS, frames));
@@ -193,10 +221,16 @@ export function estimateMontageBytes(
 }
 
 /**
- * Obergrenze der Bildbitrate (kbit/s), wo ein Encoder eine braucht. Sie greift nur bei sehr unruhigem Bild
- * (bewegtes Wasser, Laub im Wind); mit 3000 kbit/s zerfiel solches Bild in Blöcke (Issue #252).
+ * Obergrenze der Bildbitrate (kbit/s) bei 1280 × 720 und 25 Bildern/s, wo ein Encoder eine braucht. Sie greift nur
+ * bei sehr unruhigem Bild (bewegtes Wasser, Laub im Wind); mit 3000 kbit/s zerfiel solches Bild in Blöcke (Issue
+ * #252). In anderen Formaten wächst oder schrumpft sie wie das Bild (`maxVideoKbps`).
  */
 const MAX_VIDEO_KBPS = 8000;
+
+/** Obergrenze der Bildbitrate im Format `f`, auf 100 kbit/s gerundet; im Standardformat `MAX_VIDEO_KBPS`. */
+function maxVideoKbps(f: MontageFormat): number {
+  return Math.round((MAX_VIDEO_KBPS * pictureScale(f)) / 100) * 100;
+}
 
 /**
  * H.264-Encoder in der Reihenfolge, in der Feldspur sie versucht; es gilt der erste, den dieses ffmpeg kennt und mit
@@ -213,20 +247,30 @@ const MAX_VIDEO_KBPS = 8000;
  * Die Stufen sind an libx264 mit CRF 23 ausgerichtet (gemessen an ruhigem, mittlerem und sehr unruhigem Bild, siehe
  * Issue #252): ähnliche Qualität bei ähnlicher Größe. Die Rechenzeit der Encoder ändert sich dadurch nicht.
  */
-const ENCODERS: readonly (readonly [codec: string, ...args: string[]])[] = [
-  ["libx264", "-preset", "veryfast", "-crf", "23"],
-  ["h264_videotoolbox", "-q:v", "55"],
-  ["h264_videotoolbox", "-b:v", `${MAX_VIDEO_KBPS}k`],
-  ["h264_mf", "-rate_control", "quality", "-quality", "40"],
-  ["h264_mf", "-b:v", `${MAX_VIDEO_KBPS}k`],
-  ["libopenh264", "-b:v", `${MAX_VIDEO_KBPS}k`, "-qmin", "26"],
-  ["mpeg4", "-q:v", "4"],
-];
+function encoders(f: MontageFormat): (readonly [codec: string, ...args: string[]])[] {
+  const max = `${maxVideoKbps(f)}k`;
+  return [
+    ["libx264", "-preset", "veryfast", "-crf", "23"],
+    ["h264_videotoolbox", "-q:v", "55"],
+    ["h264_videotoolbox", "-b:v", max],
+    ["h264_mf", "-rate_control", "quality", "-quality", "40"],
+    ["h264_mf", "-b:v", max],
+    ["libopenh264", "-b:v", max, "-qmin", "26"],
+    ["mpeg4", "-q:v", "4"],
+  ];
+}
 
 /** Ein paar Bilder in Größe der Montage rechnen und verwerfen: Nimmt der Encoder diese Einstellungen an? */
-async function encoderWorks(enc: string[]): Promise<boolean> {
+async function encoderWorks(enc: string[], f: MontageFormat): Promise<boolean> {
   try {
-    const frames = ["-f", "lavfi", "-i", `color=s=${W}x${H}:r=${FPS}:d=0.2`, "-pix_fmt", "yuv420p"];
+    const frames = [
+      "-f",
+      "lavfi",
+      "-i",
+      `color=s=${widthOf(f.height)}x${f.height}:r=${f.fps}:d=0.2`,
+      "-pix_fmt",
+      "yuv420p",
+    ];
     await runTool("ffmpeg", ["-hide_banner", "-loglevel", "error", ...frames, ...enc, "-f", "null", "-"], {
       timeoutMs: PROBE_TIMEOUT_MS,
     });
@@ -238,42 +282,53 @@ async function encoderWorks(enc: string[]): Promise<boolean> {
 }
 
 /**
- * Der erste Eintrag aus `ENCODERS`, den dieses ffmpeg kennt (`listing` ist die Ausgabe von `ffmpeg -encoders`) und
- * mit dem ein Probebild gelingt.
+ * Der erste Eintrag aus `encoders(format)`, den dieses ffmpeg kennt (`listing` ist die Ausgabe von `ffmpeg -encoders`)
+ * und mit dem ein Probebild in diesem Format gelingt.
  */
 export async function pickEncoder(
   listing: string,
-  works: (enc: string[]) => Promise<boolean> = encoderWorks,
+  works: (enc: string[], format: MontageFormat) => Promise<boolean> = encoderWorks,
+  format: MontageFormat = DEFAULT_FORMAT,
 ): Promise<string[]> {
   const has = (n: string) => new RegExp(`^\\s*V\\S*\\s+${n}\\s`, "m").test(listing);
-  const known = ENCODERS.filter(([codec]) => has(codec)).map(([codec, ...args]) => ["-c:v", codec, ...args]);
-  for (const enc of known) if (await works(enc)) return enc;
+  const known = encoders(format)
+    .filter(([codec]) => has(codec))
+    .map(([codec, ...args]) => ["-c:v", codec, ...args]);
+  for (const enc of known) if (await works(enc, format)) return enc;
   // Nichts gelingt (etwa ein ffmpeg, das gar nicht läuft): bei H.264 mit Bitrate bleiben, die jeder der Encoder
   // annimmt, statt auf MPEG-4 auszuweichen. Der Abschnitt meldet dann den eigentlichen Fehler.
   return known.find((enc) => enc.includes("-b:v")) ?? known.at(-1) ?? ["-c:v", "mpeg4", "-q:v", "4"];
 }
 
-let encoderCache: Promise<string[]> | null = null;
-/** Encoder-Argumente für das Bild, einmal je Programmlauf bestimmt. */
-export function videoEncoder(): Promise<string[]> {
-  encoderCache ??= runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS })
-    .then((listing) => pickEncoder(listing))
-    .catch((e: unknown) => {
-      // Ließ sich ffmpeg nicht fragen, beim nächsten Mal neu versuchen statt den Fehler zu behalten.
-      encoderCache = null;
-      throw e;
-    });
-  return encoderCache;
+const encoderCache = new Map<string, Promise<string[]>>();
+/**
+ * Encoder-Argumente für das Bild im Format `format`, einmal je Programmlauf und Format bestimmt: Ein Hardware-Encoder
+ * kann eine Größe ablehnen, die er in einer anderen annimmt, und die Obergrenze der Bitrate hängt am Format.
+ */
+export function videoEncoder(format: MontageFormat = DEFAULT_FORMAT): Promise<string[]> {
+  const key = `${format.height}p${format.fps}`;
+  let got = encoderCache.get(key);
+  if (!got) {
+    got = runTool("ffmpeg", ["-hide_banner", "-encoders"], { timeoutMs: PROBE_TIMEOUT_MS })
+      .then((listing) => pickEncoder(listing, encoderWorks, format))
+      .catch((e: unknown) => {
+        // Ließ sich ffmpeg nicht fragen, beim nächsten Mal neu versuchen statt den Fehler zu behalten.
+        encoderCache.delete(key);
+        throw e;
+      });
+    encoderCache.set(key, got);
+  }
+  return got;
 }
 
-/** Stücke der Montage: Grenzen dort, wo eine Aufnahme beginnt oder endet. */
-export function planPieces(transcript: SessionTranscript): Piece[] {
+/** Stücke der Montage: Grenzen dort, wo eine Aufnahme beginnt oder endet, in Bildern bei `fps` Bildern je Sekunde. */
+export function planPieces(transcript: SessionTranscript, fps: number = DEFAULT_FORMAT.fps): Piece[] {
   const { input, resolved, plan } = transcript;
   const devices = new Map(input.devices.map((d) => [d.id, d]));
   const place = (id: Id) => resolved.placements.get(id);
   const av = input.sources.filter((s) => (s.kind === "audio" || s.kind === "video") && place(s.id));
   const refDevice = input.devices.find((d) => d.isReference)?.id;
-  const frame = (ms: number) => Math.round(ms / FRAME_MS);
+  const frame = (ms: number) => Math.round(ms / frameMs(fps));
   const covering = (s: Source, t: number) => {
     const p = place(s.id)!;
     return t >= p.startMs && t < p.endMs;
@@ -393,8 +448,8 @@ export function overlayHeader(transcript: SessionTranscript): OverlayHeader {
   return { title: h.title, date: h.date, montageId: h.montageVideoId, modeLabel: h.modeLabel };
 }
 
-/** Einblendung an einer Stelle eines Stücks (ms ab Stückbeginn). */
-export function frameAt(p: Piece, offsetMs: number): OverlayFrame {
+/** Einblendung an einer Stelle eines Stücks (ms ab Stückbeginn); `fps` wie beim Planen der Stücke. */
+function frameAt(p: Piece, offsetMs: number, fps: number): OverlayFrame {
   const media = (m: MediaRef): OverlayMedia => ({
     label: m.label,
     fileName: m.source.fileName,
@@ -402,7 +457,7 @@ export function frameAt(p: Piece, offsetMs: number): OverlayFrame {
   });
   const shown = new Set(p.videos.map((v) => v.source.id));
   return {
-    montageMs: p.f0 * FRAME_MS + offsetMs,
+    montageMs: p.f0 * frameMs(fps) + offsetMs,
     clockMs: p.kind === "card" ? p.clock0 : p.clock0 + offsetMs,
     kind: p.kind,
     title: p.title,
@@ -413,9 +468,10 @@ export function frameAt(p: Piece, offsetMs: number): OverlayFrame {
 }
 
 /** Eine Einblendung je angefangener Sekunde des Stücks: Feiner als sekundenweise zeigt das Video die Uhrzeit nicht. */
-function framesFor(p: Piece): OverlayFrame[] {
-  const n = Math.ceil(((p.f1 - p.f0) * FRAME_MS) / 1000);
-  return Array.from({ length: n }, (_, k) => frameAt(p, k * 1000));
+function framesFor(p: Piece, fps: number): OverlayFrame[] {
+  // In ganzen Bildern gerechnet: (f1 − f0) · 1000 / fps ergäbe bei 30 Bildern/s für 30 Bilder 1000,0000000000002 ms.
+  const n = Math.ceil((p.f1 - p.f0) / fps);
+  return Array.from({ length: n }, (_, k) => frameAt(p, k * 1000, fps));
 }
 
 export interface MontageVideoOptions {
@@ -439,6 +495,8 @@ export interface MontageVideoOptions {
   deviceTracks?: boolean;
   /** Wie viele Abschnitte gleichzeitig; Standard: ein Kern bleibt frei, höchstens 4. */
   parallel?: number;
+  /** Auflösung und Bildrate (Issue #250); Standard 1280 × 720 bei 25 Bildern/s. */
+  format?: MontageFormat;
   /** Lautstärke-Angleichung je Quelle (audioLevelOf); fehlt eine Quelle, bleibt ihr Ton unverändert. */
   levels?: Map<string, AudioLevel | null>;
   /**
@@ -448,21 +506,22 @@ export interface MontageVideoOptions {
   signal?: AbortSignal;
 }
 
-/** Längere Stücke werden in Abschnitte dieser Länge geteilt: parallel rechenbar, feiner Fortschritt. */
-const CHUNK_FRAMES = 60 * FPS;
+/** Längere Stücke werden in Abschnitte dieser Länge (in Sekunden) geteilt: parallel rechenbar, feiner Fortschritt. */
+const CHUNK_S = 60;
 /** Erhöhen, wenn sich das Aussehen oder der Aufbau der Abschnitte ändert, damit alte nicht wiederverwendet werden. */
 const LOOK_VERSION = 6;
 
-/** Teilt Stücke in Abschnitte von höchstens `CHUNK_FRAMES`; Uhrzeit und Stellen in den Dateien rücken mit. */
-function chunks(pieces: Piece[]): Piece[] {
+/** Teilt Stücke in Abschnitte von höchstens `CHUNK_S` Sekunden; Uhrzeit und Stellen in den Dateien rücken mit. */
+function chunks(pieces: Piece[], fps: number): Piece[] {
+  const most = CHUNK_S * fps;
   return pieces.flatMap((p) => {
     const out: Piece[] = [];
-    for (let f0 = p.f0; f0 < p.f1; f0 += CHUNK_FRAMES) {
-      const shift = (f0 - p.f0) * FRAME_MS;
+    for (let f0 = p.f0; f0 < p.f1; f0 += most) {
+      const shift = (f0 - p.f0) * frameMs(fps);
       out.push({
         ...p,
         f0,
-        f1: Math.min(p.f1, f0 + CHUNK_FRAMES),
+        f1: Math.min(p.f1, f0 + most),
         clock0: p.kind === "card" ? p.clock0 : p.clock0 + shift,
         videos: p.videos.map((v) => ({ ...v, fromMs: v.fromMs + shift })),
         audios: p.audios.map((v) => ({ ...v, fromMs: v.fromMs + shift })),
@@ -504,18 +563,18 @@ async function pool<T>(
 
 /**
  * Stellt die Standbilder eines Abschnitts ohne Video an ihren Platz: Der Encoder bekommt `stills` Bilder dicht an dicht
- * (je 1/25 s), dieser Bitstromfilter streckt die Zeiten danach auf eine Sekunde je Bild. Das letzte Bild steht nur so
- * lange, bis der Abschnitt nach `frameCount` Bildern zu 1/25 s endet. So hat der Abschnitt genau die Länge, die er mit
- * 25 Bildern je Sekunde hätte, und der Ton bleibt auf die Probe genau am Bild.
+ * (je 1/`fps` s), dieser Bitstromfilter streckt die Zeiten danach auf eine Sekunde je Bild. Das letzte Bild steht nur
+ * so lange, bis der Abschnitt nach `frameCount` Bildern zu 1/`fps` s endet. So hat der Abschnitt genau die Länge, die
+ * er mit `fps` Bildern je Sekunde hätte, und der Ton bleibt auf die Probe genau am Bild.
  *
  * Die Dekodierzeit (DTS) behält ihren Abstand zur Anzeigezeit, statt mitgestreckt zu werden: libx264 schreibt sie zwei
  * Bilder früher, und gestreckt wären das zwei Sekunden, um die die Spur am Ende zu kurz geriete. Das geht, weil diese
  * Abschnitte keine umsortierten Bilder haben (jedes zweite Bild ist ein Schlüsselbild).
  */
-function stillTimes(stills: number, frameCount: number): string[] {
-  const last = frameCount - (stills - 1) * FPS;
-  const duration = `if(lt(N\\,${stills - 1})\\,DURATION*${FPS}\\,DURATION*${last})`;
-  return ["-bsf:v", `setts=pts=PTS*${FPS}:dts=PTS*${FPS}-(PTS-DTS):duration=${duration}`];
+function stillTimes(stills: number, frameCount: number, fps: number): string[] {
+  const last = frameCount - (stills - 1) * fps;
+  const duration = `if(lt(N\\,${stills - 1})\\,DURATION*${fps}\\,DURATION*${last})`;
+  return ["-bsf:v", `setts=pts=PTS*${fps}:dts=PTS*${fps}-(PTS-DTS):duration=${duration}`];
 }
 
 /** Was im fertigen Video steckt, soweit andere Ausgaben es brauchen (der Viewer). */
@@ -549,10 +608,14 @@ export async function renderMontage(
   const dir = join(opts.workDir, "montage");
   await mkdir(dir, { recursive: true });
   // Stücke für den Ton (ganze Länge), Abschnitte (`parts`, höchstens eine Minute) für das Bild.
-  const pieces = planPieces(transcript);
-  const parts = chunks(pieces);
+  const format = opts.format ?? DEFAULT_FORMAT;
+  const fps = format.fps;
+  const oneFrameMs = frameMs(fps);
+  const layout = montageLayout(format);
+  const pieces = planPieces(transcript, fps);
+  const parts = chunks(pieces, fps);
   const header = overlayHeader(transcript);
-  const enc = await videoEncoder();
+  const enc = await videoEncoder(format);
   const cacheDir = opts.cacheDir ?? join(dir, "abschnitte");
   await mkdir(cacheDir, { recursive: true });
   // Ein Kern bleibt für die Oberfläche und den Ton frei. Mehr als vier gleichzeitig bringt nichts: Spätestens dann
@@ -627,7 +690,7 @@ export async function renderMontage(
     const aList: string[] = [];
     for (const [i, p] of pieces.entries()) {
       signal?.throwIfAborted();
-      const durS = ((p.f1 - p.f0) * FRAME_MS) / 1000;
+      const durS = ((p.f1 - p.f0) * oneFrameMs) / 1000;
       const aOut = join(dir, `${tag}-${i}.pcm`);
       const samples = Math.round(durS * RATE);
       // Auf die Probe genau so lang wie das Bild des Stücks: zu kurzen Ton mit Stille auffüllen, zu langen kappen.
@@ -694,12 +757,12 @@ export async function renderMontage(
   audioDone.catch(fail);
 
   try {
-    const totalS = Math.round((pieces.at(-1)?.f1 ?? 0) / FPS);
+    const totalS = Math.round((pieces.at(-1)?.f1 ?? 0) / fps);
     const doneFrames = new Map<number, number>();
     const report = () => {
       let f = 0;
       for (const v of doneFrames.values()) f += v;
-      opts.onProgress?.(Math.min(totalS, Math.round(f / FPS)), totalS);
+      opts.onProgress?.(Math.min(totalS, Math.round(f / fps)), totalS);
     };
     report();
 
@@ -710,8 +773,8 @@ export async function renderMontage(
       parallel,
       async (p, i) => {
         const frameCount = p.f1 - p.f0;
-        const durS = (frameCount * FRAME_MS) / 1000;
-        const frames = opts.overlay ? framesFor(p) : null;
+        const durS = (frameCount * oneFrameMs) / 1000;
+        const frames = opts.overlay ? framesFor(p, fps) : null;
         const key = createHash("sha1")
           .update(
             JSON.stringify({
@@ -725,6 +788,9 @@ export async function renderMontage(
               // Die Stelle im Video gehört nicht zum Bild: Abschnitte bleiben gültig, wenn sich davor etwas ändert.
               frames: frames?.map(({ montageMs: _m, ...f }) => f),
               header: frames ? header : null,
+              // Bildrate steckt schon in `frameCount` und den Stellen; die Größe nicht. Im Standardformat fehlt das
+              // Format im Schlüssel, damit Abschnitte von vor Issue #250 gültig bleiben.
+              ...(isDefaultFormat(format) ? {} : { format }),
             }),
           )
           .digest("hex");
@@ -749,36 +815,37 @@ export async function renderMontage(
         // Sekunde, das im fertigen Video eine Sekunde lang steht (Issue #249). 24 von 25 Bildern zu kodieren, die
         // nichts Neues zeigen, kostete vorher den größten Teil der Rechenzeit dieser Abschnitte, und beim
         // Hardware-Encoder (VideoToolbox) Durchsatz, der den Abschnitten mit Video fehlte.
-        // Die Standbilder gehen dicht an dicht durch ffmpeg, als wären es 25 je Sekunde: So bekommt der Encoder
+        // Die Standbilder gehen dicht an dicht durch ffmpeg, als wären es `fps` je Sekunde: So bekommt der Encoder
         // dieselben Einstellungen wie in den Abschnitten mit Video. An ihre Stelle im Video rückt sie `stillTimes`.
         const still = p.videos.length === 0;
-        const stills = Math.ceil(durS);
-        const srcDur = still ? ((stills + 1) / FPS).toFixed(3) : (Math.ceil(durS) + 1).toString();
-        const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${W}x${H}:r=${FPS}:d=${srcDur}`];
+        // Angefangene Sekunden in ganzen Bildern gezählt (siehe `framesFor`), nicht aus der gerundeten Dauer.
+        const stills = Math.ceil(frameCount / fps);
+        const srcDur = still ? ((stills + 1) / fps).toFixed(3) : (stills + 1).toString();
+        const args: string[] = ["-f", "lavfi", "-i", `color=c=0x10171b:s=${layout.w}x${layout.h}:r=${fps}:d=${srcDur}`];
         const filters: string[] = [];
         let last = "[0:v]";
         let input = 1;
         // Gleichzeitige Videos nebeneinander, jedes in sein Feld eingepasst.
-        const tiles = videoTiles(p.videos.length);
+        const tiles = videoTiles(p.videos.length, layout);
         for (const [k, v] of p.videos.entries()) {
           const box = tiles[k]!;
           args.push("-hwaccel", "auto", "-ss", (v.fromMs / 1000).toFixed(3), "-t", durS.toFixed(3));
           args.push("-i", v.source.originalPath);
           filters.push(
-            `[${input}:v]fps=${FPS},scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1[v${input}]`,
+            `[${input}:v]fps=${fps},scale=${box.w}:${box.h}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1[v${input}]`,
             `${last}[v${input}]overlay=x=${box.x}+(${box.w}-overlay_w)/2:y=${box.y}+(${box.h}-overlay_h)/2:eof_action=pass[b${input}]`,
           );
           last = `[b${input}]`;
           input++;
         }
         if (opts.overlay && frames) {
-          const pngs = await opts.overlay(header, frames);
+          const pngs = await opts.overlay(header, frames, format);
           signal?.throwIfAborted();
           await Promise.all(pngs.map((b, j) => writeFile(join(pdir, `o${String(j).padStart(5, "0")}.png`), b)));
-          args.push("-framerate", String(still ? FPS : 1), "-i", join(pdir, "o%05d.png"));
+          args.push("-framerate", String(still ? fps : 1), "-i", join(pdir, "o%05d.png"));
           filters.push(
             // Erst ins Format der Überlagerung wandeln, dann vervielfachen: sonst wandelt ffmpeg dasselbe Bild 25-mal.
-            still ? `[${input}:v]null[o${input}]` : `[${input}:v]format=yuva420p,fps=${FPS}[o${input}]`,
+            still ? `[${input}:v]null[o${input}]` : `[${input}:v]format=yuva420p,fps=${fps}[o${input}]`,
             `${last}[o${input}]overlay=0:0:eof_action=repeat[b${input}]`,
           );
           last = `[b${input}]`;
@@ -797,18 +864,18 @@ export async function renderMontage(
           "-frames:v",
           String(still ? stills : frameCount),
           "-r",
-          String(FPS),
+          String(fps),
           ...enc,
           // Alle zwei Sekunden ein Bild, an das Player springen können, mit und ohne Video.
           "-g",
-          String(still ? 2 : FPS * 2),
-          ...(still ? stillTimes(stills, frameCount) : []),
+          String(still ? 2 : fps * 2),
+          ...(still ? stillTimes(stills, frameCount, fps) : []),
           "-an",
           tmp,
         ];
-        // ffmpeg meldet die Zeit vor dem Strecken der Standbilder (`stillTimes`): dort zählt jedes Bild 25-fach.
+        // ffmpeg meldet die Zeit vor dem Strecken der Standbilder (`stillTimes`): dort zählt jedes Bild `fps`-fach.
         const progress = (ms: number) => {
-          doneFrames.set(i, Math.min(frameCount, Math.round(ms / FRAME_MS) * (still ? FPS : 1)));
+          doneFrames.set(i, Math.min(frameCount, Math.round(ms / oneFrameMs) * (still ? fps : 1)));
           report();
         };
         // Mehrere Abschnitte laufen gleichzeitig: Jeder merkt sich, ob er mit Hardware-Dekodierung begonnen hat.
@@ -846,8 +913,8 @@ export async function renderMontage(
       join(dir, "v.txt"),
       vFiles
         .map((f, i) => {
-          const durS = ((parts[i]!.f1 - parts[i]!.f0) * FRAME_MS) / 1000;
-          return `file '${f.replace(/'/g, "'\\''")}'\nduration ${durS.toFixed(3)}`;
+          const durS = ((parts[i]!.f1 - parts[i]!.f0) * oneFrameMs) / 1000;
+          return `file '${f.replace(/'/g, "'\\''")}'\nduration ${durS.toFixed(6)}`;
         })
         .join("\n"),
     );
@@ -864,12 +931,12 @@ export async function renderMontage(
     // Endet die Montage ohne Video, steht ihr letztes Standbild bis zum Ende. Ältere ffmpeg-Fassungen (6.x) lesen die
     // Dauer dieses einen Bilds falsch aus dem Abschnitt; hier steht sie deshalb noch einmal ausdrücklich.
     const tail = parts.at(-1);
-    const packets = parts.reduce((n, p) => n + (p.videos.length ? p.f1 - p.f0 : Math.ceil((p.f1 - p.f0) / FPS)), 0);
+    const packets = parts.reduce((n, p) => n + (p.videos.length ? p.f1 - p.f0 : Math.ceil((p.f1 - p.f0) / fps)), 0);
     const lastStill =
       tail && !tail.videos.length
         ? [
             "-bsf:v",
-            `setts=pts=PTS:dts=DTS:duration=if(eq(N\\,${packets - 1})\\,${(tail.f1 / FPS).toFixed(3)}/TB-PTS\\,DURATION)`,
+            `setts=pts=PTS:dts=DTS:duration=if(eq(N\\,${packets - 1})\\,${(tail.f1 / fps).toFixed(6)}/TB-PTS\\,DURATION)`,
           ]
         : [];
     log("montage", `setzt ${vFiles.length} Abschnitte und ${tracks.length} Tonspuren zusammen: ${outFile}`);

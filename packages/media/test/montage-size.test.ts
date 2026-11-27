@@ -3,6 +3,7 @@
  * `packages/media/src/montage-video.ts`).
  */
 import { describe, expect, it } from "vite-plus/test";
+import { DEFAULT_FORMAT } from "../src/layout.ts";
 import { estimateMontageBytes, type Piece } from "../src/montage-video.ts";
 import type { SessionTranscript } from "../src/session-transcript.ts";
 
@@ -20,7 +21,8 @@ function stueck(min: number, { videos = 0, audios = [] as string[] } = {}): Piec
     audios: audios.map((d) => ref(d)),
   } as Piece;
 }
-const schaetze = (pieces: Piece[]) => estimateMontageBytes({} as SessionTranscript, pieces);
+const schaetze = (pieces: Piece[], format = DEFAULT_FORMAT) =>
+  estimateMontageBytes({} as SessionTranscript, format, pieces);
 
 describe("Größe des Montagevideos schätzen", () => {
   it("rechnet eine Stunde laufendes Video mit Ton zu gut 1,4 GB", () => {

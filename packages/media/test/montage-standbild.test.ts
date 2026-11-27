@@ -9,10 +9,12 @@ import { join } from "node:path";
 import { ProjectStore } from "@feldspur/core";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { applyImport, scanPaths } from "../src/import.ts";
-import { FPS } from "../src/layout.ts";
+import { DEFAULT_FORMAT } from "../src/layout.ts";
 import { planPieces, renderMontage, type OverlayRenderer } from "../src/montage-video.ts";
 import { buildSessionTranscript } from "../src/session-transcript.ts";
 import { hasFfmpeg, makeAudio, makeVideo } from "./fixtures.ts";
+
+const FPS = DEFAULT_FORMAT.fps;
 
 /** Beginn jedes Bilds der Bildspur, in Sekunden. */
 function videoFrames(file: string): { at: number }[] {

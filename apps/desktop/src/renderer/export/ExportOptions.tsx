@@ -3,9 +3,10 @@
  * `apps/desktop/src/renderer/ExportStep.tsx`; die Werte hält und merkt `apps/desktop/src/renderer/export/options.ts`.
  */
 import type { ReactNode } from "react";
+import { FRAME_RATES, RESOLUTIONS, widthOf, type MontageFormat } from "@feldspur/media/layout";
 import type { SessionTranscriptPreview } from "../../shared/api.ts";
 import { aboutSize } from "../format.ts";
-import { cx, Toggle } from "../ui.tsx";
+import { Choice, cx, Toggle } from "../ui.tsx";
 import type { Options } from "./options.ts";
 
 /**
@@ -15,11 +16,16 @@ import type { Options } from "./options.ts";
 export function ExportOptions({
   opts,
   set,
+  format,
+  onFormat,
   withEpisodes,
   videoBytes,
 }: {
   opts: Options;
   set: (patch: Partial<Options>) => void;
+  /** Auflösung und Bildrate des Montagevideos, für das ganze Projekt (Issue #250). */
+  format: MontageFormat;
+  onFormat: (f: MontageFormat) => void;
   /** Sind unter „Durchsehen“ Episoden eingeschaltet? Nur dann lässt sich nach Episoden schneiden. */
   withEpisodes: boolean;
   /** Geschätzte Größe des Videos; null, solange die Montage berechnet wird oder leer ist. */
@@ -41,6 +47,7 @@ export function ExportOptions({
               : "Dauert einige Minuten. Aus: nur Einsatztranskript, Dokumentvariablen und Begleitprotokoll."
           }
         />
+        <VideoFormat format={format} onFormat={onFormat} disabled={!video} />
         {withEpisodes && (
           <Option
             checked={byEpisodes}
@@ -102,6 +109,50 @@ export function ExportOptions({
         />
       </OptionGroup>
     </>
+  );
+}
+
+/**
+ * Auflösung und Bildrate des Montagevideos als zwei Knopfreihen, eingerückt wie die Hinweise unter den Schaltern.
+ * Kleiner rechnet schneller und braucht weniger Platz; Uhrzeit, Herkunft und Montage-ID bleiben in jedem Format lesbar.
+ */
+function VideoFormat({
+  format,
+  onFormat,
+  disabled,
+}: {
+  format: MontageFormat;
+  onFormat: (f: MontageFormat) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="grid gap-2 pl-[2.625rem] text-[0.95rem]" data-testid="video-format">
+      <div className="grid grid-cols-[8.5rem_auto] items-center gap-x-2 gap-y-2">
+        <span>Auflösung</span>
+        <Choice
+          label="Auflösung des Montagevideos"
+          value={String(format.height)}
+          onChange={(v) => onFormat({ ...format, height: Number(v) })}
+          options={RESOLUTIONS.map((h) => ({
+            value: String(h),
+            label: `${h}p`,
+            title: `${widthOf(h)} × ${h} Pixel`,
+            disabled,
+          }))}
+        />
+        <span>Bilder je Sekunde</span>
+        <Choice
+          label="Bilder je Sekunde im Montagevideo"
+          value={String(format.fps)}
+          onChange={(v) => onFormat({ ...format, fps: Number(v) })}
+          options={FRAME_RATES.map((fps) => ({ value: String(fps), label: String(fps), disabled }))}
+        />
+      </div>
+      <span className="text-[0.85rem] text-muted">
+        {widthOf(format.height)} × {format.height} Pixel, {format.fps} Bilder je Sekunde. Gilt für alle Einsätze dieses
+        Projekts. Kleiner geht schneller und braucht weniger Platz; Uhrzeit und Montage-ID bleiben lesbar.
+      </span>
+    </div>
   );
 }
 

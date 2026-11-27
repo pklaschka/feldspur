@@ -119,6 +119,7 @@ const api: FeldspurApi = {
   projectOverview: () => ipcRenderer.invoke(IPC.projectOverview),
   saveFieldCalendar: (days) => ipcRenderer.invoke(IPC.saveFieldCalendar, days),
   montagePreview: (id, realtime) => ipcRenderer.invoke(IPC.montagePreview, id, realtime),
+  setMontageFormat: (id, format) => ipcRenderer.invoke(IPC.setMontageFormat, id, format),
   exportSession: (id, opts) => ipcRenderer.invoke(IPC.exportSession, id, opts),
   cancelExport: (id) => ipcRenderer.invoke(IPC.cancelExport, id),
   onExportProgress: (cb) => {
@@ -128,8 +129,8 @@ const api: FeldspurApi = {
   },
   // Anfrage und Antwort gehören über `id` zusammen; der Hauptprozess wartet darauf (`askRenderer` in main/export.ts).
   onOverlayRequest: (render) => {
-    const listener = (_e: unknown, id: number, timeline: unknown, frames: unknown[]) => {
-      render(timeline, frames).then(
+    const listener = (_e: unknown, id: number, timeline: unknown, frames: unknown[], format: unknown) => {
+      render(timeline, frames, format).then(
         (pngs) => ipcRenderer.send(IPC.overlayReply, id, pngs, null),
         (err: unknown) => ipcRenderer.send(IPC.overlayReply, id, [], String(err)),
       );

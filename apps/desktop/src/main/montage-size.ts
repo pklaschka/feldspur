@@ -9,7 +9,7 @@
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { app } from "electron";
-import { buildSessionTranscript, estimateMontageBytes, log } from "@feldspur/media";
+import { buildSessionTranscript, estimateMontageBytes, log, type MontageFormat } from "@feldspur/media";
 import type { ProjectStore } from "@feldspur/core";
 
 /** So viele Ausgaben fließen in den Faktor ein (die jüngsten). */
@@ -32,12 +32,15 @@ export function sizeFactor(ratios: number[] = readRatios()): number {
   return Math.exp(ratios.reduce((a, r) => a + Math.log(r), 0) / ratios.length);
 }
 
-/** Schätzung für die Vorschau, mit dem gelernten Faktor. */
-export function montageSize(transcript: Parameters<typeof estimateMontageBytes>[0]): {
+/** Schätzung für die Vorschau im Format `format` (Auflösung, Bildrate), mit dem gelernten Faktor. */
+export function montageSize(
+  transcript: Parameters<typeof estimateMontageBytes>[0],
+  format: MontageFormat,
+): {
   video: number;
   deviceTracks: number;
 } {
-  const raw = estimateMontageBytes(transcript);
+  const raw = estimateMontageBytes(transcript, format);
   const f = sizeFactor();
   return { video: Math.round(raw.video * f), deviceTracks: Math.round(raw.deviceTracks * f) };
 }
@@ -49,9 +52,10 @@ export function learnMontageSize(
   mode: Parameters<typeof buildSessionTranscript>[2],
   videoPath: string,
   deviceTracks: boolean,
+  format: MontageFormat,
 ): void {
   try {
-    const raw = estimateMontageBytes(buildSessionTranscript(s, sessionId, mode));
+    const raw = estimateMontageBytes(buildSessionTranscript(s, sessionId, mode), format);
     const estimated = raw.video + (deviceTracks ? raw.deviceTracks : 0);
     const actual = statSync(videoPath).size;
     if (estimated <= 0 || actual <= 0) return;

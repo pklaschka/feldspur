@@ -53,9 +53,24 @@ export function ExportStep({
   const justDone = busy ? null : (ex.results[sessionId] ?? null);
   const error = busy ? null : (ex.errors[sessionId] ?? null);
   const cancelled = busy ? null : (ex.cancelled[sessionId] ?? null);
+  // Auflösung und Bildrate gelten fürs ganze Projekt und stehen in der Projektdatei (Issue #250), nicht bei den
+  // übrigen Schaltern im Benutzerordner.
+  const { height: videoHeight, fps: videoFps } = view.montageFormat;
   const settings = useMemo(
-    () => ({ video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, realtime }),
-    [video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, realtime],
+    () => ({
+      video,
+      resolve,
+      mixAudio,
+      deviceTracks,
+      viewer,
+      readme,
+      changeLog,
+      manifest,
+      realtime,
+      videoHeight,
+      videoFps,
+    }),
+    [video, resolve, mixAudio, deviceTracks, viewer, readme, changeLog, manifest, realtime, videoHeight, videoFps],
   );
   // Stand der letzten Ausgabe steht in der Projektdatei und übersteht so auch einen Neustart.
   const status = useExportStatus(view, settings, busy, justDone);
@@ -196,6 +211,8 @@ export function ExportStep({
             <ExportOptions
               opts={opts}
               set={set}
+              format={view.montageFormat}
+              onFormat={(f) => void api.setMontageFormat(sessionId, f).then(onView, () => {})}
               withEpisodes={withEpisodes}
               videoBytes={preview && !empty ? preview.videoBytes : null}
             />

@@ -20,6 +20,9 @@ import {
   registerOverlayBridge,
   runExport,
 } from "../export.ts";
+import { setProjectFormat } from "../montage-format.ts";
+import { undoableView } from "./undoable.ts";
+import type { MontageFormat } from "@feldspur/media";
 import { buildSessionView } from "../view.ts";
 import { checkOriginals, relinkFile, searchOriginals } from "../originals.ts";
 import { citationInfo } from "../citation.ts";
@@ -50,6 +53,11 @@ export function registerExportIpc(): void {
   ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
     montagePlan(requireStore(), sessionId, realtime),
   );
+  // Auflösung und Bildrate gelten fürs ganze Projekt und stehen in der Projektdatei: ein Schritt für Rückgängig.
+  undoableView(IPC.setMontageFormat, "Videoeinstellungen geändert", (s, sessionId: string, format: MontageFormat) => {
+    setProjectFormat(s, format);
+    return sessionId;
+  });
   ipcMain.handle(IPC.exportSession, async (e, sessionId: string, opts: ExportRequest) => {
     const s = requireStore();
     let parent = opts.dir;

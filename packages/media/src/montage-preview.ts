@@ -7,7 +7,7 @@
  * Stücke stammen aus demselben `planPieces` wie das gerechnete Video (`packages/media/src/montage-video.ts`), hier
  * nur auf das gekürzt, was über IPC gehen kann (Kennungen und Zahlen statt ganzer Quellen, ms statt Bilder).
  */
-import { FPS } from "./layout.ts";
+import { DEFAULT_FORMAT, type MontageFormat } from "./layout.ts";
 import {
   overlayHeader,
   planPieces,
@@ -17,8 +17,6 @@ import {
   type Piece,
 } from "./montage-video.ts";
 import type { SessionTranscript } from "./session-transcript.ts";
-
-const FRAME_MS = 1000 / FPS;
 
 /** Eine laufende Aufnahme in einem Stück der Vorschau. */
 export interface PreviewMedia {
@@ -49,6 +47,8 @@ export interface PreviewPiece {
 /** Die ganze Vorschau: Kopfzeile wie im Video und die Stücke in ihrer Reihenfolge. */
 export interface MontagePreview {
   durationMs: number;
+  /** Auflösung und Bildrate des Montagevideos: Die Vorschau zeigt denselben Aufbau. */
+  format: MontageFormat;
   header: OverlayHeader;
   pieces: PreviewPiece[];
 }
@@ -61,9 +61,9 @@ const media = (m: MediaRef): PreviewMedia => ({
   kind: m.source.kind === "video" ? "video" : "audio",
 });
 
-const toPreview = (p: Piece): PreviewPiece => ({
-  fromMs: p.f0 * FRAME_MS,
-  toMs: p.f1 * FRAME_MS,
+const toPreview = (p: Piece, fps: number): PreviewPiece => ({
+  fromMs: (p.f0 * 1000) / fps,
+  toMs: (p.f1 * 1000) / fps,
   kind: p.kind,
   clock0: p.clock0,
   title: p.title,
@@ -73,7 +73,7 @@ const toPreview = (p: Piece): PreviewPiece => ({
 });
 
 /** Vorschau aus einem fertigen Einsatztranskript; liest keine Datei und startet kein ffmpeg. */
-export function montagePreview(transcript: SessionTranscript): MontagePreview {
-  const pieces = planPieces(transcript).map(toPreview);
-  return { durationMs: pieces.at(-1)?.toMs ?? 0, header: overlayHeader(transcript), pieces };
+export function montagePreview(transcript: SessionTranscript, format: MontageFormat = DEFAULT_FORMAT): MontagePreview {
+  const pieces = planPieces(transcript, format.fps).map((p) => toPreview(p, format.fps));
+  return { durationMs: pieces.at(-1)?.toMs ?? 0, format, header: overlayHeader(transcript), pieces };
 }
