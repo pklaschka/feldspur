@@ -25,6 +25,7 @@ import {
   type MontageFormat,
   montagePreview,
   type MontagePreview,
+  originalsBytes,
   sessionDataset,
   sessionLevels,
   type OverlayFrame,
@@ -223,6 +224,7 @@ export function previewExport(s: ProjectStore, sessionId: string, realtime?: boo
     episodes: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "episode").length : 0,
     cards: transcript.episodes ? transcript.plan.segments.filter((x) => x.kind === "card").length : 0,
     videoBytes: montageSize(transcript, projectFormat(s)),
+    originalsBytes: originalsBytes(transcript.input.sources),
     lines: transcript.entries.map(entryText),
     entries: transcript.entries.map((e) => ({
       kind: e.kind,
@@ -256,6 +258,8 @@ export function exportSettings(s: ProjectStore, sessionId: string, opts: ExportC
     manifest: opts.manifest !== false,
     // Auf Wunsch (Issue #206): Ohne ausdrückliche Wahl kommen keine Metadaten in den Ordner.
     roCrate: opts.roCrate === true,
+    // Standard aus (Issue #208): Die Originale eines Feldtags sind schnell 40 GB.
+    originals: opts.originals === true,
     videoHeight: format.height,
     videoFps: format.fps,
   };
@@ -433,6 +437,7 @@ export async function runExport(
         : undefined,
       manifest: settings.manifest,
       roCrate: settings.roCrate,
+      originals: settings.originals,
       dataset: sessionDataset(s, sessionId),
       softwareRef: opts.softwareRef,
       ...modeOf(s, sessionId, opts.realtime),

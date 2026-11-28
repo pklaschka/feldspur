@@ -33,6 +33,7 @@ import type {
   CalendarDay,
   ExportStatus,
   FileCheck,
+  FolderCheck,
   FileState,
   MethodsSessionSummary,
   MontageFormat,
@@ -599,6 +600,8 @@ export interface ExportRequestOptions {
   manifest: boolean;
   /** Metadaten als RO-Crate (ro-crate-metadata.json, Issue #206). Fehlt die Angabe, gilt aus. */
   roCrate: boolean;
+  /** Kopien der Originale unter Originale/ (Issue #208). Fehlt die Angabe, gilt aus. */
+  originals: boolean;
   /** Bildhöhe des Montagevideos in Pixeln (360, 540, 720, 1080); fehlt sie, gilt die des Projekts. */
   videoHeight: number;
   /** Bilder je Sekunde im Montagevideo (10, 15, 25, 30); fehlt die Angabe, gilt die des Projekts. */
@@ -667,6 +670,8 @@ export interface SessionTranscriptPreview {
   cards: number;
   /** Geschätzte Größe des Montagevideos in Bytes; `deviceTracks` kommt mit „Tonspur je Gerät“ dazu. */
   videoBytes: { video: number; deviceTracks: number };
+  /** Größe aller Originale des Einsatzes in Bytes (Schalter „Originale“, Issue #208). */
+  originalsBytes: number;
   /** Jede Zeile als reiner Text, wie MAXQDA sie liest; dient auch dem Vergleich mit der letzten Ausgabe. */
   lines: string[];
   entries: SessionTranscriptPreviewEntry[];
@@ -748,6 +753,14 @@ export interface OriginalsSearch {
   stillOpen: string[];
   scanned: number;
   truncated: boolean;
+}
+
+export type { FolderCheck } from "@feldspur/media";
+
+/** Fortschritt von „Ordner prüfen…“ in Bytes (`onFolderCheckProgress`, Issue #208). */
+export interface FolderCheckProgress {
+  done: number;
+  total: number;
 }
 
 /** Fortschritt beim Prüfen oder Suchen der Originale (`onOriginalsProgress`). */
@@ -1093,6 +1106,13 @@ export interface FeldspurApi {
   /** Datei für eine Quelle wählen; nur mit passender Prüfsumme verknüpft, sonst Fehler. null = abgebrochen. */
   relinkOriginal(sourceId: string): Promise<SessionView | null>;
   onOriginalsProgress(cb: (p: OriginalsProgress) => void): () => void;
+  /**
+   * „Ordner prüfen…“ (Issue #208): Ordner wählen (Vorgabe `dir`) und gegen seine manifest-sha256.txt prüfen. null bei
+   * Abbruch des Dialogs oder mit `cancelFolderCheck`; wirft mit verständlicher Meldung, wenn die Liste fehlt.
+   */
+  checkFolder(dir?: string): Promise<FolderCheck | null>;
+  cancelFolderCheck(): Promise<void>;
+  onFolderCheckProgress(cb: (p: FolderCheckProgress) => void): () => void;
 }
 
 /**
@@ -1228,4 +1248,7 @@ export const IPC = {
   searchOriginals: "originals:search",
   relinkOriginal: "originals:relink",
   originalsProgress: "originals:progress",
+  checkFolder: "export:check-folder",
+  cancelFolderCheck: "export:cancel-check-folder",
+  folderCheckProgress: "export:check-folder-progress",
 } as const;

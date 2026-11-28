@@ -3,9 +3,9 @@
  * `apps/desktop/src/renderer/exportState.tsx` oberhalb der Schritte, damit er einen Wechsel des Schritts oder des
  * Einsatzes übersteht.
  */
-import { CHECK_STEP, remainingMs, remainingText, type ExportJob } from "../exportState.tsx";
+import { CHECK_STEP, ORIGINALS_STEP, remainingMs, remainingText, type ExportJob } from "../exportState.tsx";
 import { Button } from "../ui.tsx";
-import { checkedText } from "./text.ts";
+import { checkedText, copiedText } from "./text.ts";
 
 /** Laufende Ausgabe: Schritt, Rest, Fortschrittsbalken und Abbrechen. */
 export function ExportProgress({ job, onCancel }: { job: ExportJob; onCancel: () => void }) {
@@ -19,6 +19,7 @@ export function ExportProgress({ job, onCancel }: { job: ExportJob; onCancel: ()
         <span className="text-muted tabular-nums">
           {progress?.step === "Montagevideo" && !job.cancelling && `${remainingText(remainingMs(job))} · `}
           {progress?.step === CHECK_STEP && !job.cancelling && `${checkedText(progress)} · `}
+          {progress?.step === ORIGINALS_STEP && !job.cancelling && `${copiedText(progress)} · `}
           {pct} %
         </span>
         <Button size="sm" disabled={job.cancelling} onClick={onCancel} data-testid="export-cancel">

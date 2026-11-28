@@ -12,7 +12,9 @@ export const parentDir = (p: string) => p.replace(/[\\/][^\\/]*[\\/]?$/, "") || 
  * Namen (LIESMICH, Änderungsprotokoll) vor den allgemeinen Endungen (.html, .csv).
  */
 export const FILE_ROLE: [RegExp, string][] = [
+  [/^Originale[\\/]/, "Kopien der Originale, nach Gerät; jede Kopie gegen ihre Prüfsumme nachgelesen"],
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
+  [/^[^\\/]+\.feldspur$/, "Projektdatei zum Stand der Ausgabe; öffnen und „Originale suchen“ im Ordner Originale"],
   [/^LIESMICH\.html$/, "LIESMICH: was im Ordner liegt, wie zitiert wird, Tabelle für den Methodenteil"],
   [/^manifest-sha256\.txt$/, "Prüfsummenliste: SHA-256 jeder Datei im Ordner"],
   [/^ro-crate-metadata\.json$/, "Metadaten (RO-Crate): Angaben zum Datensatz maschinenlesbar, für Archive"],
@@ -24,15 +26,21 @@ export const FILE_ROLE: [RegExp, string][] = [
   [/\.fcpxml$/, "Schnittliste für DaVinci Resolve (Datei › Importieren › Timeline)"],
 ];
 
+/** Kopie eines Originals im Ausgabeordner (Issue #208); wird in der Dateiliste als ein Eintrag gezeigt. */
+export const isCopy = (f: string) => /^Originale[\\/]/.test(f);
 /** Pfad einer Datei im Ausgabeordner, mit dem Trenner, den der Ordner schon hat (Windows oder sonst). */
 export const inDir = (dir: string, name: string) => `${dir}${dir.includes("\\") ? "\\" : "/"}${name}`;
 const GB = 1024 ** 3;
 /** „12,4 von 80,0 GB geprüft“; unter einem GB in MB. */
-export function checkedText(p: ExportProgress): string {
+export function checkedText(p: { done: number; total: number }): string {
   const big = p.total >= GB;
   const unit = big ? GB : 1024 ** 2;
   const n = (x: number) => (x / unit).toFixed(big ? 1 : 0).replace(".", ",");
   return `${n(p.done)} von ${n(p.total)} ${big ? "GB" : "MB"} geprüft`;
+}
+/** „3,1 von 40,0 GB kopiert und geprüft“: Kopieren und Nachlesen zählen je einmal die Größe (Issue #208). */
+export function copiedText(p: ExportProgress): string {
+  return checkedText({ ...p, done: p.done / 2, total: p.total / 2 }).replace(/geprüft$/, "kopiert und geprüft");
 }
 export const files = (n: number) => `${n} ${n === 1 ? "Datei" : "Dateien"}`;
 /** „2026-09-14“ → „14.09.2026“. */

@@ -22,7 +22,7 @@ import {
 } from "../export.ts";
 import { setProjectFormat } from "../montage-format.ts";
 import { undoableView } from "./undoable.ts";
-import type { MontageFormat } from "@feldspur/media";
+import { verifyFolder, type MontageFormat } from "@feldspur/media";
 import { buildSessionView } from "../view.ts";
 import { checkOriginals, relinkFile, searchOriginals } from "../originals.ts";
 import { citationInfo } from "../citation.ts";
@@ -91,6 +91,39 @@ export function registerExportIpc(): void {
     });
   });
   ipcMain.handle(IPC.cancelExport, (_e, sessionId: string) => cancelExport(sessionId));
+  // „Ordner prüfen…“ (Issue #208): braucht kein offenes Projekt, liest nur.
+  let folderCheck: AbortController | null = null;
+  ipcMain.handle(IPC.checkFolder, async (e, dir?: string) => {
+    const r = await dialog.showOpenDialog(parentWindow(), {
+      title: "Ausgabeordner prüfen",
+      buttonLabel: "Diesen Ordner prüfen",
+      defaultPath: typeof dir === "string" && existsSync(dir) ? dir : undefined,
+      properties: ["openDirectory"],
+    });
+    const chosen = r.filePaths[0];
+    if (r.canceled || !chosen) return null;
+    folderCheck?.abort();
+    const ctrl = new AbortController();
+    folderCheck = ctrl;
+    let last = 0;
+    try {
+      return await verifyFolder(chosen, {
+        signal: ctrl.signal,
+        onProgress: (done, total) => {
+          const now = Date.now();
+          if (done !== 0 && done !== total && now - last < 100) return;
+          last = now;
+          if (!e.sender.isDestroyed()) e.sender.send(IPC.folderCheckProgress, { done, total });
+        },
+      });
+    } catch (err) {
+      if (ctrl.signal.aborted) return null;
+      throw err;
+    } finally {
+      if (folderCheck === ctrl) folderCheck = null;
+    }
+  });
+  ipcMain.handle(IPC.cancelFolderCheck, () => folderCheck?.abort());
   // Originale: prüfen, in einem Ordner suchen, einzeln neu verknüpfen.
   ipcMain.handle(IPC.checkOriginals, (e, sessionId: string, video: boolean) =>
     checkOriginals(requireStore(), sessionId, {

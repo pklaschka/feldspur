@@ -441,6 +441,8 @@ export const ExportSettings = z.object({
   manifest: z.boolean().default(false),
   /** Metadaten als RO-Crate (ro-crate-metadata.json, Issue #206). Ältere Ausgaben kannten sie nicht: aus. */
   roCrate: z.boolean().default(false),
+  /** Kopien der Originale unter Originale/ (Issue #208). Ältere Ausgaben kannten sie nicht: aus. */
+  originals: z.boolean().default(false),
   /** Bildhöhe des Montagevideos in Pixeln (Issue #250). Ältere Ausgaben waren immer 1280 × 720. */
   videoHeight: z.number().int().default(720),
   /** Bilder je Sekunde im Montagevideo (Issue #250). Ältere Ausgaben hatten immer 25. */

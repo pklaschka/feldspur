@@ -18,6 +18,7 @@ import {
   type ExportDescription,
 } from "./dataset.ts";
 import type { MontageFormat } from "./layout.ts";
+import { ORIGINALS_DIR } from "./originals-copy.ts";
 import { materialTable, outputTable, germanDate, METHODS_HANDBOOK_URL, type MethodsTable } from "./methods-table.ts";
 import { methodsNumbers } from "./methods-summary.ts";
 import type { SessionTranscript } from "./session-transcript.ts";
@@ -38,6 +39,8 @@ export interface ReadmeOptions {
    * beschreibt die LIESMICH nur Einsatz und Dateien, ohne Angaben zum Datensatz.
    */
   description?: ExportDescription;
+  /** Kurzzeichen der Quellen, deren Original beim Kopieren fehlte (Issue #208). */
+  missingOriginals?: string[];
 }
 
 const esc = htmlEscape;
@@ -107,6 +110,29 @@ function datasetHtml(d: ExportDescription, crate: boolean): string {
   return `<h2>Angaben zum Datensatz</h2>\n${list}${json}\n`;
 }
 
+/**
+ * Die Dateien des Ordners als Liste. Kopien der Originale (Issue #208) stehen als ein Eintrag `Originale/` mit ihrer
+ * Zahl, nicht jede einzeln: Die einzelnen Dateien führen Prüfsummenliste und Metadaten.
+ */
+function fileList(files: string[], role: (f: string) => string, missing: string[]): string {
+  const copies = files.filter((f) => f.startsWith(`${ORIGINALS_DIR}/`));
+  const rows = files
+    .filter((f) => !f.startsWith(`${ORIGINALS_DIR}/`))
+    .map((f) => `<dt>${esc(f)}</dt><dd>${esc(role(f))}</dd>`);
+  if (copies.length) {
+    const n = copies.length === 1 ? "eine Originaldatei" : `${copies.length} Originaldateien`;
+    const gone = missing.length ? ` Nicht dabei, weil das Original beim Ausgeben fehlte: ${missing.join(", ")}.` : "";
+    // Direkt hinter den Inhalten, vor LIESMICH und Prüfsummenliste.
+    const at = rows.findIndex((r) => r.startsWith(`<dt>${README_NAME}<`) || r.startsWith(`<dt>${MANIFEST_NAME}<`));
+    rows.splice(
+      at < 0 ? rows.length : at,
+      0,
+      `<dt>${ORIGINALS_DIR}/</dt><dd>${esc(`Kopien der Originale: ${n}, je Gerät ein Ordner. Jeder Name beginnt mit dem Kurzzeichen aus dem Begleitprotokoll; jede Kopie wurde beim Ausgeben gegen die Prüfsumme vom Einsammeln geprüft.${gone}`)}</dd>`,
+    );
+  }
+  return rows.join("\n");
+}
+
 /** Die LIESMICH als vollständige HTML-Datei. */
 export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOptions): string {
   const h = transcript.header;
@@ -137,7 +163,7 @@ export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOpti
 ${datasetHtml(d, files.includes(RO_CRATE_NAME))}
 <h2>Was in diesem Ordner liegt</h2>
 <dl>
-${files.map((f) => `<dt>${esc(f)}</dt><dd>${esc(role(f))}</dd>`).join("\n")}
+${fileList(files, role, opts.missingOriginals ?? [])}
 </dl>
 
 <h2>Wie die Teile zusammengehören</h2>

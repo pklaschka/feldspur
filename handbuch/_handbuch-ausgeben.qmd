@@ -4,7 +4,7 @@ Im letzten Schritt schreibt Feldspur mit **Ausgeben…** einen **Ordner pro Eins
 heißt nach Datum und Titel, etwa `Feldtag_2026-09-14_Wochenmarkt`; gibt es dort schon einen gleichnamigen Ordner eines
 anderen Einsatzes, hängt Feldspur eine Nummer an. Einsatztranskript, Dokumentvariablen und Begleitprotokoll sind immer
 dabei. Was dazukommt, wählst du mit Schaltern in drei Gruppen: **Montagevideo** (Video, Ton und Viewer), **Nachweise
-im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste, Metadaten) und **Für den Schnitt** (Schnittliste). Ist vorher noch
+im Ordner** (LIESMICH, Änderungsprotokoll, Prüfsummenliste, Metadaten, Originale) und **Für den Schnitt** (Schnittliste). Ist vorher noch
 etwas offen, etwa eine Uhr ohne Abgleich, heißt der Knopf **Trotzdem ausgeben…**, und unter **Noch offen** stehen
 Links dorthin.
 
@@ -94,6 +94,9 @@ Optionen:
   (@sec-aenderungsprotokoll-ausgabe) und **Prüfsummenliste** (@sec-pruefsummenliste), alle drei Standard.
 - **Metadaten (RO-Crate, .json)** (@sec-ro-crate), nur auf Wunsch: die Angaben zum Datensatz maschinenlesbar, für ein
   Archiv oder Repositorium.
+- **Originale und Projektdatei (Kopien)** (@sec-originale-ausgabe), nur auf Wunsch: Kopien aller Originaldateien im
+  Unterordner `Originale` und eine Kopie der Projektdatei, damit Rohmaterial, Arbeitsstand und Ausgabe
+  beisammenliegen.
 
 Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
 
@@ -257,8 +260,46 @@ Protokoll hält den Stand beim Start der Ausgabe fest.
 Zuletzt schreibt Feldspur `manifest-sha256.txt` mit der SHA-256-Prüfsumme jeder anderen Datei im Ordner, auch von
 Montagevideo und LIESMICH. Damit lässt sich später zeigen, dass der Ordner noch genau so ist, wie Feldspur ihn
 ausgegeben hat. Das Format ist das von `sha256sum`: Im Ordner prüft `sha256sum -c manifest-sha256.txt` jede Datei
-(unter macOS `shasum -a 256 -c manifest-sha256.txt`). Die Prüfsummen der Originaldateien stehen weiter im
-Begleitprotokoll.
+(unter macOS `shasum -a 256 -c manifest-sha256.txt`), ohne Kommandozeile tut es **Ordner prüfen…**
+(@sec-ordner-pruefen). Die Prüfsummen der Originaldateien stehen weiter im Begleitprotokoll; liegen Kopien im Ordner,
+führt die Liste auch sie.
+
+### Originale und Projektdatei im Ordner {#sec-originale-ausgabe}
+
+Mit **Originale und Projektdatei (Kopien)** legt Feldspur jede Originaldatei des Einsatzes in den Ordner, im Unterordner
+`Originale` und darin je Gerät ein Ordner, etwa `Originale/Handkamera/V1_C0001.MP4`. Vor dem Dateinamen steht das
+Kurzzeichen aus dem Begleitprotokoll; so stoßen zwei `C0001.MP4` von verschiedenen Karten nicht zusammen. Neben dem
+Schalter steht, wie viel Platz das braucht. Reicht der Platz im gewählten Ordner nicht, sagt Feldspur das, bevor es
+etwas schreibt.
+
+Kopiert wird zuerst, gleich nach der Prüfung der Originale. Jede Kopie liest Feldspur danach noch einmal und vergleicht
+sie mit der Prüfsumme vom Einsammeln. Weicht sie ab, bricht die Ausgabe ab und nennt die Quelle. Bei **Erneut
+ausgeben** in denselben Ordner bleiben Kopien liegen, die schon zur letzten Ausgabe gehörten und gleich groß sind; bei
+vielen Gigabyte spart das viel Zeit. Ob sie noch stimmen, zeigt **Ordner prüfen…**. Fehlt ein Original, gibt Feldspur
+ohne seine Kopie aus, und die LIESMICH nennt es.
+
+In der LIESMICH, in den Metadaten und in der Prüfsummenliste stehen die Kopien mit. Die Dateiliste in Feldspur fasst
+sie zu einem Eintrag `Originale/` zusammen. 
+
+Neben die Originale legt Feldspur eine Kopie der Projektdatei, benannt nach dem Projekt, etwa `Wochenmarkt.feldspur`.
+Sie hält den Arbeitsstand beim Ausgeben fest, mit allen Einsätzen des Projekts. Öffnest du sie auf einem anderen
+Rechner, fehlen dort die Originale an den alten Orten. Mit **Originale suchen…** und **Ordner durchsuchen…** im Ordner
+`Originale` findet Feldspur die Kopien über ihre Prüfsumme wieder (@sec-originale). Öffne dazu eine Kopie der Datei, nicht die im Ausgabeordner: Feldspur
+schreibt beim Arbeiten in die Projektdatei, und **Ordner prüfen…** meldete sie dann als verändert.
+
+Bedenke vor dem Weitergeben: Mit den Originalen liegt das ganze Rohmaterial im Ordner, mit allen Gesichtern, Stimmen
+und Namen. Die Projektdatei enthält dazu die Pfade deines Rechners, also etwa deinen Benutzernamen und Ordnernamen.
+
+### Ordner prüfen {#sec-ordner-pruefen}
+
+Unter der letzten Ausgabe steht **Ordner prüfen…**. Damit wählst du einen Ausgabeordner, vorgeschlagen ist der der
+letzten Ausgabe, und Feldspur liest jede Datei gegen die Prüfsummenliste. Das geht mit jedem Ordner, den Feldspur mit
+Prüfsummenliste ausgegeben hat, auch mit einer Kopie auf einem Archivlaufwerk oder einem Ordner aus einem anderen
+Projekt. Ein laufender Fortschritt zeigt, wie viel schon gelesen ist; **Abbrechen** hält die Prüfung an.
+
+Stimmt alles, steht dort „alle … Dateien unverändert“. Sonst nennt Feldspur, welche Dateien **fehlen** und welche
+**verändert** sind. Dateien, die nicht in der Liste stehen, etwa eine später dazugelegte Notiz, zählen nicht als
+Fehler; sie stehen grau darunter. Systemdateien wie `.DS_Store` oder `Thumbs.db` übergeht die Prüfung.
 
 ### Angaben zum Datensatz {#sec-datensatz-angaben}
 
@@ -310,6 +351,7 @@ RO-Crate lässt sich beliebig genau ausfüllen. Feldspur schreibt bewusst nur ei
 | Der Ordner | `Dataset` | Angaben zum Datensatz, Datum der Ausgabe, Zeitraum, Ort, Montage-ID |
 | Jede Datei im Ordner | `File` | Name, Zweck, Format, Größe |
 | Jede Quelle | `File` mit `#quelle-…` | Dateiname, Kurzzeichen, SHA-256, Uhrzeit; liegt nicht im Ordner |
+| Kopien der Originale | `Dataset` `Originale/`, darin `File` | statt `#quelle-…` der Pfad der Kopie, mit Größe (@sec-originale-ausgabe) |
 | Jedes Gerät | `IndividualProduct` | Name des Geräts |
 | Jede Aufnahme | `CreateAction` | welches Gerät, wer, wann, welche Quellen |
 | Die Ausgabe | `CreateAction` | Feldspur mit Version, aus welchen Quellen welche Dateien wurden |
@@ -345,7 +387,7 @@ archivieren und weitergeben kannst. Fest ist sie allerdings erst, wenn du sie fe
 1. Gib den Einsatz aus, sobald Abgleich und Mitschrift für deine Arbeit stehen, und prüfe, dass der Stand **Aktuell**
    ist.
 2. Sichere den Ausgabeordner als Ganzes und unverändert. Die Prüfsummenliste zeigt später, dass nichts verändert wurde
-   (@sec-pruefsummenliste). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
+   (@sec-pruefsummenliste); **Ordner prüfen…** prüft eine Kopie im Archiv (@sec-ordner-pruefen). Am besten in einem Archiv oder Repositorium, das Fassungen festhält und eine dauerhafte
    Adresse vergibt, etwa eine DOI.
 3. Zitiere aus genau dieser Fassung. Im Viewer legt **Stelle kopieren** die Angabe in die Zwischenablage:
    Einsatz, Datum, Uhrzeit, Zeitmarke und Montage-ID.

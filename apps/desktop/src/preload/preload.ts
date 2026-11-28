@@ -14,6 +14,7 @@ import {
   type FeldspurApi,
   type ImportProgress,
   type OriginalsProgress,
+  type FolderCheckProgress,
 } from "../shared/api.ts";
 
 const api: FeldspurApi = {
@@ -153,6 +154,13 @@ const api: FeldspurApi = {
   checkOriginals: (id, video) => ipcRenderer.invoke(IPC.checkOriginals, id, video),
   searchOriginals: (id) => ipcRenderer.invoke(IPC.searchOriginals, id),
   relinkOriginal: (id) => ipcRenderer.invoke(IPC.relinkOriginal, id),
+  checkFolder: (dir) => ipcRenderer.invoke(IPC.checkFolder, dir),
+  cancelFolderCheck: () => ipcRenderer.invoke(IPC.cancelFolderCheck),
+  onFolderCheckProgress: (cb) => {
+    const listener = (_e: unknown, p: FolderCheckProgress) => cb(p);
+    ipcRenderer.on(IPC.folderCheckProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.folderCheckProgress, listener);
+  },
   onOriginalsProgress: (cb) => {
     const listener = (_e: unknown, p: OriginalsProgress) => cb(p);
     ipcRenderer.on(IPC.originalsProgress, listener);

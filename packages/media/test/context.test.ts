@@ -22,6 +22,7 @@ const SETTINGS: ExportSettings = {
   changeLog: false,
   manifest: false,
   roCrate: false,
+  originals: false,
   videoHeight: 720,
   videoFps: 25,
 };
