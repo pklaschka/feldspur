@@ -236,6 +236,19 @@ export function PeopleField({
           <Sign kind="plus" />
           Person hinzufügen
         </Button>
+        {nothing && inheritedNames && (
+          // Ein Eintrag ersetzt das ganze Feld: Wer nur jemanden ergänzen will, beginnt mit der Liste des Projekts.
+          <Button
+            size="sm"
+            type="button"
+            onClick={() => {
+              update(toRows(inherited));
+              focusNext.current = "add";
+            }}
+          >
+            Liste des Projekts übernehmen
+          </Button>
+        )}
         {open.length > 0 && (
           <span role="group" aria-label={suggestionsLabel} className="flex flex-wrap items-center gap-1.5">
             <span className={HINT}>{suggestionsLabel}:</span>

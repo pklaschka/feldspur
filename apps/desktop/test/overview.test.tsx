@@ -326,6 +326,9 @@ describe("Übersicht des Projekts", () => {
     expect(button("Mara Beispiel")).toBeTruthy();
     expect(field("access").value).toBe("");
     expect(card.querySelector("[aria-pressed=true]")).toBeNull();
+    // Beim ersten Mal nennt die Karte einen leichten Einstieg und schlägt den Namen des Projekts als Titel vor
+    expect(card.textContent).toContain("Für den Anfang genügen ein Titel und die Urheber*innen");
+    expect(button("Rundgang")).toBeTruthy();
     expect(button("Speichern")!.disabled).toBe(true);
     // Wenn: ein Titel getippt wird, dann lässt er sich speichern
     await act(async () => {
@@ -338,6 +341,11 @@ describe("Übersicht des Projekts", () => {
     // Dann: geht er an den Hauptprozess, und die Karte meldet „Gespeichert“
     expect(api.setProjectDataset).toHaveBeenCalledWith({ title: "Marktstudie" });
     expect(card.textContent).toContain("Gespeichert");
+    // Die Vorschau zeigt den Titel und leuchtet nach dem Speichern einmal auf.
+    const preview = card.querySelector("[data-testid=dataset-preview]")!;
+    expect(preview.textContent).toContain("Titel des DatensatzesMarktstudie");
+    expect(preview.querySelector(".settle-once")).not.toBeNull();
+    expect(card.textContent).not.toContain("Für den Anfang genügen");
     expect(button("Speichern")!.disabled).toBe(true);
   });
 });

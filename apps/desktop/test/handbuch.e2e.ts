@@ -701,7 +701,7 @@ await kapitel("ausgeben", async () => {
       await siehe(feld, karte.getByLabel(new RegExp(`^${esc(feld)}`)));
     await siehe("Urheber*innen", karte.getByLabel(/^Urheber\*innen/), { handbuch: "**Urheber\\*innen**" });
     await siehe("Gehört zu", karte.getByLabel(/^Gehört zu/));
-    for (const gruppe of ["Inhalt", "Personen", "Nutzung"])
+    for (const gruppe of ["Inhalt", "Personen", "Nutzung", "Vorschau"])
       await siehe(gruppe, karte.getByRole("heading", { name: gruppe, exact: true }));
     await siehe("Person hinzufügen", karte.getByRole("button", { name: "Person hinzufügen" }));
     await karte.getByLabel(/^Titel des Datensatzes/).fill("Marktstudie");

@@ -178,7 +178,7 @@ export function SessionDetails({
                 Leere Felder gelten wie im Projekt; was dort steht, zeigen sie grau. Ein Eintrag ersetzt das ganze Feld
                 nur für diesen Einsatz.
               </p>
-              <DatasetFields value={dataset} onChange={setDataset} placeholder={view.projectDataset} />
+              <DatasetFields value={dataset} onChange={setDataset} project={view.projectDataset} />
             </details>
             <div className="mt-1 flex justify-end gap-2">
               <Button

@@ -277,11 +277,19 @@ iD wird nicht übernommen. Stimmt nur die Prüfziffer nicht, bekommst du einen H
 weg. Unter **Lizenz** und **Zugang** stehen Vorschläge: Ein Klick trägt den Vorschlag ein, ein zweiter nimmt ihn
 wieder heraus; eigener Text geht in beiden Feldern weiterhin.
 
+Für den Anfang genügen ein Titel und die Urheber\*innen; der Rest kann später folgen. Solange kein Titel dasteht,
+schlägt die Karte unter **Name des Projekts** den Projektnamen vor. Ganz unten zeigt die **Vorschau**, wie die Angaben
+im Kopf von Einsatztranskript und Viewer stehen. Sie folgt dem, was du gerade eingetragen hast, und liegt nach dem
+Speichern kurz grün hinterlegt.
+
 Jede Ausgabe des Projekts nennt diese Angaben im Kopf von Einsatztranskript und Viewer, in der LIESMICH und, wenn gewählt, in den Metadaten. Weil sie im Kopf stehen, ändert eine geänderte Angabe den dritten Block der Montage-ID (@sec-montage-id); das Video bleibt gültig. Soll ein Einsatz
 etwas anderes sagen, etwa einen eigenen Titel oder einen engeren Zugang, trägst du es in seinen **Einsatzdaten** unter
 **Angaben zum Datensatz für diesen Einsatz** ein. Ein Eintrag dort ersetzt das ganze Feld nur für diesen Einsatz;
 leere Felder gelten wie im Projekt, das Projekt steht grau darin. Bei den Personen steht dann „Wie im Projekt“ mit
-den Namen, bis du für den Einsatz jemanden einträgst.
+den Namen, bis du für den Einsatz jemanden einträgst. Willst du nur jemanden ergänzen, holt **Liste des Projekts
+übernehmen** die Personen des Projekts in den Einsatz, und du trägst die weitere Person dazu ein. Unter **Gilt für
+diesen Einsatz** stehen Projekt und Einsatz zusammen, so wie die Ausgabe dieses Einsatzes sie nennt; was nur hier
+eingetragen ist, trägt das Zeichen „nur dieser Einsatz“.
 
 Feldspur gibt nichts vor, was nach „offen“ klingt. Beim **Zugang** stehen Vorschläge zur Auswahl, aber keiner ist
 vorgewählt. Feldmaterial enthält oft Gesichter, Stimmen und Namen; ob und für wen es zugänglich ist, entscheidest du.

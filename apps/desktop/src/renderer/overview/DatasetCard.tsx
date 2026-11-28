@@ -20,23 +20,30 @@ const same = (a: DatasetInfo, b: DatasetInfo) => JSON.stringify(cleanDataset(a))
 export function DatasetCard({
   saved,
   researchers,
+  projectName,
   onSaved,
 }: {
   /** Die gespeicherten Angaben des Projekts. */
   saved: DatasetInfo;
   /** Forschende an den Geräten: Vorschläge für „Urheber*innen“. */
   researchers: string[];
+  /** Name des Projekts: Vorschlag für den Titel, solange keiner eingetragen ist. */
+  projectName: string;
   onSaved: (d: DatasetInfo) => void;
 }) {
   const [draft, setDraft] = useState<DatasetInfo>(saved);
   const [status, setStatus] = useState<"saved" | "failed" | null>(null);
+  // Zählt die Speicherungen: Nach jeder leuchtet die Vorschau kurz auf.
+  const [settled, setSettled] = useState(0);
   const changed = !same(draft, saved);
+  const firstUse = Object.keys(cleanDataset(saved)).length === 0;
   const save = () =>
     void api.setProjectDataset(draft).then(
       (d) => {
         setDraft(d);
         onSaved(d);
         setStatus("saved");
+        setSettled((n) => n + 1);
       },
       () => setStatus("failed"),
     );
@@ -56,6 +63,8 @@ export function DatasetCard({
               Stehen in jeder Ausgabe des Projekts: in der LIESMICH, im Kopf von Einsatztranskript und Viewer und in den
               Metadaten (RO-Crate). Alles ist freiwillig. Ein Einsatz kann einzelne Felder in seinen Einsatzdaten
               überschreiben.
+              {/* Beim ersten Mal: ein leichter Einstieg statt acht gleich wichtiger Felder. */}
+              {firstUse && " Für den Anfang genügen ein Titel und die Urheber*innen; der Rest kann später folgen."}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -103,8 +112,9 @@ export function DatasetCard({
             setStatus(null);
             setDraft(d);
           }}
-          placeholder={{ title: "Ohne Titel heißt jede Ausgabe nach Einsatz und Datum" }}
           researchers={researchers}
+          titleSuggestion={projectName}
+          settled={settled}
         />
       </form>
     </Panel>
