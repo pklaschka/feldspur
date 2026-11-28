@@ -25,6 +25,7 @@ import {
   type MontageFormat,
   montagePreview,
   type MontagePreview,
+  sessionDataset,
   sessionLevels,
   type OverlayFrame,
   type OverlayRenderer,
@@ -253,6 +254,8 @@ export function exportSettings(s: ProjectStore, sessionId: string, opts: ExportC
     readme: opts.readme !== false,
     changeLog: opts.changeLog !== false,
     manifest: opts.manifest !== false,
+    // Auf Wunsch (Issue #206): Ohne ausdrückliche Wahl kommen keine Metadaten in den Ordner.
+    roCrate: opts.roCrate === true,
     videoHeight: format.height,
     videoFps: format.fps,
   };
@@ -352,6 +355,8 @@ export async function runExport(
   opts: ExportChoices & {
     /** Zeile zur Software (Version, DOI) für die LIESMICH. */
     software?: string;
+    /** Feldspur mit Version und Adresse für die Metadaten (RO-Crate). */
+    softwareRef?: { version: string; url: string };
     /** Auffälligkeiten der Prüfung bewusst übergehen (fehlende Pflichtdateien halten die Ausgabe trotzdem an). */
     acceptOriginals?: boolean;
   },
@@ -427,6 +432,9 @@ export async function runExport(
           )
         : undefined,
       manifest: settings.manifest,
+      roCrate: settings.roCrate,
+      dataset: sessionDataset(s, sessionId),
+      softwareRef: opts.softwareRef,
       ...modeOf(s, sessionId, opts.realtime),
       cacheDir: join(montageCacheRoot(), sessionId),
       onProgress: (step, done, total) => safeSend(wc, IPC.exportProgress, { sessionId, step, done, total }),

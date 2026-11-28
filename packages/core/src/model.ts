@@ -44,6 +44,30 @@ export type Role = z.infer<typeof Role>;
 export const SourceKind = z.enum(["video", "audio", "photo", "diary", "note", "gps", "other"]);
 export type SourceKind = z.infer<typeof SourceKind>;
 
+/**
+ * Angaben zum Datensatz (Issue #206): was Forschende über ihr Material sagen, alles freiwillig und als Text. Fürs
+ * Projekt einmal eingetragen (`project_meta`, Schlüssel `dataset`), je Einsatz einzeln überschreibbar
+ * (`FieldSession.dataset`); ein leeres Feld im Einsatz heißt „wie im Projekt“. Personen stehen je Zeile, Schlagworte
+ * durch Komma getrennt. Gelesen und zusammengeführt in `packages/media/src/dataset.ts`.
+ */
+export const DatasetInfo = z.object({
+  title: z.string().optional(),
+  /** Urheber*innen, eine Person je Zeile, auf Wunsch mit ORCID dahinter. */
+  creators: z.string().optional(),
+  /** Mitwirkende, wie `creators`. */
+  contributors: z.string().optional(),
+  description: z.string().optional(),
+  /** Schlagworte, durch Komma getrennt. */
+  keywords: z.string().optional(),
+  /** Lizenz als Name („CC BY 4.0“) oder Adresse. */
+  license: z.string().optional(),
+  /** Zugang: wer die Daten unter welchen Bedingungen bekommt. Bewusst ohne Vorgabe. */
+  access: z.string().optional(),
+  /** Gehört zu: größeres Projekt, Studie oder Sammlung, gern mit DOI oder Adresse. */
+  partOf: z.string().optional(),
+});
+export type DatasetInfo = z.infer<typeof DatasetInfo>;
+
 /** Ein Feldeinsatz: ein Tag, ein Ort, ein späteres MAXQDA-Dokument. */
 export const FieldSession = z.object({
   id: Id,
@@ -66,6 +90,8 @@ export const FieldSession = z.object({
    * ohne sie zeigt die Zeitachse keine Episoden und die Ausgabe läuft in Echtzeit ohne Episodenzeilen.
    */
   episodes: z.boolean().default(false),
+  /** Angaben zum Datensatz nur für diesen Einsatz (Issue #206); was fehlt, kommt aus dem Projekt. */
+  dataset: DatasetInfo.default({}),
 });
 export type FieldSession = z.infer<typeof FieldSession>;
 
@@ -413,6 +439,8 @@ export const ExportSettings = z.object({
   changeLog: z.boolean().default(false),
   /** Prüfsummenliste manifest-sha256.txt (Issue #204). Ältere Ausgaben kannten sie nicht: aus. */
   manifest: z.boolean().default(false),
+  /** Metadaten als RO-Crate (ro-crate-metadata.json, Issue #206). Ältere Ausgaben kannten sie nicht: aus. */
+  roCrate: z.boolean().default(false),
   /** Bildhöhe des Montagevideos in Pixeln (Issue #250). Ältere Ausgaben waren immer 1280 × 720. */
   videoHeight: z.number().int().default(720),
   /** Bilder je Sekunde im Montagevideo (Issue #250). Ältere Ausgaben hatten immer 25. */

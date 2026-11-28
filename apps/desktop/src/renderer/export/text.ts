@@ -15,6 +15,7 @@ export const FILE_ROLE: [RegExp, string][] = [
   [/\.mp4$/, "Montagevideo zum Zuordnen: Uhrzeit, Videos und Ton mit Herkunft, Montage-ID"],
   [/^LIESMICH\.html$/, "LIESMICH: was im Ordner liegt, wie zitiert wird, Tabelle für den Methodenteil"],
   [/^manifest-sha256\.txt$/, "Prüfsummenliste: SHA-256 jeder Datei im Ordner"],
+  [/^ro-crate-metadata\.json$/, "Metadaten (RO-Crate): Angaben zum Datensatz maschinenlesbar, für Archive"],
   [/_Aenderungsprotokoll\.csv$/, "Änderungsprotokoll dieses Einsatzes: jede Änderung mit vorher und nachher"],
   [/\.html$/, "Viewer: Einsatztranskript synchron zum Video, im Browser öffnen"],
   [/\.docx$/, "Einsatztranskript für MAXQDA, mit Zeitmarken zum Video, Mitschrift und Bildern"],

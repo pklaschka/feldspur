@@ -3,6 +3,7 @@
  * (`session:update`), bedient in `src/renderer/SessionDetails.tsx`. Ohne Electron, damit es sich direkt testen lässt.
  */
 import type { ProjectStore, TimeEvidence } from "@feldspur/core";
+import { cleanDataset } from "@feldspur/media";
 import type { SessionPatch } from "../shared/api.ts";
 
 const DAY = 86_400_000;
@@ -58,6 +59,7 @@ export function updateSessionDetails(s: ProjectStore, sessionId: string, patch: 
         .filter(([k]) => k),
     );
   }
+  if (patch.dataset !== undefined) next.dataset = cleanDataset(patch.dataset);
   const shift = next.date ? Math.round((Date.parse(next.date) - Date.parse(before.date)) / DAY) * DAY : 0;
   s.transaction(() => {
     s.updateSession(sessionId, next);

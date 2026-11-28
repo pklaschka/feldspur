@@ -63,12 +63,17 @@ afterEach(() => {
 });
 
 /** Übersicht mit erfundener App-Schnittstelle zeigen. */
-async function openOverview(sessions: OverviewSession[]) {
+async function openOverview(sessions: OverviewSession[], researchers: string[] = []) {
   const api = {
     projectOverview: vi.fn(async () => ({
       sessions,
       citation: { version: "0.4.0", released: "2026-12-01", versionDoi: null },
+      dataset: {},
+      researchers,
     })),
+    setProjectDataset: vi.fn(async (d: Record<string, string | undefined>) =>
+      Object.fromEntries(Object.entries(d).filter(([, v]) => v?.trim())),
+    ),
     copyText: vi.fn(async (_text: string) => {}),
     copyTable: vi.fn(async (_html: string, _text: string) => {}),
     openCitationLink: vi.fn(async (_url: string) => {}),
@@ -310,5 +315,37 @@ describe("Übersicht des Projekts", () => {
       "# Ohne Ort1 Einsatz",
       "Testmarkt 2",
     ]);
+  });
+
+  it("speichert die Angaben zum Datensatz erst mit „Speichern“ und schlägt die Forschenden als Urheber*innen vor", async () => {
+    const { api } = await openOverview([einsatz(1)], ["Mara Beispiel"]);
+    const card = document.querySelector("[data-testid=dataset-card]")!;
+    const field = (key: string) => card.querySelector<HTMLInputElement>(`[data-field=${key}]`)!;
+    // Angenommen: noch nichts eingetragen; die Forschenden stehen als Vorschlag da, Zugang hat keine Vorgabe
+    expect(field("creators").textContent).toContain("Ohne Eintrag gelten die Forschenden an den Geräten");
+    expect(button("Mara Beispiel")).toBeTruthy();
+    expect(field("access").value).toBe("");
+    expect(card.querySelector("[aria-pressed=true]")).toBeNull();
+    // Beim ersten Mal nennt die Karte einen leichten Einstieg und schlägt den Namen des Projekts als Titel vor
+    expect(card.textContent).toContain("Für den Anfang genügen ein Titel und die Urheber*innen");
+    expect(button("Rundgang")).toBeTruthy();
+    expect(button("Speichern")!.disabled).toBe(true);
+    // Wenn: ein Titel getippt wird, dann lässt er sich speichern
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(field("title"), "Marktstudie");
+      field("title").dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(button("Speichern")!.disabled).toBe(false);
+    await act(async () => button("Speichern")!.click());
+    // Dann: geht er an den Hauptprozess, und die Karte meldet „Gespeichert“
+    expect(api.setProjectDataset).toHaveBeenCalledWith({ title: "Marktstudie" });
+    expect(card.textContent).toContain("Gespeichert");
+    // Die Vorschau zeigt den Titel und leuchtet nach dem Speichern einmal auf.
+    const preview = card.querySelector("[data-testid=dataset-preview]")!;
+    expect(preview.textContent).toContain("Titel des DatensatzesMarktstudie");
+    expect(preview.querySelector(".settle-once")).not.toBeNull();
+    expect(card.textContent).not.toContain("Für den Anfang genügen");
+    expect(button("Speichern")!.disabled).toBe(true);
   });
 });

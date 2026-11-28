@@ -253,6 +253,26 @@
     1.25rem 0 0 var(--settle);
 }
 
+/* Angaben zum Datensatz (Issue #206): Nach dem Speichern liegen die Zeilen der Vorschau einmal kurz salbeigrün
+   hinterlegt, im selben Ton wie die gerückte Uhr oben. Wer weniger Bewegung wünscht, sieht nur „Gespeichert“. */
+.settle-once {
+  animation: settle-once 1.6s ease-out both;
+}
+@keyframes settle-once {
+  0%,
+  35% {
+    background-color: color-mix(in srgb, var(--good) 13%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settle-once {
+    animation: none;
+  }
+}
+
 /* Taste im Fließtext, z. B. im einmaligen Tastenhinweis in Durchsehen (Issue #195). */
 .kbd {
   display: inline-block;

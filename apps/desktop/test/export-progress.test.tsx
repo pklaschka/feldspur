@@ -38,6 +38,7 @@ const withVideo: ExportRequestOptions = {
   readme: true,
   changeLog: true,
   manifest: true,
+  roCrate: false,
   videoHeight: 720,
   videoFps: 25,
 };

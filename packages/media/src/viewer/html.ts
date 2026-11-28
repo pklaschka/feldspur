@@ -447,6 +447,7 @@ export function sessionTranscriptHtml(transcript: SessionTranscript, opts: Viewe
     ["Montage", `${h.montageId} · ${h.modeLabel}`],
     ...(h.sources.length ? [["Quellen", h.sources.join(", ")] as [string, string]] : []),
     ...extra,
+    ...(h.dataset ?? []),
   ];
   const meta = [
     `Feldtag: ${date}${h.place ? `, ${h.place}` : ""}`,

@@ -217,4 +217,8 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE diary_entries ADD COLUMN context_made TEXT NOT NULL DEFAULT '';
   ALTER TABLE diary_entries ADD COLUMN context_refs TEXT NOT NULL DEFAULT '[]';
   `,
+  // 16: Angaben zum Datensatz je Einsatz, überschreiben die des Projekts (Issue #206)
+  `
+  ALTER TABLE sessions ADD COLUMN dataset TEXT NOT NULL DEFAULT '{}';
+  `,
 ];

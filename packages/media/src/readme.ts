@@ -9,16 +9,19 @@
  * Einordnung: Schritt „Ausgeben“. `exportSession` (`packages/media/src/export.ts`) schreibt die Datei mit den
  * übrigen Dateien der Ausgabe; die Tabellen kommen aus `packages/media/src/methods-table.ts`.
  */
-import { DEFAULT_FORMAT, formatText, type MontageFormat } from "./layout.ts";
+import {
+  describeExport,
+  fileRole,
+  MANIFEST_NAME,
+  README_NAME,
+  RO_CRATE_NAME,
+  type ExportDescription,
+} from "./dataset.ts";
+import type { MontageFormat } from "./layout.ts";
 import { materialTable, outputTable, germanDate, METHODS_HANDBOOK_URL, type MethodsTable } from "./methods-table.ts";
 import { methodsNumbers } from "./methods-summary.ts";
 import type { SessionTranscript } from "./session-transcript.ts";
 import { htmlEscape } from "./xml.ts";
-
-/** Dateiname der LIESMICH im Ausgabeordner. */
-export const README_NAME = "LIESMICH.html";
-/** Prüfsummenliste im Ordner (Issue #204). */
-export const MANIFEST_NAME = "manifest-sha256.txt";
 
 /** Was die LIESMICH außer dem Einsatztranskript wissen muss. */
 export interface ReadmeOptions {
@@ -30,22 +33,12 @@ export interface ReadmeOptions {
   format?: MontageFormat;
   /** Zeile zur Software mit Version und DOI; die App liefert sie, ohne sie entfällt der Absatz. */
   software?: string;
+  /**
+   * Die gemeinsame Beschreibung der Ausgabe (`describeExport`), aus der auch die Metadaten entstehen. Ohne sie
+   * beschreibt die LIESMICH nur Einsatz und Dateien, ohne Angaben zum Datensatz.
+   */
+  description?: ExportDescription;
 }
-
-/** Wozu eine Datei der Ausgabe dient, am Ende des Namens erkannt. Reihenfolge zählt: Besonderes vor Allgemeinem. */
-const FILE_ROLE: [RegExp, string][] = [
-  [/\.mp4$/, "Montagevideo: die Aufnahmen aller Geräte auf einer Zeitachse, mit Uhrzeit, Herkunft und Montage-ID"],
-  [/\.html$/, "Viewer: Einsatztranskript und Montagevideo zusammen im Browser ansehen"],
-  [/_Variablen\.xlsx$/, "Dokumentvariablen für MAXQDA: die Angaben zum Einsatz"],
-  [/_Begleitprotokoll\.csv$/, "Begleitprotokoll: Herkunft, Prüfsumme und Zeitbeleg jeder Datei"],
-  [
-    /_Aenderungsprotokoll\.csv$/,
-    "Änderungsprotokoll: jede Änderung an diesem Einsatz mit Zeit und den Werten vorher und nachher",
-  ],
-  [/^manifest-sha256\.txt$/, "Prüfsummenliste: SHA-256 jeder anderen Datei im Ordner, prüfbar mit sha256sum -c"],
-  [/_Resolve\.fcpxml$/, "Schnittliste für DaVinci Resolve: dieselbe Montage ohne Einblendungen"],
-  [/\.docx$/, "Einsatztranskript: Mitschrift, Tagebuch und Fotos in zeitlicher Folge, mit Zeitmarken zum Video"],
-];
 
 const esc = htmlEscape;
 
@@ -98,6 +91,22 @@ th:last-child, td:last-child { padding-right: 0; }
 }
 `;
 
+/**
+ * Abschnitt „Angaben zum Datensatz“: nur, was eingetragen ist (Vorbelegtes nicht), mehrzeilige Felder mit ihren
+ * Zeilenumbrüchen. Ohne Angaben entfällt der Abschnitt, außer die Metadaten liegen bei: Dann sagt er, wo sie stehen.
+ */
+function datasetHtml(d: ExportDescription, crate: boolean): string {
+  if (!d.entered.length && !crate) return "";
+  const value = (v: string) => esc(v).replace(/\r?\n/g, "<br>");
+  const list = d.entered.length
+    ? `<dl>\n${d.entered.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${value(v)}</dd>`).join("\n")}\n</dl>`
+    : `<p class="note">Zu diesem Datensatz sind keine Angaben eingetragen.</p>`;
+  const json = crate
+    ? `\n<p class="note">Dieselben Angaben stehen maschinenlesbar in <code>${RO_CRATE_NAME}</code> (RO-Crate 1.2), dazu Geräte, Personen, Zeiten und die Prüfsummen der Originale.</p>`
+    : "";
+  return `<h2>Angaben zum Datensatz</h2>\n${list}${json}\n`;
+}
+
 /** Die LIESMICH als vollständige HTML-Datei. */
 export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOptions): string {
   const h = transcript.header;
@@ -105,12 +114,10 @@ export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOpti
   const tables = [materialTable([numbers]), outputTable([numbers])];
   const title = `${h.title} · ${germanDate(h.date)}`;
   const files = opts.files.includes(README_NAME) ? opts.files : [...opts.files, README_NAME];
-  const role = (f: string) => {
-    if (f === README_NAME) return "LIESMICH: diese Datei";
-    const text = FILE_ROLE.find(([re]) => re.test(f))?.[1] ?? "";
-    // Am Video steht, in welchem Format es gerechnet ist (Issue #250): Das ändert nicht, was es zeigt, nur wie fein.
-    return f.endsWith(".mp4") ? `${text} (${formatText(opts.format ?? DEFAULT_FORMAT)})` : text;
-  };
+  // Zweck jeder Datei und die Angaben zum Datensatz aus der gemeinsamen Beschreibung (Issue #206).
+  const d = opts.description ?? describeExport(transcript, { files, format: opts.format });
+  const roles = new Map(d.files.map((f) => [f.name, f.role]));
+  const role = (f: string) => roles.get(f) || fileRole(f, opts.format);
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -127,6 +134,7 @@ export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOpti
 <h1>${esc(title)}</h1>
 <p class="sub">Ausgabe eines Feldeinsatzes${h.place ? ` (${esc(h.place)})` : ""}, Montage-ID <span class="id">${esc(h.montageId)}</span>, ${esc(h.modeLabel)}</p>
 
+${datasetHtml(d, files.includes(RO_CRATE_NAME))}
 <h2>Was in diesem Ordner liegt</h2>
 <dl>
 ${files.map((f) => `<dt>${esc(f)}</dt><dd>${esc(role(f))}</dd>`).join("\n")}

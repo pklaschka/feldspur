@@ -83,7 +83,12 @@ export function registerExportIpc(): void {
       released: c.released,
       doi: c.versionDoi?.doi ?? ALL_VERSIONS_DOI,
     });
-    return runExport(s, e.sender, sessionId, parent, { ...opts, software });
+    const doi = c.versionDoi?.doi ?? ALL_VERSIONS_DOI;
+    return runExport(s, e.sender, sessionId, parent, {
+      ...opts,
+      software,
+      softwareRef: { version: c.version, url: `https://doi.org/${doi}` },
+    });
   });
   ipcMain.handle(IPC.cancelExport, (_e, sessionId: string) => cancelExport(sessionId));
   // Originale: prüfen, in einem Ordner suchen, einzeln neu verknüpfen.
