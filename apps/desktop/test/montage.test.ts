@@ -1,5 +1,5 @@
 /**
- * „Montage ansehen“ im Schritt „Ausgeben“ (`apps/desktop/src/renderer/montage.ts`): welches Stück der Montage an einer
+ * Wiedergabe im Schritt „Ansehen“ (`apps/desktop/src/renderer/montage.ts`): welches Stück der Montage an einer
  * Stelle läuft und was die Vorschau dazu einblendet.
  */
 import { describe, expect, it } from "vite-plus/test";

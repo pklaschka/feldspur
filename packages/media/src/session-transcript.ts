@@ -50,6 +50,22 @@ export interface ImageRef {
   region?: { page: number; x: number; y: number; w: number; h: number };
 }
 
+/**
+ * Woher eine Zeile stammt, damit die App von ihr zur Bearbeitung springen kann (Schritt „Ansehen“, Issue #131).
+ * Geht in keine Ausgabe und nicht in die Montage-ID ein.
+ */
+export interface EntryOrigin {
+  /** source: Beginn einer Aufnahme oder Foto · line: Mitschriftzeile · diary: Tagebucheintrag · sync: Klatscher. */
+  kind: "source" | "line" | "diary" | "sync" | "episode";
+  /** Quelle (source, line, sync), Tagebuchseite (diary) oder leer (episode). */
+  id: Id;
+  /** Stelle in der Aufnahme in ms (line, sync). */
+  atMs?: number;
+  /** Uhrzeit der Stelle (Ortszeit des Einsatzes in ms, `LocalMs`); bei Episoden ihr Beginn, `endMs` ihr Ende. */
+  clockMs: number;
+  endMs?: number;
+}
+
 /** Eine Zeile der Chronologie: im Dokument ein Absatz mit Zeitmarke. */
 export interface SessionTranscriptEntry {
   /** Stelle im Montagevideo, in ms ab dessen Beginn; daraus wird die Zeitmarke. */
@@ -68,6 +84,8 @@ export interface SessionTranscriptEntry {
   speaker?: string;
   /** Tagebuch: Schlüssel der Kontextstücke, auf die der Eintrag verweist (stehen auch am Ende von body). */
   contextRefs?: string[];
+  /** Herkunft der Zeile; fehlt bei Tafeln und am Ende. */
+  origin?: EntryOrigin;
 }
 
 /** Kopf des Einsatztranskripts: Angaben zum Einsatz (`FieldSession`) und die Kennung dieser Fassung. */
@@ -227,6 +245,7 @@ export function buildSessionTranscript(
         clock: formatClock(seg.fromMs),
         head: `Episode ${seg.episode.index}`,
         body: `${formatClock(seg.fromMs)}–${formatClock(seg.toMs)}, Quellen: ${names.join(", ")}`,
+        origin: { kind: "episode", id: "", clockMs: seg.fromMs, endMs: seg.toMs },
       });
       continue;
     }
@@ -277,6 +296,7 @@ export function buildSessionTranscript(
           clock: formatClock(p.startMs),
           head: `${what} ${s.label} beginnt`,
           body: `${s.fileName}${who(s) ? `, ${who(s)}` : ""}${follows}. Zeit: ${basis(s)}`,
+          origin: { kind: "source", id: s.id, clockMs: p.startMs },
         },
         p.startMs,
       );
@@ -292,6 +312,7 @@ export function buildSessionTranscript(
           head: `Foto ${s.label}`,
           body: `${s.fileName}${who(s) ? `, ${who(s)}` : ""}. Zeit: ${basis(s)}`,
           images: [{ sourceId: s.id }],
+          origin: { kind: "source", id: s.id, clockMs: p.startMs },
         },
         p.startMs,
       );
@@ -340,6 +361,7 @@ export function buildSessionTranscript(
         body: (text ? `${modeLabel}: ${text}` : modeLabel) + refText,
         images: e.regions.map((r) => ({ sourceId: r.sourceId, region: r })),
         ...(refKeys.length ? { contextRefs: refKeys } : {}),
+        ...(page ? { origin: { kind: "diary" as const, id: page.id, clockMs: dp.notedAtMs } } : {}),
       },
       dp.notedAtMs,
     );
@@ -360,6 +382,7 @@ export function buildSessionTranscript(
         clock: formatClock(t),
         head: "Sync-Signal",
         body: `Klatschen in ${label(a.a.sourceId)} und ${label(a.b.sourceId)}, Anker für den Abgleich`,
+        origin: { kind: "sync", id: a.a.sourceId, atMs: a.a.atMediaMs, clockMs: t },
       },
       t,
     );
@@ -383,6 +406,7 @@ export function buildSessionTranscript(
         head: transcribed.size > 1 ? label(l.sourceId) : "",
         body: `${speaker}${l.text}`,
         ...(l.speaker ? { speaker: l.speaker } : {}),
+        origin: { kind: "line", id: l.sourceId, atMs: l.atMs, clockMs: t },
       },
       t,
     );

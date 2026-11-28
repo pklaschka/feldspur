@@ -10,7 +10,8 @@
     "./layout": "./src/layout.ts",
     "./methods-table": "./src/methods-table.ts",
     "./field-calendar": "./src/field-calendar.ts",
-    "./dataset": "./src/dataset.ts"
+    "./dataset": "./src/dataset.ts",
+    "./viewer-runtime": "./src/viewer/runtime.ts"
   },
   "dependencies": {
     "@feldspur/core": "workspace:*",

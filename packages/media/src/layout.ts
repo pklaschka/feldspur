@@ -8,7 +8,7 @@
  *
  * Einordnung: Schritt „Ausgeben“. Benutzt von `packages/media/src/montage-video.ts` (ffmpeg),
  * `packages/media/src/fcpxml.ts` (Resolve-Schnittliste) und, über `@feldspur/media/layout`, von der Oberfläche:
- * `apps/desktop/src/renderer/overlay.ts` (Einblendungen) und `apps/desktop/src/renderer/MontageView.tsx` (Vorschau).
+ * `apps/desktop/src/renderer/overlay.ts` (Einblendungen) und `apps/desktop/src/renderer/watch/player.ts` (Vorschau im Schritt „Ansehen“).
  * Wer hier Maße ändert, ändert alle vier zugleich.
  *
  * Auflösung und Bildrate sind wählbar (Issue #250, `MontageFormat`): Alle Maße entstehen aus `montageLayout`.

@@ -14,7 +14,9 @@ import type { ExportSettings, ProjectStore } from "@feldspur/core";
 import {
   baseName,
   buildSessionTranscript,
+  canRenderStill,
   compareExport,
+  deviceTracksOf,
   exportFingerprint,
   type ExportStatus,
   entryText,
@@ -23,15 +25,18 @@ import {
   type ImageRef,
   montageFormat,
   type MontageFormat,
+  mixTrackTitle,
   montagePreview,
-  type MontagePreview,
   originalsBytes,
+  planPieces,
   sessionDataset,
   sessionLevels,
   type OverlayFrame,
   type OverlayRenderer,
   type OverlayHeader,
   timestamp,
+  unpackEnvelope,
+  viewerParts,
 } from "@feldspur/media";
 import { formatClock } from "@feldspur/core/time";
 import {
@@ -43,6 +48,7 @@ import {
   type ExportRunResult,
   type SessionTranscriptPreview,
   type ExportChoices,
+  type WatchPreview,
 } from "../shared/api.ts";
 import { checkOriginals } from "./originals.ts";
 import { sessionChangeLogCsv } from "./changelog.ts";
@@ -200,9 +206,41 @@ function modeOf(s: ProjectStore, sessionId: string, realtime?: boolean) {
   return { mode: episodes && realtime === false ? ("episodes" as const) : ("realtime" as const), episodes };
 }
 
-/** Ablauf der Montage zum Abspielen in der App (`MontageView.tsx` in der Oberfläche); gerechnet wird kein Video. */
-export function montagePlan(s: ProjectStore, sessionId: string, realtime?: boolean): MontagePreview {
-  return montagePreview(buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime)), projectFormat(s));
+/**
+ * Die Montage zum Ansehen im Schritt „Ansehen“ (Issue #131, `Watch.tsx` in der Oberfläche): die Seite des Viewers in
+ * der Fassung für die App und der Ablauf zum Abspielen aus den Originalen. Gerechnet wird kein Video, gelesen keine
+ * Datei; die Wellenformen kommen aus der Tonspur-Analyse, soweit sie schon vorliegt.
+ */
+export function watchPreview(s: ProjectStore, sessionId: string, realtime?: boolean): WatchPreview {
+  const transcript = buildSessionTranscript(s, sessionId, modeOf(s, sessionId, realtime));
+  const format = projectFormat(s);
+  // Gerätespuren wie im Montagevideo mit „Tonspur je Gerät“: erst ab zwei Geräten mit Ton.
+  const devices = deviceTracksOf(transcript, planPieces(transcript, format.fps));
+  const audioTracks = [{ title: mixTrackTitle() }, ...(devices.length >= 2 ? devices : [])];
+  const parts = viewerParts(transcript, {
+    app: true,
+    mediaFileName: "",
+    stills: new Map(),
+    audioTracks,
+    fps: format.fps,
+    envelopes: new Map(
+      s.listAudioAnalyses(sessionId).map((a) => [a.sourceId, unpackEnvelope(a.envelope, a.envelopeRate)]),
+    ),
+  });
+  const sources = new Map(transcript.input.sources.map((x) => [x.id, x]));
+  const trackOf = new Map(audioTracks.flatMap((t, k) => ("deviceId" in t ? [[t.deviceId, k] as const] : [])));
+  return {
+    css: parts.css,
+    body: parts.body,
+    plan: montagePreview(transcript, format),
+    images: parts.images.map((r) => ({ ...r, pdf: !canRenderStill(sources.get(r.sourceId)!) })),
+    origins: parts.origins,
+    tracks: Object.fromEntries(
+      transcript.input.sources.flatMap((x) =>
+        x.deviceId && trackOf.has(x.deviceId) ? [[x.id, trackOf.get(x.deviceId)!]] : [],
+      ),
+    ),
+  };
 }
 
 /**

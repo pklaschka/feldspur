@@ -13,7 +13,14 @@ import { exportSession } from "../src/export.ts";
 import { applyImport, scanPaths } from "../src/import.ts";
 import { deviceTracksOf } from "../src/montage-video.ts";
 import { buildSessionTranscript, timestamp } from "../src/session-transcript.ts";
-import { clockAtMontage, sessionTranscriptHtml, VIEWER_CSP, viewerData, viewerScript } from "../src/viewer/html.ts";
+import {
+  clockAtMontage,
+  sessionTranscriptHtml,
+  VIEWER_CSP,
+  viewerData,
+  viewerParts,
+  viewerScript,
+} from "../src/viewer/html.ts";
 import { readMp4Audio } from "../src/viewer/mp4-audio.ts";
 import { hasFfmpeg, makeDiaryPage, makePhoto, makeSyncDay, makeSyncVideo } from "./fixtures.ts";
 
@@ -166,5 +173,75 @@ describe.skipIf(!hasFfmpeg())("Viewer neben dem Montagevideo", () => {
     expect(data.audio).toHaveLength(1);
     expect(data.lanes.every((l) => l.audio === -1)).toBe(true);
     expect(html).toContain('<span class="noimg">');
+  });
+
+  describe("Fassung für die App (Schritt „Ansehen“)", () => {
+    const app = () => {
+      const t = buildSessionTranscript(store, sessionId);
+      const tracks = [{ title: "Mischung" }, ...deviceTracksOf(t)];
+      return { t, parts: viewerParts(t, { app: true, mediaFileName: "", stills: new Map(), audioTracks: tracks }) };
+    };
+
+    it("zeigt dieselben Zeilen wie die HTML-Datei, aber ohne Videodatei und ohne „Stelle kopieren“", () => {
+      const { t, parts } = app();
+      const file = sessionTranscriptHtml(t, { mediaFileName: "x.mp4", stills: new Map() });
+      const lines = (html: string) =>
+        [...html.matchAll(/<li class="ln k-(\w+)" data-i="(\d+)" data-m="(\d+)"/g)].map(String);
+      // Dann: Zeile für Zeile dieselbe Art an derselben Stelle
+      expect(lines(parts.body)).toEqual(lines(file));
+      // Dann: statt des Videos eine leere Bühne, die die App füllt; kopiert wird nur im ausgegebenen Viewer
+      expect(parts.body).toContain('<div id="vid"></div>');
+      expect(parts.body).not.toContain("<video");
+      expect(parts.body).toMatch(/<button class="btn icon" id="copy" type="button" hidden/);
+      expect(parts.body).not.toContain("Mediendatei");
+      expect(parts.body).toContain("Zitiert wird aus der Ausgabe");
+      // Dann: kein Skript in der Seite (die App startet es selbst), die Gerätespuren sind von Anfang an frei
+      expect(parts.body.match(/<script/g)).toHaveLength(1);
+      expect(parts.body).toContain('data-ton="frei"');
+    });
+
+    it.each`
+      zeile                        | art         | knopf
+      ${"Wie lange schon?"}        | ${"line"}   | ${"Mitschreiben"}
+      ${"Ankunft, Stände bauen"}   | ${"diary"}  | ${"Tagebuch"}
+      ${"IMG_20260914_101630.jpg"} | ${"source"} | ${"Durchsehen"}
+      ${"Klatschen in"}            | ${"sync"}   | ${"Abgleichen"}
+    `("„Bearbeiten“ an „$zeile“ führt nach $knopf", ({ zeile, art, knopf }) => {
+      const { t, parts } = app();
+      const i = t.entries.findIndex((e) => e.body.includes(zeile as string));
+      const li = new RegExp(`<li class="ln k-\\w+" data-i="${i}" .*?</li>`, "s").exec(parts.body)![0];
+      // Dann: Die Zeile trägt den Knopf mit dem Ziel, und die App kennt ihre Herkunft
+      expect(li).toMatch(new RegExp(`<button class="edit".*<span class="lbl">${knopf as string}</span></button>`));
+      expect(parts.origins[i]?.kind).toBe(art);
+    });
+
+    it("kennt zur Mitschriftzeile Aufnahme und Stelle, zum Tagebucheintrag die Seite", () => {
+      const { t, parts } = app();
+      const at = (text: string) => parts.origins[t.entries.findIndex((e) => e.body.includes(text))];
+      expect(at("Wie lange schon?")).toMatchObject({ id: src("ZOOM0001.m4a").id, atMs: 10_000 });
+      expect(at("Ankunft, Stände bauen")).toMatchObject({ id: src("Tagebuch_S01.jpg").id });
+      // Dann: Tafeln und das Ende haben nichts zu bearbeiten
+      expect(parts.origins[t.entries.findIndex((e) => e.kind === "end")]).toBeNull();
+    });
+
+    it("bettet keine Bilder ein, sondern nennt der App, welche sie nachladen soll", () => {
+      const { parts } = app();
+      // Dann: je Bild ein leerer Platz mit Nummer, in der Reihenfolge der Liste
+      const numbers = [...parts.body.matchAll(/<img data-img="(\d+)"/g)].map((m) => Number(m[1]));
+      expect(numbers).toEqual(parts.images.map((_, n) => n));
+      expect(parts.images.map((r) => r.sourceId)).toEqual(
+        expect.arrayContaining([src("Tagebuch_S01.jpg").id, src("IMG_20260914_101630.jpg").id]),
+      );
+      expect(parts.body).not.toContain("data:image/jpeg");
+    });
+
+    it("lässt die HTML-Datei unberührt: dort gibt es weder „Bearbeiten“ noch Herkunft", () => {
+      const t = buildSessionTranscript(store, sessionId);
+      const file = viewerParts(t, { mediaFileName: "x.mp4", stills: new Map() });
+      expect(file.body).not.toContain('class="edit"');
+      expect(file.body).not.toContain("data-img");
+      expect(file.origins).toEqual([]);
+      expect(file.css).not.toContain(".edit");
+    });
   });
 });

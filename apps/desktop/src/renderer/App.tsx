@@ -325,10 +325,10 @@ export function App() {
 }
 
 /**
- * Die vier Schritte (Reiter) eines Einsatzes: Einsammeln (`Collect.tsx`), Abgleichen (`Sync.tsx`), Durchsehen
+ * Die fünf Schritte (Reiter) eines Einsatzes: Einsammeln (`Collect.tsx`), Abgleichen (`Sync.tsx`), Durchsehen
  * (`Review.tsx`), Ausgeben (`ExportStep.tsx`). Mitschreiben und Tagebuch sind keine Schritte, sondern Dialoge.
  */
-export type Step = "collect" | "sync" | "review" | "export";
+export type Step = "collect" | "sync" | "review" | "watch" | "export";
 
 /** Zuletzt gewählter Einsatz eines Projekts (sonst der erste). */
 function lastSession(p: ProjectInfo): string | null {

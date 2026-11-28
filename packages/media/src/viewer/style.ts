@@ -514,3 +514,30 @@ kbd { font: 600 0.82rem/1 "Source Sans 3", system-ui, sans-serif; border: 1px so
 .c-item .img img { max-height: 420px; }
 @media print { .ln:not(.k-episode) { content-visibility: visible; } }
 `;
+
+/**
+ * Zusätze für die Fassung in der App (Schritt „Ansehen“, Issue #131; `ViewerOptions.app` in `html.ts`): die Bühne
+ * aus den Originalen statt des Montagevideos, „Bearbeiten“ an den Zeilen, und was dort entfällt.
+ */
+export const VIEWER_APP_CSS = String.raw`
+/* Der Titel steht schon im Kopf der App; im Vollbild bleibt er. */
+.proj:not(:fullscreen) > .title { display: none; }
+.v-missing { display: none; }
+/* Die Freigabe der Einzelspuren braucht es nicht: Die App spielt die Aufnahmen ohnehin einzeln. */
+#ton-btn, .ton-known { display: none !important; }
+/* Bühne: Felder und Einblendungen liegen in Anteilen der Bildgröße, wie im Montagevideo. */
+#vid { position: absolute; inset: 0; background: #10171b; }
+#vid video { position: absolute; background: #000; object-fit: contain; }
+#vid canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.img img:not([src]) { width: 220px; height: 140px; background: var(--panel-2); }
+/* „Bearbeiten“ hat rechts eine eigene Spur, damit es nie über dem Text liegt: schmal nur das Zeichen, breit mit Ziel. */
+.ln:not(.k-episode) { position: relative; }
+.ln { padding-right: 48px; }
+.edit { position: absolute; top: 2px; right: 12px; display: inline-flex; align-items: center; gap: 5px; min-width: 28px; min-height: 26px; justify-content: center; padding: 0 6px; border: 1px solid var(--line-2); border-radius: 7px; background: var(--panel); color: var(--ink-2); font-family: "Source Sans 3", system-ui, sans-serif; font-size: 0.82rem; white-space: nowrap; opacity: 0; box-shadow: 0 1px 2px rgb(var(--shadow) / 0.12); }
+.edit .ic { width: 13px; height: 13px; }
+.edit .lbl { display: none; }
+@container (min-width: 720px) { .ln { padding-right: 140px; } .edit { padding: 0 9px 0 7px; } .edit .lbl { display: inline; } }
+.ln:hover .edit, .ln[aria-current="true"] .edit, .edit:focus-visible { opacity: 1; }
+.edit:hover { color: var(--accent); border-color: var(--accent); }
+@media print { .edit { display: none; } }
+`;

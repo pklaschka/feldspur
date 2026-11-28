@@ -9,7 +9,8 @@
       "ignoreDependencies": ["better-sqlite3", "electron", "electron-builder"],
     },
     "apps/desktop": {
-      "entry": ["src/main/main.ts", "src/preload/preload.ts", "test/**/*.{ts,tsx}"],
+      // `watch/frame.ts` ist der Einstieg von `src/renderer/watch.html` (Rahmen des Schritts „Ansehen“).
+      "entry": ["src/main/main.ts", "src/preload/preload.ts", "src/renderer/watch/frame.ts", "test/**/*.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx,css}", "test/**/*.{ts,tsx}"],
       "ignoreDependencies": [
         // Wird über @feldspur/core gebündelt; die App braucht es selbst für die native Bibliothek im Paket.

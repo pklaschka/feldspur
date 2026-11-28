@@ -57,6 +57,8 @@ Die Bildschirmfotos zeigen nur erfundene Beispieldaten (einen "Testmarkt"), kein
 
 {{< include _handbuch-mitschreiben.qmd >}}
 
+{{< include _handbuch-ansehen.qmd >}}
+
 {{< include _handbuch-ausgeben.qmd >}}
 
 {{< include _zitieren.qmd >}}

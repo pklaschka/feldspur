@@ -2,8 +2,8 @@
  * Montage zum Ansehen in der App: derselbe Ablauf wie im Montagevideo, aber ohne zu rechnen.
  * Die Oberfläche spielt die Originale an den richtigen Stellen ab und zeichnet die Einblendungen selbst.
  *
- * Einordnung: Schritt „Ausgeben“, Vorschau der Montage. Der Hauptprozess baut den Plan (`montagePlan` in
- * `apps/desktop/src/main/export.ts`) und schickt ihn per IPC an `apps/desktop/src/renderer/MontageView.tsx`. Die
+ * Einordnung: Schritt „Ansehen“ (Issue #131). Der Hauptprozess baut den Plan (`watchPreview` in
+ * `apps/desktop/src/main/export.ts`) und schickt ihn per IPC an die Oberfläche (`Watch.tsx`, `watch/player.ts`). Die
  * Stücke stammen aus demselben `planPieces` wie das gerechnete Video (`packages/media/src/montage-video.ts`), hier
  * nur auf das gekürzt, was über IPC gehen kann (Kennungen und Zahlen statt ganzer Quellen, ms statt Bilder).
  */

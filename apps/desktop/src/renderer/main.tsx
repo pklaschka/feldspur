@@ -6,10 +6,10 @@
  * - `App.tsx`: der Rahmen. Startbildschirm, links die Einsatzliste mit Projektmenü (`Recent.tsx`), Dialoge
  *   „Änderungsprotokoll“ (`ChangeLog.tsx`) und „Sicherungen“ (`Backups.tsx`), die Übersicht des Projekts
  *   (`Overview.tsx`, `overview/`). Kleinteile dazu in `app/`.
- * - `app/SessionPane.tsx`: ein geöffneter Einsatz (`FieldSession`) mit den vier Schritten als Reiter:
+ * - `app/SessionPane.tsx`: ein geöffneter Einsatz (`FieldSession`) mit den fünf Schritten als Reiter:
  *   Einsammeln (`Collect.tsx`), Abgleichen (`Sync.tsx`, Feinabgleich in `FineAlign.tsx`), Durchsehen (`Review.tsx`,
- *   `review/`, Zeichnen der Zeitachse in `timeline.ts`, Kontext in `context/`) und Ausgeben (`ExportStep.tsx`,
- *   `export/`, Montage ansehen in `MontageView.tsx`).
+ *   `review/`, Zeichnen der Zeitachse in `timeline.ts`, Kontext in `context/`), Ansehen (`Watch.tsx`, der Viewer in
+ *   einem eigenen Rahmen: `watch.html`, `watch/`) und Ausgeben (`ExportStep.tsx`, `export/`).
  * - Detailleiste rechts neben den Schritten: `Inspector.tsx`, `inspector/`.
  * - Dialoge eines Einsatzes: Mitschreiben (`Transcriber.tsx`, `transcriber/`, `transcribe.ts`), Tagebuch abtippen
  *   (`DiaryEditor.tsx`, `diary/`), große Vorschau (`Preview.tsx`), Schnellsuche (`SearchDialog.tsx`, `search.ts`),

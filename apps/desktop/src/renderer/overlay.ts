@@ -6,7 +6,7 @@
  *
  * Zwei Wege führen hierher: Bei der Ausgabe fragt der Hauptprozess (`apps/desktop/src/main/export.ts`) über
  * `onOverlayRequest` an, `App.tsx` antwortet mit `renderOverlays` (PNG je Einblendung), und ffmpeg legt die Bilder
- * über das Video. Beim Ansehen in der App zeichnet `MontageView.tsx` mit `drawOverlay` direkt auf seine Leinwand.
+ * über das Video. Beim Ansehen in der App zeichnet `watch/player.ts` mit `drawOverlay` direkt auf seine Leinwand.
  * Maße und Felder kommen aus `packages/media/src/layout.ts` (`montageLayout`, je nach gewählter Auflösung, Issue #250),
  * damit beide Seiten dasselbe Raster nutzen.
  */

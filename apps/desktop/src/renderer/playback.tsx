@@ -17,7 +17,10 @@ export interface Position {
 
 interface Playback {
   position: Position | null;
-  /** Nur der Player ruft das auf: neuer Stand, oder null, wenn nichts mehr geladen ist. */
+  /**
+   * Der Player meldet hier seinen Stand, oder null, wenn nichts mehr geladen ist. „Ansehen“ (`Watch.tsx`) meldet die
+   * Stelle einer Zeile, bevor es Mitschreiben öffnet.
+   */
   report: (p: Position | null) => void;
   /** Letzter Spul-Wunsch; `n` zählt hoch, damit derselbe Wunsch erneut greift. */
   seekRequest: { sourceId: string; atMs: number; n: number } | null;
