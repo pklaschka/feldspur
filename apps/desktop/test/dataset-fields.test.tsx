@@ -22,7 +22,7 @@ afterEach(() => {
 /** Felder zeigen; `current()` liefert, was zuletzt beim Aufrufer ankam, `reset` setzt die Angaben von außen. */
 function open(
   initial: DatasetInfo = {},
-  props: { placeholder?: Partial<Record<keyof DatasetInfo, string>>; researchers?: string[] } = {},
+  props: { project?: DatasetInfo; researchers?: string[]; titleSuggestion?: string; settled?: number } = {},
 ) {
   let latest = initial;
   let reset = (_d: DatasetInfo) => {};
@@ -154,7 +154,7 @@ describe("Personenliste", () => {
   });
 
   it("zeigt in den Einsatzdaten die Personen des Projekts statt leerer Zeilen", () => {
-    const { current } = open({}, { placeholder: { creators: "Mara Beispiel, 0000-0002-1825-0097\nJo Muster" } });
+    const { current } = open({}, { project: { creators: "Mara Beispiel, 0000-0002-1825-0097\nJo Muster" } });
     const g = group("creators");
     expect(g.querySelector("[data-inherited]")!.textContent).toBe("Wie im Projekt: Mara Beispiel, Jo Muster");
     expect(g.querySelectorAll("[data-person]")).toHaveLength(0);
@@ -167,6 +167,21 @@ describe("Personenliste", () => {
     click(button(g, "Kim Beispiel entfernen"));
     expect(current().creators).toBe("");
     expect(g.querySelector("[data-inherited]")).not.toBeNull();
+  });
+
+  it("übernimmt in den Einsatzdaten die Liste des Projekts, um jemanden zu ergänzen", () => {
+    const { current } = open({}, { project: { creators: "Mara Beispiel, 0000-0002-1825-0097\nJo Muster" } });
+    const g = group("creators");
+    // Wenn: die Liste des Projekts übernommen und eine Person ergänzt wird
+    click(button(g, "Liste des Projekts übernehmen"));
+    expect(current().creators).toBe("Mara Beispiel, 0000-0002-1825-0097\nJo Muster");
+    expect(button(g, "Liste des Projekts übernehmen")).toBeUndefined();
+    click(button(g, "Person hinzufügen"));
+    type(input(g, "Person 3: Name"), "Kim Beispiel");
+    // Dann: gilt für den Einsatz die ganze Liste mit der neuen Person
+    expect(current().creators).toBe("Mara Beispiel, 0000-0002-1825-0097\nJo Muster\nKim Beispiel");
+    // Ohne Personen im Projekt gibt es nichts zu übernehmen.
+    expect(button(group("contributors"), "Liste des Projekts übernehmen")).toBeUndefined();
   });
 
   it("beginnt neu, wenn die Angaben von außen ersetzt werden (Verwerfen)", () => {
@@ -217,7 +232,7 @@ describe("Schlagworte", () => {
   });
 
   it("zeigt in den Einsatzdaten die Schlagworte des Projekts als Vorgabe", () => {
-    open({}, { placeholder: { keywords: "Markt, Alltag" } });
+    open({}, { project: { keywords: "Markt, Alltag" } });
     expect(field().placeholder).toBe("Markt, Alltag");
   });
 });
@@ -247,5 +262,44 @@ describe("Vorschläge für Lizenz und Zugang", () => {
     click(button(access, "Gesperrt bis …"));
     expect(current().access).toBe("Gesperrt bis ");
     expect(document.activeElement).toBe(field("access"));
+  });
+});
+
+describe("Titelvorschlag und Vorschau", () => {
+  const preview = () => document.querySelector<HTMLElement>("[data-testid=dataset-preview]")!;
+  const rows = () => [...preview().querySelectorAll("dl > div")].map((r) => r.textContent);
+
+  it("schlägt in der Übersicht den Namen des Projekts als Titel vor, solange keiner dasteht", () => {
+    const { current } = open({}, { titleSuggestion: "Marktstudie" });
+    expect(preview().textContent).toContain("Noch keine Angaben. Hier steht dann");
+    click(button(document.body, "Marktstudie"));
+    expect(current().title).toBe("Marktstudie");
+    expect(button(document.body, "Marktstudie")).toBeUndefined();
+    expect(document.activeElement).toBe(document.querySelector("[data-field=title]"));
+  });
+
+  it("zeigt die Angaben so, wie sie im Kopf des Einsatztranskripts stehen", () => {
+    open({
+      title: "Marktstudie",
+      creators: "Mara Beispiel, 0000-0002-1825-0097\nJo Muster",
+      keywords: "Markt, Alltag",
+    });
+    expect(rows()).toEqual([
+      "Titel des DatensatzesMarktstudie",
+      "Urheber*innenMara Beispiel (ORCID 0000-0002-1825-0097); Jo Muster",
+      "SchlagworteMarkt, Alltag",
+    ]);
+    // Vor dem ersten Speichern leuchtet nichts auf.
+    expect(preview().querySelector(".settle-once")).toBeNull();
+  });
+
+  it("legt in den Einsatzdaten den Einsatz über das Projekt und kennzeichnet, was nur hier gilt", () => {
+    open({ access: "Gesperrt bis 2030" }, { project: { title: "Marktstudie", access: "Offen zugänglich" } });
+    expect(rows()).toEqual(["Titel des DatensatzesMarktstudie", "ZugangGesperrt bis 2030 nur dieser Einsatz"]);
+  });
+
+  it("sagt in den Einsatzdaten ohne jede Angabe, wo die fürs Projekt hingehören", () => {
+    open({}, { project: {} });
+    expect(preview().textContent).toContain("Angaben fürs ganze Projekt trägst du in der Übersicht ein.");
   });
 });

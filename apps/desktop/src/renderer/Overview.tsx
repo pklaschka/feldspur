@@ -127,6 +127,7 @@ export function Overview({
           <DatasetCard
             saved={data.dataset}
             researchers={data.researchers}
+            projectName={name}
             onSaved={(dataset) => setData({ ...data, dataset })}
           />
         )}

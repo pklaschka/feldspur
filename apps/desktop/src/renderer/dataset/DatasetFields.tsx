@@ -3,12 +3,13 @@
  * `overview/DatasetCard.tsx`) und die Einsatzdaten (Angaben, die nur für einen Einsatz gelten, `SessionDetails.tsx`).
  * Welche Felder es gibt, steht in `packages/media/src/dataset.ts`; hier, wie sie gegliedert sind und aussehen.
  *
- * Drei Gruppen: Inhalt, Personen, Nutzung. Auf breiten Flächen steht die Überschrift der Gruppe links neben ihren
+ * Drei Gruppen: Inhalt, Personen, Nutzung; darunter die Vorschau (`DatasetPreview.tsx`). Auf breiten Flächen steht die Überschrift der Gruppe links neben ihren
  * Feldern, auf schmalen (Dialog der Einsatzdaten) darüber; das entscheidet die Breite der Fläche, nicht der Aufrufer.
  */
 import { useId, useRef, type ReactNode } from "react";
 import type { DatasetInfo } from "@feldspur/core/model";
-import { ACCESS_SUGGESTIONS, DATASET_FIELDS, LICENSE_SUGGESTIONS } from "@feldspur/media/dataset";
+import { ACCESS_SUGGESTIONS, cleanDataset, DATASET_FIELDS, LICENSE_SUGGESTIONS } from "@feldspur/media/dataset";
+import { DatasetPreview } from "./DatasetPreview.tsx";
 import { cx } from "../ui.tsx";
 import { KeywordField } from "./KeywordField.tsx";
 import { HINT, LABEL, PLACEHOLDER, Suggestion } from "./parts.tsx";
@@ -57,22 +58,34 @@ function Field({
   );
 }
 
+/** Was am Titel steht, solange in der Übersicht keiner eingetragen ist. */
+const NO_TITLE = "Ohne Titel heißt jede Ausgabe nach Einsatz und Datum";
+
 /**
- * Alle Felder. `placeholder` zeigt je Feld, was gilt, solange es leer bleibt: in der Übersicht die Vorbelegung, in den
- * Einsatzdaten der Wert aus dem Projekt (bei den Personen als Zeile „Wie im Projekt: …“).
+ * Alle Felder, darunter die Vorschau. Mit `project` (Einsatzdaten) zeigt jedes leere Feld grau, was aus dem Projekt
+ * gilt, bei den Personen als Zeile „Wie im Projekt: …“; ohne (Übersicht) steht nur am Titel, was ohne Eintrag gilt.
  */
 export function DatasetFields({
   value,
   onChange,
-  placeholder = {},
+  project,
   researchers = [],
+  titleSuggestion,
+  settled,
 }: {
   value: DatasetInfo;
   onChange: (next: DatasetInfo) => void;
-  placeholder?: Partial<Record<Key, string>>;
+  /** In den Einsatzdaten: die Angaben des Projekts, die gelten, solange hier nichts steht. */
+  project?: DatasetInfo;
   /** Forschende an den Geräten: Vorschläge für „Urheber*innen“ und, ohne Eintrag, ohnehin die Urheber*innen. */
   researchers?: readonly string[];
+  /** Vorschlag für den Titel, solange keiner eingetragen ist (der Name des Projekts). */
+  titleSuggestion?: string;
+  /** Zählt die Speicherungen, damit die Vorschau danach kurz aufleuchtet. */
+  settled?: number;
 }) {
+  const placeholder: DatasetInfo = project ? cleanDataset(project) : { title: NO_TITLE };
+  const titleField = useRef<HTMLInputElement>(null);
   const id = useId();
   const set = (key: Key) => (text: string) => onChange({ ...value, [key]: text });
   /** Was ein einfaches Eingabefeld braucht. */
@@ -90,7 +103,25 @@ export function DatasetFields({
       <Group title="Inhalt">
         {/* In den Einsatzdaten steht darüber schon der Titel des Einsatzes: hier deshalb ausgeschrieben. */}
         <Field id={`${id}-title`} label="Titel des Datensatzes">
-          <input {...text("title", false)} />
+          <input ref={titleField} {...text("title", false)} />
+          {titleSuggestion && !value.title?.trim() && (
+            <div
+              role="group"
+              aria-label="Vorschlag für den Titel"
+              className="mt-0.5 flex flex-wrap items-center gap-1.5"
+            >
+              <span className={HINT}>Name des Projekts:</span>
+              <Suggestion
+                onClick={() => {
+                  set("title")(titleSuggestion);
+                  // Der Vorschlag verschwindet mit dem Klick: Der Fokus geht ins Feld, zum Weiterschreiben.
+                  titleField.current?.focus();
+                }}
+              >
+                {titleSuggestion}
+              </Suggestion>
+            </div>
+          )}
         </Field>
         <Field
           id={`${id}-description`}
@@ -152,6 +183,9 @@ export function DatasetFields({
             onPick={set("access")}
           />
         </div>
+      </Group>
+      <Group title={project ? "Gilt für diesen Einsatz" : "Vorschau"}>
+        <DatasetPreview value={value} project={project} settled={settled} />
       </Group>
     </div>
   );
