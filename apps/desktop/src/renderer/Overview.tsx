@@ -7,20 +7,26 @@
  *
  * Darunter die Angaben zum Datensatz (Issue #206, `overview/DatasetCard.tsx`), die jede Ausgabe nennt.
  *
+ * Im Kopf steht „Alle Einsätze ausgeben…“ (Issue #209): die Einsätze mit Häkchen in einen gemeinsamen Projektordner,
+ * mit den Schaltern aus dem Schritt „Ausgeben“. Fortschritt und Ergebnis zeigt `overview/ProjectExport.tsx`.
+ *
  * Gezeigt von `App.tsx` anstelle eines Einsatzes. Die Zahlen rechnet der Hauptprozess bei jedem Öffnen neu
  * (`projectOverview`, `apps/desktop/src/main/export.ts`); die beiden Karten liegen in `overview/` (`FieldCalendar`,
  * `Metrics`), der Text der Tabellen kommt aus `apps/desktop/src/shared/methods-table.ts`.
  */
 import { useEffect, useState } from "react";
-import type { ProjectOverview } from "../shared/api.ts";
+import type { ProjectExportRequest, ProjectExportResult, ProjectOverview } from "../shared/api.ts";
 import { ALL_VERSIONS_DOI } from "../shared/citation.ts";
-import { softwareLine } from "../shared/methods-table.ts";
+import { germanDate, softwareLine } from "../shared/methods-table.ts";
 import type { Step } from "./App.tsx";
-import { ErrorBanner, Panel } from "./ui.tsx";
+import { useExportOptions } from "./export/options.ts";
+import { useExport } from "./exportState.tsx";
+import { Button, ErrorBanner, Panel } from "./ui.tsx";
 import { FieldCalendar } from "./overview/FieldCalendar.tsx";
 import { Metrics, type Copied } from "./overview/Metrics.tsx";
 import { DatasetCard } from "./overview/DatasetCard.tsx";
-import { spanText } from "./overview/text.ts";
+import { ProjectExport } from "./overview/ProjectExport.tsx";
+import { settingsText, spanText } from "./overview/text.ts";
 
 const api = window.feldspur;
 
@@ -41,6 +47,10 @@ export function Overview({
   const [copied, setCopied] = useState<Copied>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
+  const ex = useExport();
+  const [exportOpts] = useExportOptions();
+  // Nach „Alle Einsätze ausgeben…“ neu zählen: Der Stand der Ausgaben hat sich geändert.
+  const projectResult = ex.projectResult;
   useEffect(() => {
     let live = true;
     void api.projectOverview().then(
@@ -50,7 +60,7 @@ export function Overview({
     return () => {
       live = false;
     };
-  }, []);
+  }, [projectResult]);
 
   const all = data ? [...data.sessions].sort((a, b) => a.date.localeCompare(b.date)) : [];
   const chosen = all.filter((s) => !skipped.has(s.sessionId));
@@ -65,6 +75,33 @@ export function Overview({
         doi: data.citation.versionDoi?.doi ?? ALL_VERSIONS_DOI,
       })
     : "";
+  // „Alle Einsätze ausgeben…“: die Schalter des Schritts „Ausgeben“; geschnitten wird nach Episoden nur dort, wo ein
+  // Einsatz welche bildet (das entscheidet der Hauptprozess je Einsatz).
+  const request: ProjectExportRequest = {
+    video: exportOpts.video,
+    resolve: exportOpts.resolve,
+    mixAudio: exportOpts.mixAudio,
+    deviceTracks: exportOpts.deviceTracks,
+    viewer: exportOpts.viewer,
+    readme: exportOpts.readme,
+    changeLog: exportOpts.changeLog,
+    manifest: exportOpts.manifest,
+    roCrate: exportOpts.roCrate,
+    originals: exportOpts.originals,
+    realtime: !exportOpts.byEpisodes,
+  };
+  const toExport = chosen.filter((s) => s.output.durationMs > 0);
+  const exporting = !!ex.job || !!ex.project;
+  const exportAll = () =>
+    ex.startProject(
+      toExport.map((s) => s.sessionId),
+      request,
+    );
+  const retry = (r: ProjectExportResult, accept?: string) =>
+    ex.startProject(
+      r.sessions.map((x) => x.sessionId),
+      { ...request, dir: r.dir, accept: accept ? [accept] : undefined },
+    );
   const toggle = (id: string) => {
     setCopied(null);
     setSaved(null);
@@ -79,8 +116,8 @@ export function Overview({
   // Fläche und erzeugen eine zweite Bildlaufleiste.
   return (
     <main className="relative col-span-2 overflow-auto" data-testid="overview">
-      <header className="border-b border-line bg-panel px-6 pt-5 pb-4">
-        <h1 className="flex flex-wrap items-baseline gap-x-3 text-[1.4rem] font-semibold">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-6 pt-5 pb-4">
+        <h1 className="flex min-w-0 flex-[1_1_0%] flex-wrap items-baseline gap-x-3 text-[1.4rem] font-semibold">
           {name}
           <span className="font-serif text-[1rem] font-normal text-muted italic">
             {data ? spanText(all) : "Übersicht"}
@@ -92,6 +129,21 @@ export function Overview({
             </span>
           )}
         </h1>
+        {all.length > 0 && (
+          <Button
+            variant="primary"
+            disabled={exporting || toExport.length === 0}
+            onClick={exportAll}
+            title={`Die Einsätze mit Häkchen in einen gemeinsamen Projektordner. ${settingsText(exportOpts)}`}
+            data-testid="overview-export-all"
+          >
+            {ex.project
+              ? "Gibt aus…"
+              : chosen.length === all.length
+                ? "Alle Einsätze ausgeben…"
+                : `${toExport.length} von ${all.length} Einsätzen ausgeben…`}
+          </Button>
+        )}
       </header>
       <div className="grid max-w-[1640px] gap-4 p-5">
         <ErrorBanner />
@@ -110,6 +162,18 @@ export function Overview({
             </p>
           </Panel>
         )}
+        <ProjectExport
+          project={ex.project}
+          job={ex.project ? ex.job : null}
+          result={ex.projectResult}
+          error={ex.projectError}
+          settings={settingsText(exportOpts)}
+          titles={new Map(all.map((s) => [s.sessionId, `${s.title} · ${germanDate(s.date)}`]))}
+          onCancel={ex.cancel}
+          onRetry={retry}
+          onDismiss={ex.dismissProject}
+          onOpen={onOpen}
+        />
         {data && all.length > 0 && (
           <>
             <FieldCalendar

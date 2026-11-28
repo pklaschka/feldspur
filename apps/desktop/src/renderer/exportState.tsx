@@ -7,7 +7,7 @@
  * (`apps/desktop/src/main/ipc/export.ts`, `apps/desktop/src/main/export.ts`, darunter `packages/media/src/export.ts`)
  * und meldet Fortschritt über `onExportProgress`. Es läuft höchstens eine Ausgabe zur selben Zeit.
  */
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   EXPORT_CHECK_STEP,
   EXPORT_LEVELS_STEP,
@@ -15,6 +15,8 @@ import {
   type ExportProgress,
   type ExportRequestOptions,
   type OriginalsCheck,
+  type ProjectExportRequest,
+  type ProjectExportResult,
 } from "../shared/api.ts";
 import { errorText } from "./format.ts";
 
@@ -61,8 +63,28 @@ export interface CancelledExport {
   video: boolean;
 }
 
+/**
+ * Laufendes „Alle Einsätze ausgeben…“ (Issue #209): eine Folge einzelner Ausgaben. Die gerade laufende steht wie
+ * jede andere in `job`, damit Reiter und Schritt „Ausgeben“ sie zeigen.
+ */
+export interface ProjectExportJob {
+  /** Die gewählten Einsätze. */
+  sessionIds: string[];
+  /** Stelle des laufenden Einsatzes (ab 0) und Zahl der gewählten; null, solange noch keiner begonnen hat. */
+  at: { index: number; total: number } | null;
+  cancelling: boolean;
+}
+
 interface ExportState {
   job: ExportJob | null;
+  /** „Alle Einsätze ausgeben…“, solange es läuft; danach `projectResult` oder `projectError`. */
+  project: ProjectExportJob | null;
+  projectResult: ProjectExportResult | null;
+  projectError: string | null;
+  /** Alle gewählten Einsätze in einen Projektordner ausgeben; tut nichts, solange eine Ausgabe läuft. */
+  startProject(sessionIds: string[], opts: ProjectExportRequest): void;
+  /** Ergebnis oder Fehler des letzten Laufs ausblenden. */
+  dismissProject(): void;
   /** Letztes Ergebnis je Einsatz-Id; `errors` ebenso die letzte Fehlermeldung, bis zum nächsten Versuch. */
   results: Record<string, ExportOutcome>;
   errors: Record<string, string>;
@@ -97,8 +119,71 @@ export function ExportProvider({ children }: { children: ReactNode }) {
       ),
     [],
   );
+  const [project, setProject] = useState<ProjectExportJob | null>(null);
+  const [projectResult, setProjectResult] = useState<ProjectExportResult | null>(null);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  // Welche Schalter der laufende Lauf hat: Daraus gewichtet `percent` den Balken jedes Einsatzes.
+  const projectOpts = useRef<ProjectExportRequest | null>(null);
+  useEffect(
+    () =>
+      api.onProjectExportProgress((p) => {
+        const opts = projectOpts.current;
+        if (!opts) return;
+        setProject((x) => (x ? { ...x, at: { index: p.index, total: p.total } } : x));
+        // Jeder Einsatz beginnt mit einem frischen Balken; zwischen zwei Einsätzen und am Schluss läuft keiner.
+        setJob((j) =>
+          p.sessionId
+            ? {
+                sessionId: p.sessionId,
+                video: opts.video,
+                originals: opts.originals === true,
+                progress: null,
+                percent: 0,
+                videoFrom: null,
+                cancelling: j?.cancelling ?? false,
+              }
+            : null,
+        );
+      }),
+    [],
+  );
+  const startProject = (sessionIds: string[], opts: ProjectExportRequest) => {
+    if (job || project) return;
+    projectOpts.current = opts;
+    setProject({ sessionIds, at: null, cancelling: false });
+    setProjectResult(null);
+    setProjectError(null);
+    const done = () => {
+      projectOpts.current = null;
+      setProject(null);
+      setJob(null);
+    };
+    api.exportProject(sessionIds, opts).then(
+      (r) => {
+        if (r) {
+          setProjectResult(r);
+          // Was dieser Lauf für einen Einsatz geklärt hat, ersetzt ältere Meldungen in seinem Schritt „Ausgeben“.
+          for (const x of r.sessions) {
+            if (x.outcome !== "written") continue;
+            setErrors((e) => without(e, x.sessionId));
+            setCancelled((e) => without(e, x.sessionId));
+            setHeld((e) => without(e, x.sessionId));
+          }
+        }
+        done();
+      },
+      (e: unknown) => {
+        setProjectError(errorText(e));
+        done();
+      },
+    );
+  };
+  const dismissProject = () => {
+    setProjectResult(null);
+    setProjectError(null);
+  };
   const start = (sessionId: string, opts: ExportRequestOptions, key?: string) => {
-    if (job) return;
+    if (job || project) return;
     setJob({
       sessionId,
       video: opts.video,
@@ -127,13 +212,39 @@ export function ExportProvider({ children }: { children: ReactNode }) {
     );
   };
   const cancel = () => {
+    if (project) {
+      // Mitten in „Alle Einsätze ausgeben…“ gilt der Abbruch dem Ganzen, auch zwischen zwei Einsätzen.
+      if (project.cancelling) return;
+      setProject({ ...project, cancelling: true });
+      if (job) setJob({ ...job, cancelling: true });
+      void api.cancelProjectExport();
+      return;
+    }
     if (!job || job.cancelling) return;
     setJob({ ...job, cancelling: true });
     void api.cancelExport(job.sessionId);
   };
   const dismiss = (sessionId: string) => setHeld((x) => without(x, sessionId));
   return (
-    <Ctx.Provider value={{ job, results, errors, cancelled, held, cancel, start, dismiss }}>{children}</Ctx.Provider>
+    <Ctx.Provider
+      value={{
+        job,
+        project,
+        projectResult,
+        projectError,
+        results,
+        errors,
+        cancelled,
+        held,
+        cancel,
+        start,
+        startProject,
+        dismissProject,
+        dismiss,
+      }}
+    >
+      {children}
+    </Ctx.Provider>
   );
 }
 

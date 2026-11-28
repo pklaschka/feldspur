@@ -10,8 +10,9 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { dialog, ipcMain, shell } from "electron";
-import { IPC, type ExportRequest } from "../../shared/api.ts";
+import { IPC, type ExportRequest, type ProjectExportRequest } from "../../shared/api.ts";
 import {
+  abortExport,
   cancelExport,
   exportCard,
   exportStatus,
@@ -20,15 +21,26 @@ import {
   registerOverlayBridge,
   runExport,
 } from "../export.ts";
+import { lastProjectParent, projectDirIn, runProjectExport } from "../project-export.ts";
 import { setProjectFormat } from "../montage-format.ts";
 import { undoableView } from "./undoable.ts";
-import { verifyFolder, type MontageFormat } from "@feldspur/media";
+import { README_NAME, verifyFolder, type MontageFormat } from "@feldspur/media";
 import { buildSessionView } from "../view.ts";
 import { checkOriginals, relinkFile, searchOriginals } from "../originals.ts";
 import { citationInfo } from "../citation.ts";
 import { softwareLine } from "../../shared/methods-table.ts";
 import { ALL_VERSIONS_DOI } from "../../shared/citation.ts";
 import { parentWindow, requireStore, stillOpen, whileOpen } from "../state.ts";
+
+/** Zeile zur Software für die LIESMICH und ihr Verweis für die Metadaten: wie in „Feldspur zitieren“, ohne Netz. */
+function softwareInfo(): { software: string; softwareRef: { version: string; url: string } } {
+  const c = citationInfo();
+  const doi = c.versionDoi?.doi ?? ALL_VERSIONS_DOI;
+  return {
+    software: softwareLine({ version: c.version, released: c.released, doi }),
+    softwareRef: { version: c.version, url: `https://doi.org/${doi}` },
+  };
+}
 
 export function registerExportIpc(): void {
   registerOverlayBridge();
@@ -76,21 +88,36 @@ export function registerExportIpc(): void {
       parent = r.filePaths[0];
       stillOpen(s);
     }
-    // Zeile zur Software für die LIESMICH: Version und DOI wie in „Feldspur zitieren“, ohne Abfrage im Netz.
-    const c = citationInfo();
-    const software = softwareLine({
-      version: c.version,
-      released: c.released,
-      doi: c.versionDoi?.doi ?? ALL_VERSIONS_DOI,
-    });
-    const doi = c.versionDoi?.doi ?? ALL_VERSIONS_DOI;
-    return runExport(s, e.sender, sessionId, parent, {
-      ...opts,
-      software,
-      softwareRef: { version: c.version, url: `https://doi.org/${doi}` },
-    });
+    return runExport(s, e.sender, sessionId, parent, { ...opts, ...softwareInfo() });
   });
   ipcMain.handle(IPC.cancelExport, (_e, sessionId: string) => cancelExport(sessionId));
+  // „Alle Einsätze ausgeben…“ in der Übersicht (Issue #209).
+  let projectDir: string | null = null;
+  ipcMain.handle(IPC.exportProject, async (e, sessionIds: string[], opts: ProjectExportRequest) => {
+    const s = requireStore();
+    let dir = typeof opts.dir === "string" && opts.dir ? opts.dir : undefined;
+    if (!dir) {
+      const r = await dialog.showOpenDialog(parentWindow(), {
+        title: "Wohin soll der Projektordner?",
+        buttonLabel: "Hier ausgeben",
+        defaultPath: lastProjectParent(s),
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (r.canceled || !r.filePaths[0]) return null;
+      dir = projectDirIn(stillOpen(s), r.filePaths[0]);
+    }
+    const ids = Array.isArray(sessionIds) ? sessionIds.map(String) : [];
+    const result = await whileOpen(s, runProjectExport(s, e.sender, ids, dir, { ...opts, ...softwareInfo() }));
+    projectDir = result.dir;
+    return result;
+  });
+  ipcMain.handle(IPC.cancelProjectExport, () => abortExport());
+  ipcMain.handle(IPC.openProjectReadme, async () => {
+    // Nur die LIESMICH des Ordners, den diese Sitzung zuletzt geschrieben hat: nie ein freier Pfad.
+    const path = projectDir ? join(projectDir, README_NAME) : null;
+    if (!path || !existsSync(path)) return false;
+    return (await shell.openPath(path)) === "";
+  });
   // „Ordner prüfen…“ (Issue #208): braucht kein offenes Projekt, liest nur.
   let folderCheck: AbortController | null = null;
   ipcMain.handle(IPC.checkFolder, async (e, dir?: string) => {

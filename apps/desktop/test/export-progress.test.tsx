@@ -19,6 +19,7 @@ import {
 /** Was die Oberfläche beim Hauptprozess anmeldet: Hier landen die Meldungen des Tests. */
 let report: (p: ExportProgress) => void = () => {};
 (window as unknown as { feldspur: object }).feldspur = {
+  onProjectExportProgress: () => () => {},
   onExportProgress: (cb: (p: ExportProgress) => void) => {
     report = cb;
     return () => {};

@@ -40,6 +40,7 @@ export * from "./log.ts";
 export * from "./methods-summary.ts";
 export * from "./methods-table.ts";
 export * from "./readme.ts";
+export * from "./project-folder.ts";
 export * from "./dataset.ts";
 export * from "./ro-crate.ts";
 export * from "./originals-copy.ts";

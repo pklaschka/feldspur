@@ -575,6 +575,56 @@ interface ExportNeedsDecision {
 /** Was `exportSession` antwortet: fertig, abgebrochen oder von der Prüfung der Originale angehalten. */
 export type ExportRunResult = ExportOutcome | ExportCancelled | ExportNeedsDecision;
 
+/** Ein Einsatz im Ergebnis von „Alle Einsätze ausgeben…“ (Issue #209). */
+export interface ProjectExportSession {
+  sessionId: string;
+  title: string;
+  /** Kalendertag, "2026-09-14". */
+  date: string;
+  /**
+   * „written“ = neu ausgegeben, „unchanged“ = lag schon im jetzigen Stand im Ordner, „empty“ = nichts auszugeben
+   * (keine Quelle mit Uhrzeit), „held“ = die Prüfung der Originale hat etwas gefunden, „failed“ = Fehler,
+   * „cancelled“ = dabei abgebrochen, „pending“ = nach einem Abbruch nicht mehr begonnen.
+   */
+  outcome: "written" | "unchanged" | "empty" | "held" | "failed" | "cancelled" | "pending";
+  /** Name des Unterordners, wenn der Einsatz im Projektordner liegt. */
+  folder?: string;
+  /** Bei „held“ und „failed“: was los ist, in einem Satz. */
+  detail?: string;
+  /** Bei „held“: Es fehlen Originale, ohne die es nicht geht; „Trotzdem ausgeben“ hilft dann nicht. */
+  blocking?: boolean;
+}
+
+/** Ergebnis von „Alle Einsätze ausgeben…“: der Projektordner und was aus jedem gewählten Einsatz wurde. */
+export interface ProjectExportResult {
+  /** Der Projektordner. */
+  dir: string;
+  /** Die gewählten Einsätze, nach Datum. */
+  sessions: ProjectExportSession[];
+  /** Liegt jeder gewählte Einsatz im jetzigen Stand im Ordner? Nur dann gibt es die gemeinsame LIESMICH. */
+  complete: boolean;
+  /** Dateien auf oberster Ebene, die geschrieben wurden (LIESMICH, Metadaten). */
+  files: string[];
+  cancelled: boolean;
+}
+
+/** Stand von „Alle Einsätze ausgeben…“: welcher Einsatz gerade ausgegeben wird (`onProjectExportProgress`). */
+export interface ProjectExportProgress {
+  /** Stelle des Einsatzes unter den gewählten, ab 0; am Ende gleich `total`. */
+  index: number;
+  total: number;
+  /** Einsatz, dessen Ausgabe jetzt beginnt; null, sobald die gemeinsame LIESMICH an der Reihe ist. */
+  sessionId: string | null;
+}
+
+/** Anfrage für „Alle Einsätze ausgeben…“: die Schalter des Schritts „Ausgeben“, dazu Ordner und bewusste Ausnahmen. */
+export type ProjectExportRequest = ExportChoices & {
+  /** Ohne Ordnerdialog in diesen Projektordner (ein weiterer Lauf nach einem unvollständigen). */
+  dir?: string;
+  /** Einsätze, bei denen Auffälligkeiten der Originale übergangen werden. */
+  accept?: string[];
+};
+
 /**
  * Alle Schalter des Schritts „Ausgeben“ an einer Stelle. Eine neue Option kommt nur hierher (siehe AGENTS.md,
  * „Neue Ausgabe-Option“); der Hauptprozess liest sie in `exportSettings` (`apps/desktop/src/main/export.ts`).
@@ -1058,6 +1108,17 @@ export interface FeldspurApi {
   cancelExport(sessionId: string): Promise<void>;
   onExportProgress(cb: (p: ExportProgress) => void): () => void;
   /**
+   * „Alle Einsätze ausgeben…“ (Issue #209): die Einsätze `sessionIds` in einen gemeinsamen Projektordner, je Einsatz
+   * ein Unterordner, darüber eine LIESMICH. Fragt nach dem Ordner, außer `dir` nennt den Projektordner. Einsätze, die
+   * dort schon im jetzigen Stand liegen, bleiben unberührt. null = kein Ordner gewählt.
+   */
+  exportProject(sessionIds: string[], opts: ProjectExportRequest): Promise<ProjectExportResult | null>;
+  /** „Alle Einsätze ausgeben…“ abbrechen: Der laufende Einsatz bricht ab, weitere beginnen nicht. */
+  cancelProjectExport(): Promise<void>;
+  onProjectExportProgress(cb: (p: ProjectExportProgress) => void): () => void;
+  /** Die LIESMICH des zuletzt geschriebenen Projektordners im Browser öffnen; false, wenn es sie nicht gibt. */
+  openProjectReadme(): Promise<boolean>;
+  /**
    * Die Oberfläche zeichnet die Einblendungen des Montagevideos. Umgekehrte Richtung: Während der Ausgabe fragt der
    * Hauptprozess an (`askRenderer`, `apps/desktop/src/main/export.ts`), `render` liefert je Bild ein PNG.
    */
@@ -1239,6 +1300,10 @@ export const IPC = {
   exportSession: "export:run",
   cancelExport: "export:cancel",
   exportProgress: "export:progress",
+  exportProject: "export:project",
+  cancelProjectExport: "export:project-cancel",
+  projectExportProgress: "export:project-progress",
+  openProjectReadme: "export:project-open-readme",
   overlayRequest: "overlay:request",
   overlayReply: "overlay:reply",
   stillRequest: "still:request",
