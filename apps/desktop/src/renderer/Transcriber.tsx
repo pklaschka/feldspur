@@ -137,6 +137,8 @@ function Body({
   const [pos, setPos] = useState(position?.sourceId === row.id ? position.atMs : 0);
   // Stelle auch zwischen zwei Renderdurchläufen (Tastenkürzel, „Zeit hierher“); wird mit setPos zusammen gesetzt.
   const posRef = useRef(pos);
+  // Solange die Datei noch lädt, steht das Element bei 0: Bis dahin gilt die Stelle, mit der geöffnet wurde.
+  const loaded = useRef(false);
   const updatePos = (ms: number) => {
     posRef.current = ms;
     setPos(ms);
@@ -202,7 +204,7 @@ function Body({
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      if (media.current) updatePos(Math.round(media.current.currentTime * 1000));
+      if (media.current && loaded.current) updatePos(Math.round(media.current.currentTime * 1000));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -591,7 +593,10 @@ function Body({
               {...LEVEL_MEDIA_PROPS}
               preload="auto"
               className="block max-h-[38vh] w-full rounded-lg bg-black"
-              onLoadedMetadata={() => seekTo(pos)}
+              onLoadedMetadata={() => {
+                loaded.current = true;
+                seekTo(pos);
+              }}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
               onError={() => setFailed(true)}
@@ -603,7 +608,10 @@ function Body({
               src={mediaUrl(row.id)}
               {...LEVEL_MEDIA_PROPS}
               preload="auto"
-              onLoadedMetadata={() => seekTo(pos)}
+              onLoadedMetadata={() => {
+                loaded.current = true;
+                seekTo(pos);
+              }}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
               onError={() => setFailed(true)}

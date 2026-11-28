@@ -122,11 +122,12 @@ export function NewSessionForm({
   );
 }
 
-/** Die vier Schritte mit je einem Halbsatz, wie sie die Vorschau des ersten Einsatzes ankündigt. */
+/** Die fünf Schritte mit je einem Halbsatz, wie sie die Vorschau des ersten Einsatzes ankündigt. */
 const PREVIEW_STEPS = [
   ["Einsammeln", "Dateien des Tages hinzufügen"],
   ["Abgleichen", "Geräte auf eine Zeitachse bringen"],
   ["Durchsehen", "Lage jeder Aufnahme prüfen"],
+  ["Ansehen", "Montage und Einsatztranskript vorab ansehen"],
   ["Ausgeben", "Einsatztranskript und Montagevideo erstellen"],
 ] as const;
 
@@ -135,7 +136,7 @@ const pale = "text-muted/60";
 
 /**
  * Vorschau neben dem Formular im leeren Projekt: So steht der Einsatz gleich in der Kopfzeile (`SessionPane.tsx`,
- * gleiche Schriften und Größen), darunter die vier Schritte als Ausblick. Die Kopfzeile ist für Screenreader
+ * gleiche Schriften und Größen), darunter die fünf Schritte als Ausblick. Die Kopfzeile ist für Screenreader
  * verborgen, weil sie nur wiederholt, was in den Feldern steht.
  */
 function SessionPreview({ draft }: { draft: NewSession }) {

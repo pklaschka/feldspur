@@ -1,5 +1,5 @@
 /**
- * Montage in der App abspielen: Rechenhilfen ohne Oberfläche (testbar). Die Ansicht dazu ist `MontageView.tsx`;
+ * Montage in der App abspielen: Rechenhilfen ohne Oberfläche (testbar). Die Wiedergabe dazu ist `watch/player.ts` (Schritt „Ansehen“);
  * die Stücke (`PreviewPiece`) plant `packages/media/src/montage-preview.ts` mit demselben Plan wie das Montagevideo.
  */
 import type { OverlayFrame } from "@feldspur/media";

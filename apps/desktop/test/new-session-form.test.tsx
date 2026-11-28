@@ -58,7 +58,7 @@ describe("NewSessionForm (Hero)", () => {
 describe("FirstSession (Vorschau der Kopfzeile)", () => {
   const preview = (host: HTMLElement) => host.querySelector<HTMLElement>("[data-testid=session-preview]")!;
 
-  it("zeigt leere Felder als Platzhalter und die vier Schritte", () => {
+  it("zeigt leere Felder als Platzhalter und die fünf Schritte", () => {
     const host = render(<FirstSession onCreate={() => {}} />);
     const [, date, place] = [...host.querySelectorAll("input")];
     type(date!, "");
@@ -70,6 +70,7 @@ describe("FirstSession (Vorschau der Kopfzeile)", () => {
       "Einsammeln",
       "Abgleichen",
       "Durchsehen",
+      "Ansehen",
       "Ausgeben",
     ]);
   });

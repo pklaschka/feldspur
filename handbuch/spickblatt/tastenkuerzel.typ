@@ -7,7 +7,7 @@
 // die Tasten der Karte markiert sind. So bleibt hängen, wo eine Taste liegt, bevor das Kürzel sitzt.
 //
 // Die Kürzel stammen aus dem Code (apps/desktop/src/renderer: transcribe.ts, Transcriber.tsx, transcriber/Line.tsx,
-// app/history.tsx, app/SessionPane.tsx, App.tsx, DiaryEditor.tsx, diary/EntryCard.tsx, MontageView.tsx,
+// app/history.tsx, app/SessionPane.tsx, App.tsx, DiaryEditor.tsx, diary/EntryCard.tsx, watch/frame.ts,
 // FineAlign.tsx, SearchDialog.tsx, Notes.tsx, Review.tsx, context/ContextStrip.tsx, keys.ts). Ändert sich dort
 // etwas, hier nachziehen.
 //
@@ -507,25 +507,21 @@
     )
     v(3 * E, weak: true)
     karte(
-      [Montage ansehen],
+      [Ansehen],
       farbe: video,
       symbol: "video",
-      markiert: ("leer", "links", "rechts", "pos1", "ende"),
+      markiert: ("leer", "links", "rechts", "hoch", "runter", "e"),
       {
+        // Dieselben Tasten wie im ausgegebenen Viewer (packages/media/src/viewer/runtime.ts); E gibt es nur in der App.
         let m(t, ..a) = ts(t, video, ..a)
-        let lm(t) = taste(t, u: u, aktiv: false)
         grid(
           columns: (auto, auto),
           column-gutter: 4 * E,
-          stack(
-            spacing: 2.5 * E,
-            kuerzel(m("Leertaste", breite: 3, symbol: "spielen"), [Abspielen / Anhalten]),
-            kuerzel({ m("←", mitte: true); h(E); m("→", mitte: true) }, [10 s zurück / vor]),
-          ),
-          kuerzel(
-            grid(columns: 3, gutter: E, lm("Einfg"), m("Pos1"), lm("Bild ↑"), lm("Entf"), m("Ende"), lm("Bild ↓")),
-            [Anfang / Ende],
-          ),
+          row-gutter: 2.5 * E,
+          kuerzel(m("Leertaste", breite: 3, symbol: "spielen"), [Abspielen / Anhalten]),
+          kuerzel({ m("↑", mitte: true); h(E); m("↓", mitte: true) }, [Zeile davor / danach]),
+          kuerzel({ m("←", mitte: true); h(E); m("→", mitte: true) }, [5 s zurück / vor]),
+          kuerzel(m("E"), [Zeile bearbeiten], text-unten: [? zeigt alle Tasten]),
         )
       },
     )

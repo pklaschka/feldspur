@@ -158,12 +158,12 @@ Mitgelieferte Software Dritter, etwa FFmpeg (LGPL), behält ihre eigenen Lizenze
 
 ## Aufbau
 
-| Paket                              | Inhalt                                                                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| [`packages/core`](packages/core)   | Datenmodell (Zod), Zeitbestimmung, Uhrzeiten aus Dateinamen, Projektdatei (SQLite via better-sqlite3 + Drizzle)     |
-| [`packages/media`](packages/media) | Einsammeln: Dateiart erkennen, ffprobe/EXIF lesen, SHA-256, Gerätevermutung, Zeitbelege, Import ins Projekt         |
-| [`apps/desktop`](apps/desktop)     | Electron-App (React, Tailwind, Radix). Schritte Einsammeln, Abgleichen, Durchsehen (Canvas-Zeitachse), Detailleiste |
-| [`scripts`](scripts)               | Entwicklerwerkzeuge                                                                                                 |
+| Paket                              | Inhalt                                                                                                                       |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/core`](packages/core)   | Datenmodell (Zod), Zeitbestimmung, Uhrzeiten aus Dateinamen, Projektdatei (SQLite via better-sqlite3 + Drizzle)              |
+| [`packages/media`](packages/media) | Einsammeln: Dateiart erkennen, ffprobe/EXIF lesen, SHA-256, Gerätevermutung, Zeitbelege, Import ins Projekt                  |
+| [`apps/desktop`](apps/desktop)     | Electron-App (React, Tailwind, Radix). Schritte Einsammeln, Abgleichen, Durchsehen (Canvas-Zeitachse), Ansehen, Detailleiste |
+| [`scripts`](scripts)               | Entwicklerwerkzeuge                                                                                                          |
 
 Werkzeugkette ist [Vite+](https://viteplus.dev) (`vp`): Vitest, Oxlint, Oxfmt, tsdown, Vite.
 
@@ -216,8 +216,8 @@ Bewusste Abweichungen vom Tech-Stack-Dokument (mit Zuri abzustimmen):
   Kurzzeichen, Datei und Stelle im Original, die laufenden Tonquellen und eine **Montage-ID**, die auch im Kopf des
   Einsatztranskripts steht. Der Ton aller laufenden Geräte liegt übereinander (abschaltbar: nur die Hauptquelle). Wahlweise
   nach Episoden (Zeit dazwischen als kurze Tafel) oder in Echtzeit am Stück. Die Einblendungen zeichnet die Oberfläche,
-  weil die LGPL-Fassung von FFmpeg keine Schrift setzt; „Montage ansehen“ spielt dieselbe Montage ohne Rechnen aus den
-  Originalen ab. Dazu **Dokumentvariablen** (.xlsx) für MAXQDA und ein **Begleitprotokoll** (.csv) mit Herkunft und
+  weil die LGPL-Fassung von FFmpeg keine Schrift setzt; der Schritt „Ansehen“ zeigt dieselbe Montage samt Einsatztranskript ohne Rechnen aus den
+  Originalen. Dazu **Dokumentvariablen** (.xlsx) für MAXQDA und ein **Begleitprotokoll** (.csv) mit Herkunft und
   Zeitnachweis jeder Datei. Abwählbar kommen dazu: ein **Viewer** (.html), der Video und Einsatztranskript zusammen im
   Browser zeigt, eine **LIESMICH** (.html) mit den Tabellen für den Methodenteil, das Änderungsprotokoll des Einsatzes
   (.csv) und eine Prüfsummenliste (`manifest-sha256.txt`).

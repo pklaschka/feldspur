@@ -7,11 +7,10 @@
  * `exportState.tsx` oberhalb der Einsätze; gerechnet wird im Hauptprozess (`apps/desktop/src/main/export.ts`,
  * `apps/desktop/src/main/ipc/export.ts`, `packages/media`).
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { SessionView } from "../shared/api.ts";
 import { cancelledText, useExport } from "./exportState.tsx";
 import { formatDuration } from "@feldspur/core/time";
-import { MontageView } from "./MontageView.tsx";
 import { todos, type Todo } from "./inspector/status.ts";
 import { TodoList } from "./inspector/Summary.tsx";
 import { Button, Notice, Panel, StepHeader } from "./ui.tsx";
@@ -31,6 +30,7 @@ export function ExportStep({
   onGo,
   onView,
   onOriginals,
+  onWatch,
 }: {
   view: SessionView;
   /** Zu einer offenen Aufgabe springen (Schritt und ggf. Quelle), aus der Liste „Noch offen“. */
@@ -38,6 +38,8 @@ export function ExportStep({
   onView: (v: SessionView) => void;
   /** Dialog „Originaldateien“ (`Originals.tsx`) öffnen. */
   onOriginals: () => void;
+  /** Zum Schritt „Ansehen“: die Montage vorab aus den Originalen. */
+  onWatch: () => void;
 }) {
   const [opts, set] = useExportOptions();
   const {
@@ -53,7 +55,6 @@ export function ExportStep({
     originals,
     byEpisodes,
   } = opts;
-  const [watching, setWatching] = useState(false);
   const withEpisodes = view.session.episodes;
   // Echtzeit ist der Normalfall; nach Episoden geschnitten wird nur, wenn der Einsatz Episoden hat und es gewählt ist.
   const realtime = !(withEpisodes && byEpisodes);
@@ -220,22 +221,10 @@ export function ExportStep({
                   )}
                 </>
               )}
-              <Button
-                variant="link"
-                className="ml-2 font-sans text-[0.9rem]"
-                disabled={empty}
-                onClick={() => setWatching(true)}
-              >
-                Montage ansehen…
+              <Button variant="link" className="ml-2 font-sans text-[0.9rem]" disabled={empty} onClick={onWatch}>
+                Montage ansehen
               </Button>
             </p>
-            <MontageView
-              sessionId={sessionId}
-              realtime={realtime}
-              open={watching}
-              onOpenChange={setWatching}
-              levels={new Map(view.rows.map((r) => [r.id, r.level]))}
-            />
             <ExportOptions
               opts={opts}
               set={set}

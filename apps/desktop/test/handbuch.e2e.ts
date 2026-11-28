@@ -524,6 +524,41 @@ await kapitel("mitschreiben", async () => {
   });
 });
 
+await kapitel("ansehen", async () => {
+  await ablauf("Die Montage vorab ansehen und von einer Zeile aus bearbeiten", async () => {
+    await siehe("Ansehen", page.getByRole("tab", { name: /Ansehen/ }));
+    await page.getByRole("tab", { name: /Ansehen/ }).click();
+    await page.getByRole("heading", { name: "Ansehen" }).waitFor();
+    await siehe("Nach Episoden schneiden", page.getByRole("switch", { name: "Nach Episoden schneiden" }));
+    const viewer = page.frameLocator("[data-testid=watch-frame]");
+    await viewer.locator("#tr > li").first().waitFor({ timeout: 20_000 });
+    // Gerätespuren sind in der App gleich frei: S und M an jeder Spur.
+    await siehe("S", viewer.getByRole("button", { name: /^Nur .* hören$/ }), {
+      hinweis: "Knopf S an einer Gerätespur",
+    });
+    await siehe("M", viewer.getByRole("button", { name: / stumm$/ }), { hinweis: "Knopf M an einer Gerätespur" });
+    // Der Stift nennt sein Ziel; an der Mitschriftzeile führt er ins Mitschreiben.
+    for (const [art, ziel] of [
+      ["k-line", "Mitschreiben"],
+      ["k-diary", "Tagebuch"],
+      ["k-start", "Durchsehen"],
+    ] as const) {
+      const zeile = viewer.locator(`#tr > li.${art}`).first();
+      await zeile.scrollIntoViewIfNeeded();
+      await zeile.hover();
+      await siehe(ziel, zeile.locator(".edit", { hasText: ziel }), { hinweis: `Stift an einer Zeile (${art})` });
+    }
+    const zeile = viewer.locator("#tr > li.k-line").first();
+    await zeile.scrollIntoViewIfNeeded();
+    await zeile.hover();
+    await zeile.locator(".edit").click();
+    await page.getByTestId("transcriber").waitFor();
+    await page.getByTestId("transcriber").getByRole("button", { name: "Fertig" }).click();
+    await page.getByTestId("transcriber").waitFor({ state: "detached" });
+    await page.getByRole("heading", { name: "Ansehen" }).waitFor();
+  });
+});
+
 await kapitel("ausgeben", async () => {
   const out = await ablauf("Ausgeben", async () => {
     const out = join(dir, "Ausgabe");
@@ -558,7 +593,7 @@ await kapitel("ausgeben", async () => {
       page.getByRole("switch", { name: /^Montagevideo mit ausgeben/, disabled: true }),
       { handbuch: "bleibt **Montagevideo mit ausgeben** deshalb an" },
     );
-    await siehe("Montage ansehen…");
+    await siehe("Montage ansehen");
     await siehe("Kontext", page.getByTestId("export-context"), { hinweis: "Karte Kontext links" });
     const offen = await page.getByText("Noch offen").count();
     await siehe(offen ? "Trotzdem ausgeben…" : "Ausgeben…", knopf(/^(Trotzdem a|A)usgeben…$/));

@@ -1105,34 +1105,48 @@ try {
     return out;
   });
 
-  await ablauf("Die Montage in der App ansehen", async () => {
-    // Montage in der App ansehen: springt ins erste Episodenstück und spielt ab.
-    await page.getByRole("button", { name: "Montage ansehen…" }).click();
-    const montage = page.getByTestId("montage");
-    const montageTime = montage.getByTestId("montage-time");
-    await montageTime.waitFor();
-    const montageBar = montage.getByTestId("montage-bar");
-    for (let i = 0; i < 8 && !(await montageBar.innerText()).includes("Episode"); i++)
-      await montage.getByRole("button", { name: "Nächstes Stück" }).click();
-    const before = await montageTime.innerText();
-    await montage.getByRole("button", { name: "Abspielen" }).click();
-    // In der Episode laufen die Originale (Ton oder Video) an der passenden Stelle mit.
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll<HTMLMediaElement>("[data-testid=montage] :is(video, audio)")].some(
+  await ablauf("Die Montage im Schritt „Ansehen“ ansehen und von einer Zeile aus bearbeiten", async () => {
+    // „Montage ansehen“ in Ausgeben führt in den Schritt; dort steht der Viewer mit dem Einsatztranskript.
+    await page.getByRole("button", { name: "Montage ansehen", exact: true }).click();
+    const viewer = page.frameLocator("[data-testid=watch-frame]");
+    const lines = viewer.locator("#tr > li.k-line");
+    await lines.first().waitFor({ timeout: 20_000 });
+    const inFrame = () => page.frames().find((f) => f.url().includes("watch.html"))!;
+    // Wenn: eine Mitschriftzeile angeklickt und abgespielt wird
+    await lines.first().click();
+    const before = await viewer.locator("#now-clock").innerText();
+    await viewer.locator("#play").click();
+    // Dann: laufen die Originale (Ton oder Video) an der passenden Stelle mit, gerechnet wird nichts.
+    await inFrame().waitForFunction(() =>
+      [...document.querySelectorAll<HTMLMediaElement>("#vid :is(video, audio)")].some(
         (m) => !m.paused && m.currentTime > 0.5,
       ),
     );
-    console.log(`Montage-Vorschau: ${before} → ${await montageTime.innerText()} · ${await montageBar.innerText()}`);
-    // Eine Minute weiter (←/→ springen je 10 s) läuft die Kamera: Ihr Bild steht im Hauptfeld.
-    for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(() => {
-      const v = document.querySelector<HTMLVideoElement>("[data-testid=montage] video");
+    await inFrame().waitForFunction((b) => document.querySelector("#now-clock")?.textContent !== b, before);
+    // Eine halbe Minute weiter läuft die Kamera: Ihr Bild steht im Hauptfeld.
+    const line = lines.filter({ hasText: "Das hört man auch im Video" });
+    await line.click();
+    await inFrame().waitForFunction(() => {
+      const v = document.querySelector<HTMLVideoElement>("#vid video");
       return !!v && !v.paused && v.currentTime > 0.2 && v.readyState >= 2;
     });
-    await shot("-montage");
-    await montage.getByRole("button", { name: "Pause" }).click();
-    await montage.getByRole("button", { name: "Schließen" }).click();
-    await montage.waitFor({ state: "detached" });
+    console.log(`Ansehen: ${before} → ${await viewer.locator("#now-clock").innerText()}`);
+    await shot("-ansehen");
+    // Wenn: an der Zeile „Bearbeiten“ gewählt wird, dann öffnet das Mitschreiben an ihrer Stelle
+    await viewer.locator("#play").click();
+    await line.hover();
+    await line.locator(".edit").click();
+    const tr = page.getByTestId("transcriber");
+    await tr.waitFor();
+    const at = (await tr.getByTestId("transcriber-position").innerText()).split("\n")[0];
+    console.log(`Ansehen › Bearbeiten: Mitschreiben offen bei ${at}`);
+    await tr.getByTestId("line").filter({ hasText: "Das hört man auch im Video" }).waitFor();
+    await tr.getByRole("button", { name: "Fertig" }).click();
+    await tr.waitFor({ state: "detached" });
+    // Dann: Zurück in „Ansehen“ steht man wieder an derselben Zeile.
+    await viewer.locator('#tr > li.k-line[aria-current="true"]', { hasText: "Das hört man auch im Video" }).waitFor();
+    await page.getByRole("button", { name: "Weiter: Ausgeben →" }).click();
+    await page.getByRole("heading", { name: "Ausgeben" }).waitFor();
   });
   const t0 = await ablauf("Nach Episoden ausgeben", async () => {
     // Standard ist Echtzeit; nach Episoden geschnitten wird das Video kürzer. Ausgegeben wird

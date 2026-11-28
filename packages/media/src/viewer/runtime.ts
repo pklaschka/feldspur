@@ -9,7 +9,9 @@
  * Die DOM-Typen gelten durch die Referenz oben für das ganze Paket; im Node-Code bitte trotzdem nicht verwenden.
  *
  * Einordnung: Teil des Viewers aus dem Schritt „Ausgeben“. `viewerScript` (`packages/media/src/viewer/html.ts`)
- * bettet die Funktion ein; in der App selbst läuft sie nie. Das HTML-Gerüst mit allen IDs und die Daten (`D`,
+ * bettet die Funktion ein. In der App läuft dieselbe Funktion im Schritt „Ansehen“ (Issue #131): Dort ruft
+ * `apps/desktop/src/renderer/watch/frame.ts` sie in einem eigenen Rahmen auf und gibt ihr mit `ViewerHost` eine
+ * Wiedergabe aus den Originalen statt des Montagevideos. Das HTML-Gerüst mit allen IDs und die Daten (`D`,
  * Typ `ViewerData`) kommen aus `html.ts`, das Aussehen aus `style.ts`. Aufbau unten: Hilfen, Zustand (`S`), Zeilen,
  * Kontext, Bilder, Zeitleiste, Video, Tonspuren, Suche, Ansicht, Tasten, Start. Es gibt kein Framework: Das Skript
  * setzt `data-`-Attribute und CSS-Variablen, den Rest erledigt das CSS.
@@ -19,11 +21,21 @@ import type { ViewerData } from "./html.ts";
 import type { Mp4AudioInfo, Mp4AudioTrack, readMp4Audio } from "./mp4-audio.ts";
 
 /**
+ * Was die App dem Viewer anstelle der Videodatei gibt (Schritt „Ansehen“). In der HTML-Datei gibt es das nicht.
+ */
+export interface ViewerHost {
+  /** Wiedergabe mit den Eigenschaften und Ereignissen eines `<video>`, soweit der Viewer sie nutzt. */
+  video: HTMLVideoElement;
+  /** Solo und Stumm: die Tonspuren (Index wie `ViewerData.audio`), die zu hören sein sollen; null = alle. */
+  mix: (tracks: number[] | null) => void;
+}
+
+/**
  * Einstieg des Viewers, einmal beim Laden der Seite aufgerufen. `readMp4` ist `readMp4Audio`
  * (`packages/media/src/viewer/mp4-audio.ts`), als Argument übergeben, weil die Funktion nichts von außen kennen darf.
  * Zeiten ohne Zusatz sind hier Sekunden Videozeit (wie `video.currentTime`), die Daten in `D` dagegen ms.
  */
-export function viewerMain(readMp4: typeof readMp4Audio): void {
+export function viewerMain(readMp4: typeof readMp4Audio, host?: ViewerHost): void {
   // ───── Hilfen ─────
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const el = (tag: string, cls?: string, text?: string | number) => {
@@ -60,7 +72,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
   const pct = (t: number) => `${(t / DUR) * 100}%`;
   const app = $("app");
-  const vid = $<HTMLVideoElement>("vid");
+  const vid = host ? host.video : $<HTMLVideoElement>("vid");
   const tr = $("tr");
   const sc = $("scroll");
 
@@ -81,7 +93,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
     solo: new Set<number>(),
     mute: new Set<number>(),
     // Tonspuren: nur die Mischung · Video von früher bekannt, Zugriff noch zu bestätigen · Einzelspuren frei.
-    ton: "mix" as "mix" | "bekannt" | "frei",
+    ton: (host ? "frei" : "mix") as "mix" | "bekannt" | "frei",
     // Bis dahin (performance.now) gilt Scrollen als vom Skript ausgelöst und beendet das Mitlaufen nicht.
     progUntil: 0,
     userMuted: false,
@@ -126,7 +138,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   entries.forEach((e) =>
     e.li.addEventListener("click", (ev) => {
       const sel = getSelection();
-      if ((sel && !sel.isCollapsed) || (ev.target as HTMLElement).closest(".img, .ref")) return;
+      if ((sel && !sel.isCollapsed) || (ev.target as HTMLElement).closest(".img, .ref, .edit")) return;
       seek(e.t, true);
     }),
   );
@@ -845,7 +857,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
   const nativeTracks = () =>
     (vid as unknown as { audioTracks?: { length: number; [i: number]: NativeTrack } }).audioTracks;
   // Der Browser bietet die Tonspuren des Videos selbst an (gesetzt, sobald das Video geladen ist).
-  let nativeOk = false;
+  let nativeOk = !!host;
   const canEngine = () =>
     typeof (window as unknown as { AudioDecoder?: unknown }).AudioDecoder === "function" &&
     typeof AudioContext === "function";
@@ -1074,6 +1086,7 @@ export function viewerMain(readMp4: typeof readMp4Audio): void {
       }
     }
     if (engine) engine.gains.forEach((g, k) => (g.gain.value = wantedTracks().includes(k) ? 1 : 0));
+    host?.mix(custom ? wantedTracks() : null);
     applyVolume();
     engineRestart();
   }

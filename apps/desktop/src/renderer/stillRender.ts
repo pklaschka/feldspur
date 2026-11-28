@@ -14,6 +14,8 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("Bild nicht lesbar"));
+    // Ohne das gälte die Leinwand als fremd befüllt und ließe sich nicht als JPEG lesen (Schritt „Ansehen“).
+    img.crossOrigin = "anonymous";
     img.src = url;
   });
 }

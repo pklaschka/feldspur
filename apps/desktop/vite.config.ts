@@ -47,6 +47,8 @@ export default defineConfig({
     // Der PDF-Worker ist absichtlich größer als Vites Standard-Schwelle.
     chunkSizeWarningLimit: 1200,
     rolldownOptions: {
+      // Zwei Seiten: die App und der Rahmen des Schritts „Ansehen“ (`watch.html`, Issue #131).
+      input: { index: "src/renderer/index.html", watch: "src/renderer/watch.html" },
       onLog(level, log, defaultHandler) {
         if (level === "warn" && log.code === "MODULE_LEVEL_DIRECTIVE" && log.message.includes('"use client"')) {
           return;

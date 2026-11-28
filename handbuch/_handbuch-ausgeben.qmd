@@ -98,7 +98,8 @@ Optionen:
   Unterordner `Originale` und eine Kopie der Projektdatei, damit Rohmaterial, Arbeitsstand und Ausgabe
   beisammenliegen.
 
-Mit **Montage ansehen…** spielst du dieselbe Montage vorher direkt aus den Originalen ab, ohne sie zu rechnen.
+**Montage ansehen** führt zurück in den Schritt „Ansehen“ (@sec-ansehen): Dort läuft dieselbe Montage vorab aus den
+Originalen, ohne dass etwas gerechnet wird.
 
 Ein Montagevideo in Echtzeit rechnet bei einem langen Einsatz eine Weile. Der Rechner geht dabei nicht in den
 Ruhezustand, und du kannst das Fenster in den Hintergrund legen; einen Mac lässt du besser aufgeklappt. Mit

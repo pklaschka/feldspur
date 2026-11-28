@@ -2,7 +2,7 @@
  * IPC-Aufrufe fürs Ausgeben: Vorschau, Stand, Ausgabe, Originale prüfen und wiederfinden.
  *
  * Gegenstücke in der Oberfläche (`apps/desktop/src/renderer/`): Schritt „Ausgeben“ (`ExportStep.tsx`,
- * `exportState.tsx`, `export/`), die Vorschau der Montage (`MontageView.tsx`) und die Prüfung der Originale
+ * `exportState.tsx`, `export/`), die Vorschau der Montage (Schritt „Ansehen“, `Watch.tsx`) und die Prüfung der Originale
  * (`Originals.tsx`). Die Ausgabe ist kein Schritt für Rückgängig: Sie ändert keine Forschungsdaten, nur den Vermerk
  * über die letzte Ausgabe. Neu verknüpfte Originale tragen sich dagegen selbst in den Verlauf ein
  * (`../originals.ts`). Die Arbeit der Ausgabe steckt in `../export.ts`.
@@ -16,7 +16,7 @@ import {
   cancelExport,
   exportCard,
   exportStatus,
-  montagePlan,
+  watchPreview,
   previewExport,
   registerOverlayBridge,
   runExport,
@@ -62,8 +62,8 @@ export function registerExportIpc(): void {
     if (!existsSync(path)) return false;
     return (await shell.openPath(path)) === "";
   });
-  ipcMain.handle(IPC.montagePreview, (_e, sessionId: string, realtime?: boolean) =>
-    montagePlan(requireStore(), sessionId, realtime),
+  ipcMain.handle(IPC.watchPreview, (_e, sessionId: string, realtime?: boolean) =>
+    watchPreview(requireStore(), sessionId, realtime),
   );
   // Auflösung und Bildrate gelten fürs ganze Projekt und stehen in der Projektdatei: ein Schritt für Rückgängig.
   undoableView(IPC.setMontageFormat, "Videoeinstellungen geändert", (s, sessionId: string, format: MontageFormat) => {

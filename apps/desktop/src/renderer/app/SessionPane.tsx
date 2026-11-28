@@ -28,6 +28,7 @@ import { QuickSearch, type Reveal } from "../SearchDialog.tsx";
 import { SessionDetails } from "../SessionDetails.tsx";
 import { SourceActionsProvider, type SourceActions } from "../SourceMenu.tsx";
 import { Transcriber } from "../Transcriber.tsx";
+import { Watch } from "../Watch.tsx";
 import { Sync } from "../Sync.tsx";
 import { Button, cx, ErrorBanner } from "../ui.tsx";
 
@@ -200,9 +201,10 @@ export function SessionPane({
             : null,
       warn: unplaced > 0 || toCheck > 0,
     },
+    { id: "watch", n: 4, title: "Ansehen", badge: null },
     {
       id: "export",
-      n: 4,
+      n: 5,
       title: "Ausgeben",
       badge: exporting.job?.sessionId === view.session.id ? `läuft ${exporting.job.percent} %` : null,
     },
@@ -246,7 +248,8 @@ export function SessionPane({
         <Tabs.Root
           value={step}
           onValueChange={(v) => setStep(v as Step)}
-          className="flex min-w-0 flex-col overflow-hidden"
+          // „Ansehen“ braucht die ganze Breite (Video und Text nebeneinander); die Detailleiste entfällt dort.
+          className={cx("flex min-w-0 flex-col overflow-hidden", step === "watch" && "col-span-2")}
           asChild
         >
           <main>
@@ -306,7 +309,7 @@ export function SessionPane({
                   </Button>
                 </span>
               </div>
-              {/* Die vier Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur.
+              {/* Die fünf Schritte als Weg: Wegmarken, verbunden durch eine gestrichelte Spur.
                */}
               <Tabs.List className="mt-3 -mb-px flex items-center @container" aria-label="Arbeitsschritte">
                 {steps.map((s, i) => (
@@ -383,7 +386,7 @@ export function SessionPane({
                 onConfirm={(r) => confirm(r.id, r.startMs!)}
                 selected={selected}
                 onSelect={setSelected}
-                onNext={() => setStep("export")}
+                onNext={() => setStep("watch")}
                 onEpisodes={(on) => void saveDetails({ episodes: on })}
                 onEpisodeEdit={(e) =>
                   update(
@@ -401,54 +404,77 @@ export function SessionPane({
                 onCreateText={createContextText}
               />
             </Tabs.Content>
+            <Tabs.Content value="watch" className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
+              <Watch
+                view={view}
+                covered={transcribeId !== null || diaryPage !== null || searching || editing}
+                jump={{
+                  onSource: setSelected,
+                  onTranscribe: setTranscribeId,
+                  onDiary: setDiaryPage,
+                  onReview: () => setStep("review"),
+                  onReveal: (r) => setReveal((old) => ({ ...r, n: (old?.n ?? 0) + 1 })),
+                }}
+                onSync={(id) => go({ text: "", step: "sync", sourceId: id, action: "" })}
+                onNext={() => setStep("export")}
+              />
+            </Tabs.Content>
             <Tabs.Content value="export" className={tabContent}>
-              <ExportStep view={view} onGo={go} onView={setView} onOriginals={() => setOriginals(true)} />
+              <ExportStep
+                view={view}
+                onGo={go}
+                onView={setView}
+                onOriginals={() => setOriginals(true)}
+                onWatch={() => setStep("watch")}
+              />
             </Tabs.Content>
           </main>
         </Tabs.Root>
-        <Inspector
-          view={view}
-          // In Ausgeben zählt der Stand des ganzen Einsatzes, nicht eine einzelne Quelle.
-          row={step === "export" ? null : selectedRow}
-          context={step === "export" ? null : selectedContext}
-          step={step}
-          onClose={() => setSelected(null)}
-          onGo={go}
-          actions={{
-            diaryNote: (id, clock) => update(guard(() => api.setDiaryNote(id, clock))),
-            addTime: async (input) => {
-              const v = await guard(() => api.addTime(input));
-              if (v) setView(v);
-              return !!v;
-            },
-            confirm,
-            decide: (input) => update(guard(() => api.decidePlacement(input))),
-            decideMany: (sourceIds, kind, reason) => update(guard(() => api.decideMany({ sourceIds, kind, reason }))),
-            setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),
-            setDeviceOffset: (id, ms) => update(guard(() => api.setDeviceOffset(id, ms))),
-            goSync: () => go({ text: "", step: "sync", action: "" }),
-            trustDeviceClock: (id) => update(guard(() => api.setDeviceOffset(id, 0))),
-            setReference: (id) => update(guard(() => api.setReference(id))),
-            toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
-            removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
-            setLevel: (id, input) => update(guard(() => api.setLevel(id, input))),
-            measureLevel: async (id) => {
-              const v = await guard(() => api.measureLevel(id));
-              if (v) setView(v);
-            },
-            openDiary: setDiaryPage,
-            transcribe: setTranscribeId,
-            apply: (fn) => update(guard(fn)),
-            relinkOriginal: (id) => void guard(() => api.relinkOriginal(id)).then((v) => v && setView(v)),
-            openOriginals: () => setOriginals(true),
-            importTranscript: async (id, mode) => {
-              const r = await guard(() => api.importTranscript(id, { mode }));
-              if (!r) return null;
-              setView(r.view);
-              return { count: r.count, dropped: r.dropped };
-            },
-          }}
-        />
+        {step !== "watch" && (
+          <Inspector
+            view={view}
+            // In Ausgeben zählt der Stand des ganzen Einsatzes, nicht eine einzelne Quelle.
+            row={step === "export" ? null : selectedRow}
+            context={step === "export" ? null : selectedContext}
+            step={step}
+            onClose={() => setSelected(null)}
+            onGo={go}
+            actions={{
+              diaryNote: (id, clock) => update(guard(() => api.setDiaryNote(id, clock))),
+              addTime: async (input) => {
+                const v = await guard(() => api.addTime(input));
+                if (v) setView(v);
+                return !!v;
+              },
+              confirm,
+              decide: (input) => update(guard(() => api.decidePlacement(input))),
+              decideMany: (sourceIds, kind, reason) => update(guard(() => api.decideMany({ sourceIds, kind, reason }))),
+              setDeviceUtc: (id, utc) => update(guard(() => api.setDeviceUtc(id, utc))),
+              setDeviceOffset: (id, ms) => update(guard(() => api.setDeviceOffset(id, ms))),
+              goSync: () => go({ text: "", step: "sync", action: "" }),
+              trustDeviceClock: (id) => update(guard(() => api.setDeviceOffset(id, 0))),
+              setReference: (id) => update(guard(() => api.setReference(id))),
+              toggleEvidence: (id, enabled) => update(guard(() => api.setEvidenceEnabled(id, enabled))),
+              removeEvidence: (id) => update(guard(() => api.removeEvidence(id))),
+              setLevel: (id, input) => update(guard(() => api.setLevel(id, input))),
+              measureLevel: async (id) => {
+                const v = await guard(() => api.measureLevel(id));
+                if (v) setView(v);
+              },
+              openDiary: setDiaryPage,
+              transcribe: setTranscribeId,
+              apply: (fn) => update(guard(fn)),
+              relinkOriginal: (id) => void guard(() => api.relinkOriginal(id)).then((v) => v && setView(v)),
+              openOriginals: () => setOriginals(true),
+              importTranscript: async (id, mode) => {
+                const r = await guard(() => api.importTranscript(id, { mode }));
+                if (!r) return null;
+                setView(r.view);
+                return { count: r.count, dropped: r.dropped };
+              },
+            }}
+          />
+        )}
         <DiaryEditor
           view={view}
           pageId={diaryPage}

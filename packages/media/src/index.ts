@@ -34,7 +34,7 @@ export * from "./integrity.ts";
 export * from "./export-state.ts";
 export * from "./note-text.ts";
 export * from "./context.ts";
-export { sessionTranscriptHtml, viewerData, VIEWER_CSP } from "./viewer/html.ts";
+export { sessionTranscriptHtml, viewerData, viewerParts, VIEWER_CSP, type ViewerParts } from "./viewer/html.ts";
 export * from "./clip-times.ts";
 export * from "./log.ts";
 export * from "./methods-summary.ts";

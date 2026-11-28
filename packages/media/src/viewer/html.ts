@@ -19,6 +19,8 @@ import { DEFAULT_FORMAT } from "../layout.ts";
 import { deviceTracksOf, planPieces } from "../montage-video.ts";
 import {
   timestamp,
+  type EntryOrigin,
+  type ImageRef,
   type SessionTranscript,
   type SessionTranscriptContext,
   type SessionTranscriptEntry,
@@ -27,7 +29,7 @@ import type { Still } from "../stills.ts";
 import { VIEWER_FONTS } from "./fonts.ts";
 import { readMp4Audio } from "./mp4-audio.ts";
 import { viewerMain } from "./runtime.ts";
-import { VIEWER_CSS } from "./style.ts";
+import { VIEWER_APP_CSS, VIEWER_CSS } from "./style.ts";
 
 /** Fassung der eingebetteten Daten (feldspur-daten). */
 const VIEWER_DATA_VERSION = 1;
@@ -49,6 +51,26 @@ export interface ViewerOptions {
   envelopes?: Map<Id, Envelope>;
   /** Bilder je Sekunde des Montagevideos (Issue #250); die Gerätespuren folgen denselben Bildgrenzen. */
   fps?: number;
+  /**
+   * Fassung für die App (Schritt „Ansehen“, Issue #131): Statt des Montagevideos spielt die App die Originale, Bilder
+   * lädt sie selbst nach (`ViewerParts.images`), jede Zeile mit Herkunft bekommt „Bearbeiten“, und „Stelle kopieren“
+   * entfällt, weil nur aus der Ausgabe zitiert wird.
+   */
+  app?: boolean;
+}
+
+/** Die Teile der Seite einzeln: für die HTML-Datei (`sessionTranscriptHtml`) und für die App (`viewerParts`). */
+export interface ViewerParts {
+  /** Text für `<title>`. */
+  title: string;
+  /** Schriften und Aussehen, Inhalt eines `<style>`. */
+  css: string;
+  /** Inhalt von `<body>` ohne das Skript, samt der Daten (`feldspur-daten`). */
+  body: string;
+  /** Nur in der App: Bilder in der Reihenfolge der `data-img`-Nummern; die App rendert sie beim Hinsehen. */
+  images: ImageRef[];
+  /** Nur in der App: Herkunft je Zeile (Index wie `data-i`), null = nichts zu bearbeiten. */
+  origins: (EntryOrigin | null)[];
 }
 
 /**
@@ -273,15 +295,26 @@ function imageButton(still: Still | null, caption: string, missing: string): str
   return `<button class="img" type="button" aria-label="Bild vergrößern: ${esc(caption)}"><img src="${src}" width="${still.width}" height="${still.height}" alt="${esc(caption)}" loading="lazy" decoding="async"></button>`;
 }
 
-/** Alle Bilder einer Zeile oder eines Kontextstücks. `scanOnly`: Tagebuchseite, die nur als Scan vorliegt. */
+/**
+ * Alle Bilder einer Zeile oder eines Kontextstücks. `scanOnly`: Tagebuchseite, die nur als Scan vorliegt.
+ * `lazy` (nur App): Statt eingebetteter Bilder leere `<img data-img="n">`; die Liste sammelt, was dazu zu laden ist.
+ */
 function images(
   refs: SessionTranscriptEntry["images"],
   stills: (Still | null)[],
   caption: string,
   scanOnly: boolean,
+  lazy?: ImageRef[],
 ): string {
   if (!refs.length) return "";
   const alt = scanOnly ? `${caption} (nur Scan, nicht abgetippt)` : caption;
+  if (lazy)
+    return `<div class="imgs">${refs
+      .map(
+        (r) =>
+          `<button class="img" type="button" aria-label="Bild vergrößern: ${esc(alt)}"><img data-img="${lazy.push(r) - 1}" alt="${esc(alt)}"></button>`,
+      )
+      .join("")}</div>`;
   return `<div class="imgs">${refs
     .map((r, i) =>
       imageButton(
@@ -306,6 +339,7 @@ function entryHtml(
   stills: (Still | null)[],
   ctx: { keyToId: Map<string, string>; names: Map<string, string> },
   lastSrc: { v: string },
+  lazy?: ImageRef[],
 ): string {
   const clockMs = clockAtMontage(t.plan, e.montageMs);
   const gutter = e.kind === "diary" ? e.clock.slice(0, 5) : (e.clock.split("–")[0] ?? "") || formatClock(clockMs);
@@ -371,10 +405,32 @@ function entryHtml(
       stills,
       `${e.head} · Uhrzeit ${e.kind === "diary" ? e.clock.slice(0, 5) : e.clock}`,
       /: nur Scan$|^nur Scan/.test(e.body),
+      lazy,
     );
   }
-  return `<li class="ln k-${e.kind}" data-i="${i}" data-m="${Math.round(e.montageMs)}">${tm}${gl}<div class="tx">${tx}</div></li>`;
+  // Nur in der App: der Weg zur Bearbeitung dieser Zeile. Was der Knopf öffnet, sagt sein Tooltip.
+  const edit =
+    lazy && e.origin
+      ? `<button class="edit" type="button" title="${esc(EDIT_HINT[e.origin.kind])} (E)" aria-label="${esc(EDIT_HINT[e.origin.kind])}">${svg("M3 13l.6-2.9 7-7a1.4 1.4 0 0 1 2 0l.3.3a1.4 1.4 0 0 1 0 2l-7 7ZM9.6 4.1l2.3 2.3")}<span class="lbl">${EDIT_LABEL[e.origin.kind]}</span></button>`
+      : "";
+  return `<li class="ln k-${e.kind}" data-i="${i}" data-m="${Math.round(e.montageMs)}">${tm}${gl}<div class="tx">${tx}</div>${edit}</li>`;
 }
+
+/** Aufschrift von „Bearbeiten“ je Herkunft der Zeile: Der Knopf nennt den Ort, an den er führt. */
+const EDIT_LABEL: Record<EntryOrigin["kind"], string> = {
+  line: "Mitschreiben",
+  diary: "Tagebuch",
+  source: "Durchsehen",
+  episode: "Durchsehen",
+  sync: "Abgleichen",
+};
+const EDIT_HINT: Record<EntryOrigin["kind"], string> = {
+  line: "Diese Zeile in „Mitschreiben“ bearbeiten",
+  diary: "Diesen Eintrag im Tagebuch bearbeiten",
+  source: "Diese Quelle in „Durchsehen“ zeigen",
+  episode: "Diese Episode in „Durchsehen“ zeigen",
+  sync: "Den Abgleich dieser Aufnahme in „Abgleichen“ zeigen",
+};
 
 /** Angaben zum Kontextstück; die Uhrzeiten hinter „erwähnt um“ springen zur erwähnenden Zeile. */
 function contextDetails(details: string, mentions: number[]): string {
@@ -391,9 +447,15 @@ function contextDetails(details: string, mentions: number[]): string {
 }
 
 /** Ein Kontextstück für das Fenster „Kontext“. `mentions`: Videozeiten (ms) der Verweise. */
-function contextHtml(c: SessionTranscriptContext, id: string, stills: (Still | null)[], mentions: number[]): string {
+function contextHtml(
+  c: SessionTranscriptContext,
+  id: string,
+  stills: (Still | null)[],
+  mentions: number[],
+  lazy?: ImageRef[],
+): string {
   const name = c.head.replace(/^Kontext · /, "");
-  return `<li class="c-item" id="${id}"><h3>${esc(name)}</h3>${c.details ? `<p class="det">${contextDetails(c.details, mentions)}</p>` : ""}${images(c.images, stills, `Kontext · ${name}`, false)}${c.body ? `<p class="body">${esc(c.body)}</p>` : ""}</li>`;
+  return `<li class="c-item" id="${id}"><h3>${esc(name)}</h3>${c.details ? `<p class="det">${contextDetails(c.details, mentions)}</p>` : ""}${images(c.images, stills, `Kontext · ${name}`, false, lazy)}${c.body ? `<p class="body">${esc(c.body)}</p>` : ""}</li>`;
 }
 
 /** `@font-face`-Regeln mit den Schriften aus `packages/media/src/viewer/fonts.ts` als `data:`-Adressen. */
@@ -420,14 +482,44 @@ export function viewerScript(): string {
  * Schnittstelle zu `packages/media/src/viewer/runtime.ts` (dort `$("…")`) und `style.ts`.
  */
 export function sessionTranscriptHtml(transcript: SessionTranscript, opts: ViewerOptions): string {
+  const parts = viewerParts(transcript, opts);
+  return `<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${VIEWER_CSP}">
+<meta name="generator" content="Feldspur">
+<meta name="feldspur-montage-id" content="${esc(transcript.header.montageId)}">
+<title>${esc(parts.title)}</title>
+<style>
+${parts.css}
+</style>
+</head>
+<body>
+${parts.body}
+<script>
+${viewerScript()}
+</script>
+</body>
+</html>
+`;
+}
+
+/**
+ * Die Seite in Teilen. Die HTML-Datei setzt sie mit dem Skript zusammen; die App (`opts.app`) lädt sie in ihren
+ * Schritt „Ansehen“ und ruft `viewerMain` selbst auf (`apps/desktop/src/renderer/watch/frame.ts`).
+ */
+export function viewerParts(transcript: SessionTranscript, opts: ViewerOptions): ViewerParts {
   const h = transcript.header;
+  const lazy: ImageRef[] | undefined = opts.app ? [] : undefined;
   const data = viewerData(transcript, opts);
   const date = displayDate(h.date);
   const keyToId = new Map(transcript.context.map((c, i) => [c.key, `ctx-${i + 1}`]));
   const names = new Map(transcript.context.map((c) => [c.key, c.head.replace(/^Kontext · /, "")]));
   const lastSrc = { v: "" };
   const lines = transcript.entries
-    .map((e, i) => entryHtml(transcript, e, i, opts.stills.get(e) ?? [], { keyToId, names }, lastSrc))
+    .map((e, i) => entryHtml(transcript, e, i, opts.stills.get(e) ?? [], { keyToId, names }, lastSrc, lazy))
     .join("\n");
   const ctxItems = transcript.context
     .map((c) =>
@@ -436,6 +528,7 @@ export function sessionTranscriptHtml(transcript: SessionTranscript, opts: Viewe
         keyToId.get(c.key)!,
         opts.contextStills?.get(c) ?? [],
         transcript.entries.filter((e) => e.contextRefs?.includes(c.key)).map((e) => e.montageMs),
+        lazy,
       ),
     )
     .join("\n");
@@ -443,7 +536,7 @@ export function sessionTranscriptHtml(transcript: SessionTranscript, opts: Viewe
   const facts: [string, string][] = [
     ...(h.researchers.length ? [["Forschende", h.researchers.join(", ")] as [string, string]] : []),
     ...(h.reference ? [["Referenzuhr", h.reference] as [string, string]] : []),
-    ["Mediendatei", opts.mediaFileName],
+    ...(opts.app ? [] : [["Mediendatei", opts.mediaFileName] as [string, string]]),
     ["Montage", `${h.montageId} · ${h.modeLabel}`],
     ...(h.sources.length ? [["Quellen", h.sources.join(", ")] as [string, string]] : []),
     ...extra,
@@ -456,28 +549,16 @@ export function sessionTranscriptHtml(transcript: SessionTranscript, opts: Viewe
       ? `Kontext: ${h.contextCount} ${h.contextCount === 1 ? "Stück" : "Stücke"} ohne Zeitmarke, im Fenster „Kontext“.`
       : "",
     "Am Rand steht die Uhrzeit. Ein Klick auf eine Zeile springt zur Stelle im Video.",
+    opts.app
+      ? "Das ist eine Vorschau aus den Originalen. Zitiert wird aus der Ausgabe: Erst sie hält diesen Stand fest."
+      : "",
   ].filter(Boolean);
   // „<“ maskieren: Ein „</script“ in Titel oder Dateinamen würde das Daten-Element sonst vorzeitig beenden.
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const title = `${h.title} · ${date} – Einsatztranskript mit Video`;
   const ctxCount = transcript.context.length;
 
-  return `<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="${VIEWER_CSP}">
-<meta name="generator" content="Feldspur">
-<meta name="feldspur-montage-id" content="${esc(h.montageId)}">
-<title>${esc(title)}</title>
-<style>
-${fontCss()}
-${VIEWER_CSS}
-</style>
-</head>
-<body>
-<div class="app" id="app" data-kontext="zu" data-video="ok" data-ton="mix">
+  const body = `<div class="app" id="app" data-kontext="zu" data-video="ok" data-ton="${opts.app ? "frei" : "mix"}">
 
   <section class="stage" id="stage" data-spuren="zu" aria-label="Montagevideo">
     <div class="proj" id="proj">
@@ -490,7 +571,7 @@ ${VIEWER_CSS}
     </header>
 
     <div class="video" id="video" data-playing="false">
-      <video id="vid" src="${esc(encodeURIComponent(opts.mediaFileName))}" preload="metadata" playsinline></video>
+      ${opts.app ? '<div id="vid"></div>' : `<video id="vid" src="${esc(encodeURIComponent(opts.mediaFileName))}" preload="metadata" playsinline></video>`}
       <div class="v-play" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 2.5v11l9-5.5z"/></svg></div>
       <div class="v-missing">
         <b>Das Montagevideo liegt nicht neben dieser Datei.</b>
@@ -504,7 +585,7 @@ ${VIEWER_CSS}
       <button class="btn icon" id="back5" type="button" aria-label="5 Sekunden zurück" title="5 Sekunden zurück (←)">${svg("M7.5 4 3.5 8l4 4M12.5 4l-4 4 4 4")}</button>
       <button class="btn icon" id="fwd5" type="button" aria-label="5 Sekunden vor" title="5 Sekunden vor (→)">${svg("m8.5 4 4 4-4 4M3.5 4l4 4-4 4")}</button>
       <div class="now"><span class="clock num" id="now-clock"></span><small>Uhrzeit</small><span class="vt num" id="now-vt"><span class="w">Video </span><span id="now-vt-t"></span><span class="w" id="now-dur"></span></span></div>
-      <button class="btn icon" id="copy" type="button" aria-label="Stelle kopieren" title="Stelle kopieren (Uhrzeit, Zeitmarke, Montage-ID)">${svg("M5.5 5.5V3.8a1.3 1.3 0 0 1 1.3-1.3h5.4a1.3 1.3 0 0 1 1.3 1.3v5.4a1.3 1.3 0 0 1-1.3 1.3h-1.7M3.8 5.5h5.4a1.3 1.3 0 0 1 1.3 1.3v5.4a1.3 1.3 0 0 1-1.3 1.3H3.8a1.3 1.3 0 0 1-1.3-1.3V6.8a1.3 1.3 0 0 1 1.3-1.3Z")}</button>
+      <button class="btn icon" id="copy" type="button"${opts.app ? " hidden" : ""} aria-label="Stelle kopieren" title="Stelle kopieren (Uhrzeit, Zeitmarke, Montage-ID)">${svg("M5.5 5.5V3.8a1.3 1.3 0 0 1 1.3-1.3h5.4a1.3 1.3 0 0 1 1.3 1.3v5.4a1.3 1.3 0 0 1-1.3 1.3h-1.7M3.8 5.5h5.4a1.3 1.3 0 0 1 1.3 1.3v5.4a1.3 1.3 0 0 1-1.3 1.3H3.8a1.3 1.3 0 0 1-1.3-1.3V6.8a1.3 1.3 0 0 1 1.3-1.3Z")}</button>
       <button class="btn only-narrow" id="spuren-btn" type="button" aria-expanded="false">${svg(ICON.audio!)}Tonspuren</button>
       <button class="btn num" id="rate" type="button" aria-label="Tempo" title="Tempo (F7 langsamer, Umschalt+F7 schneller)">1×</button>
       <span class="vol">
@@ -643,22 +724,24 @@ ${ctxItems}
     <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>zur Zeile davor / danach</dd>
     <dt><kbd>N</kbd> · <kbd>Umschalt</kbd>+<kbd>N</kbd></dt><dd>nächste / vorige Episode</dd>
     <dt><kbd>F7</kbd> · <kbd>Umschalt</kbd>+<kbd>F7</kbd></dt><dd>langsamer / schneller</dd>
-    <dt><kbd>1</kbd> … <kbd>9</kbd> · <kbd>0</kbd></dt><dd>nur diese Tonspur hören · wieder alle (nach der Freigabe der Einzelspuren)</dd>
+    <dt><kbd>1</kbd> … <kbd>9</kbd> · <kbd>0</kbd></dt><dd>nur diese Tonspur hören · wieder alle${opts.app ? "" : " (nach der Freigabe der Einzelspuren)"}</dd>
     <dt><kbd>M</kbd></dt><dd>Ton aus / an</dd>
     <dt><kbd>F</kbd></dt><dd>Vollbild an / aus (auch Doppelklick ins Video)</dd>
     <dt><kbd>T</kbd></dt><dd>Text läuft mit: an / aus</dd>
     <dt><kbd>+</kbd> <kbd>−</kbd> · Mausrad</dt><dd>Zeitleiste vergrößern / verkleinern; Umschalt+Mausrad verschiebt</dd>
     <dt><kbd>/</kbd> · <kbd>Strg</kbd>+<kbd>F</kbd></dt><dd>suchen; <kbd>Enter</kbd> nächster Treffer, <kbd>Umschalt</kbd>+<kbd>Enter</kbd> voriger</dd>
     ${ctxCount ? "<dt><kbd>C</kbd></dt><dd>Kontext zeigen / schließen</dd>" : ""}
+    ${opts.app ? "<dt><kbd>E</kbd></dt><dd>aktuelle Zeile bearbeiten (Mitschreiben, Tagebuch, Durchsehen oder Abgleichen)</dd>" : ""}
     <dt><kbd>Esc</kbd></dt><dd>Suche leeren, Fenster schließen, Vollbild verlassen</dd>
   </dl></div>
 </dialog>
 
-<script type="application/json" id="feldspur-daten">${json}</script>
-<script>
-${viewerScript()}
-</script>
-</body>
-</html>
-`;
+<script type="application/json" id="feldspur-daten">${json}</script>`;
+  return {
+    title,
+    css: `${fontCss()}\n${VIEWER_CSS}${opts.app ? `\n${VIEWER_APP_CSS}` : ""}`,
+    body,
+    images: lazy ?? [],
+    origins: opts.app ? transcript.entries.map((e) => e.origin ?? null) : [],
+  };
 }

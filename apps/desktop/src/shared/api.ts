@@ -36,6 +36,8 @@ import type {
   FolderCheck,
   FileState,
   MethodsSessionSummary,
+  EntryOrigin,
+  ImageRef,
   MontageFormat,
   MontagePreview,
   SessionTranscriptKind,
@@ -697,7 +699,26 @@ export interface ExportProgress {
 }
 
 /** Einsatztranskript ohne Video, zur Vorschau im Schritt „Ausgeben“. */
-export type { MontagePreview, PreviewMedia, PreviewPiece } from "@feldspur/media";
+export type { EntryOrigin, MontagePreview, PreviewMedia, PreviewPiece } from "@feldspur/media";
+
+/**
+ * Was der Schritt „Ansehen“ zeigt (Issue #131): die Seite des Viewers in der Fassung für die App und der Ablauf der
+ * Montage zum Abspielen aus den Originalen. Gebaut von `watchPreview` (`apps/desktop/src/main/export.ts`), gezeigt
+ * von `apps/desktop/src/renderer/Watch.tsx` in einem eigenen Rahmen (`watch/frame.ts`).
+ */
+export interface WatchPreview {
+  /** Aussehen und Inhalt der Seite (`ViewerParts` aus `packages/media/src/viewer/html.ts`). */
+  css: string;
+  body: string;
+  /** Ablauf der Montage: Stücke mit ihren Videos und Tonquellen. */
+  plan: MontagePreview;
+  /** Bilder der Seite in der Reihenfolge ihrer `data-img`-Nummern; `pdf`: Seite eines PDF-Scans. */
+  images: (ImageRef & { pdf: boolean })[];
+  /** Herkunft je Zeile (Index wie `data-i`), null = nichts zu bearbeiten. */
+  origins: (EntryOrigin | null)[];
+  /** Tonspur je Quelle (Index wie die Gerätespuren der Seite); Quellen ohne eigene Spur fehlen. */
+  tracks: Record<string, number>;
+}
 
 /** Eine Zeile der Vorschau, in Teilen, damit sie wie im .docx eingefärbt werden kann. */
 export interface SessionTranscriptPreviewEntry {
@@ -1089,8 +1110,8 @@ export interface FeldspurApi {
   setProjectDataset(dataset: DatasetInfo): Promise<DatasetInfo>;
   /** Feldkalender der gewählten Tage als SVG-Grafik speichern (Dialog); Pfad oder null bei Abbruch. */
   saveFieldCalendar(days: CalendarDay[]): Promise<string | null>;
-  /** Ablauf der Montage zum Abspielen in der App (ohne zu rechnen). */
-  montagePreview(sessionId: string, realtime?: boolean): Promise<MontagePreview>;
+  /** Die Montage zum Ansehen in der App (Schritt „Ansehen“), ohne zu rechnen. */
+  watchPreview(sessionId: string, realtime?: boolean): Promise<WatchPreview>;
   /**
    * Auflösung und Bildrate des Montagevideos für das ganze Projekt wählen (Issue #250); ein Schritt für Rückgängig.
    * Antwort: die neue Ansicht von `sessionId` (mit `montageFormat`).
@@ -1295,7 +1316,7 @@ export const IPC = {
   projectOverview: "project:overview",
   setProjectDataset: "project:set-dataset",
   saveFieldCalendar: "project:save-field-calendar",
-  montagePreview: "export:montage",
+  watchPreview: "export:watch",
   setMontageFormat: "export:set-format",
   exportSession: "export:run",
   cancelExport: "export:cancel",

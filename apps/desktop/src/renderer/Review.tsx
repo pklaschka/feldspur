@@ -86,7 +86,7 @@ export function Review({
   /** Gewählte Quelle (ihre Einzelheiten zeigt die Detailleiste). */
   selected: string | null;
   onSelect: (id: string) => void;
-  /** Weiter zu „Ausgeben“. */
+  /** Weiter zu „Ansehen“. */
   onNext: () => void;
   /** Episoden für den Einsatz ein- oder ausschalten (nur auf Wunsch). */
   onEpisodes: (on: boolean) => void;
@@ -554,7 +554,7 @@ function Timeline({
       >
         {/* Wie in Abgleichen: „Weiter“ wird erst zum Hauptknopf, wenn nichts mehr zu prüfen ist. */}
         <Button variant={toCheck.length || unplaced.length ? "default" : "primary"} onClick={onNext}>
-          Weiter: Ausgeben →
+          Weiter: Ansehen →
         </Button>
       </StepHeader>
       {strip}
@@ -581,7 +581,7 @@ function Timeline({
             data-testid="all-checked"
           >
             <FlagMark size={11} className="mr-1.5 inline align-[-1px]" />
-            Alle Stellen geprüft · Weiter: Ausgeben →
+            Alle Stellen geprüft · Weiter: Ansehen →
           </Button>
         )}
         <span className="flex-1" />

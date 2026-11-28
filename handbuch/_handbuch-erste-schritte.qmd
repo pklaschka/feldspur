@@ -57,16 +57,17 @@ Prüfsumme fest. Verschiebe den Ordner mit den Aufnahmen deshalb nach dem Einsam
 
 ![Einsatzdaten mit weiteren Angaben für den Quellennachweis](bilder/einsatzdaten.png){#fig-einsatzdaten}
 
-### Die vier Schritte
+### Die fünf Schritte
 
-Oben im Fenster stehen die vier Arbeitsschritte eines Einsatzes. Kleine Hinweise an den Reitern zeigen, wo noch etwas
+Oben im Fenster stehen die fünf Arbeitsschritte eines Einsatzes. Kleine Hinweise an den Reitern zeigen, wo noch etwas
 offen ist. Die Wörter sind überall dieselben: "zu prüfen" heißt, Feldspur hat einen Vorschlag oder eine unsichere
 Lage, die du bestätigen solltest; "ohne Abgleich" und "ohne Zeit" heißen, dass noch etwas fehlt.
 
 1. **Einsammeln** (@sec-einsammeln): alle Dateien hineinziehen, Feldspur ordnet sie Geräten zu.
 2. **Abgleichen** (@sec-abgleichen): die Uhren der Geräte aufeinander abstimmen.
 3. **Durchsehen** (@sec-durchsehen): alles auf der Zeitachse prüfen, Tagebuch abtippen, mitschreiben.
-4. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll schreiben, dazu auf Wunsch Montagevideo, Viewer und LIESMICH.
+4. **Ansehen** (@sec-ansehen): Montage und Einsatztranskript vorab ansehen, wie sie nach der Ausgabe aussehen.
+5. **Ausgeben** (@sec-ausgeben): Einsatztranskript für MAXQDA, Dokumentvariablen und Begleitprotokoll schreiben, dazu auf Wunsch Montagevideo, Viewer und LIESMICH.
 
 Rechts öffnet sich zu jeder gewählten Quelle die **Detailleiste** mit Vorschau, Lage auf der Zeitachse,
 Zeitbelegen und Dateiangaben. Mit **Suchen** ([Strg+K]{.kbd}, auf dem Mac [⌘+K]{.kbd}) durchsuchst du Mitschrift, Notizen, Tagebuch,
