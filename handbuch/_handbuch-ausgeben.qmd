@@ -356,6 +356,7 @@ RO-Crate lässt sich beliebig genau ausfüllen. Feldspur schreibt bewusst nur ei
 | Jede Aufnahme | `CreateAction` | welches Gerät, wer, wann, welche Quellen |
 | Die Ausgabe | `CreateAction` | Feldspur mit Version, aus welchen Quellen welche Dateien wurden |
 | Personen | `Person` | Name, mit ORCID iD als Kennung, falls angegeben |
+| Der Projektordner | `Dataset`, darin je Einsatzordner ein `Dataset` | Angaben zum Datensatz fürs Projekt; je Einsatz Montage-ID, Tag der Ausgabe und Dateien (@sec-projektordner) |
 
 : Das Profil der Metadaten {#tbl-ro-crate-profil}
 
@@ -414,7 +415,7 @@ liest, erkennt an der ID ebenso, ob die vorliegende Fassung die zitierte ist.
 Wer aus der Ausgabe zitiert, muss einmal erklären, was das für ein Artefakt ist und woraus es besteht. Das
 Begleitprotokoll ist dafür zu fein: Es führt jede Datei einzeln. Für einen einzelnen Einsatz stehen die verdichteten
 Tabellen in der LIESMICH seines Ausgabeordners (@sec-liesmich). Für mehrere Einsätze zusammen gibt es die
-**Übersicht**. Du findest sie in der linken Leiste über den Einsätzen; sie gehört zum Projekt, nicht zu einem
+**Übersicht**, und als Ordner fürs Archiv den Projektordner (@sec-projektordner). Du findest sie in der linken Leiste über den Einsätzen; sie gehört zum Projekt, nicht zu einem
 einzelnen Einsatz.
 
 ![Die Übersicht: oben der Feldkalender, darunter die Kennwerte für den Methodenteil](bilder/uebersicht.png){#fig-uebersicht}
@@ -493,3 +494,33 @@ Handbuch als Quelle, @sec-zitieren) oder in eigenen Worten nacherzählen:
 
 Schneidest du nach Episoden, passt der Satz zum Montagevideo nicht: Dann laufen nur die Episoden in voller Länge, und
 die Zeit dazwischen wird zu einer kurzen Tafel.
+
+### Alle Einsätze ausgeben: der Projektordner {#sec-projektordner}
+
+Oben rechts in der Übersicht steht **Alle Einsätze ausgeben…**. Damit schreibt Feldspur alle Einsätze mit Häkchen in
+einen gemeinsamen Ordner, der nach dem Projekt heißt. Darin liegt je Einsatz ein Ordner, genau so, wie ihn der Schritt
+Ausgeben schreibt, und mit denselben Schaltern, die du dort zuletzt gewählt hast. Darüber liegt eine eigene
+`LIESMICH.html` mit
+
+- den Angaben zum Datensatz für das ganze Projekt (@sec-datensatz-angaben),
+- der Liste der Einsatzordner mit ihren Montage-IDs,
+- dem Feldkalender als Grafik,
+- den beiden Tabellen für den Methodenteil über alle Einsätze im Ordner.
+
+So zählen die Tabelle in deinem Text und der Ordner im Archiv dasselbe. Mit **Metadaten (RO-Crate, .json)** kommt eine
+`ro-crate-metadata.json` für das ganze Projekt dazu: der Projektordner als Datensatz, jeder Einsatzordner als Teil
+davon mit Montage-ID und Dateien (@sec-ro-crate).
+
+Ein Einsatz, der schon in seinem jetzigen Stand im Projektordner liegt, wird nicht neu ausgegeben. Nach einer
+Korrektur an einem Einsatz rechnet Feldspur also nur diesen neu. Wählst du später denselben Ordner oder den, in dem er
+liegt, schreibt Feldspur dort weiter. Einsätze ohne Quelle mit Uhrzeit bleiben draußen.
+
+Die gemeinsame LIESMICH gibt es nur, wenn jeder gewählte Einsatz in seinem jetzigen Stand im Ordner liegt. Hält die
+Prüfung der Originale einen Einsatz an, schlägt eine Ausgabe fehl oder brichst du ab, fehlt sie, und Feldspur nennt
+je Einsatz den Grund. **Trotzdem ausgeben** übergeht veränderte Originale für diesen einen Einsatz, **Im Einsatz
+ansehen** führt in seinen Schritt Ausgeben, **Erneut ausgeben** holt nach, was fehlt. Was schon im Ordner liegt, bleibt
+dabei unberührt.
+
+Zitiert wird weiter aus dem Ordner eines Einsatzes, mit seiner Montage-ID (@sec-stelle-zitieren). Der Projektordner
+fasst die Einsätze nur zusammen und trägt keine eigene ID. **Ordner prüfen…** (@sec-ordner-pruefen) prüft je einen
+Einsatzordner.

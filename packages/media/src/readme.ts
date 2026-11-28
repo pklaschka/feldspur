@@ -49,7 +49,7 @@ const esc = htmlEscape;
  * Tabelle mit Überschrift. Die Überschrift steht über dem Rollbereich, damit sie auf schmalen Bildschirmen stehen
  * bleibt; kurze Zellen (Zahlen, Endungen, Montage-ID) brechen nie um.
  */
-function tableHtml(t: MethodsTable, id: string): string {
+export function tableHtml(t: MethodsTable, id: string): string {
   const cell = (c: string) => `<td${c.length <= 24 ? ' class="nw"' : ""}>${esc(c)}</td>`;
   return (
     `<p class="cap" id="${id}">${esc(t.caption)}</p>` +
@@ -59,7 +59,8 @@ function tableHtml(t: MethodsTable, id: string): string {
   );
 }
 
-const CSS = `
+/** Gestaltung der LIESMICH; dieselbe trägt die LIESMICH des Projektordners (`project-folder.ts`). */
+export const README_CSS = `
 :root { --bg: #fcfbf7; --ink: #26241f; --muted: #5b5d53; --line: #d7dccf; --accent: #a4441f; --soft: #f4f5ef; }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #23201c; --ink: #efe8dc; --muted: #a59a89; --line: #4a433a; --accent: #e48f63; --soft: #292520; }
@@ -153,7 +154,7 @@ export function exportReadmeHtml(transcript: SessionTranscript, opts: ReadmeOpti
 <meta name="generator" content="Feldspur">
 <meta name="feldspur-montage-id" content="${esc(h.montageId)}">
 <title>LIESMICH · ${esc(title)}</title>
-<style>${CSS}</style>
+<style>${README_CSS}</style>
 </head>
 <body>
 <main>

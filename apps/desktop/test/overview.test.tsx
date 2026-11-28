@@ -6,7 +6,13 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import type { FeldspurApi, OverviewSession } from "../src/shared/api.ts";
+import type {
+  FeldspurApi,
+  OverviewSession,
+  ProjectExportProgress,
+  ProjectExportRequest,
+  ProjectExportResult,
+} from "../src/shared/api.ts";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -64,7 +70,23 @@ afterEach(() => {
 
 /** Übersicht mit erfundener App-Schnittstelle zeigen. */
 async function openOverview(sessions: OverviewSession[], researchers: string[] = []) {
+  /** „Alle Einsätze ausgeben…“ bleibt offen, bis der Test es mit `finishProject` beendet. */
+  let finishProject: (r: ProjectExportResult | null) => void = () => {};
+  let progress: (p: ProjectExportProgress) => void = () => {};
   const api = {
+    onExportProgress: vi.fn(() => () => {}),
+    onProjectExportProgress: vi.fn((cb: (p: ProjectExportProgress) => void) => {
+      progress = cb;
+      return () => {};
+    }),
+    exportProject: vi.fn(
+      (_ids: string[], _opts: ProjectExportRequest) =>
+        new Promise<ProjectExportResult | null>((done) => {
+          finishProject = done;
+        }),
+    ),
+    cancelProjectExport: vi.fn(async () => {}),
+    openProjectReadme: vi.fn(async () => true),
     projectOverview: vi.fn(async () => ({
       sessions,
       citation: { version: "0.4.0", released: "2026-12-01", versionDoi: null },
@@ -83,12 +105,24 @@ async function openOverview(sessions: OverviewSession[], researchers: string[] =
   (window as unknown as { feldspur: Partial<FeldspurApi> }).feldspur = api;
   vi.resetModules();
   const { Overview } = await import("../src/renderer/Overview.tsx");
+  const { ExportProvider } = await import("../src/renderer/exportState.tsx");
   const onOpen = vi.fn((_id: string, _step?: string, _atMs?: number) => {});
   const host = document.body.appendChild(document.createElement("div"));
   const root = createRoot(host);
-  await act(async () => root.render(<Overview name="Rundgang" onOpen={onOpen} />));
+  await act(async () =>
+    root.render(
+      <ExportProvider>
+        <Overview name="Rundgang" onOpen={onOpen} />
+      </ExportProvider>,
+    ),
+  );
   unmount = () => root.unmount();
-  return { api, onOpen };
+  return {
+    api,
+    onOpen,
+    progress: (p: ProjectExportProgress) => act(async () => progress(p)),
+    finishProject: (r: ProjectExportResult | null) => act(async () => finishProject(r)),
+  };
 }
 const text = (id: string) => document.querySelector(`[data-testid=${id}]`)?.textContent ?? "";
 const button = (label: string) =>
@@ -347,5 +381,101 @@ describe("Übersicht des Projekts", () => {
     expect(preview.querySelector(".settle-once")).not.toBeNull();
     expect(card.textContent).not.toContain("Für den Anfang genügen");
     expect(button("Speichern")!.disabled).toBe(true);
+  });
+});
+
+describe("Alle Einsätze ausgeben", () => {
+  /** Ergebnis eines Laufs über die Einsätze 1 und 2; `zweiter` sagt, was aus dem zweiten wurde. */
+  const ergebnis = (zweiter: Partial<ProjectExportResult["sessions"][number]> = {}): ProjectExportResult => {
+    const second = {
+      sessionId: "s2",
+      title: "Testmarkt 2",
+      date: "2026-09-15",
+      outcome: "written" as const,
+      ...zweiter,
+    };
+    const complete = second.outcome === "written" || second.outcome === "unchanged";
+    return {
+      dir: "/tmp/Rundgang",
+      sessions: [{ sessionId: "s1", title: "Testmarkt 1", date: "2026-09-14", outcome: "unchanged" }, second],
+      complete,
+      files: complete ? ["LIESMICH.html"] : [],
+      cancelled: false,
+    };
+  };
+
+  it("gibt die Einsätze mit Häkchen aus, mit den Schaltern aus dem Schritt Ausgeben", async () => {
+    // Angenommen: drei Einsätze, einer ohne Quelle mit Uhrzeit; im Schritt Ausgeben ist das Video abgewählt
+    localStorage.setItem("feldspur.export-options", JSON.stringify({ video: false, viewer: false, roCrate: true }));
+    const leer = einsatz(3, { output: { ...einsatz(3).output, durationMs: 0 }, exported: "none" });
+    const { api } = await openOverview([einsatz(1), einsatz(2), leer]);
+    expect(button("Alle Einsätze ausgeben…")).toBeTruthy();
+    // Wenn: der erste abgewählt und dann ausgegeben wird
+    await act(async () => checkbox("14.09.2026 Testmarkt 1")!.click());
+    await act(async () => button("1 von 3 Einsätzen ausgeben…")!.click());
+    // Dann: geht nur der zweite in den Projektordner, ohne Video und mit Metadaten
+    expect(api.exportProject).toHaveBeenCalledOnce();
+    expect(api.exportProject.mock.calls[0]![0]).toEqual(["s2"]);
+    expect(api.exportProject.mock.calls[0]![1]).toMatchObject({ video: false, roCrate: true, realtime: true });
+  });
+
+  it("zeigt, welcher Einsatz an der Reihe ist, und lässt sich abbrechen", async () => {
+    const { api, progress } = await openOverview([einsatz(1), einsatz(2)]);
+    // Wenn: der Lauf beginnt, dann sperrt der Knopf und die Karte sagt, was geschieht
+    await act(async () => button("Alle Einsätze ausgeben…")!.click());
+    expect(button("Gibt aus…")!.disabled).toBe(true);
+    expect(text("project-export")).toContain("Projektordner wird geschrieben");
+    expect(text("project-export")).toContain("dazu Montagevideo, Viewer und LIESMICH");
+    // Wenn: der zweite Einsatz an der Reihe ist
+    await progress({ index: 1, total: 2, sessionId: "s2" });
+    expect(text("project-export-at")).toBe("Einsatz 2 von 2 · Testmarkt 2 · 15.09.2026");
+    // Wenn: abgebrochen wird, dann gilt das dem ganzen Lauf
+    await act(async () => button("Abbrechen")!.click());
+    expect(api.cancelProjectExport).toHaveBeenCalledOnce();
+    expect(text("project-export")).toContain("Bricht ab…");
+  });
+
+  it("meldet den fertigen Projektordner, öffnet seine LIESMICH und zählt die Übersicht neu", async () => {
+    const { api, finishProject } = await openOverview([einsatz(1), einsatz(2)]);
+    await act(async () => button("Alle Einsätze ausgeben…")!.click());
+    // Wenn: der Lauf vollständig endet
+    await finishProject(ergebnis());
+    // Dann: steht das Ergebnis je Einsatz da, und die Übersicht hat neu gezählt
+    expect(text("project-export-result")).toContain("Projektordner geschrieben");
+    expect(text("project-export")).toContain("1 Einsatz neu ausgegeben, 1 unverändert übernommen.");
+    expect(text("project-export-sessions")).toContain("14.09.2026 Testmarkt 1Unverändert, nicht neu ausgegeben");
+    expect(api.projectOverview).toHaveBeenCalledTimes(2);
+    // Wenn: die LIESMICH geöffnet und die Meldung geschlossen wird
+    await act(async () => button("LIESMICH öffnen")!.click());
+    expect(api.openProjectReadme).toHaveBeenCalledOnce();
+    await act(async () => button("Schließen")!.click());
+    expect(document.querySelector("[data-testid=project-export]")).toBeNull();
+  });
+
+  it("sagt, was fehlt, wenn ein Einsatz angehalten wurde, und gibt ihn auf Wunsch trotzdem aus", async () => {
+    const { api, onOpen, finishProject } = await openOverview([einsatz(1), einsatz(2)]);
+    await act(async () => button("Alle Einsätze ausgeben…")!.click());
+    // Wenn: die Prüfung der Originale den zweiten Einsatz anhält
+    await finishProject(ergebnis({ outcome: "held", blocking: false, detail: "1 Original ist verändert oder fehlt." }));
+    // Dann: ist der Ordner nicht vollständig, und die Zeile nennt den Grund
+    expect(text("project-export-result")).toBe("Der Projektordner ist noch nicht vollständig");
+    expect(text("project-export-sessions")).toContain("Angehalten: 1 Original ist verändert oder fehlt.");
+    // Wenn: der Sprung in den Einsatz gewählt wird
+    await act(async () => button("Im Einsatz ansehen")!.click());
+    expect(onOpen).toHaveBeenCalledWith("s2", "export");
+    // Wenn: „Trotzdem ausgeben“ gewählt wird, dann läuft es in denselben Ordner, nur für diesen Einsatz ohne Halt
+    await act(async () => button("Trotzdem ausgeben")!.click());
+    expect(api.exportProject.mock.calls[1]![0]).toEqual(["s1", "s2"]);
+    expect(api.exportProject.mock.calls[1]![1]).toMatchObject({ dir: "/tmp/Rundgang", accept: ["s2"] });
+  });
+
+  it("bietet bei fehlenden Originalen kein „Trotzdem ausgeben“ an", async () => {
+    const { finishProject } = await openOverview([einsatz(1), einsatz(2)]);
+    await act(async () => button("Alle Einsätze ausgeben…")!.click());
+    await finishProject(
+      ergebnis({ outcome: "held", blocking: true, detail: "1 Original fehlt oder ist nicht lesbar." }),
+    );
+    expect(button("Trotzdem ausgeben")).toBeUndefined();
+    expect(button("Im Einsatz ansehen")).toBeTruthy();
   });
 });

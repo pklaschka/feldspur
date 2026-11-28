@@ -14,3 +14,25 @@ export function spanText(sessions: OverviewSession[]): string {
   const days = first === last ? germanDate(first) : `${germanDate(first)} bis ${germanDate(last)}`;
   return `${count(sessions.length, "Einsatz", "Einsätze")} · ${days}`;
 }
+
+/**
+ * Was „Alle Einsätze ausgeben…“ je Einsatz schreibt, in einem Satz: immer Einsatztranskript, Dokumentvariablen und
+ * Begleitprotokoll, dazu das, was im Schritt „Ausgeben“ gewählt ist.
+ */
+export function settingsText(o: {
+  video: boolean;
+  viewer: boolean;
+  readme: boolean;
+  roCrate: boolean;
+  originals: boolean;
+}): string {
+  const extra = [
+    o.video && "Montagevideo",
+    o.video && o.viewer && "Viewer",
+    o.readme && "LIESMICH",
+    o.roCrate && "Metadaten (RO-Crate)",
+    o.originals && "Kopien der Originale",
+  ].filter((x): x is string => !!x);
+  const list = extra.length > 1 ? `${extra.slice(0, -1).join(", ")} und ${extra.at(-1)}` : extra[0];
+  return `Je Einsatz ein Ordner mit Einsatztranskript, Dokumentvariablen und Begleitprotokoll${list ? `, dazu ${list}` : ""}. Die Auswahl stammt aus dem Schritt „Ausgeben“.`;
+}

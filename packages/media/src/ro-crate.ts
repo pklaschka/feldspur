@@ -14,7 +14,17 @@
  * Einordnung: `exportSession` (`export.ts`) schreibt die Datei nach der LIESMICH und vor der Prüfsummenliste; die
  * Beschreibung kommt aus `describeExport` (`dataset.ts`).
  */
-import type { ExportDescription } from "./dataset.ts";
+import {
+  cleanDataset,
+  fileRole,
+  keywordList,
+  licenseUrl,
+  parsePeople,
+  README_NAME,
+  RO_CRATE_NAME,
+  type ExportDescription,
+} from "./dataset.ts";
+import type { ProjectFolder } from "./project-folder.ts";
 
 /** Adresse des Profils: der Abschnitt im Handbuch, der es beschreibt (dauerhafte Adresse). */
 export const PROFILE_URL = "https://purl.archive.org/feldspur#sec-ro-crate";
@@ -81,8 +91,8 @@ function slug(s: string): string {
   );
 }
 
-/** Die Metadaten als JSON-Text (zwei Leerzeichen Einrückung, Zeilenende am Schluss). */
-export function roCrateJson(d: ExportDescription, opts: RoCrateOptions): string {
+/** Ein Graph im Aufbau: Knoten anhängen, jede Kennung nur einmal. */
+function newGraph() {
   const graph: Node[] = [];
   const ids = new Set<string>();
   /** Einen Knoten anhängen; gleiche Kennung nur einmal (etwa dieselbe Person als Urheberin und am Gerät). */
@@ -98,6 +108,21 @@ export function roCrateJson(d: ExportDescription, opts: RoCrateOptions): string 
       "@type": "Person",
       name: p.name,
     });
+  return { graph, add, person };
+}
+
+/** Der fertige Graph als JSON-Text (zwei Leerzeichen Einrückung, Zeilenende am Schluss). */
+function crateText(graph: Node[]): string {
+  const crate = {
+    "@context": ["https://w3id.org/ro/crate/1.2/context", { sha256: "https://w3id.org/ro/terms/workflow-run#sha256" }],
+    "@graph": graph,
+  };
+  return JSON.stringify(crate, null, 2) + "\n";
+}
+
+/** Die Metadaten einer Ausgabe als JSON-Text. */
+export function roCrateJson(d: ExportDescription, opts: RoCrateOptions): string {
+  const { graph, add, person } = newGraph();
 
   graph.push({
     "@id": "ro-crate-metadata.json",
@@ -225,9 +250,105 @@ export function roCrateJson(d: ExportDescription, opts: RoCrateOptions): string 
     result: outputs,
   });
 
-  const crate = {
-    "@context": ["https://w3id.org/ro/crate/1.2/context", { sha256: "https://w3id.org/ro/terms/workflow-run#sha256" }],
-    "@graph": graph,
-  };
-  return JSON.stringify(crate, null, 2) + "\n";
+  return crateText(graph);
+}
+
+/**
+ * Metadaten des Projektordners (Issue #209): Der Ordner ist der Datensatz mit den Angaben des Projekts, jeder
+ * Einsatzordner ein Teil (`Dataset`) mit Montage-ID, Tag der Ausgabe und seinen Dateien. Liegen im Einsatzordner eigene
+ * Metadaten, ist er als eigenes RO-Crate gekennzeichnet (`conformsTo`, `subjectOf`); Quellen, Geräte und Prüfsummen
+ * stehen dann dort und werden hier nicht wiederholt. Kopien der Originale führt nur der Einsatzordner einzeln.
+ */
+export function projectRoCrateJson(p: ProjectFolder, opts: Pick<RoCrateOptions, "exportedAt" | "software">): string {
+  const { graph, add, person } = newGraph();
+  graph.push({
+    "@id": RO_CRATE_NAME,
+    "@type": "CreativeWork",
+    conformsTo: ref("https://w3id.org/ro/crate/1.2"),
+    about: ref("./"),
+  });
+  const root: Node = { "@id": "./", "@type": "Dataset" };
+  graph.push(root);
+  add({ "@id": PROFILE_URL, "@type": ["CreativeWork", "Profile"], name: "Feldspur-Ausgabe", version: PROFILE_VERSION });
+
+  const d = cleanDataset(p.dataset);
+  const creators = parsePeople(d.creators);
+  const contributors = parsePeople(d.contributors);
+  const keywords = keywordList(d.keywords);
+  root.name = d.title ?? p.name;
+  if (d.description) root.description = d.description;
+  root.datePublished = opts.exportedAt;
+  root.conformsTo = ref(PROFILE_URL);
+  root.author = (creators.length ? creators : p.researchers.map((name) => ({ name }))).map(person);
+  if (contributors.length) root.contributor = contributors.map(person);
+  if (keywords.length) root.keywords = keywords;
+  if (d.license)
+    root.license = add({ "@id": licenseUrl(d.license) ?? "#lizenz", "@type": "CreativeWork", name: d.license });
+  if (d.access) root.conditionsOfAccess = d.access;
+  if (d.partOf)
+    root.isPartOf = /^https?:\/\/\S+$/.test(d.partOf)
+      ? ref(d.partOf)
+      : add({ "@id": "#gehoert-zu", "@type": "CreativeWork", name: d.partOf });
+  const dates = p.sessions.map((s) => s.numbers.date).sort();
+  if (dates.length) root.temporalCoverage = dates[0] === dates.at(-1) ? dates[0] : `${dates[0]}/${dates.at(-1)}`;
+  const places = [...new Set(p.sessions.map((s) => s.place).filter(Boolean))];
+  if (places.length)
+    root.contentLocation = places.map((name) => add({ "@id": `#ort-${slug(name)}`, "@type": "Place", name }));
+
+  const readme = add({
+    "@id": README_NAME,
+    "@type": "File",
+    name: README_NAME,
+    description: "LIESMICH des Projektordners: Einsätze, Feldkalender und Tabellen für den Methodenteil",
+    encodingFormat: "text/html",
+  });
+  const folders = p.sessions.map((s) => {
+    const n = s.numbers;
+    const dir = `${encodeURI(s.folder)}/`;
+    const files = s.files
+      .filter((f) => !f.startsWith("Originale/"))
+      .map((f) => {
+        const type = mediaType(f);
+        const role = fileRole(f);
+        return add({
+          "@id": dir + encodeURI(f),
+          "@type": "File",
+          name: f,
+          ...(role ? { description: role } : {}),
+          ...(type ? { encodingFormat: type } : {}),
+        });
+      });
+    return add({
+      "@id": dir,
+      "@type": "Dataset",
+      name: `${n.title} · ${n.date}`,
+      description: `Ausgabe des Einsatzes, Montage-ID ${n.output.montageId} (${n.output.mode})`,
+      identifier: n.output.montageId,
+      datePublished: s.exportedAt,
+      temporalCoverage: n.date,
+      ...(s.place ? { contentLocation: ref(`#ort-${slug(s.place)}`) } : {}),
+      // Ein Einsatzordner mit eigenen Metadaten ist selbst ein RO-Crate.
+      ...(s.files.includes(RO_CRATE_NAME)
+        ? { conformsTo: ref("https://w3id.org/ro/crate"), subjectOf: ref(dir + RO_CRATE_NAME) }
+        : {}),
+      hasPart: files,
+    });
+  });
+  root.hasPart = [readme, ...folders];
+
+  const software = add({
+    "@id": opts.software?.url ?? "https://purl.archive.org/feldspur/repo",
+    "@type": "SoftwareApplication",
+    name: "Feldspur",
+    ...(opts.software ? { version: opts.software.version } : {}),
+  });
+  add({
+    "@id": "#ausgabe",
+    "@type": "CreateAction",
+    name: "Ausgabe des Projektordners mit Feldspur",
+    instrument: software,
+    endTime: opts.exportedAt,
+    result: [readme, ...folders],
+  });
+  return crateText(graph);
 }

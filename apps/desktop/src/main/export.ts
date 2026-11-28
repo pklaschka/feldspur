@@ -55,9 +55,31 @@ const CHUNK = 60;
 let running: string | null = null;
 let controller: AbortController | null = null;
 
+/**
+ * „Alle Einsätze ausgeben…“ läuft (`project-export.ts`): eine Folge einzelner Ausgaben. Zwischen zweien läuft kurz
+ * keine, trotzdem darf weder das Projekt gewechselt noch eine andere Ausgabe begonnen werden.
+ */
+let batch: { aborted: boolean } | null = null;
+
 /** Läuft gerade eine Ausgabe? Dann nicht schließen, ohne zu fragen. */
 export function exportRunning(): boolean {
-  return running !== null;
+  return running !== null || batch !== null;
+}
+
+/**
+ * Eine Folge von Ausgaben beginnen. `aborted` sagt, ob inzwischen abgebrochen wurde (dann folgt kein weiterer
+ * Einsatz), `end` gibt die App wieder frei.
+ */
+export function beginBatch(): { aborted: () => boolean; end: () => void } {
+  if (exportRunning()) throw new Error("Es läuft schon eine Ausgabe. Bitte warten, bis sie fertig ist.");
+  const b = { aborted: false };
+  batch = b;
+  return {
+    aborted: () => b.aborted,
+    end: () => {
+      if (batch === b) batch = null;
+    },
+  };
 }
 
 /** Einsatz, für den gerade ausgegeben wird (null = keine Ausgabe). */
@@ -333,6 +355,7 @@ export function montageCacheRoot(): string {
 
 /** Laufende Ausgabe abbrechen, welche es auch ist: beim Schließen der App. */
 export function abortExport(): void {
+  if (batch) batch.aborted = true;
   controller?.abort();
 }
 
@@ -343,7 +366,10 @@ function safeSend(wc: WebContents, channel: string, ...args: unknown[]): void {
 
 /** Laufende Ausgabe dieses Einsatzes abbrechen (sonst nichts). */
 export function cancelExport(sessionId: string): void {
-  if (running === sessionId) controller?.abort();
+  if (running !== sessionId) return;
+  // Wer mitten in „Alle Einsätze ausgeben…“ abbricht, meint das Ganze.
+  if (batch) batch.aborted = true;
+  controller?.abort();
 }
 
 /**

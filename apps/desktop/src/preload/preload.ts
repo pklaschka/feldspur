@@ -14,6 +14,7 @@ import {
   type FeldspurApi,
   type ImportProgress,
   type OriginalsProgress,
+  type ProjectExportProgress,
   type FolderCheckProgress,
 } from "../shared/api.ts";
 
@@ -129,6 +130,14 @@ const api: FeldspurApi = {
     ipcRenderer.on(IPC.exportProgress, listener);
     return () => ipcRenderer.removeListener(IPC.exportProgress, listener);
   },
+  exportProject: (ids, opts) => ipcRenderer.invoke(IPC.exportProject, ids, opts),
+  cancelProjectExport: () => ipcRenderer.invoke(IPC.cancelProjectExport),
+  onProjectExportProgress: (cb) => {
+    const listener = (_e: unknown, p: ProjectExportProgress) => cb(p);
+    ipcRenderer.on(IPC.projectExportProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.projectExportProgress, listener);
+  },
+  openProjectReadme: () => ipcRenderer.invoke(IPC.openProjectReadme),
   // Anfrage und Antwort gehören über `id` zusammen; der Hauptprozess wartet darauf (`askRenderer` in main/export.ts).
   onOverlayRequest: (render) => {
     const listener = (_e: unknown, id: number, timeline: unknown, frames: unknown[], format: unknown) => {

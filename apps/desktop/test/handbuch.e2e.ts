@@ -814,6 +814,38 @@ await kapitel("ausgeben", async () => {
     renameSync(`${ausgabe}-verschoben`, ausgabe);
   });
 
+  await ablauf("Alle Einsätze in einen Projektordner ausgeben", async () => {
+    // Angenommen: ein leerer Ordner fürs Archiv
+    const archiv = join(dir, "Archiv");
+    mkdirSync(archiv);
+    await app.evaluate(({ dialog }, f) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [f] })) as typeof dialog.showOpenDialog;
+    }, archiv);
+    await knopf("Übersicht").click();
+    // Wenn: alle Einsätze ausgegeben werden
+    await siehe("Alle Einsätze ausgeben…", page.getByTestId("overview-export-all"));
+    await page.getByTestId("overview-export-all").click();
+    const ergebnis = page.getByTestId("project-export-result");
+    await ergebnis.waitFor({ timeout: 300_000 });
+    // Hält die Prüfung der Originale einen Einsatz an, nennt die Zeile den Weg weiter
+    const trotzdem = page.getByTestId("project-export-sessions").getByRole("button", { name: /^Trotzdem ausgeben/ });
+    if (await trotzdem.isVisible()) {
+      await siehe("Trotzdem ausgeben", trotzdem);
+      await siehe("Im Einsatz ansehen", page.getByRole("button", { name: /^Im Einsatz ansehen/ }));
+      await siehe(
+        "Erneut ausgeben",
+        page.getByTestId("project-export").getByRole("button", { name: "Erneut ausgeben" }),
+      );
+      await trotzdem.click();
+      await ergebnis.getByText("Projektordner geschrieben").waitFor({ timeout: 300_000 });
+    }
+    // Dann: liegt im Ordner des Projekts die gemeinsame LIESMICH über dem Ordner des Einsatzes
+    const ordner = join(archiv, "Rundgang");
+    const inhalt = existsSync(ordner) ? readdirSync(ordner) : [];
+    if (!inhalt.includes("LIESMICH.html") || !inhalt.some((f) => f.startsWith("Feldtag_")))
+      throw new Error(`Projektordner unvollständig: ${inhalt.join(", ")}`);
+  });
+
   await ablauf("Eine Quelle weit weg vom Datum fehlt im Feldkalender", async () => {
     // Angenommen: die Uhr einer Kamera ist auf 2019 zurückgesprungen
     const weit = join(dir, "Falsche Uhr");
