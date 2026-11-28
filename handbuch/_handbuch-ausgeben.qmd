@@ -264,17 +264,27 @@ Begleitprotokoll.
 
 Unten in der **Übersicht** trägst du einmal fürs Projekt ein, was ein Archiv oder spätere Leser\*innen über das
 Material wissen sollte: **Titel des Datensatzes**, **Urheber\*innen**, **Mitwirkende**, **Beschreibung**, **Schlagworte**, **Lizenz**,
-**Zugang** und **Gehört zu** (etwa das Forschungsprojekt mit seiner DOI). Alles ist freiwillig. Personen stehen je
-Zeile, eine ORCID iD darf dahinter stehen; Schlagworte trennst du mit Komma. **Speichern** übernimmt die Angaben, und
-wie jede Änderung lässt sich das rückgängig machen.
+**Zugang** und **Gehört zu** (etwa das Forschungsprojekt mit seiner DOI). Alles ist freiwillig. **Speichern**
+übernimmt die Angaben, und wie jede Änderung lässt sich das rückgängig machen.
+
+Die Karte hat drei Gruppen: **Inhalt**, **Personen** und **Nutzung**. Bei **Urheber\*innen** und **Mitwirkende** hat
+jede Person eine Zeile mit **Name** und **ORCID iD**; **Person hinzufügen** legt eine weitere an, das Kreuz am Ende
+der Zeile entfernt sie. Die ORCID iD ist freiwillig. Du kannst sie auch als Adresse oder ohne Bindestriche
+einfügen; Feldspur schreibt sie dann in vier Blöcken. Sind es nicht 16 Zeichen, steht das unter der Zeile, und die
+iD wird nicht übernommen. Stimmt nur die Prüfziffer nicht, bekommst du einen Hinweis und die iD bleibt stehen. Unter
+**Forschende an den Geräten** stehen die Forschenden des Projekts; ein Klick trägt sie als Urheber\*in ein.
+**Schlagworte** schließt du mit Enter oder Komma ab, die Rücktaste oder das Kreuz am Schlagwort nimmt eines wieder
+weg. Unter **Lizenz** und **Zugang** stehen Vorschläge: Ein Klick trägt den Vorschlag ein, ein zweiter nimmt ihn
+wieder heraus; eigener Text geht in beiden Feldern weiterhin.
 
 Jede Ausgabe des Projekts nennt diese Angaben im Kopf von Einsatztranskript und Viewer, in der LIESMICH und, wenn gewählt, in den Metadaten. Weil sie im Kopf stehen, ändert eine geänderte Angabe den dritten Block der Montage-ID (@sec-montage-id); das Video bleibt gültig. Soll ein Einsatz
 etwas anderes sagen, etwa einen eigenen Titel oder einen engeren Zugang, trägst du es in seinen **Einsatzdaten** unter
 **Angaben zum Datensatz für diesen Einsatz** ein. Ein Eintrag dort ersetzt das ganze Feld nur für diesen Einsatz;
-leere Felder gelten wie im Projekt, das Projekt steht grau darin.
+leere Felder gelten wie im Projekt, das Projekt steht grau darin. Bei den Personen steht dann „Wie im Projekt“ mit
+den Namen, bis du für den Einsatz jemanden einträgst.
 
 Feldspur gibt nichts vor, was nach „offen“ klingt. Beim **Zugang** stehen Vorschläge zur Auswahl, aber keiner ist
-vorbelegt. Feldmaterial enthält oft Gesichter, Stimmen und Namen; ob und für wen es zugänglich ist, entscheidest du.
+vorgewählt. Feldmaterial enthält oft Gesichter, Stimmen und Namen; ob und für wen es zugänglich ist, entscheidest du.
 Vorbelegt sind nur zwei Felder, und nur, solange sie leer sind: Ohne Titel heißt der Datensatz nach Einsatz und
 Datum, ohne **Urheber\*innen** gelten die Forschenden an den Geräten des Einsatzes. Ändern sich die Angaben, steht
 eine frühere Ausgabe als veraltet da.
