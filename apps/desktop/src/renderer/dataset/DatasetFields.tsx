@@ -1,84 +1,202 @@
 /**
  * Die Felder der Angaben zum Datensatz (Issue #206), gemeinsam für die Übersicht (Angaben fürs Projekt,
  * `overview/DatasetCard.tsx`) und die Einsatzdaten (Angaben, die nur für einen Einsatz gelten, `SessionDetails.tsx`).
- * Welche Felder es gibt, steht in `packages/media/src/dataset.ts`; hier nur, wie sie aussehen.
+ * Welche Felder es gibt, steht in `packages/media/src/dataset.ts`; hier, wie sie gegliedert sind und aussehen.
+ *
+ * Drei Gruppen: Inhalt, Personen, Nutzung. Auf breiten Flächen steht die Überschrift der Gruppe links neben ihren
+ * Feldern, auf schmalen (Dialog der Einsatzdaten) darüber; das entscheidet die Breite der Fläche, nicht der Aufrufer.
  */
-import { useId } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import type { DatasetInfo } from "@feldspur/core/model";
 import { ACCESS_SUGGESTIONS, DATASET_FIELDS, LICENSE_SUGGESTIONS } from "@feldspur/media/dataset";
 import { cx } from "../ui.tsx";
+import { KeywordField } from "./KeywordField.tsx";
+import { HINT, LABEL, PLACEHOLDER, Suggestion } from "./parts.tsx";
+import { PeopleField } from "./PeopleField.tsx";
 
 type Key = keyof DatasetInfo;
 
-/** Hinweis unter dem Feld; mehrzeilige Felder haben eine Zeile je Person oder Absatz. */
-const FIELD: Record<Key, { label?: string; hint?: string; rows?: number; wide?: boolean; list?: readonly string[] }> = {
-  // In den Einsatzdaten steht darüber schon der Titel des Einsatzes: hier deshalb ausgeschrieben.
-  title: { label: "Titel des Datensatzes", wide: true },
-  creators: { hint: "Eine Person je Zeile, die ORCID iD darf dahinter stehen.", rows: 2 },
-  contributors: { hint: "Eine Person je Zeile, wie oben.", rows: 2 },
-  description: { hint: "Was im Material zu sehen und zu hören ist, wo und wozu es entstand.", rows: 3, wide: true },
-  keywords: { hint: "Durch Komma getrennt." },
-  license: { hint: "Name oder Adresse, z. B. CC BY 4.0.", list: LICENSE_SUGGESTIONS },
-  access: { hint: "Wer die Daten bekommt und unter welchen Bedingungen.", list: ACCESS_SUGGESTIONS },
-  partOf: { hint: "Projekt, Studie oder Sammlung, gern mit DOI oder Adresse." },
-};
+const LABELS = Object.fromEntries(DATASET_FIELDS.map((f) => [f.key, f.label])) as Record<Key, string>;
+
+/** Überschrift einer Gruppe mit ihren Feldern; die Linie darüber trennt sie von der vorigen. */
+function Group({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="grid gap-x-8 gap-y-3 border-t border-line py-4 last:pb-0 @[52rem]:grid-cols-[10rem_minmax(0,44rem)] @[52rem]:py-5">
+      <h3 className="text-[0.95rem] font-semibold">{title}</h3>
+      <div className="grid gap-4">{children}</div>
+    </section>
+  );
+}
+
+/** Ein Feld mit Beschriftung darüber und Hinweis darunter. */
+function Field({
+  id,
+  label,
+  hint,
+  children,
+  className,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cx("grid content-start gap-1", className)}>
+      <label htmlFor={id} className={LABEL}>
+        {label}
+      </label>
+      {children}
+      {hint && (
+        <span id={`${id}-hint`} className={HINT}>
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
 
 /**
- * Alle Felder in zwei Spalten (auf schmalen Flächen in einer). `placeholder` zeigt je Feld, was gilt, solange das Feld
- * leer bleibt: in der Übersicht die Vorbelegung, in den Einsatzdaten der Wert aus dem Projekt.
+ * Alle Felder. `placeholder` zeigt je Feld, was gilt, solange es leer bleibt: in der Übersicht die Vorbelegung, in den
+ * Einsatzdaten der Wert aus dem Projekt (bei den Personen als Zeile „Wie im Projekt: …“).
  */
 export function DatasetFields({
   value,
   onChange,
   placeholder = {},
-  columns = 2,
+  researchers = [],
 }: {
   value: DatasetInfo;
   onChange: (next: DatasetInfo) => void;
   placeholder?: Partial<Record<Key, string>>;
-  /** Spalten auf breiten Flächen; im Dialog der Einsatzdaten eine. */
-  columns?: 1 | 2;
+  /** Forschende an den Geräten: Vorschläge für „Urheber*innen“ und, ohne Eintrag, ohnehin die Urheber*innen. */
+  researchers?: readonly string[];
 }) {
   const id = useId();
+  const set = (key: Key) => (text: string) => onChange({ ...value, [key]: text });
+  /** Was ein einfaches Eingabefeld braucht. */
+  const text = (key: Key, hint: boolean) => ({
+    id: `${id}-${key}`,
+    "data-field": key,
+    value: value[key] ?? "",
+    placeholder: placeholder[key],
+    "aria-describedby": hint ? `${id}-${key}-hint` : undefined,
+    onChange: (e: { target: { value: string } }) => set(key)(e.target.value),
+    className: PLACEHOLDER,
+  });
   return (
     <div className="@container">
-      <div className={cx("grid gap-x-5 gap-y-3.5", columns === 2 && "@[44rem]:grid-cols-2")}>
-        {DATASET_FIELDS.map(({ key, label }) => {
-          const f = FIELD[key];
-          const common = {
-            value: value[key] ?? "",
-            placeholder: placeholder[key],
-            onChange: (e: { target: { value: string } }) => onChange({ ...value, [key]: e.target.value }),
-            "data-field": key,
-            // Vorgaben kursiv und blass, damit sie sich von Eingetragenem unterscheiden.
-            className: "placeholder:text-muted placeholder:italic",
-          };
+      <Group title="Inhalt">
+        {/* In den Einsatzdaten steht darüber schon der Titel des Einsatzes: hier deshalb ausgeschrieben. */}
+        <Field id={`${id}-title`} label="Titel des Datensatzes">
+          <input {...text("title", false)} />
+        </Field>
+        <Field
+          id={`${id}-description`}
+          label={LABELS.description}
+          hint="Was zu sehen und zu hören ist, wo und wozu es entstand."
+        >
+          <textarea rows={3} {...text("description", true)} className={cx("resize-y", PLACEHOLDER)} />
+        </Field>
+        <Field id={`${id}-keywords`} label={LABELS.keywords} hint="Enter oder Komma schließt ein Schlagwort ab.">
+          <KeywordField
+            id={`${id}-keywords`}
+            value={value.keywords}
+            onChange={set("keywords")}
+            placeholder={placeholder.keywords}
+            describedBy={`${id}-keywords-hint`}
+          />
+        </Field>
+        <Field id={`${id}-partOf`} label={LABELS.partOf} hint="Projekt, Studie oder Sammlung, gern mit DOI.">
+          <input {...text("partOf", true)} />
+        </Field>
+      </Group>
+      <Group title="Personen">
+        <PeopleField
+          field="creators"
+          label={LABELS.creators}
+          value={value.creators}
+          onChange={set("creators")}
+          inherited={placeholder.creators}
+          emptyHint="Ohne Eintrag gelten die Forschenden an den Geräten des Einsatzes."
+          suggestions={researchers}
+          suggestionsLabel="Forschende an den Geräten"
+        />
+        <PeopleField
+          field="contributors"
+          label={LABELS.contributors}
+          hint="Wer beigetragen hat, ohne Urheber*in zu sein."
+          value={value.contributors}
+          onChange={set("contributors")}
+          inherited={placeholder.contributors}
+        />
+      </Group>
+      <Group title="Nutzung">
+        <div className="grid gap-x-6 gap-y-4 @[40rem]:grid-cols-2">
+          <Choices
+            id={`${id}-license`}
+            label={LABELS.license}
+            hint="Name oder Adresse der Lizenz."
+            options={LICENSE_SUGGESTIONS}
+            input={text("license", true)}
+            onPick={set("license")}
+          />
+          {/* Ohne Vorauswahl: Feldmaterial ist oft sensibel, den Zugang legt nur fest, wer ihn einträgt. */}
+          <Choices
+            id={`${id}-access`}
+            label={LABELS.access}
+            hint="Wer die Daten bekommt und unter welchen Bedingungen."
+            options={ACCESS_SUGGESTIONS}
+            input={text("access", true)}
+            onPick={set("access")}
+          />
+        </div>
+      </Group>
+    </div>
+  );
+}
+
+/** Freies Eingabefeld mit sichtbaren Vorschlägen darunter; ein Klick trägt den Vorschlag ein, ein zweiter leert. */
+function Choices({
+  id,
+  label,
+  hint,
+  options,
+  input,
+  onPick,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  options: readonly string[];
+  input: { value: string } & Record<string, unknown>;
+  onPick: (text: string) => void;
+}) {
+  const field = useRef<HTMLInputElement>(null);
+  const current = input.value.trim();
+  return (
+    <Field id={id} label={label} hint={hint}>
+      <input ref={field} {...input} />
+      <div role="group" aria-label={`Vorschläge für ${label}`} className="order-last mt-0.5 flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          // „Gesperrt bis …“ ist ein Anfang zum Weiterschreiben: ohne die Punkte eintragen und ins Feld springen.
+          const open = o.endsWith("…");
           return (
-            <label
-              key={key}
-              className={cx(
-                "grid content-start gap-1 text-[0.9rem] font-medium",
-                f.wide && columns === 2 && "@[44rem]:col-span-2",
-              )}
+            <Suggestion
+              key={o}
+              aria-pressed={open ? undefined : current === o}
+              onClick={() => {
+                if (!open) return onPick(current === o ? "" : o);
+                onPick(o.slice(0, -1));
+                field.current?.focus();
+              }}
             >
-              {f.label ?? label}
-              {f.rows ? (
-                <textarea rows={f.rows} {...common} className={`resize-y ${common.className}`} />
-              ) : (
-                <input {...common} list={f.list ? `${id}-${key}` : undefined} />
-              )}
-              {f.list && (
-                <datalist id={`${id}-${key}`}>
-                  {f.list.map((o) => (
-                    <option key={o} value={o} />
-                  ))}
-                </datalist>
-              )}
-              {f.hint && <span className="text-[0.82rem] font-normal text-muted">{f.hint}</span>}
-            </label>
+              {o}
+            </Suggestion>
           );
         })}
       </div>
-    </div>
+    </Field>
   );
 }

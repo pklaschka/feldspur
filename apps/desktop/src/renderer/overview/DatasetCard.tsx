@@ -1,8 +1,8 @@
 /**
  * Karte „Angaben zum Datensatz“ in der Übersicht (Issue #206): einmal fürs Projekt eintragen, jede Ausgabe nennt sie in
- * der LIESMICH und, auf Wunsch, in den Metadaten (RO-Crate). Ein Einsatz kann einzelne Felder in seinen Einsatzdaten
- * überschreiben. Alles ist freiwillig; vorbelegt sind nur Titel und Urheber*innen, und zwar als Platzhalter, nicht als
- * Eintrag.
+ * der LIESMICH, im Kopf von Einsatztranskript und Viewer und, auf Wunsch, in den Metadaten (RO-Crate). Ein Einsatz kann
+ * einzelne Felder in seinen Einsatzdaten überschreiben. Alles ist freiwillig; vorbelegt sind nur Titel und
+ * Urheber*innen, und zwar als Hinweis am Feld, nicht als Eintrag.
  *
  * Gespeichert wird erst mit „Speichern“, als ein Schritt für Rückgängig (`setProjectDataset`).
  */
@@ -10,7 +10,7 @@ import { useState } from "react";
 import type { DatasetInfo } from "@feldspur/core/model";
 import { cleanDataset } from "@feldspur/media/dataset";
 import { DatasetFields } from "../dataset/DatasetFields.tsx";
-import { Button, Panel } from "../ui.tsx";
+import { Button, cx, Panel } from "../ui.tsx";
 
 const api = window.feldspur;
 
@@ -24,7 +24,7 @@ export function DatasetCard({
 }: {
   /** Die gespeicherten Angaben des Projekts. */
   saved: DatasetInfo;
-  /** Forschende an den Geräten: Vorbelegung für „Urheber*innen“. */
+  /** Forschende an den Geräten: Vorschläge für „Urheber*innen“. */
   researchers: string[];
   onSaved: (d: DatasetInfo) => void;
 }) {
@@ -49,45 +49,63 @@ export function DatasetCard({
         }}
         data-testid="dataset-card"
       >
-        <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h2 className="text-[1.05rem] font-semibold">Angaben zum Datensatz</h2>
-          <span className="flex-1" />
-          <span role="status" className={status === "failed" ? "text-[0.9rem] text-bad" : "text-[0.9rem] text-good"}>
-            {status === "saved" && !changed && (
-              <>
-                <span aria-hidden>✓ </span>Gespeichert
-              </>
+        <div className="mb-4 flex flex-wrap items-start gap-x-4 gap-y-2">
+          <div className="min-w-56 flex-[1_1_0%]">
+            <h2 className="text-[1.05rem] font-semibold">Angaben zum Datensatz</h2>
+            <p className="mt-1 max-w-[70ch] text-[0.88rem] text-muted">
+              Stehen in jeder Ausgabe des Projekts: in der LIESMICH, im Kopf von Einsatztranskript und Viewer und in den
+              Metadaten (RO-Crate). Alles ist freiwillig. Ein Einsatz kann einzelne Felder in seinen Einsatzdaten
+              überschreiben.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              role="status"
+              className={cx(
+                "inline-flex items-center gap-1.5 text-[0.9rem]",
+                status === "failed" ? "text-bad" : "text-good",
+              )}
+            >
+              {status === "saved" && !changed && (
+                <>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="m3 8.5 3.2 3.2L13 4.8" />
+                  </svg>
+                  Gespeichert
+                </>
+              )}
+              {status === "failed" && "Speichern hat nicht geklappt."}
+            </span>
+            {/* Verwerfen gibt es nur, solange es etwas zu verwerfen gibt. */}
+            {changed && (
+              <Button variant="ghost" type="button" onClick={() => setDraft(saved)}>
+                Verwerfen
+              </Button>
             )}
-            {status === "failed" && "Speichern hat nicht geklappt."}
-          </span>
-          <Button type="button" disabled={!changed} onClick={() => setDraft(saved)}>
-            Verwerfen
-          </Button>
-          <Button variant="primary" type="submit" disabled={!changed}>
-            Speichern
-          </Button>
+            <Button variant="primary" type="submit" disabled={!changed}>
+              Speichern
+            </Button>
+          </div>
         </div>
-        <p className="mb-4 max-w-[78ch] text-[0.88rem] text-muted">
-          Gelten für jede Ausgabe dieses Projekts: in der LIESMICH und in den Metadaten (RO-Crate). Ein Einsatz kann
-          einzelne Felder in seinen Einsatzdaten überschreiben. Alles ist freiwillig, leere Felder bleiben in der
-          Ausgabe leer.
-        </p>
         <DatasetFields
           value={draft}
           onChange={(d) => {
             setStatus(null);
             setDraft(d);
           }}
-          placeholder={{
-            title: "Ohne Titel heißt jede Ausgabe nach Einsatz und Datum",
-            creators: researchers.length ? researchers.join("\n") : undefined,
-          }}
+          placeholder={{ title: "Ohne Titel heißt jede Ausgabe nach Einsatz und Datum" }}
+          researchers={researchers}
         />
-        {!draft.creators?.trim() && researchers.length > 0 && (
-          <p className="mt-2 text-[0.82rem] text-muted">
-            Ohne Eintrag gelten die Forschenden an den Geräten des jeweiligen Einsatzes als Urheber*innen.
-          </p>
-        )}
       </form>
     </Panel>
   );

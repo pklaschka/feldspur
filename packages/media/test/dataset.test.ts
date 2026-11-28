@@ -11,10 +11,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import {
   cleanDataset,
   describeExport,
+  formatPeople,
   keywordList,
   licenseUrl,
   MANIFEST_NAME,
   mergeDataset,
+  normalizeOrcid,
+  orcidChecksumOk,
   parsePeople,
   projectDataset,
   README_NAME,
@@ -47,6 +50,49 @@ describe("Angaben zum Datensatz", () => {
 
   it("liest je Zeile eine Person", () => {
     expect(parsePeople("Mara Beispiel\r\nJo Muster\n\n").map((p) => p.name)).toEqual(["Mara Beispiel", "Jo Muster"]);
+  });
+
+  it("schreibt Personen so, wie parsePeople sie wieder liest, und lässt Zeilen ohne Namen weg", () => {
+    // Angenommen: eine Liste aus der Oberfläche, mit leerer Zeile und einem Namen in der Form „Nachname, Vorname“
+    const people = [
+      { name: " Mara  Beispiel ", orcid: "0000-0002-1825-0097" },
+      { name: "" },
+      { name: "  ", orcid: "0000-0002-1825-0097" },
+      { name: "Muster, Jo" },
+      { name: "Beispiel, Kim", orcid: "0000-0002-1694-233X" },
+    ];
+    // Wenn: sie als Text gespeichert wird
+    const text = formatPeople(people);
+    // Dann: steht eine Person je Zeile, und das Lesen ergibt dieselben Personen
+    expect(text).toBe("Mara Beispiel, 0000-0002-1825-0097\nMuster, Jo\nBeispiel, Kim, 0000-0002-1694-233X");
+    expect(parsePeople(text)).toEqual([
+      { name: "Mara Beispiel", orcid: "0000-0002-1825-0097" },
+      { name: "Muster, Jo" },
+      { name: "Beispiel, Kim", orcid: "0000-0002-1694-233X" },
+    ]);
+    expect(formatPeople([])).toBe("");
+  });
+
+  it.each`
+    eingabe                                      | orcid
+    ${"0000-0002-1825-0097"}                     | ${"0000-0002-1825-0097"}
+    ${" https://orcid.org/0000-0002-1694-233x "} | ${"0000-0002-1694-233X"}
+    ${"0000000218250097"}                        | ${"0000-0002-1825-0097"}
+    ${"0000 0002 1825 0097"}                     | ${"0000-0002-1825-0097"}
+    ${"0000-0002-1825-009"}                      | ${null}
+    ${"0000-0002-1825-00977"}                    | ${null}
+    ${"Mara Beispiel"}                           | ${null}
+  `("liest „$eingabe“ als ORCID iD $orcid", ({ eingabe, orcid }) => {
+    expect(normalizeOrcid(eingabe)).toBe(orcid);
+  });
+
+  it("prüft die Prüfziffer einer ORCID iD", () => {
+    expect(orcidChecksumOk("0000-0002-1825-0097")).toBe(true);
+    expect(orcidChecksumOk("0000-0002-1694-233X")).toBe(true);
+    // Zahlendreher und falsches letztes Zeichen
+    expect(orcidChecksumOk("0000-0002-1852-0097")).toBe(false);
+    expect(orcidChecksumOk("0000-0002-1825-0098")).toBe(false);
+    expect(orcidChecksumOk("0000-0002-1825")).toBe(false);
   });
 
   it("trennt Schlagworte an Komma und Semikolon und nimmt Doppelte heraus", () => {

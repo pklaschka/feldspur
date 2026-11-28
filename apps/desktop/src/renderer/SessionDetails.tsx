@@ -175,10 +175,10 @@ export function SessionDetails({
                 Angaben zum Datensatz für diesen Einsatz
               </summary>
               <p className={`${hint} mt-1 mb-3`}>
-                Leere Felder gelten wie in der Übersicht des Projekts (grau). Ein Eintrag hier ersetzt das ganze Feld
-                nur für diesen Einsatz, in LIESMICH und Metadaten.
+                Leere Felder gelten wie im Projekt; was dort steht, zeigen sie grau. Ein Eintrag ersetzt das ganze Feld
+                nur für diesen Einsatz.
               </p>
-              <DatasetFields value={dataset} onChange={setDataset} columns={1} placeholder={view.projectDataset} />
+              <DatasetFields value={dataset} onChange={setDataset} placeholder={view.projectDataset} />
             </details>
             <div className="mt-1 flex justify-end gap-2">
               <Button

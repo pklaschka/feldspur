@@ -830,7 +830,7 @@ export interface ProjectOverview {
   citation: CitationInfo;
   /** Angaben zum Datensatz für das ganze Projekt (Issue #206). */
   dataset: DatasetInfo;
-  /** Forschende an den Geräten aller Einsätze: die Vorbelegung für „Urheber*innen“, solange dort nichts steht. */
+  /** Forschende an den Geräten aller Einsätze: in der Übersicht die Vorschläge für „Urheber*innen“. */
   researchers: string[];
 }
 

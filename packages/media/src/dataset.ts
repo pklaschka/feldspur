@@ -119,6 +119,41 @@ export function parsePeople(text: string | undefined): DatasetPerson[] {
     .filter((p) => p.name);
 }
 
+/**
+ * Personen wieder als Text, wie `parsePeople` ihn liest: eine Person je Zeile, die ORCID iD nach einem Komma. Zeilen
+ * ohne Namen fallen weg. Die Oberfläche führt Personen als Liste und speichert sie so.
+ */
+export function formatPeople(people: readonly DatasetPerson[]): string {
+  return people
+    .map((p) => ({ name: p.name.replace(/\s+/g, " ").trim(), orcid: p.orcid }))
+    .filter((p) => p.name)
+    .map((p) => (p.orcid ? `${p.name}, ${p.orcid}` : p.name))
+    .join("\n");
+}
+
+/**
+ * ORCID iD aus einer Eingabe in der üblichen Schreibweise (vier Blöcke, großes X): mit oder ohne Adresse, Leerzeichen
+ * und Bindestriche. Null, wenn es nicht 16 Zeichen sind (15 Ziffern, dann Ziffer oder X).
+ */
+export function normalizeOrcid(text: string): string | null {
+  const t = text
+    .trim()
+    .replace(/^(?:https?:\/\/)?orcid\.org\//i, "")
+    .replace(/[\s\u2010-\u2015-]/g, "")
+    .toUpperCase();
+  return /^\d{15}[\dX]$/.test(t) ? t.match(/.{4}/g)!.join("-") : null;
+}
+
+/** Stimmt die Prüfziffer (das letzte Zeichen) einer ORCID iD? Rechnung nach ISO 7064, 11-2. */
+export function orcidChecksumOk(orcid: string): boolean {
+  const t = orcid.replace(/-/g, "").toUpperCase();
+  if (!/^\d{15}[\dX]$/.test(t)) return false;
+  let total = 0;
+  for (const digit of t.slice(0, 15)) total = (total + Number(digit)) * 2;
+  const check = (12 - (total % 11)) % 11;
+  return t[15] === (check === 10 ? "X" : String(check));
+}
+
 /** Schlagworte, durch Komma oder Semikolon getrennt, ohne Doppelte. */
 export function keywordList(text: string | undefined): string[] {
   return [

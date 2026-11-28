@@ -321,9 +321,11 @@ describe("Übersicht des Projekts", () => {
     const { api } = await openOverview([einsatz(1)], ["Mara Beispiel"]);
     const card = document.querySelector("[data-testid=dataset-card]")!;
     const field = (key: string) => card.querySelector<HTMLInputElement>(`[data-field=${key}]`)!;
-    // Angenommen: noch nichts eingetragen; vorbelegt sind nur Platzhalter, Zugang hat keine Vorgabe
-    expect(field("creators").placeholder).toBe("Mara Beispiel");
+    // Angenommen: noch nichts eingetragen; die Forschenden stehen als Vorschlag da, Zugang hat keine Vorgabe
+    expect(field("creators").textContent).toContain("Ohne Eintrag gelten die Forschenden an den Geräten");
+    expect(button("Mara Beispiel")).toBeTruthy();
     expect(field("access").value).toBe("");
+    expect(card.querySelector("[aria-pressed=true]")).toBeNull();
     expect(button("Speichern")!.disabled).toBe(true);
     // Wenn: ein Titel getippt wird, dann lässt er sich speichern
     await act(async () => {
