@@ -50,6 +50,8 @@ function load(m: Extract<ToFrame, { type: "load" }>): void {
     const index = Number((li as HTMLElement | null)?.dataset.i);
     if (!li?.querySelector(".edit") || !Number.isInteger(index)) return;
     player?.pause();
+    // Zurück im Schritt soll die bearbeitete Zeile dastehen, auch wenn gerade eine andere lief.
+    if (li.getAttribute("aria-current") !== "true") viewer.seek(Number((li as HTMLElement).dataset.m) / 1000, true);
     send({ type: "at", t: viewer.S.t });
     send({ type: "edit", index });
   };

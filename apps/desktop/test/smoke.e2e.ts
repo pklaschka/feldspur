@@ -1133,6 +1133,8 @@ try {
     console.log(`Ansehen: ${before} → ${await viewer.locator("#now-clock").innerText()}`);
     await shot("-ansehen");
     // Wenn: an der Zeile „Bearbeiten“ gewählt wird, dann öffnet das Mitschreiben an ihrer Stelle
+    // Inzwischen läuft schon die nächste Zeile: Bearbeitet wird die gewählte, und zu ihr kommt man zurück.
+    await viewer.locator('#tr > li.k-line[aria-current="true"]', { hasText: "Zwölf Jahre" }).waitFor();
     await viewer.locator("#play").click();
     await line.hover();
     await line.locator(".edit").click();
